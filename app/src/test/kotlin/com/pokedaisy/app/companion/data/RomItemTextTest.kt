@@ -66,6 +66,8 @@ class RomItemTextTest {
         Case("Pokemon Quetzal (Alpha 9.0) (English).gba", GameKind.QUETZAL, NATIVE_QUETZAL, mapOf(28 to "by 20 points")),
         // Its Spanish release has its own (Spanish) descriptions; Unbound's French translation rewrote them in place.
         Case("Pokemon Quetzal (Alpha 9.0) (Spanish).gba", GameKind.QUETZAL, NATIVE_QUETZAL_ES, mapOf(28 to "Restaura 20 PS")),
+        Case("Quetzal English Alpha 9v1.gba", GameKind.QUETZAL, NATIVE_QUETZAL_V1, mapOf(28 to "by 20 points")),
+        Case("Quetzal Spanish Alpha 9v1.gba", GameKind.QUETZAL, NATIVE_QUETZAL_ES_V1, mapOf(28 to "Restaura 20 PS")),
         Case("Pokemon Quetzal (Alpha 0.8.4) (English).gba", GameKind.QUETZAL, NATIVE_QUETZAL_V084, mapOf(28 to "by 20 points")),
         Case("Pokemon Quetzal (Alpha 0.8.4) (Spanish).gba", GameKind.QUETZAL, NATIVE_QUETZAL_V084_ES, mapOf(28 to "Restaura 20 PS")),
         Case("Moemon Quetzal (Alpha 0.8.4 Hotfix) (English).gba", GameKind.QUETZAL, NATIVE_QUETZAL_MOEMON_V084, mapOf(28 to "by 20 points")),

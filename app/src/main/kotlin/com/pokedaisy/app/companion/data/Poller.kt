@@ -291,6 +291,7 @@ class TelemetrySampler {
             emeraldHack = emeraldHackFor(base)
             mariomonV13 = base === NATIVE_MARIOMON_V1_3 || base === NATIVE_MARIOMON_V1_2_2 || base === NATIVE_MARIOMON_V1_2_1
             quetzalV084 = base?.quetzalV084 == true
+            quetzalV1 = base?.quetzalV1 == true
             gen2Cfg?.let { activeGen2 = it }
             romLanguage = nativeCfg?.language ?: gen1Cfg?.language ?: 'E'
             romGameCode = nativeCfg?.gameCode ?: gen1Cfg?.gameCode.orEmpty()
@@ -471,6 +472,8 @@ class TelemetrySampler {
                 IMPERIUM_V1_3_1_SHA1 -> { kind = GameKind.IMPERIUM; nativeCfg = NATIVE_IMPERIUM }
                 QUETZAL_V9_0_ALPHA_SHA1 -> { kind = GameKind.QUETZAL; nativeCfg = NATIVE_QUETZAL }
                 QUETZAL_V9_0_ALPHA_ES_SHA1 -> { kind = GameKind.QUETZAL; nativeCfg = NATIVE_QUETZAL_ES }
+                QUETZAL_V9_1_ALPHA_SHA1 -> { kind = GameKind.QUETZAL; nativeCfg = NATIVE_QUETZAL_V1 }
+                QUETZAL_V9_1_ALPHA_ES_SHA1 -> { kind = GameKind.QUETZAL; nativeCfg = NATIVE_QUETZAL_ES_V1 }
                 QUETZAL_V0_8_4_ALPHA_SHA1 -> { kind = GameKind.QUETZAL; nativeCfg = NATIVE_QUETZAL_V084 }
                 QUETZAL_V0_8_4_ALPHA_ES_SHA1 -> { kind = GameKind.QUETZAL; nativeCfg = NATIVE_QUETZAL_V084_ES }
                 MOEMON_QUETZAL_V0_8_4_ALPHA_Hotfix_SHA1 -> { kind = GameKind.QUETZAL; nativeCfg = NATIVE_QUETZAL_MOEMON_V084 }
@@ -765,6 +768,9 @@ class TelemetrySampler {
         const val QUETZAL_V9_0_ALPHA_SHA1 = "d0658315da1e8827f66f15c3d3a000fe747e163e"
         // Pokémon Quetzal Spanish Alpha 9 v0 (BPEE, 32 MB) - host-side masked hash (GPIO bytes zero).
         const val QUETZAL_V9_0_ALPHA_ES_SHA1 = "fe346b5b0eb022e3a103f81e7dcefba6f1dc542f"
+        // Pokémon Quetzal English / Spanish Alpha 9 v1 (BPEE, 32 MB): plain `shasum`s (their GPIO bytes are zero).
+        const val QUETZAL_V9_1_ALPHA_SHA1 = "c108cec750a35775084c0806cc704d8abd1994e7"
+        const val QUETZAL_V9_1_ALPHA_ES_SHA1 = "ff008b70b6f2b330da9ffa8a405fc951a9e54147"
         // Pokémon Quetzal Alpha 0.8.4, English / Spanish, and the Moemon Hotfix builds of both (BPEE, 32 MB) - host-side
         // masked hashes (GPIO bytes zero, so a plain `shasum`).
         const val QUETZAL_V0_8_4_ALPHA_SHA1 = "6806c7146aff457a4be85ef2030e9ddcdb17b665"
@@ -917,7 +923,7 @@ class TelemetrySampler {
             AMETHYST_V1_3_0_SHA1, AMETHYST_V1_4_1_SHA1, CELIA_V1_1_4_SHA1, HEART_AND_SOUL_V2_0_6_SHA1, LAZARUS_V2_0_SHA1,
             ROWE_V2_1_9_1_SHA1, EMERALD_ROGUE_V2_2_1_EX_SHA1, TMT2_V1_5_2_SHA1, EMERALD_SEAGLASS_V3_0_SHA1, EMERALD_KAIZO_V2_0_SHA1, EMERALD_LEGACY_V1_1_4_SHA1,
             SOULGOLD_V1_1_4_SHA1, SOULGOLD_V1_2_SHA1, SOULGOLD_V1_2B_SHA1, SOULGOLD_V1_2C_SHA1, GLAZED_V9_2_0_SHA1, IMPERIUM_V1_3_1_SHA1,
-            QUETZAL_V9_0_ALPHA_SHA1, QUETZAL_V9_0_ALPHA_ES_SHA1, UNBOUND_V2_1_1_1_FR_SHA1,
+            QUETZAL_V9_0_ALPHA_SHA1, QUETZAL_V9_0_ALPHA_ES_SHA1, QUETZAL_V9_1_ALPHA_SHA1, QUETZAL_V9_1_ALPHA_ES_SHA1, UNBOUND_V2_1_1_1_FR_SHA1,
             QUETZAL_V0_8_4_ALPHA_SHA1, QUETZAL_V0_8_4_ALPHA_ES_SHA1, MOEMON_QUETZAL_V0_8_4_ALPHA_Hotfix_SHA1,
             MOEMON_QUETZAL_V0_8_4_ALPHA_ES_Hotfix_SHA1,
             ORANGE_ISLANDS_V5_7_BETA_SHA1, ORANGE_ISLANDS_UNVERSIONED_SHA1,

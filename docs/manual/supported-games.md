@@ -50,7 +50,7 @@ Any GBA or Game Boy game plays in PokeDaisy. "Supported" is about the companion 
 | Emerald Imperium | 1.3.1 |
 | Pokémon Emerald Kaizo | 2.0 |
 | Pokémon Emerald Legacy | 1.1.4 |
-| Pokémon Quetzal | English Alpha 9 v0, Spanish Alpha 9 v0, English and Spanish Alpha 0.8.4 |
+| Pokémon Quetzal | English and Spanish Alpha 9 v1, English Alpha 9 v0, Spanish Alpha 9 v0, English and Spanish Alpha 0.8.4 |
 | Moemon Quetzal | English and Spanish Alpha 0.8.4 Hotfix |
 | Super Mariomon | 1.2.1 to 1.3, 1.5.1 and 1.5.2 |
 | Pokémon Recharged Emerald | 2.2.5 and 2.2.8, and Rebalanced 2.2.8 |

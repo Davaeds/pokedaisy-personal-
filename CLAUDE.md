@@ -1146,6 +1146,10 @@ dex intact, its bag misread by 0.8.4 as by our decode (the game's own bag screen
 dumps had the build's decompressed battle sprites and their palettes zeroed** (its pictures are never committed - do the
 same for any new Moemon capture). Cursors, the four handlers and the POKéMON switch (gPartyMenu 0x0203EA08, a list) were
 checked headless on all four. No EXPAND (not mapped).
+**Quetzal Alpha 9 v1 (2026-10-15)**: English / Spanish (`NATIVE_QUETZAL_V1` / `_ES_V1`, `quetzalV1`): v0 rebuilt, v0's RAM, every ROM
+table moved (each checked equal to v0's, `gen_quetzal_tables.py --v1`, `QuetzalV1Test`); the v0 saves load in it. Its bag is a new
+`BAG4` record (`Bag4Layout`, read before `bag3`: v1 rewrites a v0 BAG3 on load) whose item lists are in the ROM - a fixture test
+needs the ROM file (`RomFileReader.withRam`). Spanish v0's dex config read English's evolution / learnset tables until then.
 **Ultra Violet / Sword and Shield Ultimate Plus (2026-10-11)**: **Ultra Violet v1.22** is FireRed rev 0 edited in place
 under a game code of its own, **PUVV** (`TelemetrySampler.HACK_GAME_CODES`: detect() hashes it before the "not a Pokémon
 game" check; `CompanionSupport`, `GameTitles`' hashing, INFO's base game, the level-up fanfare, `RegionMapWatch` and the

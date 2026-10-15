@@ -770,6 +770,21 @@ val GUIDE_TABLES_QUETZAL_ES = GUIDE_TABLES_QUETZAL.copy(
     mapGroups = 0x08934070L,
 )
 
+// Quetzal Alpha 9 v1: v0's tables at v1's addresses (v0's literal pools read in v1's code; Kanto's trainers by their
+// records), each v0's entry for entry, pointers followed.
+val GUIDE_TABLES_QUETZAL_V1 = GUIDE_TABLES_QUETZAL.copy(
+    trainers = 0x085107FCL,
+    wildHeaders = 0x0918A638L,
+    altTrainers = listOf(0x09991270L, 0x0999C7C4L),
+    mapGroups = 0x0893C438L,
+)
+val GUIDE_TABLES_QUETZAL_ES_V1 = GUIDE_TABLES_QUETZAL_ES.copy(
+    trainers = 0x0851C23CL,
+    wildHeaders = 0x09196024L,
+    altTrainers = listOf(0x09996218L, 0x099A176CL),
+    mapGroups = 0x08947E24L,
+)
+
 // Quetzal Alpha 0.8.4 (English / Spanish, and their Moemon Hotfix builds): Alpha 9's record shapes for Hoenn alone - no
 // Johto / Kanto trainer tables or map groups (34 groups, 124 wild headers). gTrainers, gWildMonHeaders and gMapGroups
 // through Alpha 9's literal pools; 265 is ROXANNE (PETRA), 961 her HARD twin, as in Alpha 9.

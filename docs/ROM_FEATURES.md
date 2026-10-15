@@ -44,6 +44,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | Odyssey | 4.1.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ |
 | Orange Islands | Beta 5.7, an older beta | ◐ ³ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ |
 | Quetzal | English / Spanish Alpha 9 v0 | ◐ ³ | ✅ | ✅ | ✅ | — | — | — | ◐ ⁶ | — | — | — |
+| Quetzal | English / Spanish Alpha 9 v1 | — | ✅ | ✅ | ✅ | — | — | — | — | — | — | — |
 | Quetzal, Moemon Quetzal | English / Spanish Alpha 0.8.4 (+ Hotfix) | — | ✅ | ✅ | ✅ | — | — | — | — | — | — | — |
 | R.O.W.E. | 2.1.9.1 Experimental | ◐ ³ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — |
 | Radical Red | 4.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ |

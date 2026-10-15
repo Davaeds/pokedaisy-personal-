@@ -424,7 +424,16 @@ private val mapSecDataRechargedYellow by lazy { mapSecData.renamedSecs(mapSecNam
 
 private fun quetzalMoves(lang: Int) = if (quetzalV084) when (lang) { 1 -> moveDataQuetzalV084Es; 2 -> moveDataQuetzalV084La; else -> moveDataQuetzalV084 }
     else when (lang) { 1 -> moveDataQuetzalEs; 2 -> moveDataQuetzalLa; else -> moveDataQuetzal }
-private fun quetzalItems(lang: Int) = when (lang) { 1 -> itemNamesQuetzalSpanish; 2 -> itemNamesQuetzalLatam; else -> itemNamesQuetzal }
+private fun quetzalItems(lang: Int) = when (lang) {
+    1 -> itemNamesQuetzalSpanish
+    2 -> if (quetzalV1) itemNamesQuetzalLatamV1 else itemNamesQuetzalLatam
+    else -> itemNamesQuetzal
+}
+private val itemNamesQuetzalLatamV1 by lazy { itemNamesQuetzalLatam + itemNamesQuetzalLaV1Changes }
+
+/** Quetzal Alpha 9 v1: v0's tables but the Latin American names of Johto's key items (v0's were Portuguese,
+ * [itemNamesQuetzalLaV1Changes]). Set with [activeGame] by the Poller. */
+var quetzalV1 = false
 private fun quetzalMapSecs(lang: Int) = if (quetzalV084) (if (lang == 1) mapSecDataQuetzalV084Es else mapSecDataQuetzalV084)
     else when (lang) { 1 -> mapSecDataQuetzalEs; 2 -> mapSecDataQuetzalLa; else -> mapSecDataQuetzalOnMap }
 

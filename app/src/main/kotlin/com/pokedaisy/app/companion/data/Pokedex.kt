@@ -852,7 +852,35 @@ val POKEDEX_QUETZAL_ES = POKEDEX_QUETZAL.copy(
     speciesToNational = 0x08542386L,
     abilityNames = 0x08532F97L,
     footprints = 0x091C42ACL,
+    // Its own copies (English's addresses read other bytes here: EVOLVE / MOVES were wrong before 2026-10-15).
+    evoLayout = EvoLayout(EvoScheme.QUETZAL, table = 0x08594A50L, perMon = 11),
+    levelUpLearnsets = 0x085B57E8L,
     probeCategory = "Semilla",
+)
+
+/** Quetzal Alpha 9 v1 (English / Spanish): v0 rebuilt - every table its own address, each v0's entry for entry (pointers
+ * followed: the pages, pics, palettes, footprints, evolutions and learnsets they point at are v0's bytes). */
+val POKEDEX_QUETZAL_V1 = POKEDEX_QUETZAL.copy(
+    entries = 0x091C5BA8L,
+    frontPics = 0x085013F4L,
+    palettes = 0x084ECA00L,
+    speciesInfo = 0x085520A8L,
+    speciesToNational = 0x0854A59AL,
+    abilityNames = 0x0853B1B6L,
+    footprints = 0x091CA3E4L,
+    evoLayout = EvoLayout(EvoScheme.QUETZAL, table = 0x0859CC90L, perMon = 11),
+    levelUpLearnsets = 0x085BDA28L,
+)
+val POKEDEX_QUETZAL_ES_V1 = POKEDEX_QUETZAL_ES.copy(
+    entries = 0x091C9160L,
+    frontPics = 0x0850CE34L,
+    palettes = 0x084F8440L,
+    speciesInfo = 0x0855DA18L,
+    speciesToNational = 0x08555F0AL,
+    abilityNames = 0x08546B1CL,
+    footprints = 0x091CD99CL,
+    evoLayout = EvoLayout(EvoScheme.QUETZAL, table = 0x085A8600L, perMon = 11),
+    levelUpLearnsets = 0x085C9398L,
 )
 
 /** Quetzal Alpha 0.8.4: Alpha 9's shapes over its first 1520 species (no Browt / Pombon / Gecqua lines: dex numbers to

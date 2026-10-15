@@ -5,6 +5,7 @@
     scripts/gen_quetzal_tables.py <rom.gba> [out_dir]
     scripts/gen_quetzal_tables.py <rom.gba> --languages [<spanish rom.gba>]
     scripts/gen_quetzal_tables.py <rom.gba> --v084 <0.8.4 rom.gba>...
+    scripts/gen_quetzal_tables.py <rom.gba> <spanish rom.gba> --v1 <Alpha 9 v1 rom.gba>...
 
 Writes {SpeciesNames,SpeciesTypes,GenderRatios,ItemNames,ItemPockets,MoveData,
 TypeChart,MapSecData}Quetzal.kt (default: the app's data package).
@@ -23,6 +24,8 @@ past the Western charmap (ã, õ).
 Hotfix builds) against Alpha 9 and writes QuetzalV084Gen.kt: the few moves whose
 power or type 0.8.4 has its own way. It shares every other table by id (its
 species / items are Alpha 9's first 1520 / 879).
+--v1 checks Quetzal Alpha 9 v1 (English / Spanish: v0 rebuilt, every table moved) against v0 and writes
+QuetzalV1Gen.kt: the Latin American names of Johto's key items, which v1 corrected (v0's were Portuguese).
 Item descriptions aren't written: the app reads them from the player's ROM
 (RomItemText, NativeConfig.itemDescs).
 
@@ -353,8 +356,103 @@ def v084(rom, paths):
     write("QuetzalV084Gen.kt", body)
 
 
+# Quetzal Alpha 9 v1 (English / Spanish): Alpha 9 v0 rebuilt, every table moved (its GF header and these say where).
+V1 = {
+    "c108cec750a35775084c0806cc704d8abd1994e7": dict(label="English Alpha 9 v1", base=SHA1, item_names=0x091EFDC4,
+                                                     region_map_entries=0x09233AE0, johto_map_entries=0x09234D70),
+    "ff008b70b6f2b330da9ffa8a405fc951a9e54147": dict(label="Spanish Alpha 9 v1", base=ES_SHA1, item_names=0x091F2E08,
+                                                     region_map_entries=0x09236DA4, johto_map_entries=0x09238034),
+}
+
+
+def v1(rom, es_rom, paths):
+    """Checks Quetzal Alpha 9 v1's tables against v0's (rom: English v0, es_rom: Spanish v0) and writes QuetzalV1Gen.kt:
+    the names v1 has its own way. Everything else is v0's by id, checked here: species (English, Spanish), move and item
+    names (English, Spanish, Latin American), gSpeciesInfo's types / gender, item pockets, the type chart, moves' power /
+    type (one PP differs: MOUNTAIN GALE 5 -> 10, read live from the Pokemon) and every map section's name (all four
+    languages) and rect, Kanto's and Johto's. Its Latin American names of Johto's key items (879..889) were Portuguese
+    in v0 and are Spanish in v1."""
+    def same(a_rom, a, b_rom, b, stride, count, first=1):
+        return [i for i in range(first, count) if a_rom[a - 0x08000000 + stride * i:a - 0x08000000 + stride * (i + 1)] !=
+                b_rom[b - 0x08000000 + stride * i:b - 0x08000000 + stride * (i + 1)]]
+
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from gen_emerald_lang_tables import CHARS as WESTERN
+
+    def wtext(r, a, maxlen):
+        out = []
+        for b in r[a - 0x08000000:a - 0x08000000 + maxlen]:
+            if b == 0xFF:
+                break
+            out.append(" " if b in (0xFA, 0xFB, 0xFE) else WESTERN[b])
+        return " ".join("".join(out).split())
+
+    def names4(r, p):
+        return tuple(text(r, u32(r, p + 4 * k), 40) if is_ptr(r, u32(r, p + 4 * k)) else None for k in range(4))
+
+    la_items = None
+    for path in paths:
+        r = open(path, "rb").read()
+        meta = V1.get(hashlib.sha1(r).hexdigest())
+        if meta is None:
+            sys.exit(f"{path} isn't a Quetzal Alpha 9 v1 build this knows")
+        base = rom if meta["base"] == SHA1 else es_rom
+        if hashlib.sha1(base).hexdigest() != meta["base"]:
+            sys.exit(f"{meta['label']} is checked against {'English' if meta['base'] == SHA1 else 'Spanish'} Alpha 9 v0: pass it")
+        b_hdr = lambda o: u32(base, 0x08000100 + o)
+        hdr = lambda o: u32(r, 0x08000100 + o)
+        assert not same(base, b_hdr(0x44), r, hdr(0x44), 13, 2 * SPECIES_COUNT), "species names differ"
+        assert not same(base, b_hdr(0x48), r, hdr(0x48), 17, 3 * 936), "move names differ"
+        b_items = ITEM_NAMES if base is rom else ES_TABLES["items"]["En"]
+        assert not same(base, b_items, r, meta["item_names"], 20, 2 * ITEM_COUNT), "item names (English / Spanish) differ"
+        la = same(base, b_items + 40 * ITEM_COUNT, r, meta["item_names"] + 40 * ITEM_COUNT, 20, ITEM_COUNT)
+        mine = {i: wtext(r, meta["item_names"] + 20 * (2 * ITEM_COUNT + i), 20) for i in la}
+        assert la_items is None or la_items == mine, "the builds' Latin American items differ"
+        la_items = mine
+        info, b_info = hdr(0xBC), b_hdr(0xBC)
+        for i in range(1, SPECIES_COUNT):
+            a, b = b_info + 0x24 * i, info + 0x24 * i
+            assert base[a - 0x08000000:a - 0x08000000 + 0x24] == r[b - 0x08000000:b - 0x08000000 + 0x24], f"species {i}'s data"
+        items, b_items_info = hdr(0xC8), b_hdr(0xC8)
+        for i in range(1, ITEM_COUNT):
+            assert u8(base, b_items_info + 0x1C * i + 0x12) == u8(r, items + 0x1C * i + 0x12), f"item {i}'s pocket"
+        chart = rom[TYPE_CHART - 0x08000000:TYPE_CHART - 0x08000000 + 4 * TYPE_COUNT * TYPE_COUNT]
+        assert r.count(chart) == 1, "type chart differs"
+        moves, b_moves = hdr(0xCC), b_hdr(0xCC)
+        for i in range(1, 936):
+            a, b = b_moves + 0x18 * i, moves + 0x18 * i
+            assert (u8(base, a + 2), u8(base, a + 3)) == (u8(r, b + 2), u8(r, b + 3)), f"move {i}'s power / type"
+        b_e = REGION_MAP_ENTRIES if base is rom else ES_REGION_MAP_ENTRIES
+        e = meta["region_map_entries"]
+        for i in range(MAPSEC_COUNT):
+            assert base[b_e + 8 * i + 4 - 0x08000000:b_e + 8 * i + 8 - 0x08000000] == r[e + 8 * i + 4 - 0x08000000:e + 8 * i + 8 - 0x08000000], hex(i)
+            p, q = u32(base, b_e + 8 * i), u32(r, e + 8 * i)
+            if is_ptr(base, p):
+                assert names4(base, p) == names4(r, q), (hex(i), names4(base, p), names4(r, q))
+        b_j = JOHTO_MAP_ENTRIES if base is rom else ES_JOHTO_MAP_ENTRIES
+        j = meta["johto_map_entries"]
+        for i in range(64):
+            assert base[b_j + 8 * i - 0x08000000:b_j + 8 * i + 4 - 0x08000000] == r[j + 8 * i - 0x08000000:j + 8 * i + 4 - 0x08000000], f"johto {i}"
+            p, q = u32(base, b_j + 8 * i + 4), u32(r, j + 8 * i + 4)
+            if is_ptr(base, p):
+                assert names4(base, p) == names4(r, q), (f"johto {i}", names4(base, p), names4(r, q))
+        print(f"{meta['label']}: v0's tables; {len(mine)} Latin American item names of its own")
+    body = header("Quetzal Alpha 9 v1's names that differ from v0's (laid over the Latin American item\n"
+                  "// names by ActiveTables' quetzalV1). Everything else it shares by id - see gen_quetzal_tables.py's v1().\n")
+    body += ("internal val itemNamesQuetzalLaV1Changes: Map<Int, String> = mapOf(\n" +
+             "".join(f"    {i} to {kstr(n)},\n" for i, n in sorted(la_items.items())) + ")\n")
+    write("QuetzalV1Gen.kt", body)
+
+
 def main():
     global OUT_DIR
+    if "--v1" in sys.argv:
+        args = [a for a in sys.argv[1:] if a != "--v1"]
+        rom, es_rom = open(args[0], "rb").read(), open(args[1], "rb").read()
+        if hashlib.sha1(rom).hexdigest() != SHA1 or hashlib.sha1(es_rom).hexdigest() != ES_SHA1:
+            sys.exit(f"usage: {sys.argv[0]} <English Alpha 9 v0> <Spanish Alpha 9 v0> --v1 <v1 rom.gba>...")
+        v1(rom, es_rom, args[2:])
+        return
     if "--v084" in sys.argv:
         rom = open(sys.argv[1], "rb").read()
         if hashlib.sha1(rom).hexdigest() != SHA1:

@@ -165,6 +165,8 @@ data class NativeConfig(
     val gameCode: String = "",
     // A bag kept as a bit stream in SaveBlock1 instead of gBagPockets (Quetzal); null = gBagPockets.
     val bag3: Bag3Layout? = null,
+    // Quetzal Alpha 9 v1's "BAG4" record, read before [bag3] (v1 rewrites a v0 save's BAG3 into it on load).
+    val bag4: Bag4Layout? = null,
     // Map groups whose sections are named from a second table (Quetzal's Johto): read as 0x100 + id.
     val altMapSecGroups: IntRange? = null,
     // The game's money cap: Gen 3's 999,999 (Glazed's AddMoney caps at 9,999,999); above it is a wrong read.
@@ -174,6 +176,8 @@ data class NativeConfig(
     val quetzalPlacesDefault: Int = -1,
     // Quetzal Alpha 0.8.4 (ActiveTables' quetzalV084): Hoenn on Emerald's map, its map names in one language, its moves.
     val quetzalV084: Boolean = false,
+    // Quetzal Alpha 9 v1 (ActiveTables' quetzalV1): v0's names but the Latin American ones of Johto's key items.
+    val quetzalV1: Boolean = false,
 ) {
     val gMainInBattle get() = gMain + inBattleOff
     val gMainVblankCtr get() = gMain + 0x24
@@ -1766,6 +1770,47 @@ val NATIVE_QUETZAL_ES = NATIVE_QUETZAL.copy(
     quetzalPlacesDefault = 1,
 )
 
+// Pokémon Quetzal English / Spanish Alpha 9 v1 (sha1 c108cec7… / ff008b70…): Alpha 9 v0 rebuilt. Its RAM is v0's - every
+// RAM literal pool of v0's code maps to the same word in v1's, and the v0 saves load in it unchanged (`quetzal_v1`,
+// `quetzal_es_v1`; the party struct sets three more bits of byte 0x1B, which nothing here reads). Every ROM table moved, each
+// checked equal to v0's entry for entry (scripts/gen_quetzal_tables.py --v1: names, species data, pockets, chart, moves'
+// power / type, map sections). Its bag is a new record, "BAG4" ([Bag4Layout]), which v1 writes over a v0 save's BAG3 as it
+// loads (the same items, quantities and key items); the battle handlers were read in gBattlerControllerFuncs in each menu of a scripted wild
+// battle (`quetzal_v1_battle`, `quetzal_es_v1_battle`: Spanish's 0x24 earlier, as in v0), the target handler (doubles
+// only) is v0's function, one local more, where v0's literal pool points in v1. One-press picks: v0's cursors, unmoved.
+val NATIVE_QUETZAL_V1 = NATIVE_QUETZAL.copy(
+    itemDescs = ItemDescTable(0x091E9C6CL, 0x1C, 0x0C),
+    handleInputChooseAction = 0x0808DC89L,
+    handleInputChooseMove = 0x0808E911L,
+    completeWhenChoseItem = 0x08090B21L,
+    waitForMonSelection = 0x08090A31L,
+    handleInputChooseTarget = 0x0808E071L,
+    monIconTable = 0x091D9258L,
+    monIconPaletteIndices = 0x091DB4B4L,
+    monIconPaletteTable = 0x091DBD4CL,
+    itemIconTable = 0x092C7AC0L,
+    bag4 = Bag4Layout(off = 0x940L, midOff = 0x29D8L, tailOff = 0x3535L, lists = 0x09201A00L, counts = 0x09201A2CL, pockets = itemPocketsQuetzal),
+    pokedex = POKEDEX_QUETZAL_V1,
+    guideTables = GUIDE_TABLES_QUETZAL_V1,
+    quetzalV1 = true,
+)
+val NATIVE_QUETZAL_ES_V1 = NATIVE_QUETZAL_ES.copy(
+    itemDescs = ItemDescTable(0x091ECCB0L, 0x1C, 0x0C),
+    handleInputChooseAction = 0x0808DC65L,
+    handleInputChooseMove = 0x0808E8EDL,
+    completeWhenChoseItem = 0x08090AFDL,
+    waitForMonSelection = 0x08090A0DL,
+    handleInputChooseTarget = 0x0808E04DL,
+    monIconTable = 0x091DC870L,
+    monIconPaletteIndices = 0x091DEACCL,
+    monIconPaletteTable = 0x091DF364L,
+    itemIconTable = 0x092CC07CL,
+    bag4 = Bag4Layout(off = 0x940L, midOff = 0x29D8L, tailOff = 0x3535L, lists = 0x09204A44L, counts = 0x09204A70L, pockets = itemPocketsQuetzal),
+    pokedex = POKEDEX_QUETZAL_ES_V1,
+    guideTables = GUIDE_TABLES_QUETZAL_ES_V1,
+    quetzalV1 = true,
+)
+
 /** Quetzal 0.8.4's 11 bag pockets (its bag screen's tabs: ITEMS, MEDICINE, POKé BALLS, BERRIES, TRAINING, EVO / FORMS,
  * BATTLE ITEMS, MEGA STONES, Z CRYSTALS, TERA SHARDS, KEY ITEMS - gItems' +0x12 pocket, 1-based). TMs aren't in it. */
 val QUETZAL_V084_BAG_POCKET_ORDER = listOf(
@@ -2735,6 +2780,63 @@ data class Bag3Layout(
     val off: Long, val splitAt: Int, val tailOff: Long, val keyItemsBit: Int, val pockets: Map<Int, Int>,
 )
 
+/**
+ * Quetzal Alpha 9 v1's bag, a "BAG4" record in three pieces of SaveBlock1 (its offsets 0..0xC07 at [off], 0xC08..0x10DF at
+ * [midOff], the rest at [tailOff], as offsets from 0xC08 - the game's own accessor, 0x08142D40 in English v1). It keeps a
+ * bag per campaign: byte 5 is the current one (0..2). Header: "BAG4", version 4 at +4; key items per bag at +8 / +9 / +0xA;
+ * from +0x10, 30 u16 running totals of item entries, 10 pockets per bag. Item entry n is 22 bits at bit 0x300 * 8 + 22 n:
+ * the low 8 an index into its pocket's ROM list of item ids ([lists] / [counts]: 11 lists, a pointer / u16 length each),
+ * the high 14 the quantity XOR the encryption key. Key item j of bag g is a byte at 0x100 + 128 g + j: its index (low 7
+ * bits) into the 11th list. Read off the game's code (the BAG4 check 0x08144F88, the entry and key readers) and checked
+ * against v0's BAG3 of the same saves, item for item.
+ */
+data class Bag4Layout(
+    val off: Long, val midOff: Long, val tailOff: Long, val lists: Long, val counts: Long, val pockets: Map<Int, Int>,
+)
+
+private fun readBag4(c: MemoryReader, cfg: NativeConfig, b: Bag4Layout): List<Item>? {
+    val sb1 = saveBlock1(c, cfg)
+    val sb2 = saveBlock2(c, cfg)
+    if (sb1 !in 0x02000000L until 0x04000000L || sb2 !in 0x02000000L until 0x04000000L) return null
+    val key = u32le(c.readCoreMemory(sb2 + cfg.encryptionKeyOff, 4), 0).toInt() and 0x3FFF
+    val head = c.readCoreMemory(sb1 + b.off, 0xC08)
+    val mid = c.readCoreMemory(sb1 + b.midOff, 0x4D8)
+    val tail = c.readCoreMemory(sb1 + b.tailOff + 0x4D8, 0x400)
+    fun byte(o: Int): Int = when {
+        o < 0xC08 -> head.getOrElse(o) { 0 }
+        o - 0xC08 < 0x4D8 -> mid.getOrElse(o - 0xC08) { 0 }
+        else -> tail.getOrElse(o - 0xC08 - 0x4D8) { 0 }
+    }.toInt() and 0xFF
+    fun u16(o: Int) = byte(o) or (byte(o + 1) shl 8)
+    if (byte(0) != 'B'.code || byte(1) != 'A'.code || byte(2) != 'G'.code || byte(3) != '4'.code || byte(4) != 4) return null
+    val bag = byte(5).takeIf { it <= 2 } ?: return null
+    val lists = c.readCoreMemory(b.lists, 11 * 4)
+    val counts = c.readCoreMemory(b.counts, 11 * 2)
+    fun itemAt(list: Int, index: Int): Int {
+        if (index >= u16le(counts, 2 * list)) return 0
+        return u16le(c.readCoreMemory(u32le(lists, 4 * list) + 2 * index, 2), 0)
+    }
+    val out = mutableListOf<Item>()
+    var n = if (bag == 0) 0 else u16(0x10 + 2 * (10 * bag - 1))
+    for (p in 0 until 10) {
+        val end = u16(0x10 + 2 * (10 * bag + p))
+        while (n < end && n < 0x5BC && out.size < BAG_MAX_ITEMS) {
+            val bit = 0x300 * 8 + 22 * n
+            var v = 0L
+            for (k in 0 until 4) v = v or (byte((bit ushr 3) + k).toLong() shl (8 * k))
+            val e = ((v ushr (bit and 7)) and 0x3FFFFF).toInt()
+            val id = itemAt(p, e and 0xFF)
+            if (id != 0) out.add(Item(id, ((e ushr 8) xor key) and 0x3FFF, b.pockets[id] ?: POCKET_ITEMS))
+            n++
+        }
+    }
+    for (j in 0 until minOf(byte(8 + bag), 128)) {
+        val id = itemAt(10, byte(0x100 + 128 * bag + j) and 0x7F)
+        if (id != 0) out.add(Item(id, 1, POCKET_KEY_ITEMS))
+    }
+    return out
+}
+
 private fun readBag3(c: MemoryReader, cfg: NativeConfig, b: Bag3Layout): List<Item> {
     val sb1 = saveBlock1(c, cfg)
     val sb2 = saveBlock2(c, cfg)
@@ -2767,6 +2869,7 @@ private fun readBag3(c: MemoryReader, cfg: NativeConfig, b: Bag3Layout): List<It
 // gBagPockets: 5 pockets of { *itemSlots, u8 capacity }. Quantities XOR
 // SaveBlock2.encryptionKey (retail FireRed obfuscates them; Unbound leaves it 0).
 private fun readNativeBag(c: MemoryReader, cfg: NativeConfig): List<Item> {
+    cfg.bag4?.let { b -> readBag4(c, cfg, b)?.let { return it } }
     cfg.bag3?.let { return readBag3(c, cfg, it) }
     var key = 0
     // encryptionKeyOff < 0: Ruby/Sapphire don't obfuscate bag quantities.

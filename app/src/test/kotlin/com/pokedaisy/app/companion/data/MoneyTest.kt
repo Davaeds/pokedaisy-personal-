@@ -36,6 +36,9 @@ class MoneyTest {
         assertEquals(48937L, money("quetzal_johto", NATIVE_QUETZAL))
         // Quetzal's money goes past 999,999 (its START menu shows 1048458).
         assertEquals(1_048_458L, money("quetzal_es", NATIVE_QUETZAL_ES))
+        // Alpha 9 v1 keeps v0's SaveBlock1: the v0 saves, the same money.
+        assertEquals(7450L, money("quetzal_v1", NATIVE_QUETZAL_V1))
+        assertEquals(1_048_458L, money("quetzal_es_v1", NATIVE_QUETZAL_ES_V1))
         // Quetzal 0.8.4 keeps Alpha 9's SaveBlock1: the same save, the same money, every build.
         assertEquals(1_048_458L, money("quetzal_084", NATIVE_QUETZAL_V084))
         assertEquals(1_048_458L, money("quetzal_es_084", NATIVE_QUETZAL_V084_ES))

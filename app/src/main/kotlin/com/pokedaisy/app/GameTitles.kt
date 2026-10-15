@@ -67,6 +67,8 @@ object GameTitles {
         "1d20091c4d936f5eb122db8780554dd0829ffb63" to "Pokémon Emerald Imperium",
         "d0658315da1e8827f66f15c3d3a000fe747e163e" to "Pokémon Quetzal",
         "fe346b5b0eb022e3a103f81e7dcefba6f1dc542f" to "Pokémon Quetzal",
+        "c108cec750a35775084c0806cc704d8abd1994e7" to "Pokémon Quetzal",
+        "ff008b70b6f2b330da9ffa8a405fc951a9e54147" to "Pokémon Quetzal",
         "6806c7146aff457a4be85ef2030e9ddcdb17b665" to "Pokémon Quetzal",
         "b6542c7dbb40cf6ea96714a7a0e30cb468102861" to "Pokémon Quetzal",
         "f1035f615c13c46394a18fa99181c24c3cd15e12" to "Moemon Quetzal",
