@@ -84,7 +84,7 @@ import com.pokedaisy.app.companion.data.pocketLabel
 import com.pokedaisy.app.companion.data.pocketOrder
 import com.pokedaisy.app.companion.ui.theme.pixelFontFamily
 import com.pokedaisy.app.companion.data.isGameBoyGame
-import com.pokedaisy.app.companion.data.isCrystalFamily
+import com.pokedaisy.app.companion.data.isGen2
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -119,7 +119,7 @@ internal fun bagItemName(id: Int): String = gameItemNames(activeGame)?.get(id) ?
 
 private fun capsBagLabels(game: GameKind): Boolean =
     gameItemNames(game) != null || game == GameKind.HEART_AND_SOUL || game == GameKind.ORANGE_ISLANDS ||
-        (game.isCrystalFamily && game != GameKind.PRISM)   // Prism's bag is mixed case ("Poké Ball")
+        (game.isGen2 && game != GameKind.PRISM)   // Prism's bag is mixed case ("Poké Ball")
 
 /** The FAVORITES tab's id among the pocket tabs (pocket ids are 0 and up): the starred items. */
 private const val FAVORITES_TAB = -1
@@ -493,6 +493,17 @@ private val CrystalClearBag = YellowBag.copy(
     backdrop = Color(0xFFFF0000) to Color(0xFFAD0000),
 )
 
+/** Pokémon Red / Blue: Yellow's ITEM window in the Super Game Boy's white and black (sampled headless). */
+private val RedBlueBag = YellowBag.copy(
+    panelLayers = listOf(Color(0xFF181010) to 1, Color(0xFFFFEFFF) to 1, Color(0xFF181010) to 1, Color(0xFFFFEFFF) to 1),
+    fill = Color(0xFFFFEFFF),
+    text = Color(0xFF181010), tabText = Color(0xFF181010), tabUnderline = Color(0xFF181010),
+    descLayers = listOf(Color(0xFF181010) to 1, Color(0xFFFFEFFF) to 1, Color(0xFF181010) to 1), descFill = Color(0xFFFFEFFF),
+    descText = Color(0xFF181010),
+    iconBox = Color(0xFFFFEFFF), iconBoxEdge = Color(0xFF181010),
+    backdrop = Color(0xFFFFEFFF) to Color(0xFFFFEFFF),
+)
+
 /** Whether [ItemsBackdrop] replaces the party backdrop behind this game's Items tab. */
 fun hasItemsBackdrop(game: GameKind): Boolean = bagPaletteFor(game).backdrop != null
 
@@ -556,7 +567,9 @@ private fun lightBagFor(game: GameKind): BagPalette = when (game) {
     GameKind.ROWE -> RoweBag
     GameKind.SOULGOLD -> SoulGoldBag
     GameKind.YELLOW -> YellowBag
-    GameKind.CRYSTAL -> CrystalBag
+    GameKind.RED, GameKind.BLUE -> RedBlueBag
+    // Gold's and Silver's PACK is Crystal's, pixel for pixel (sampled headless in both).
+    GameKind.CRYSTAL, GameKind.GOLD, GameKind.SILVER -> CrystalBag
     GameKind.CRYSTAL_CLEAR -> CrystalClearBag
     // Prism's PACK: Crystal's blue checks and text boxes.
     GameKind.PRISM -> CrystalBag

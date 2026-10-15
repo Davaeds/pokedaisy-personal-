@@ -1,0 +1,13 @@
+# Pokémon Gold / Silver (USA, Europe) from a save: the intro, the title, CONTINUE and the save summary, then on the
+# field (capture_fixture_headless.sh gold --script native-capture/boot/gold.txt). Silver takes the same timing.
+# Gen 2 can miss a one-frame press outside its menus: START and A are held 3 frames. Three A's (Crystal's script has
+# a fourth): the third already leaves the summary for the field, so a fourth would be a press on the field.
+wait 600
+hold START 3
+wait 200
+hold A 3
+wait 120
+hold A 3
+wait 120
+hold A 3
+wait 200

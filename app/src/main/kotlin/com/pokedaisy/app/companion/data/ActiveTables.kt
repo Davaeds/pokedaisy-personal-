@@ -25,7 +25,8 @@ package com.pokedaisy.app.companion.data
 // hacks above, via NATIVE_HEART_AND_SOUL/NATIVE_LAZARUS/NATIVE_ROWE in
 // NativeReader.kt. Heart and Soul and Lazarus now have their own
 // ROM-extracted tables (*Hns.kt / *Lazarus.kt, scripts/gen_expansion_tables.py).
-enum class GameKind { FIRERED, EMERALD, UNBOUND, GAIA, RADICAL_RED, ODYSSEY, HEART_AND_SOUL, LAZARUS, ROWE, EMERALD_ROGUE, AMETHYST, EMERALD_SEAGLASS, CELIA, TMT2, SOULGOLD, YELLOW, GLAZED, IMPERIUM, QUETZAL, ORANGE_ISLANDS, RECHARGED_YELLOW, MARIOMON, SWORD_SHIELD, GS_CHRONICLES, CRYSTAL, CRYSTAL_CLEAR, PRISM }
+enum class GameKind { FIRERED, EMERALD, UNBOUND, GAIA, RADICAL_RED, ODYSSEY, HEART_AND_SOUL, LAZARUS, ROWE, EMERALD_ROGUE, AMETHYST, EMERALD_SEAGLASS, CELIA, TMT2, SOULGOLD, YELLOW, GLAZED, IMPERIUM, QUETZAL, ORANGE_ISLANDS, RECHARGED_YELLOW, MARIOMON, SWORD_SHIELD, GS_CHRONICLES, CRYSTAL, CRYSTAL_CLEAR, PRISM,
+    GOLD, SILVER, RED, BLUE }
 
 @Volatile
 var activeGame: GameKind = GameKind.FIRERED
@@ -67,12 +68,16 @@ private inline val orangeIslands get() = activeGame == GameKind.ORANGE_ISLANDS
 // and type chart (its generator checks them against FireRed's bytes), its own names and items
 // (gen_recharged_yellow_tables.py) and FireRed's map sections under its own names.
 private inline val rechargedYellow get() = activeGame == GameKind.RECHARGED_YELLOW
-// Pokémon Yellow (Game Boy): Gen 1's own tables (gen_gen1_tables.py), keyed by National Dex number.
-private inline val yellow get() = activeGame == GameKind.YELLOW
+// Pokémon Yellow (Game Boy): Gen 1's own tables (gen_gen1_tables.py), keyed by National Dex number. Red and Blue use
+// them too: every table the generator reads comes out as Yellow's in both (gen_gen1_tables.py red / blue checks it).
+private inline val yellow get() = activeGame.isGen1
+private inline val redBlue get() = activeGame.isRedBlue
 // Pokémon Crystal (Game Boy Color): Gen 2's own tables (gen_gen2_tables.py), keyed by National Dex number. Crystal
 // Clear kept its species, moves and types (the generator checks them against Crystal's); its items and places are its own.
-private inline val crystal get() = activeGame.isCrystalFamily
+// Gold and Silver kept the same species, moves and types too; their items and landmarks are their own (one table for both).
+private inline val crystal get() = activeGame.isGen2
 private inline val crystalClear get() = activeGame == GameKind.CRYSTAL_CLEAR
+private inline val goldSilver get() = activeGame.isGoldSilver
 // Pokémon Prism (a Crystal-engine hack, its own Naljo / Rijon): every table its own, keyed by its own species ids
 // (not Dex numbers), read from the ROM by gen_gen2_tables.py prism. Checked before [crystal], which it also is.
 private inline val prism get() = activeGame == GameKind.PRISM
@@ -159,7 +164,7 @@ fun emeraldHackFor(cfg: NativeConfig?): HackText? = when {
  * FireRed-engine hack but the ones that kept FireRed's (FireRed itself carries its title-cased names). */
 val readsRomRegionMap: Boolean get() = when (activeGame) {
     // Recharged Yellow is a rebuild: FireRed 1.0's literal pools RomRegionMap follows aren't its code.
-    GameKind.YELLOW, GameKind.RECHARGED_YELLOW -> false
+    GameKind.YELLOW, GameKind.RED, GameKind.BLUE, GameKind.RECHARGED_YELLOW -> false
     GameKind.FIRERED -> runningFireRedHack?.ownRegionMap == true
     else -> true
 }
@@ -252,6 +257,7 @@ val activeItemNames: Map<Int, String> get() = localText?.items ?: when {
     yellow -> itemNamesYellow
     prism -> itemNamesPrism
     crystalClear -> itemNamesCrystalClear
+    goldSilver -> itemNamesGoldSilver
     crystal -> itemNamesCrystal
     unbound -> itemNamesUnbound
     amethyst -> if (amethystV141) itemNamesAmethystV141 else itemNamesAmethyst
@@ -349,6 +355,7 @@ val activeMapSecData: Map<Int, MapSecInfo> get() = localText?.mapSecData ?: when
     yellow -> mapSecDataYellow
     prism -> mapSecDataPrism
     crystalClear -> mapSecDataCrystalClear
+    goldSilver -> mapSecDataGoldSilver
     crystal -> mapSecDataCrystal
     unbound -> mapSecDataUnbound
     // Seaglass keeps vanilla Hoenn mapsec ids (0x00 = Littleroot, confirmed live).
@@ -444,9 +451,11 @@ private val regionMapImagesSeaglass = arrayOf("seaglass")
 private val regionMapImagesRechargedEmerald = arrayOf("recharged_emerald")
 
 val activeRegionMapImages: Array<String> get() = when {
+    redBlue -> arrayOf(Gen1Art.RED_BLUE_TOWN_MAP_NAME)   // Red's / Blue's town map, in their own colours (Gen1Art)
     yellow -> arrayOf("yellow")   // its town map, rebuilt from the ROM (Gen1Art)
     prism -> Gen2Art.PRISM_TOWN_MAPS   // Naljo, Rijon, Johto, Kanto, Sevii, Tunod
     crystalClear -> Gen2Art.CRYSTAL_CLEAR_TOWN_MAPS
+    goldSilver -> Gen2Art.GOLD_SILVER_TOWN_MAPS
     crystal -> Gen2Art.CRYSTAL_TOWN_MAPS   // the POKéGEAR's Johto and Kanto maps, rebuilt from the ROM (Gen2Art)
     unbound -> regionMapImagesUnbound
     seaglass -> regionMapImagesSeaglass
@@ -475,9 +484,11 @@ val activeRegionMapImages: Array<String> get() = when {
  */
 val activeMonSpriteDir: String get() = when {
     unbound -> "pokemon-unbound"
+    redBlue -> Gen1Art.RED_BLUE_ICONS
     yellow -> Gen1Art.YELLOW_ICONS   // its own party icons, rebuilt from the ROM
     prism -> Gen2Art.PRISM_ICONS
     crystalClear -> Gen2Art.CRYSTAL_CLEAR_ICONS
+    goldSilver -> Gen2Art.GOLD_SILVER_ICONS
     crystal -> Gen2Art.CRYSTAL_ICONS
     else -> "pokemon"
 }
@@ -507,6 +518,8 @@ fun GameKind.displayName(): String = when (this) {
     GameKind.TMT2 -> "Too Many Types 2"
     GameKind.SOULGOLD -> "Pokémon SoulGold"
     GameKind.YELLOW -> "Pokémon Yellow"
+    GameKind.RED -> "Pokémon Red"
+    GameKind.BLUE -> "Pokémon Blue"
     GameKind.GLAZED -> "Pokémon Glazed"
     GameKind.IMPERIUM -> "Emerald Imperium"
     GameKind.QUETZAL -> "Pokémon Quetzal"
@@ -518,4 +531,6 @@ fun GameKind.displayName(): String = when (this) {
     GameKind.CRYSTAL -> "Pokémon Crystal"
     GameKind.CRYSTAL_CLEAR -> "Pokémon Crystal Clear"
     GameKind.PRISM -> "Pokémon Prism"
+    GameKind.GOLD -> "Pokémon Gold"
+    GameKind.SILVER -> "Pokémon Silver"
 }

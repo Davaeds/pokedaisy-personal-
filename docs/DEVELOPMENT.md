@@ -267,7 +267,9 @@ working · — = not attempted.
 | **Pokémon Recharged Emerald** v2.2.5, v2.2.8, Rebalanced v2.2.8 | Emerald-based (BPEE, **16 MB**), a full pokeemerald rebuild with modern gcc by Recharged Yellow's author, no source | ✅ (`recharged_emerald_v225` / `recharged_emerald` / `recharged_emerald_rebalanced`: the user's retail Emerald save rewritten into its save layout by `scripts/convert_save_recharged_emerald.py`) | ✅ scripted wild battles (`*_battle`) captured headless; each build's five handlers read live in their menus, the one-press picks and the POKéMON switch checked on each | ✅ 6 pockets (a Medicine pocket folded into Items), Emerald's encryption key | ✅ Emerald's map sections, boxes and cursor grid under its own redrawn Hoenn and player heads (`regionmap/recharged_emerald.png`, `player_*_re`, from its ROM by RomArt) | ✅ mon + item icons (the GF ROM header's icon tables; item icons by MASTER BALL's {tiles, palette} pair) | ✅ Hoenn (202) + National, Emerald's entry shape in its casing, SEEN 108 / OWN 28 on the converted save | `NATIVE_RECHARGED_EMERALD_V2_2_5` / `_V2_2_8` / `_REBALANCED_V2_2_8`, `GameKind.EMERALD` with `ActiveTables.emeraldHack`. See "Pokémon Recharged Emerald" below. |
 | **Pokémon Yellow** (Game Boy, USA/Europe) | Gen 1 retail cart (sha1 `cc7d0326…`, = pret/pokeyellow's build) | ✅ (`Gen1Reader`: big-endian party_struct, internal species → Dex via PokedexOrder) | ⚠️ both battlers (wBattleMon / wEnemyMon) + a trainer's party - headless scripted wild battle (`yellow_battle`); no touch controls | ✅ one list, game order | ✅ its own town map from the ROM (`Gen1Art`: CompressedMap RLE) + the place's cell | ✅ its party icons from the ROM (MonPartySpritePointers, GBC colours) | — | Runs on mGBA's GB core (M_CORE_GB, SGB borders off). Tables from `scripts/gen_gen1_tables.py yellow` (pokeyellow.sym addresses); the companion sets its text in the game's own font (`Gen1Art` → `BitmapTtf`) and Gen 1 windows (`OptionColors` while YELLOW). |
 | **Pokémon Yellow** (Game Boy: Gelbe Edition, Version Jaune, Versione Gialla, Edición Amarilla) | the German / French / Italian / Spanish carts (sha1 `42f3714e…` / `0aceec0e…` / `05bb8e99…` / `1dc24203…`): English's code with their own text | ✅ (`GEN1_YELLOW_DE` .. `_ES`: English's RAM + 5 bytes from wBattleMon up, the same in all four; the English save loads) | ⚠️ as English (`yellow_<l>_battle*`); the battle menu's cursor columns are per language (`battleMenuLeftX` / `RightX`) | ✅ | ✅ English's town map (the same pixels), their own place names | ✅ English's icons, their own font (`Gen1Charset`) | ✅ their own text, metric (`Gen1DexTables.metric`) | Addresses from `scripts/port_gen1.py` (English's code matched in theirs, every table checked by contents); names from `scripts/gen_gen1_tables.py yellow_<l>` (`YellowText<Lang>Gen.kt`, a `GameText` by the cart's CGB code APSD / APSF / APSI / APSS). No item descriptions (ours are English). |
+| **Pokémon Red / Blue** (Game Boy, USA/Europe) | Gen 1 retail carts (sha1 `ea9bcae6…` / `d7037c83…`, = pret/pokered's `pokered` / `pokeblue` builds; Blue checked on the build) | ✅ (`GEN1_RED` / `GEN1_BLUE`: Yellow's reader, Yellow's RAM + 1 from wOnSGB up; `red` / `blue`: the user's Red save in both) | ⚠️ both battlers from a wild battle (`red_battle`, `blue_battle`); touch controls and the POKéMON switch as Yellow's (`red_battle_*`) | ✅ one list, game order | ✅ its town map from the ROM in the SGB's colours | ✅ its party icons from the ROM (14 icon loads a frame, no PIKACHU shape) | ✅ its own pages (Yellow rewrote them), SGB palettes, MEW apart in bank 1 | `GameKind.RED` / `.BLUE`. Yellow's tables (`gen_gen1_tables.py red` / `blue` check every table equals Yellow's). See below. |
 | **Pokémon Crystal** (Game Boy Color: USA rev 0, USA/Europe rev 1, Australia) | Gen 2 retail carts (sha1 `f4cd194b…` / `f2f52230…` / `a0fc810f…`, = pret/pokecrystal's `crystal` / `crystal11` / `crystal_au` builds) | ✅ (`Gen2Reader`: big-endian 48-byte party_struct, species = Dex number, held item, gender from the DVs; `crystal` / `crystal_rev0` / `crystal_au`: one save in all three) | ⚠️ both battlers (wBattleMon / wEnemyMon, 32-byte battle_struct with its types) from a wild battle (`crystal_battle`); a trainer's party (wOTPartyMons) is read but no trainer battle was captured. Touch controls: the 2D menu's cursor (`readGen2BattleInput`), steered like Yellow's; a move and RUN checked headless | ✅ four pockets (ITEMS, BALLS, KEY ITEMS, the TM / HM quantities) | ✅ landmarks: each map header's landmark by (group, number), the POKéGEAR's Johto and Kanto maps from the ROM (`Gen2Art`) | ✅ its party icons from the ROM (IconPointers, PartyMenuOBPals), the held-item / Mail marks | ✅ 251, national order; SEEN 2 / OWN 2 = the game's own POKéDEX (flag poked on to look) | Runs on mGBA's GB core. Tables from `scripts/gen_gen2_tables.py crystal` (pokecrystal.sym addresses, the three releases checked byte for byte). WRAM bank 1 is read by bank (`wramx`), see below. |
+| **Pokémon Gold / Silver** (Game Boy Color, USA/Europe) | Gen 2 retail carts (sha1 `d8b8a360…` / `49b163f7…`, = pret/pokegold's `pokegold` / `pokesilver` builds) | ✅ Crystal's struct at their own RAM (`GEN2_GOLD` / `GEN2_SILVER`; `gold` / `silver`: one save played headless in Gold, loaded in both) | ⚠️ both battlers from wild battles (`gold_battle`, `silver_battle`) and a trainer's six (`gold_trainer`); touch controls and the POKéMON switch on Crystal's menus (`gold_battle_*`) | ✅ Crystal's four pockets, their own item names | ✅ their own 95 landmarks and maps, the POKéGEAR's Johto / Kanto maps (`Gen2Art`), the boy on them | ✅ their party icons from the ROM, Crystal's colours | ✅ 251, each version's own pages | `GameKind.GOLD` / `.SILVER`. Tables from `scripts/gen_gen2_tables.py gold_silver` (species, moves, types and chart checked equal to Crystal's with `--base`). See below. |
 | **Pokémon Crystal Clear** v2.5.11, v2.6.0 (each Standard Colors and Color Filter) | Crystal-based (GBC, 2 MB), ShockSlayer's open-world hack: pokecrystal grown and rebuilt, no source or symbols (sha1 `a1c4da6b…` / `6fc677bf…` / `84d5c492…` / `534876e4…`) | ✅ Crystal's struct (`crystal_clear` / `crystal_clear_v2_5_11`: one save made headless in v2.6.0, loaded in all four builds) | ⚠️ both battlers and a trainer's team (`crystal_clear_trainer`: MOM's six), wild battles in both versions; touch controls on Crystal's 2D menu (a move and RUN checked headless in both) | ✅ Crystal's four pockets, its own item names | ✅ its own 117 landmarks and 488 maps from the ROM, its POKéGEAR Johto / Kanto maps (`Gen2Art`); no player head (the player is customised) | ✅ its own per-species icons (LZ, each in its colours) | ✅ 251, its dex pages (text packed with a dictionary) | `GEN2_CRYSTAL_CLEAR_V2_6_0` / `_V2_5_11`, `GameKind.CRYSTAL_CLEAR`. Tables from `scripts/gen_gen2_tables.py crystal_clear` (species, moves, types and chart checked equal to Crystal's with `--base`). See below. |
 
 **Pokémon Recharged Yellow** (Jaizu; four releases, `NATIVE_RECHARGED_YELLOW_*`) is pokefirered
@@ -345,6 +347,29 @@ found, and how:
 - **Not done**: EXPAND (its object events are expansion's layout and its overworld sprites load their tiles at run time:
   gSprites' image pointers are null, which WIDE's far-off objects rely on), FLY and the CARD. FF music isn't checked on it.
 
+**Pokémon Red and Blue** (Game Boy; `GEN1_RED` / `GEN1_BLUE`, `GameKind.RED` / `.BLUE`): pret/pokered builds both carts
+byte for byte (`pokered.gbc` / `pokeblue.gbc`, its roms.sha1), and the two keep every RAM address and every table the
+companion reads at the same place with the same bytes; the user has a Red cart, Blue is checked on the build. What differs
+from Yellow:
+- **RAM**: Yellow's plus one byte from wOnSGB (CF1B) up; the menus (wTopMenuItemY, wMoveMenuType, wPlayerMonNumber) and
+  wTileMap below it, and the audio RAM, didn't move. The battle menu's cursor columns are Yellow's (9 / 15).
+- **Tables**: every one `gen_gen1_tables.py` reads (species order, names, types, moves, items, chart, maps) comes out as
+  Yellow's (`red` / `blue` check it and write nothing), so the app keeps one set. Yellow's hand-written item text fits them.
+- **A Super Game Boy**: an SGB-enhanced cart that isn't a Color one runs as a Super Game Boy in mGBA (model 0x20), so its
+  colours are the SGB palettes the game sends (pokered's data/sgb): the windows' white is 0xFFEFFF, black 0x181010
+  (`OptionColors.gbPaper` / `gbInk`), the party menu PAL_MEWMON through OBP0 and PAL_GREENBAR / YELLOWBAR / REDBAR, the town
+  map PAL_TOWNMAP (its sprite through OBP0: the player is white / light blue / black) - all sampled headless.
+- **Art** (`Gen1Art.RED` / `.BLUE`, one set of files): pokered's addresses; 14 icon loads a frame (no PIKACHU shape).
+- **DEX**: their own pages (Yellow rewrote the text) and SGB palettes (`SuperPalettes`, the same format as CGBBasePalettes);
+  MEW was added last, so its base stats (`MewBaseStats`) and pics sit in bank 1 (`Gen1DexTables.mewBaseStats`).
+- **STEADY FF music**: Yellow's sound engine and audio RAM, their own PlayMusic (0x23A1) and songs (bank 0x1F's ids from
+  INTRO_BATTLE on are one lower; no bank 0x20). Bank 0 holds no `18 FE` to park on, so the render core parks on WRAM:
+  `pkRenderGbPark` writes `jr @` at 0xCD39 (wUnusedSimulatedJoypadStatesMask, written by the main loop, never read) first
+  (mgba_dump's `gbpark` too). Route 1 loops at 22.9 s, the wild battle at 31.3 s after 13.1 s: Yellow's numbers.
+- **Saves**: the user's Red save (Yellow's team, Nelson) loads in Blue, but its map's tileset pointers are Red's, which
+  Blue keeps 0x10 lower, so Blue draws that Pokémon Center as garbage (`native-capture/boot/blue.txt` pokes Blue's pointers
+  in for the fixtures). Not the companion's concern: what it reads is right either way.
+
 **Pokémon Crystal** (Game Boy Color; `GEN2_CRYSTAL`, `GameKind.CRYSTAL`): pret/pokecrystal builds every English
 release byte for byte (`make crystal crystal11 crystal_au` with rgbds 1.0.4, its roms.sha1), and the three keep every RAM
 address and every table the companion reads at the same place (their .sym files differ only in code). What's Gen 2's own:
@@ -369,6 +394,26 @@ address and every table the companion reads at the same place (their .sym files 
   `ItemDescriptions`, a TM's from its move (`TMHMMoves` -> `MoveDescriptions`), as PrintItemDescription does.
 - **Not done**: GUIDE, STEADY FF music (Gen 2's sound engine isn't Gen 1's: STEADY plays the game's audio sped up), the
   POKéMON switch, a trainer-battle fixture, the TRAINER CARD.
+
+**Pokémon Gold and Silver** (Game Boy Color; `GEN2_GOLD` / `GEN2_SILVER`, `GameKind.GOLD` / `.SILVER`): pret/pokegold
+builds both carts byte for byte (`pokegold.gbc` / `pokesilver.gbc`, its roms.sha1), and the two keep every RAM address at the
+same place (their .sym files agree on all of WRAM / HRAM). What differs from Crystal:
+- **RAM**: every address its own (pokegold.sym), the structs and menus Crystal's; wBattleMon, wCurOTMon and wCurBattleMon sit
+  in bank 0. No gender choice (`playerGender = -1`: the boy).
+- **Tables**: one set for both (`gen_gen2_tables.py gold_silver`, the two ROMs checked byte for byte); species, moves, types
+  and chart are Crystal's (`--base`), items Crystal's less the four Crystal filled in (CLEAR BELL, GS BALL, BLUE CARD, EGG
+  TICKET), landmarks one fewer (no BATTLE TOWER: from ROUTE 40 on, one id below Crystal's).
+- **Art** (`Gen2Art.GOLD` / `.SILVER`, one set of files): Crystal's pixels from their own addresses (Silver's icon tables sit
+  0x1A bytes before Gold's); the party menu and PACK are Crystal's colours, pixel for pixel in both versions (sampled headless).
+- **DEX**: each version's own pages (`POKEDEX_GOLD` / `POKEDEX_SILVER`, two objects so a cache never crosses them).
+  GetDexEntryPointer computes the page's bank (64 species a bank from 68:4000: `Gen2DexTables.dexEntryFirstBank`), and
+  FixPicBank is a table of {stored, real} bank pairs (`picBankFixes`), not Crystal's PicsBanks index.
+- **A new game, played headless** in Gold (the user had none): GOLD, CYNDAQUIL, the aide's POTION, a PIDGEY caught on ROUTE 29
+  with Poké Balls poked into the bag, a BERRY poked onto CYNDAQUIL; the same file loads in Silver. mgba_dump's `loadstate` left
+  this cart's PACK listing "?" items (RAM identical), so the save and fixtures come from single runs fed commands live. Gold's
+  hROMBank is FF9F (`gbfar` writes Crystal's FF9D) and its FarCall takes a = bank, hl = address (`gbinject`'s trampoline is
+  Crystal's): `gold_trainer`'s README has the trainer battle's workaround (a 15-byte trampoline poked over it).
+- **Not done**: GUIDE, STEADY FF music, the TRAINER CARD (as Crystal).
 
 **Pokémon Crystal Clear** (Game Boy Color; ShockSlayer's open-world hack of Crystal; `GameKind.CRYSTAL_CLEAR`,
 `GEN2_CRYSTAL_CLEAR_V2_6_0` / `_V2_5_11`): v2.5.11 and v2.6.0, each released as a Standard Colors and a Color Filter build.

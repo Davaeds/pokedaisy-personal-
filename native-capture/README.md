@@ -58,7 +58,7 @@ One command per line:
 | `memcopy SRC DST LEN` | Copy LEN bytes of RAM - e.g. a one-Pokémon save's lead into the empty party slots (then `poke8` the party count) |
 | `memsnap ADDR LEN` / `memrestore` | Copy LEN bytes (up to 256) and write them back later - how FieldItems' dry run on Emerald (an item's effect called on a party Pokémon, its 100 bytes put back) was checked |
 | `park ADDR` | Park the main loop on a Thumb `b .` at ADDR once the VBlank IRQ is fully on (the app's `pkRenderPark`) |
-| `gbpark ADDR` | Game Boy: park the main loop on a `jr @` at ADDR once interrupts are on (`pkRenderGbPark`) |
+| `gbpark ADDR` | Game Boy: park the main loop on a `jr @` at ADDR once interrupts are on (`pkRenderGbPark`); an ADDR in WRAM gets the `jr @` (18 FE) written there first - Red / Blue's bank 0 has none, so they park on 0xCD39 |
 | `gbcall FN A C RET` | Game Boy: call FN with A / C until it returns to RET, e.g. Yellow's PlayMusic `gbcall 0x2211 240 8 0x1757` (`pkRenderGbCall`) |
 | `gbloop N` | Game Boy: run N frames and report where Gen 1's music channel state first repeats (`Gen1LoopWatch`) |
 | `gbfar BANK ADDR A BC DE HL` | Game Boy (all hex): call the function at BANK:ADDR between frames, the bank switched in and written to hROMBank (FF9D, the pokecrystal family's) so its own far calls come back, WRAM bank 1 at D000; run to its return, every register put back, and print A. Interrupts stay off, so nothing that waits for a frame returns - e.g. Prism's TryAddMonToParty (`gbfar 3c 4000 0 0 0 0` after `gbpoke`s of the species, level and wMonType) or ReceiveItem (`gbfar 00 12e5 0 0 0 D866`) |

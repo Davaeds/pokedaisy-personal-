@@ -11,7 +11,7 @@ import java.security.MessageDigest
  * screen's own pixels, so a landmark's coordinates land where the game puts its icon) and the player
  * (CHRIS / KRIS) as the map shows them.
  *
- * Addresses are pret/pokecrystal's symbols for Crystal and their moved twins in Crystal Clear and Prism
+ * Addresses are pret/pokecrystal's symbols for Crystal, pret/pokegold's for Gold and Silver, and their moved twins in Crystal Clear and Prism
  * ([Gen2ArtTables]); the ROM is checked by SHA1 first, so another cart never gets art cut from the wrong bytes.
  * Each game writes its own paths; the builds of one game (Crystal Clear's Standard Colors / Color Filter, its
  * two versions) share them, and the art is rebuilt whenever another of its builds starts.
@@ -30,6 +30,13 @@ object Gen2Art {
     /** The player on the town map, by gender (MapScreen's head assets). */
     const val CRYSTAL_PLAYER = "player_chris"
     const val CRYSTAL_PLAYER_F = "player_kris"
+
+    const val GOLD_SILVER_FONT = "gen2/gold-silver-font.ttf"
+    const val GOLD_SILVER_ICONS = "gen2/gold_silver/pokemon"
+    const val GOLD_SILVER_HOLD_ICONS = "gen2/gold_silver/hold_icons.png"
+    val GOLD_SILVER_TOWN_MAPS = arrayOf("gold_silver_johto", "gold_silver_kanto")
+    /** The player (the boy: no gender choice before Crystal) on the town map. */
+    const val GOLD_SILVER_PLAYER = "player_gold_silver"
 
     const val CRYSTAL_CLEAR_FONT = "gen2/crystal-clear-font.ttf"
     const val CRYSTAL_CLEAR_ICONS = "gen2/crystal_clear/pokemon"
@@ -108,6 +115,42 @@ object Gen2Art {
     )
 
     /**
+     * Gold (USA, Europe): pret/pokegold's symbols. Its art is Silver's byte for byte (one family: the paths are shared)
+     * and only the party icons' tables sit elsewhere in Silver; the icons, town maps and player are Crystal's pixels,
+     * the font its own. The player is the boy alone, in the day palettes' red as Crystal draws CHRIS.
+     */
+    val GOLD = Gen2ArtTables(
+        name = "gold_silver",
+        sha1s = setOf(TelemetrySampler.GOLD_SHA1),
+        font = 0x3E to 0x42F2,
+        fontPath = GOLD_SILVER_FONT,
+        icons = 0x23 to 0x6A70,
+        monMenuIcons = 0x23 to 0x6975,
+        eggIcon = 0x1C,
+        heldItemIcons = 0x23 to 0x68DB,
+        partyMenuObPals = 0x02 to 0x7AC6,
+        iconsDir = GOLD_SILVER_ICONS,
+        holdIconsPath = GOLD_SILVER_HOLD_ICONS,
+        townMapGfx = 0x3E to 0x4C92,
+        townMaps = listOf(0x24 to 0x5F52, 0x24 to 0x60BB),
+        townMapPalMap = 0x24 to 0x5EAC,
+        pokegearPals = 0x02 to 0x7B6E,
+        townMapPaths = GOLD_SILVER_TOWN_MAPS.map { "regionmap/$it.png" },
+        playerSprites = listOf(0x30 to 0x4000),
+        objectPals = 0x02 to 0x78AE,
+        playerPaths = listOf("regionmap/$GOLD_SILVER_PLAYER.png"),
+    )
+
+    /** Silver: Gold's art, the party icons' tables 0x1A bytes earlier. */
+    val SILVER = GOLD.let {
+        Gen2ArtTables(
+            it.name, setOf(TelemetrySampler.SILVER_SHA1), it.font, it.fontPath, 0x23 to 0x6A56, 0x23 to 0x695B, it.eggIcon,
+            0x23 to 0x68C1, it.partyMenuObPals, it.iconsDir, it.holdIconsPath, it.townMapGfx, it.townMaps, it.townMapPalMap,
+            it.pokegearPals, it.townMapPaths, it.playerSprites, it.objectPals, it.playerPaths,
+        )
+    }
+
+    /**
      * Crystal Clear v2.6.0, both builds: Crystal's art moved (the town maps' and font's bytes where Crystal has them,
      * found by their contents; the icons and their palettes by the party menu's code, 23:6F3C). Its POKéGEAR map is the
      * RED gear's, the default. No player: the hack's player is customised (model, skin, colours), so it's left off.
@@ -179,7 +222,7 @@ object Gen2Art {
         townMapsLz = true,
         townMapPalCount = 8,
     )
-    private val GAMES = listOf(CRYSTAL, CRYSTAL_CLEAR_V2_6_0, CRYSTAL_CLEAR_V2_5_11, PRISM)
+    private val GAMES = listOf(CRYSTAL, GOLD, SILVER, CRYSTAL_CLEAR_V2_6_0, CRYSTAL_CLEAR_V2_5_11, PRISM)
 
     /** The game's text characters for its font tiles 0x80-0xFF (constants/charmap.asm) the companion prints. */
     private val CHARS: Map<Int, Char> = buildMap {

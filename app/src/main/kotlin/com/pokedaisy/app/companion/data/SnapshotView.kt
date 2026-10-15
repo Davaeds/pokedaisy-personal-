@@ -60,12 +60,12 @@ data class ExpProgress(val total: Long, val levelStart: Long, val nextLevel: Lon
 fun expProgress(species: Int, level: Int, exp: Long?): ExpProgress? {
     if (exp == null || level !in 1..100) return null
     // Gen 1's growth rates and curves are Gen 3's for the first 151 (Yellow's species are Dex numbers here).
-    if (activeGame != GameKind.FIRERED && activeGame != GameKind.EMERALD && activeGame != GameKind.YELLOW &&
+    if (activeGame != GameKind.FIRERED && activeGame != GameKind.EMERALD && !activeGame.isGen1 &&
         activeGame != GameKind.ORANGE_ISLANDS && activeGame != GameKind.RECHARGED_YELLOW &&
         activeGame != GameKind.MARIOMON &&
         // Crystal's growth rates for its 251 are Gen 3's, byte for byte, and its curves the same formulas (CrystalDecodeTest);
-        // Crystal Clear kept Crystal's base data (gen_gen2_tables.py checks it).
-        !activeGame.isCrystalFamily) return null
+        // Crystal Clear, Gold and Silver kept Crystal's base data (gen_gen2_tables.py checks it).
+        !activeGame.isGen2) return null
     // Prism's species are its own ids, with its own growth rates (BaseData): the four Gen 3 shares by id (0 medium
     // fast, 3 medium slow, 4 fast, 5 slow); its others (1, 2, 6, 7) have no curve here.
     if (activeGame == GameKind.PRISM) {

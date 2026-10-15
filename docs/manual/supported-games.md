@@ -18,7 +18,9 @@ Any GBA or Game Boy game plays in PokeDaisy. "Supported" is about the companion 
 
 **Game Boy and Game Boy Color:**
 
+- Pokémon Red and Blue: the USA / Europe releases, drawn in the game's own look: the colours they show on a Super Game Boy.
 - Pokémon Yellow: the USA / Europe release and the German, French, Italian and Spanish ones, drawn in the game's own look. A German, French, Italian or Spanish copy shows its own names and Pokédex text. Item descriptions are only shown in the English one, as these games have none of their own.
+- Pokémon Gold and Silver: the USA / Europe releases, drawn in the game's own look.
 - Pokémon Crystal: the USA release, the USA / Europe revision 1 and the Australian one, drawn in the game's own look.
 - Pokémon Crystal Clear, the open world hack of Crystal: versions 2.5.11 and 2.6.0, each in its Standard Colors and its Color Filter build, drawn in the game's own look.
 - Pokémon Prism, built on Crystal with regions of its own: version 0.95 build 254 (Hotfix 5), drawn in the game's own look, with its own Pokédex.

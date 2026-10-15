@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.pokedaisy.app.companion.data.GameKind
+import com.pokedaisy.app.companion.data.isGameBoyGame
 import com.pokedaisy.app.companion.data.MapTiles
 import com.pokedaisy.app.companion.data.PlayerMapTile
 import com.pokedaisy.app.companion.data.RegionMapModel
@@ -253,9 +254,11 @@ internal enum class MapLabelStyle(val width: Int, val height: Int) {
         // Recharged Emerald redrew both heads for its map.
         EMERALD -> if (com.pokedaisy.app.companion.data.runningEmeraldHack != null) { if (gender == 1) "player_may_re" else "player_brendan_re" }
             else if (gender == 1) "player_may" else if (game == GameKind.MARIOMON) "player_mario" else "player_brendan"
-        // Red's standing sprite (Gen1Art), or Crystal's CHRIS / KRIS (Gen2Art), from the ROM.
+        // Red's standing sprite (Gen1Art), Crystal's CHRIS / KRIS or Gold / Silver's boy (Gen2Art), from the ROM.
         // Crystal Clear's player is the player's own (model, skin, colours): none drawn.
         GEN1 -> if (game == GameKind.CRYSTAL_CLEAR || game == GameKind.PRISM) null   // Prism's too (six models)
+            else if (game == GameKind.GOLD || game == GameKind.SILVER) com.pokedaisy.app.companion.data.Gen2Art.GOLD_SILVER_PLAYER
+            else if (game == GameKind.RED || game == GameKind.BLUE) "player_red_blue"
             else if (game != GameKind.CRYSTAL) "player_yellow"
             else if (gender == 1) com.pokedaisy.app.companion.data.Gen2Art.CRYSTAL_PLAYER_F
             else com.pokedaisy.app.companion.data.Gen2Art.CRYSTAL_PLAYER
@@ -270,8 +273,8 @@ internal enum class MapLabelStyle(val width: Int, val height: Int) {
 
         fun of(game: GameKind?) = when (game) {
             in EMERALD_FAMILY -> EMERALD
-            GameKind.YELLOW, GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM -> GEN1   // Crystal's POKéGEAR map: the same black name on light
-            else -> FIRERED
+            // Crystal's POKéGEAR map: the same black name on light.
+            else -> if (game.isGameBoyGame) GEN1 else FIRERED
         }
     }
 }
@@ -284,8 +287,8 @@ private fun regionName(images: Array<String>, i: Int): String = when (images[i])
     "sevii67" -> "SEVII 6-7"
     "crystal_johto" -> "JOHTO"
     "crystal_kanto" -> "KANTO"
-    "crystal_clear_johto" -> "JOHTO"
-    "crystal_clear_kanto" -> "KANTO"
+    "crystal_clear_johto", "gold_silver_johto" -> "JOHTO"
+    "crystal_clear_kanto", "gold_silver_kanto" -> "KANTO"
     "prism_naljo" -> "NALJO"
     "prism_rijon" -> "RIJON"
     "prism_johto" -> "JOHTO"

@@ -165,7 +165,8 @@ object MgbaCore {
      * to a safe moment (see the JNI side). */
     external fun pkRenderPark(spin: Long): Boolean
 
-    /** A Game Boy render core's [pkRenderPark]: the main loop goes to [spin] (a `jr @` in bank 0). */
+    /** A Game Boy render core's [pkRenderPark]: the main loop goes to [spin] (a `jr @` in bank 0, or a WRAM address the
+     * `jr @` is written to first). */
     external fun pkRenderGbPark(spin: Int): Boolean
 
     /** Calls the Game Boy render core's [fn] (bank 0) with A = [a], C = [c], until it returns to [ret]. */

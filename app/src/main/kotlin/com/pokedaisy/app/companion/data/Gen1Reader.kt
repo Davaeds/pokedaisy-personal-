@@ -52,7 +52,7 @@ data class Gen1Config(
     val playerMonNumber: Long = 0,
 )
 
-/** Pokémon Yellow (USA, Europe). Red/Blue's own addresses are one byte later (wPartyCount D163). */
+/** Pokémon Yellow (USA, Europe). Red / Blue's own addresses are one byte later ([GEN1_RED]). */
 val GEN1_YELLOW = Gen1Config(
     partyCount = 0xD162L,
     partyMons = 0xD16AL,
@@ -110,6 +110,40 @@ val GEN1_YELLOW_FR = GEN1_YELLOW_EUROPE.copy(language = 'F', gameCode = "APSF", 
 val GEN1_YELLOW_IT = GEN1_YELLOW_EUROPE.copy(language = 'I', gameCode = "APSI", pokedex = POKEDEX_YELLOW_IT,
     battleMenuLeftX = 7, battleMenuRightX = 14)
 val GEN1_YELLOW_ES = GEN1_YELLOW_EUROPE.copy(language = 'S', gameCode = "APSS", pokedex = POKEDEX_YELLOW_ES)
+
+/**
+ * Pokémon Red and Blue (USA, Europe): pret/pokered's symbols (its red and blue builds are both carts byte for byte, and
+ * pokered.sym / pokeblue.sym agree on every address here). Yellow's RAM plus one byte from wOnSGB (CF1B) up;
+ * the menus, tile map and wPlayerMonNumber below it didn't move. Checked on headless captures of the user's Red save,
+ * booted in both (the `red*` / `blue*` fixtures).
+ */
+val GEN1_RED = GEN1_YELLOW.copy(
+    partyCount = 0xD163L,
+    partyMons = 0xD16BL,
+    bagCount = 0xD31DL,
+    money = 0xD347L,
+    badges = 0xD356L,
+    curMap = 0xD35EL,
+    yCoord = 0xD361L,
+    xCoord = 0xD362L,
+    isInBattle = 0xD057L,
+    battleMon = 0xD014L,
+    enemyMon = 0xCFE5L,
+    enemyMonPartyPos = 0xCFE8L,
+    enemyPartyCount = 0xD89CL,
+    enemyMons = 0xD8A4L,
+    pokedex = POKEDEX_RED,
+    playTime = 0xDA41L,
+    partyMenuType = 0xD07DL,
+)
+/** Blue: Red's addresses (its own dex tables object, so a cache never mixes the two carts' pages). */
+val GEN1_BLUE = GEN1_RED.copy(pokedex = POKEDEX_BLUE)
+
+/** Pokémon Yellow, Red or Blue (every language): Gen 1's reader ([readGen1Telemetry]), tables and look. */
+val GameKind?.isGen1: Boolean get() = this == GameKind.YELLOW || isRedBlue
+
+/** Pokémon Red or Blue: Yellow's tables, their own art, dex pages and RAM ([GEN1_RED]). */
+val GameKind?.isRedBlue: Boolean get() = this == GameKind.RED || this == GameKind.BLUE
 
 const val GEN1_PARTY_MON_SIZE = 44
 const val GEN1_BATTLE_MON_SIZE = 29

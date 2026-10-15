@@ -74,7 +74,7 @@ import Pixel from './Pixel.astro';
     'retail-hack': (v) => `A ROM hack built on ${v.base}. Only the original game is supported so far.`,
     revision: (v, r) => `${v.base} revision ${r.rev} isn't supported yet.`,
     'other-game': (_, r) => `Not a game the companion reads (game code ${r.code}). PokeDaisy still plays it, without the companion.`,
-    gb: () => 'A Game Boy game the companion doesn\'t read yet. It reads Pokémon Yellow, Crystal, Crystal Clear and Prism so far.',
+    gb: () => 'A Game Boy game the companion doesn\'t read yet. It reads Pokémon Red, Blue, Yellow, Gold, Silver, Crystal, Crystal Clear and Prism so far.',
     '7z': () => 'Unpack the .7z first, then drop the ROM (or a .zip of it).',
     'empty-zip': () => 'There\'s no .gba, .gb or .gbc file in that zip.',
     'not-a-rom': () => 'This doesn\'t look like a GBA or Game Boy ROM.',

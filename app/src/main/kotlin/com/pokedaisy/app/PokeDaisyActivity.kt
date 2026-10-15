@@ -61,7 +61,8 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import com.pokedaisy.app.companion.data.isCrystalFamily
+import com.pokedaisy.app.companion.data.isGen2
+import com.pokedaisy.app.companion.data.isGen1
 
 /**
  * Phase 1 shell: full-screen GBA emulation with RetroArch-style savestate slots
@@ -577,8 +578,8 @@ class PokeDaisyActivity : Activity() {
      * stay out.
      */
     private fun switchAddrsFor(game: com.pokedaisy.app.companion.data.GameKind?): BattleInputController.SwitchAddrs? = when {
-        // Yellow and the Crystal family: their own party menus, read through GbPartySwitch (no gPartyMenu, no personality).
-        game == com.pokedaisy.app.companion.data.GameKind.YELLOW || game.isCrystalFamily ->
+        // Yellow and the Gen 2 games: their own party menus, read through GbPartySwitch (no gPartyMenu, no personality).
+        game.isGen1 || game.isGen2 ->
             telemetry.gbPartySwitch()?.let { BattleInputController.SwitchAddrs(gb = it) }
         game == com.pokedaisy.app.companion.data.GameKind.FIRERED && romCode == "BPRE" && romRev == 1 ->
             BattleInputController.SwitchAddrs(partyMenu = 0x0203B0A0L, party = 0x02024284L)
@@ -1265,8 +1266,8 @@ class PokeDaisyActivity : Activity() {
                 // The menus' cursors, so a FIGHT / move tap goes straight to its cell (NativeConfig.actionCursor).
                 if (snap.connected) battleCursorAddrs = telemetry.knownCursorAddrs()
                     ?.let { (action, move) -> BattleInputController.CursorAddrs(action = action, move = move) }
-                if (snap.connected) battleGen1Menus = snap.game == com.pokedaisy.app.companion.data.GameKind.YELLOW ||
-                    snap.game.isCrystalFamily   // the same 2x2 menu and move column
+                if (snap.connected) battleGen1Menus = snap.game.isGen1 ||
+                    snap.game.isGen2   // the same 2x2 menu and move column
                 // party.isNotEmpty(), not just connected: `connected` flips true as
                 // soon as the native addresses are found, which can be
                 // well before the save's party has actually loaded into RAM (e.g.

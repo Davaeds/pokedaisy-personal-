@@ -21,7 +21,7 @@
 </div>
 
 PokeDaisy is a Game Boy, Game Boy Color and GBA player for dual-screen Android
-handhelds, made for Pokemon FireRed, LeafGreen, Emerald, Ruby, Sapphire, Yellow, Crystal
+handhelds, made for Pokemon FireRed, LeafGreen, Emerald, Ruby, Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal
 and popular ROM hacks of every generation. The game runs on the top screen. The
 bottom screen is a live companion that reads your game as you play: your party, your bag, the map, battle matchups, your Pokedex, and a
 spoiler-free guide. Everything is drawn in the game's own menu style.
@@ -239,8 +239,10 @@ shows a "not supported" notice).
 
 | Game                           | Version                    | Party | Bag | Battle | Map |   Dex   | Guide |
 | ------------------------------ | -------------------------- | :---: | :-: | :----: | :-: | :-----: | :---: |
+| Red / Blue (GB)                | USA/Europe                 |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   —   |
 | Yellow (GB)                    | USA/Europe                 |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   —   |
 | Yellow (GB)                    | DE / FR / IT / ES          |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   —   |
+| Gold / Silver (GBC)            | USA/Europe                 |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   —   |
 | Crystal (GBC)                  | USA, USA/Europe rev 1, AU  |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   —   |
 | Crystal Clear (GBC)            | 2.5.11, 2.6.0 (4 builds)   |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   —   |
 | Prism (GBC)                    | 0.95 build 254             |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   —   |
@@ -288,8 +290,9 @@ shows a "not supported" notice).
 <details>
 <summary><strong>Notes on the table</strong></summary>
 
-Yellow, Crystal and the Crystal hacks Crystal Clear and Prism are the Game Boy games the companion reads,
-each in the game's own look (its font, icons and town maps, rebuilt from your ROM). The German,
+Red, Blue, Yellow, Gold, Silver, Crystal and the Crystal hacks Crystal Clear and Prism are the Game Boy games the companion reads,
+each in the game's own look (its font, icons and town maps, rebuilt from your ROM; Red and Blue in the colours a
+Super Game Boy gives them). The German,
 French, Italian and Spanish Yellows show their own names, Pokédex pages and battle words. Prism
 shows its own Pokémon, moves, types, six town maps and its own Pokédex (its 253 in the game's order).
 Map ◐ means place names

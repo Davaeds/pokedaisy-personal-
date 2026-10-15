@@ -52,7 +52,7 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-import com.pokedaisy.app.companion.data.isCrystalFamily
+import com.pokedaisy.app.companion.data.isGen2
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -424,6 +424,19 @@ private val CrystalPartyPaletteLight = crystalPartyPalette(YellowPartyPaletteLig
 private val CrystalPartyPaletteNight = crystalPartyPalette(YellowPartyPaletteNight, Color(0xFF181818))
 val CrystalPartyPalette: PartyPalette get() = if (OptionColors.dark) CrystalPartyPaletteNight else CrystalPartyPaletteLight
 
+/**
+ * Pokémon Red / Blue (a Super Game Boy, in mGBA): Yellow's slots in the SGB's white and black, the HP bar in
+ * pokered's PAL_GREENBAR / YELLOWBAR / REDBAR (sampled headless: the green 0x4AA55A).
+ */
+private fun redBluePartyPalette(ink: Color, paper: Color, cursor: Color) = yellowPartyPalette(ink, paper, cursor).copy(
+    hpGreen = HpBarColors(Color(0xFF4AA55A), Color(0xFF4AA55A)),
+    hpYellow = HpBarColors(Color(0xFFD6A500), Color(0xFFD6A500)),
+    hpRed = HpBarColors(Color(0xFFD65231), Color(0xFFD65231)),
+)
+private val RedBluePartyPaletteLight = redBluePartyPalette(Color(0xFF181010), Color(0xFFFFEFFF), Color(0xFFE6D6E6))
+private val RedBluePartyPaletteNight = redBluePartyPalette(Color(0xFFE8E8E8), Color(0xFF181818), Color(0xFF3A3A3A))
+val RedBluePartyPalette: PartyPalette get() = if (OptionColors.dark) RedBluePartyPaletteNight else RedBluePartyPaletteLight
+
 /** The generic slot's palette for [game] - add a palette here to restyle a game. */
 fun partyPaletteFor(game: GameKind): PartyPalette = when (game) {
     GameKind.EMERALD_ROGUE -> RoguePartyPalette
@@ -433,7 +446,9 @@ fun partyPaletteFor(game: GameKind): PartyPalette = when (game) {
     GameKind.ROWE -> RowePartyPalette
     GameKind.SOULGOLD -> SoulGoldPartyPalette
     GameKind.YELLOW -> YellowPartyPalette
-    GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM -> CrystalPartyPalette
+    GameKind.RED, GameKind.BLUE -> RedBluePartyPalette
+    // Gold's and Silver's party menu is Crystal's, pixel for pixel (sampled headless in both).
+    GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM, GameKind.GOLD, GameKind.SILVER -> CrystalPartyPalette
     GameKind.GLAZED, GameKind.QUETZAL -> GlazedPartyPalette
     GameKind.IMPERIUM -> ImperiumPartyPalette
     GameKind.SWORD_SHIELD -> SwordShieldPartyPalette
@@ -725,15 +740,17 @@ internal fun HeldItemMarker(itemId: Int, u: Int, x: Float, y: Float) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val gen = rememberArtGeneration()
     val icons = androidx.compose.runtime.remember(gen) {
-        // Crystal's and Crystal Clear's own marks (Gen2Art), the GBA games' from RomArt.
+        // The Gen 2 games' own marks (Gen2Art), the GBA games' from RomArt.
         GameArt.get(context, when (com.pokedaisy.app.companion.data.activeGame) {
             com.pokedaisy.app.companion.data.GameKind.CRYSTAL -> com.pokedaisy.app.companion.data.Gen2Art.CRYSTAL_HOLD_ICONS
             com.pokedaisy.app.companion.data.GameKind.CRYSTAL_CLEAR -> com.pokedaisy.app.companion.data.Gen2Art.CRYSTAL_CLEAR_HOLD_ICONS
             com.pokedaisy.app.companion.data.GameKind.PRISM -> com.pokedaisy.app.companion.data.Gen2Art.PRISM_HOLD_ICONS
+            com.pokedaisy.app.companion.data.GameKind.GOLD, com.pokedaisy.app.companion.data.GameKind.SILVER ->
+                com.pokedaisy.app.companion.data.Gen2Art.GOLD_SILVER_HOLD_ICONS
             else -> RomArt.HOLD_ICONS
         })?.asImageBitmap()
     } ?: return
-    val mail = if (com.pokedaisy.app.companion.data.activeGame.isCrystalFamily) {
+    val mail = if (com.pokedaisy.app.companion.data.activeGame.isGen2) {
         itemId in com.pokedaisy.app.companion.data.activeGen2.mailItems
     } else itemId in com.pokedaisy.app.companion.data.MAIL_ITEMS
     Canvas(Modifier.fillMaxSize()) {

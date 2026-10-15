@@ -135,10 +135,11 @@ fun gameCase(name: String): String = when {
 fun itemDescription(id: Int): String = when (activeGame) {
     // Gen 1 items have no descriptions of their own: ours, and what each TM / HM teaches.
     // ... in English: the German / French / Italian / Spanish carts get none rather than English under their names.
-    GameKind.YELLOW -> if (romLanguage != 'E') "" else itemDescriptionsYellow[id] ?: tmDescriptionsYellow[id] ?: ""
+    // Red and Blue have Yellow's items (gen_gen1_tables.py checks it): its text fits them.
+    GameKind.YELLOW, GameKind.RED, GameKind.BLUE -> if (romLanguage != 'E') "" else itemDescriptionsYellow[id] ?: tmDescriptionsYellow[id] ?: ""
     // Crystal's own text, from the cart (a TM's: its move's), like the GBA games'.
     // (Prism's are compressed: none.)
-    GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM -> activeGen2.pokedex?.gen2?.let { Gen2Dex.itemDescription(it, id) }.orEmpty()
+    GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM, GameKind.GOLD, GameKind.SILVER -> activeGen2.pokedex?.gen2?.let { Gen2Dex.itemDescription(it, id) }.orEmpty()
     else -> RomItemText.description(id)
 }
 

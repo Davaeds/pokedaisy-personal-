@@ -1,0 +1,16 @@
+# Pokemon Blue (USA, Europe) from the Red save (the same SRAM layout): as red.txt, but the save keeps Red's
+# wTilesetBlocksPtr / wTilesetGfxPtr (0xD52C / 0xD52E) for the map's tileset, which Blue has 0x10 bytes earlier
+# (Pokecenter_Block 1a:53AF, Pokecenter_GFX 1a:4DAF, Red's 53BF / 4DBF): with the summary on screen, Blue's own
+# pointers go in first, or the Pokemon Center draws as garbage (fixtures blue*). Only for a save made in Vermilion
+# City's Pokemon Center; another map's tileset needs its own pair.
+wait 1600
+press START
+wait 200
+press A
+wait 120
+poke8 0xD52C 0xAF
+poke8 0xD52D 0x53
+poke8 0xD52E 0xAF
+poke8 0xD52F 0x4D
+press A
+wait 300

@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import com.pokedaisy.app.companion.data.GameKind
 import com.pokedaisy.app.companion.data.activeGame
 import com.pokedaisy.app.companion.data.isGameBoyGame
+import com.pokedaisy.app.companion.data.isRedBlue
 import com.pokedaisy.app.companion.ui.theme.AppColors
 import com.pokedaisy.app.companion.ui.theme.gbaFocusRing
 import androidx.compose.ui.focus.onFocusChanged
@@ -103,8 +104,13 @@ object OptionColors {
     val dark get() = DarkMode.on
 
     // Gen 1: black on white; dark mode turns its windows round (white on black), same lines.
-    private val G1_INK get() = if (dark) Color(0xFFE8E8E8) else Color(0xFF181818)
-    private val G1_PAPER get() = if (dark) Color(0xFF181818) else Color(0xFFFFFFFF)
+    // Red / Blue run as a Super Game Boy: their white and black are its palettes' (sampled headless).
+    private val G1_INK get() = if (dark) Color(0xFFE8E8E8) else gbInk(activeGame)
+    private val G1_PAPER get() = if (dark) Color(0xFF181818) else gbPaper(activeGame)
+
+    /** A Game Boy game's own black and white in light mode: Yellow's and Gen 2's GBC ones, Red / Blue's SGB ones. */
+    fun gbInk(game: GameKind?): Color = if (game.isRedBlue) Color(0xFF181010) else Color(0xFF181818)
+    fun gbPaper(game: GameKind?): Color = if (game.isRedBlue) Color(0xFFFFEFFF) else Color(0xFFFFFFFF)
     private val G1_FRAME get() = listOf(G1_PAPER to 2, G1_INK to 1, G1_PAPER to 1, G1_INK to 1, G1_PAPER to 1)
 
     // The PokéDaisy theme's light backdrop on the top screen (Library, Settings, setup): text drawn straight
@@ -134,7 +140,8 @@ object OptionColors {
     )
     val listFill get() = if (gen1) G1_PAPER else c(0xFFE0DFDF, 0xFF1D2128)
     /** The cursor row (Gen 1 marks it with its ▶; here a light grey band, a lighter slate in dark). */
-    val rowSelected get() = if (gen1) c(0xFFDCDCDC, 0xFF3A3A3A) else c(0xFFFFFFFF, 0xFF353C49)
+    val rowSelected get() = if (gen1) (if (activeGame.isRedBlue) c(0xFFE6D6E6, 0xFF3A3A3A) else c(0xFFDCDCDC, 0xFF3A3A3A))
+        else c(0xFFFFFFFF, 0xFF353C49)
     val label get() = if (gen1) G1_INK else c(0xFF575656, 0xFFCDD1D9)
     val labelShadow get() = if (gen1) Color.Transparent else c(0xFFBCBBB4, 0xFF3A404B)
     val value get() = if (gen1) G1_INK else c(0xFFCB0707, 0xFFFF6A5C)

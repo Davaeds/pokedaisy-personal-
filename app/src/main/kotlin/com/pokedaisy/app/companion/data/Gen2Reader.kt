@@ -31,7 +31,7 @@ data class Gen2Config(
     val otPartyCount: Long,     // wOTPartyCount, then wOTPartySpecies
     val otPartyMons: Long,      // wOTPartyMons: a trainer's party_structs
     val curOTMon: Long,         // wCurOTMon: which of them is out
-    val playerGender: Long,     // wPlayerGender: bit 0 = Kris
+    val playerGender: Long,     // wPlayerGender: bit 0 = Kris; -1 = none (Gold / Silver: always the boy)
     val gameTime: Long,         // wGameTimeHours (big-endian word), Minutes, Seconds, Frames
     val dexCaught: Long,        // wPokedexCaught, wPokedexSeen: 32 bytes each, bit n-1 = Dex No. n
     val dexSeen: Long,
@@ -101,6 +101,47 @@ val GEN2_CRYSTAL = Gen2Config(
     tmItems = gen2TmItemsCrystal,
     pokedex = POKEDEX_CRYSTAL,
 )
+
+/**
+ * Retail English Gold and Silver (USA, Europe): pret/pokegold's symbols (its gold and silver builds are byte-identical to
+ * both carts), checked on headless captures of a new game played in each (the `gold*` / `silver*` fixtures). The two
+ * keep every RAM address here at the same place; their WRAM is laid out apart from Crystal's (every address its own,
+ * wBattleMon / wCurOTMon / wCurBattleMon in bank 0), the structs and menus are Crystal's. No gender choice: the player
+ * is always the boy. Their items and landmarks are their own tables (Crystal's less its additions), species / moves /
+ * types Crystal's; dex pages, front pics and party icons are read from each version's ROM ([POKEDEX_GOLD] / [POKEDEX_SILVER]).
+ */
+val GEN2_GOLD = Gen2Config(
+    partyCount = wramx(1, 0xDA22),
+    partyMons = wramx(1, 0xDA2A),
+    numItems = wramx(1, 0xD5B7),
+    numKeyItems = wramx(1, 0xD5E1),
+    numBalls = wramx(1, 0xD5FC),
+    tmsHms = wramx(1, 0xD57E),
+    money = wramx(1, 0xD573),
+    mapGroup = wramx(1, 0xDA00),
+    backupMapGroup = wramx(1, 0xD9F6),
+    battleMode = wramx(1, 0xD116),
+    battleMon = 0xCB0CL,
+    enemyMon = wramx(1, 0xD0EF),
+    otPartyCount = wramx(1, 0xDD55),
+    otPartyMons = wramx(1, 0xDD5D),
+    curOTMon = 0xCB41L,
+    playerGender = -1,
+    gameTime = wramx(1, 0xD1EB),
+    dexCaught = wramx(1, 0xDBE4),
+    dexSeen = wramx(1, 0xDC04),
+    menu2D = 0xCED8L,
+    menuCursor = 0xCEE0L,
+    moveMenuType = wramx(1, 0xD11F),
+    tileMap = 0xC3A0L,
+    partyMenuAction = wramx(1, 0xD03E),
+    curBattleMon = 0xCFC6L,
+    landmarks = mapLandmarksGoldSilver,
+    genderRatios = gen2GenderRatiosCrystal,
+    tmItems = gen2TmItemsCrystal,
+    pokedex = POKEDEX_GOLD,
+)
+val GEN2_SILVER = GEN2_GOLD.copy(pokedex = POKEDEX_SILVER)
 
 /**
  * Pokémon Crystal Clear (ShockSlayer's open-world hack of Crystal): v2.6.0 and v2.5.11, each in a Standard Colors and a
@@ -360,14 +401,20 @@ fun readGen2Telemetry(r: MemoryReader, cfg: Gen2Config): Telemetry {
         enemyParty = enemyParty,
         enemyActive = enemyActive,
         money = ((u8(m, 0).toLong() shl 16) or (u8(m, 1).toLong() shl 8) or u8(m, 2).toLong()),
-        playerGender = u8(r.readCoreMemory(cfg.playerGender, 1), 0) and 1,
+        playerGender = if (cfg.playerGender < 0) 0 else u8(r.readCoreMemory(cfg.playerGender, 1), 0) and 1,
         pokedex = cfg.pokedex?.let { runCatching { readGen2PokedexState(r, cfg, it) }.getOrNull() },
     )
 }
 
-/** A Game Boy game (Yellow, Crystal and its hacks): the black-on-white text-box look, plain white screens, the 2x2 battle menu. */
-val GameKind?.isGameBoyGame: Boolean get() = this == GameKind.YELLOW || isCrystalFamily
+/** A Game Boy game (the Gen 1 and Gen 2 games): the black-on-white text-box look, plain white screens, the 2x2 battle menu. */
+val GameKind?.isGameBoyGame: Boolean get() = isGen1 || isGen2
 
-/** Crystal or a hack of it (Crystal Clear, Prism): Gen 2's reader ([readGen2Telemetry]), PACK, POKéGEAR maps and battle menus. */
+/** Crystal or a hack of it (Crystal Clear, Prism). */
 val GameKind?.isCrystalFamily: Boolean get() = this == GameKind.CRYSTAL || this == GameKind.CRYSTAL_CLEAR || this == GameKind.PRISM
+
+/** Gold, Silver: retail Gen 2 before Crystal, one RAM layout and one look ([GEN2_GOLD]). */
+val GameKind?.isGoldSilver: Boolean get() = this == GameKind.GOLD || this == GameKind.SILVER
+
+/** A Gen 2 game (Gold, Silver, the Crystal family): Gen 2's reader ([readGen2Telemetry]), PACK, POKéGEAR maps and battle menus. */
+val GameKind?.isGen2: Boolean get() = isCrystalFamily || isGoldSilver
 

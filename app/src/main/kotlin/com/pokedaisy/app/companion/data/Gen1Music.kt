@@ -15,7 +15,8 @@ data class Gen1MusicTables(
     val sha1: String,
     /** PlayMusic, in bank 0. */
     val playMusic: Int,
-    /** A `jr @` (18 FE) in bank 0 that nothing jumps to, for the render core's parked main loop. */
+    /** A `jr @` (18 FE) in bank 0 that nothing jumps to, for the render core's parked main loop - or two WRAM bytes the
+     * parked game never touches, where the park (pkRenderGbPark) writes one. */
     val spin: Int,
     val audioRomBank: Long,       // wAudioROMBank
     val channelSoundIds: Long,    // wChannelSoundIDs: 8 bytes, CHAN1 first
@@ -60,8 +61,31 @@ val GEN1_MUSIC_YELLOW_FR = GEN1_MUSIC_YELLOW.copy(sha1 = TelemetrySampler.YELLOW
 val GEN1_MUSIC_YELLOW_IT = GEN1_MUSIC_YELLOW.copy(sha1 = TelemetrySampler.YELLOW_IT_SHA1)
 val GEN1_MUSIC_YELLOW_ES = GEN1_MUSIC_YELLOW.copy(sha1 = TelemetrySampler.YELLOW_ES_SHA1, playMusic = 0x2210)
 
+/**
+ * Red and Blue (pret/pokered: the same addresses and songs in both): Yellow's audio RAM, their own PlayMusic and songs
+ * (bank 0x1F's ids from INTRO_BATTLE on are one lower than Yellow's; no bank 0x20). Their bank 0 holds no `18 FE` at
+ * all, so the render core parks on WRAM: wUnusedSimulatedJoypadStatesMask (written by the main loop, never read) and
+ * the byte after it. Checked headless (mgba_dump gbpark / gbcall / gbloop): ROUTES1 loops at 22.9 s, the wild battle
+ * at 31.3 s after a 13.1 s intro - Yellow's numbers.
+ */
+val GEN1_MUSIC_RED = GEN1_MUSIC_YELLOW.copy(
+    sha1 = TelemetrySampler.RED_SHA1,
+    playMusic = 0x23A1,
+    spin = 0xCD39,
+    songs = listOf(
+        2 to 186, 2 to 189, 2 to 192, 2 to 195, 2 to 199, 2 to 202, 2 to 205, 2 to 208, 2 to 212, 2 to 216,
+        2 to 219, 2 to 222, 2 to 225, 2 to 229, 2 to 232, 2 to 235, 2 to 239, 2 to 243, 2 to 247, 2 to 251,
+        8 to 234, 8 to 237, 8 to 240, 8 to 243, 8 to 246, 8 to 249, 8 to 252,
+        0x1F to 195, 0x1F to 199, 0x1F to 202, 0x1F to 205, 0x1F to 208, 0x1F to 210, 0x1F to 214, 0x1F to 217,
+        0x1F to 220, 0x1F to 224, 0x1F to 228, 0x1F to 232, 0x1F to 236, 0x1F to 240, 0x1F to 243, 0x1F to 246,
+        0x1F to 249, 0x1F to 252,
+    ),
+)
+val GEN1_MUSIC_BLUE = GEN1_MUSIC_RED.copy(sha1 = TelemetrySampler.BLUE_SHA1)
+
 object Gen1Music {
-    private val GAMES = listOf(GEN1_MUSIC_YELLOW, GEN1_MUSIC_YELLOW_DE, GEN1_MUSIC_YELLOW_FR, GEN1_MUSIC_YELLOW_IT, GEN1_MUSIC_YELLOW_ES)
+    private val GAMES = listOf(GEN1_MUSIC_YELLOW, GEN1_MUSIC_YELLOW_DE, GEN1_MUSIC_YELLOW_FR, GEN1_MUSIC_YELLOW_IT, GEN1_MUSIC_YELLOW_ES,
+        GEN1_MUSIC_RED, GEN1_MUSIC_BLUE)
 
     fun forSha1(sha1: String): Gen1MusicTables? = GAMES.firstOrNull { it.sha1 == sha1 }
 

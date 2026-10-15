@@ -10,6 +10,8 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | ---- | ------- | :----: | :------------: | :-------------: | :------------: | :---------: | :-: | :----------: | :---------: | :---------: | :-------------: | :---------: |
 | Yellow (GB) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Yellow (GB) | DE / FR / IT / ES | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
+| Red / Blue (GB) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
+| Gold / Silver (GBC) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Crystal (GBC) | USA, USA/Europe rev 1, AU | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Crystal Clear (GBC) | 2.5.11, 2.6.0 (4 builds) | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Prism (GBC) | 0.95 build 254 | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
@@ -59,6 +61,10 @@ change to any of the places listed under "Where it's decided" updates its rows h
    on a config. Crystal's were run headless with the controls' own timing: a move used, RUN taken; Crystal Clear keeps
    Crystal's menus and their variables at Crystal's addresses, run the same way in both of its versions; so does Prism
    (its words mixed case: Fight / PkMn / Pack / Run), run the same way in a wild battle.
+   Gold / Silver have Crystal's battle menus (their own addresses, `GEN2_GOLD`): reads checked on the `gold_battle*` /
+   `silver_battle` fixtures, the controls' timing not run on them.
+   Red / Blue have Yellow's battle menus and menu variables (at Yellow's addresses, the cursor columns 9 / 15): their
+   reads are checked on the `red_battle*` fixtures, the controls' timing wasn't run on them.
 2. Spanish FireRed's port copies English rev 1's config, cursors included. Its battle RAM matches English byte for
    byte (gBattleStruct 0x02023FE8, gEnemyParty 0x0202402C, the cursors sit between them), but it was never checked
    headless.
@@ -81,7 +87,11 @@ change to any of the places listed under "Where it's decided" updates its rows h
    a faint too, the one already out refused before a press), Crystal rev 1 (from PKMN, from inside its SWITCH menu,
    after a faint), Crystal Clear 2.6.0 and Prism (from the menu and after a faint). Crystal rev 0 / AU and Crystal
    Clear 2.5.11 share that RAM and code; Prism takes a menu press only if it spans two frames, so every switch press
-   does.
+   does. Gold / Silver have Crystal's party menus (CANCEL row, SWITCH menu, none after a faint): their reads are checked
+   on the `gold_battle_*` fixtures and the faint's pick by pressing headless (an A on SWITCH took 6 frames after the ▶
+   showed), not through the controller. Red / Blue have Yellow's party menu code: their reads (the list, SWITCH / STATS / CANCEL, the pick after a
+   faint) are checked on the `red_battle_*` fixtures and by pressing headless (an A on SWITCH takes from 2 frames after
+   the menu shows, as Yellow's Delay3 lets it), not through the controller.
 9. Should work, not run on this hack yet: it is FireRed rev 0's code edited in place (Rocket Edition, Ash Gray) or a
    CFRU hack (GS Chronicles), and the tables these columns use are FireRed rev 0's / the CFRU hacks', each checked on
    other games.

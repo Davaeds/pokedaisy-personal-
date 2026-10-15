@@ -39,6 +39,12 @@ class Gen2DexTables(
     val unown: Int = 201,
     /** The last item with a description in [itemDescriptions] (Crystal's run up to TM01; Prism's 253 items). */
     val lastItem: Int = firstTm - 1,
+    /** Gold / Silver's GetDexEntryPointer: the page's bank is this one + (species - 1) / 64, no [dexEntryBanks] table
+     * (-1: Crystal's table). */
+    val dexEntryFirstBank: Int = -1,
+    /** Gold / Silver's FixPicBank: a table of {stored bank, real bank} pairs, 0xFF-terminated - a bank not listed is
+     * the real one (null: Crystal's [picsBanks] index). */
+    val picBankFixes: Pair<Int, Int>? = null,
 ) {
     private val dexNumbers: IntArray? = dexOrder?.let { o ->
         IntArray((o.maxOrNull() ?: 0) + 1).also { m -> o.forEachIndexed { i, s -> if (m[s] == 0) m[s] = i + 1 } }
@@ -103,12 +109,38 @@ val GEN2_DEX_CRYSTAL = Gen2DexTables(
     tmItems = gen2TmItemsCrystal,
 )
 
+/**
+ * Gold and Silver (pret/pokegold): every table at the same address in both versions; the pages and front pics they point
+ * at differ (each version's own dex text), so each reads its own ROM. The page's bank is computed (64 species a bank from
+ * 68:4000, GetDexEntryPointer) and the pics' banks fixed by a pair table (FixPicBank, 14:5878).
+ */
+val GEN2_DEX_GOLD_SILVER = Gen2DexTables(
+    baseData = 0x14 to 0x5B0B,
+    dexEntryPointers = 0x11 to 0x4360,
+    dexEntryBanks = 0x11 to 0x4360,   // unused: [dexEntryFirstBank]
+    picPointers = 0x12 to 0x4000,
+    unownPicPointers = 0x1F to 0x4000,
+    picsBanks = 0x14 to 0x5878,       // unused: [picBankFixes]
+    palettes = 0x02 to 0x6D3D,
+    itemDescriptions = 0x6E to 0x4000,
+    tmHmMoves = 0x04 to 0x5A66,
+    moveDescriptions = 0x6D to 0x4000,
+    firstTm = 0xBF,
+    tmItems = gen2TmItemsCrystal,
+    dexEntryFirstBank = 0x68,
+    picBankFixes = 0x14 to 0x5878,
+)
+
 /** Johto's 251 by National number (the game's own New / Old dex modes are orderings of the same flags). */
 val POKEDEX_CRYSTAL = PokedexTables(
     entries = 0, frontPics = 0, palettes = 0, speciesInfo = 0, speciesToNational = 0, abilityNames = 0, footprints = 0,
     speciesCount = 252, nationalCount = 251, regionalCount = 251, regionName = null,
     gen2 = GEN2_DEX_CRYSTAL,
 )
+
+/** Gold's and Silver's: the same tables over each version's own pages (two objects, so a dex cache never crosses them). */
+val POKEDEX_GOLD = POKEDEX_CRYSTAL.copy(gen2 = GEN2_DEX_GOLD_SILVER)
+val POKEDEX_SILVER = POKEDEX_CRYSTAL.copy(gen2 = GEN2_DEX_GOLD_SILVER)
 
 /**
  * Crystal Clear v2.6.0 (both builds): Crystal's tables moved (found by their contents and the code that reads them,
@@ -448,7 +480,8 @@ object Gen2Dex {
         val rom = Gen1Dex.rom ?: return null
         val species = t.speciesOf(dex).takeIf { it > 0 } ?: return null
         val (pb, pa) = t.dexEntryPointers
-        val bank = u8(rom, off(t.dexEntryBanks.first, t.dexEntryBanks.second) + ((species - 1) shr 6))
+        val bank = if (t.dexEntryFirstBank >= 0) t.dexEntryFirstBank + ((species - 1) shr 6)
+            else u8(rom, off(t.dexEntryBanks.first, t.dexEntryBanks.second) + ((species - 1) shr 6))
         val ptr = u16(rom, off(pb, pa) + 2 * (species - 1))
         val s = off(t.baseData.first, t.baseData.second) + t.baseDataSize * (species - 1)
         val category: String
@@ -517,7 +550,15 @@ object Gen2Dex {
         // UNOWN's pics are by letter: A's for the dex.
         val ptrs = if (species == t.unown) off(t.unownPicPointers.first, t.unownPicPointers.second)
         else off(t.picPointers.first, t.picPointers.second) + 6 * (species - 1)
-        val bank = if (t.picBankDirect) u8(rom, ptrs) else {
+        val fixes = t.picBankFixes
+        val bank = if (t.picBankDirect) u8(rom, ptrs) else if (fixes != null) {
+            // FixPicBank (Gold / Silver): the stored bank, or the one its {stored, real} pair names.
+            val stored = u8(rom, ptrs)
+            var o = off(fixes.first, fixes.second)
+            var real = stored
+            while (u8(rom, o) != 0xFF) { if (u8(rom, o) == stored) { real = u8(rom, o + 1); break }; o += 2 }
+            real
+        } else {
             // FixPicBank: the stored bank byte is an index into PicsBanks, offset by its first bank - PICS_FIX.
             val banks = off(t.picsBanks.first, t.picsBanks.second)
             u8(rom, banks + u8(rom, ptrs) - (u8(rom, banks) - PICS_FIX))

@@ -301,8 +301,9 @@ class TelemetrySampler {
             val telemetry = when (kind) {
                 // English Unbound leaves nativeCfg null (see detect()); its French translation sets its own.
                 GameKind.UNBOUND -> readNativeTelemetry(reader, nativeCfg ?: NATIVE_UNBOUND_WITH_DEX)
-                GameKind.YELLOW -> readGen1Telemetry(reader, gen1Cfg ?: GEN1_YELLOW)
-                GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM -> readGen2Telemetry(reader, gen2Cfg ?: GEN2_CRYSTAL)
+                GameKind.YELLOW, GameKind.RED, GameKind.BLUE -> readGen1Telemetry(reader, gen1Cfg ?: GEN1_YELLOW)
+                GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM, GameKind.GOLD, GameKind.SILVER ->
+                    readGen2Telemetry(reader, gen2Cfg ?: GEN2_CRYSTAL)
                 else -> {
                     unsupportedHackLabel?.let { return SnapshotView(connected = false, error = it, unsupported = true) }
                     val cfg = nativeCfg ?: return SnapshotView(connected = false, error = "no telemetry source")
@@ -324,7 +325,7 @@ class TelemetrySampler {
     /** Where the detected game's item descriptions are ([RomItemText]): its config's
      * table when the ROM has it there, else the vanilla table found by its shape. */
     private fun itemTable(reader: MemoryReader): ItemDescTable? {
-        if (kind == GameKind.YELLOW || kind.isCrystalFamily || unsupportedHackLabel != null) return null
+        if (kind.isGen1 || kind.isGen2 || unsupportedHackLabel != null) return null
         val cfg = if (kind == GameKind.UNBOUND) nativeCfg ?: NATIVE_UNBOUND_WITH_DEX else nativeCfg
         val t = cfg?.itemDescs
         if (t != null && RomItemText.matchesRom(reader, t)) return t
@@ -588,8 +589,12 @@ class TelemetrySampler {
         }
         val hash = if (off == size && size > 0) digest.digest().joinToString("") { "%02x".format(it) } else null
         when {
+            GAME_BOY_SUPPORT && hash == RED_SHA1 -> { kind = GameKind.RED; gen1Cfg = GEN1_RED }
+            GAME_BOY_SUPPORT && hash == BLUE_SHA1 -> { kind = GameKind.BLUE; gen1Cfg = GEN1_BLUE }
             GAME_BOY_SUPPORT && gen1ConfigFor(hash) != null -> { kind = GameKind.YELLOW; gen1Cfg = gen1ConfigFor(hash) }
             hash in CRYSTAL_SHA1S && GAME_BOY_SUPPORT -> { kind = GameKind.CRYSTAL; gen2Cfg = GEN2_CRYSTAL }
+            GAME_BOY_SUPPORT && hash == GOLD_SHA1 -> { kind = GameKind.GOLD; gen2Cfg = GEN2_GOLD }
+            GAME_BOY_SUPPORT && hash == SILVER_SHA1 -> { kind = GameKind.SILVER; gen2Cfg = GEN2_SILVER }
             GAME_BOY_SUPPORT && crystalClearConfigFor(hash) != null -> { kind = GameKind.CRYSTAL_CLEAR; gen2Cfg = crystalClearConfigFor(hash) }
             GAME_BOY_SUPPORT && hash == PRISM_V0_95_254_SHA1 -> { kind = GameKind.PRISM; gen2Cfg = GEN2_PRISM }
             else -> {
@@ -616,11 +621,11 @@ class TelemetrySampler {
         get() = nativeCfg?.fieldItems
 
     /** A Game Boy game's battle party menu, for the POKéMON switch ([GbPartySwitch]): Yellow (every language) and the
-     * Crystal family, each checked headless (a switch from PkMn / PKMN and the pick after a faint); null otherwise. */
+     * Red / Blue and the Gen 2 games, each checked headless (a switch from PkMn / PKMN and the pick after a faint); null otherwise. */
     val gbPartySwitch: GbPartySwitch?
         get() = when {
-            kind == GameKind.YELLOW -> gen1Cfg?.let { c -> gbSwitchFor(c) { Gen1PartySwitch(c) } }
-            kind.isCrystalFamily -> gen2Cfg?.let { c -> gbSwitchFor(c) { Gen2PartySwitch(c) } }
+            kind.isGen1 -> gen1Cfg?.let { c -> gbSwitchFor(c) { Gen1PartySwitch(c) } }
+            kind.isGen2 -> gen2Cfg?.let { c -> gbSwitchFor(c) { Gen2PartySwitch(c) } }
             else -> null
         }
 
@@ -634,12 +639,12 @@ class TelemetrySampler {
         private set
 
     fun sampleBattleInputFast(reader: MemoryReader): Pair<Int, Int>? {
-        if (kind == GameKind.YELLOW) {
+        if (kind.isGen1) {
             val (state, cursor) = runCatching { readGen1BattleInput(reader, gen1Cfg ?: GEN1_YELLOW) }.getOrNull() ?: return null
             battleMenuCursor = cursor
             return 0 to state
         }
-        if (kind.isCrystalFamily) {
+        if (kind.isGen2) {
             val (state, cursor) = runCatching { readGen2BattleInput(reader, gen2Cfg ?: GEN2_CRYSTAL) }.getOrNull() ?: return null
             battleMenuCursor = cursor
             return 0 to state
@@ -849,6 +854,10 @@ class TelemetrySampler {
         const val YELLOW_IT_SHA1 = "05bb8e99f24d498613930949730afa8024e77d08"
         const val YELLOW_ES_SHA1 = "1dc242039218fba50928d1afb66b70565b6b9daf"
 
+        // Pokémon Red and Blue (USA, Europe): pret/pokered builds both byte for byte.
+        const val RED_SHA1 = "ea9bcae617fdf159b045185467ae58b2e4a48b9a"
+        const val BLUE_SHA1 = "d7037c83e1ae5b39bde3c30787637ba1d4c48ce2"
+
         /** A Yellow cart's config by its hash, or null for any other Game Boy game. */
         fun gen1ConfigFor(hash: String?): Gen1Config? = when (hash) {
             YELLOW_SHA1 -> GEN1_YELLOW
@@ -864,6 +873,10 @@ class TelemetrySampler {
         const val CRYSTAL_REV1_SHA1 = "f2f52230b536214ef7c9924f483392993e226cfb"
         const val CRYSTAL_AU_SHA1 = "a0fc810f1d4e124434f7be2c989ab5b5892ddf36"
         val CRYSTAL_SHA1S = setOf(CRYSTAL_SHA1, CRYSTAL_REV1_SHA1, CRYSTAL_AU_SHA1)
+
+        // Pokémon Gold and Silver (USA, Europe): pret/pokegold builds both byte for byte.
+        const val GOLD_SHA1 = "d8b8a3600a465308c9953dfa04f0081c05bdcb94"
+        const val SILVER_SHA1 = "49b163f7e57702bc939d642a18f591de55d92dae"
 
         // Pokémon Crystal Clear (ShockSlayer's open-world Crystal hack): v2.5.11 and v2.6.0, each a Standard Colors
         // build and a Color Filter one (the same code and tables, other palettes): one RAM, a version's ROM tables.
@@ -886,8 +899,8 @@ class TelemetrySampler {
         const val PRISM_V0_95_254_SHA1 = "752076692ae3387cf426ce5f51a98c6b60e8df6a"
 
         /** The Game Boy / Color carts the companion reads ([CompanionSupport] checks imports against it). */
-        val SUPPORTED_GB_SHA1S = setOf(YELLOW_SHA1, YELLOW_DE_SHA1, YELLOW_FR_SHA1, YELLOW_IT_SHA1, YELLOW_ES_SHA1) +
-            CRYSTAL_SHA1S + CRYSTAL_CLEAR_SHA1S + PRISM_V0_95_254_SHA1
+        val SUPPORTED_GB_SHA1S = setOf(YELLOW_SHA1, YELLOW_DE_SHA1, YELLOW_FR_SHA1, YELLOW_IT_SHA1, YELLOW_ES_SHA1, RED_SHA1, BLUE_SHA1) +
+            CRYSTAL_SHA1S + CRYSTAL_CLEAR_SHA1S + PRISM_V0_95_254_SHA1 + GOLD_SHA1 + SILVER_SHA1
 
         /**
          * Game Boy / Color (Pokémon Yellow): the library, folder scan, frontend launch and

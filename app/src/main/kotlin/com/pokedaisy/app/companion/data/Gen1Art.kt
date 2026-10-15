@@ -24,6 +24,12 @@ object Gen1Art {
     const val YELLOW_PLAYER = "regionmap/player_yellow.png"
     /** The town map, where MapScreen loads region maps from ([activeRegionMapImages] "yellow"). */
     const val YELLOW_TOWN_MAP = "regionmap/yellow.png"
+    const val RED_BLUE_FONT = "gen1/red-blue-font.ttf"
+    const val RED_BLUE_ICONS = "gen1/red_blue/pokemon"
+    /** Red / Blue's town map and player ([activeRegionMapImages] "red_blue"), in their Super Game Boy colours. */
+    const val RED_BLUE_TOWN_MAP_NAME = "red_blue"
+    const val RED_BLUE_TOWN_MAP = "regionmap/$RED_BLUE_TOWN_MAP_NAME.png"
+    const val RED_BLUE_PLAYER = "regionmap/player_red_blue.png"
     /** Bump when what [extractTo] writes changes, so a cached ROM's art is rebuilt once. */
     private const val VERSION = 3
 
@@ -48,6 +54,8 @@ object Gen1Art {
         val playerSprite: Pair<Int, Int>,
         val playerPath: String,
         val charset: Gen1Charset = Gen1Charset.EN,
+        /** The player's colours for pixel values 0-3 when the sprite's palette isn't the map's (null: [townMapColors]). */
+        val playerColors: IntArray? = null,
     )
 
     val YELLOW = Gen1ArtTables(
@@ -88,7 +96,36 @@ object Gen1Art {
     val YELLOW_FR = europe(TelemetrySampler.YELLOW_FR_SHA1, 'F', 0x581E, 0x598B, 0x518D, Gen1Charset.DF)
     val YELLOW_IT = europe(TelemetrySampler.YELLOW_IT_SHA1, 'I', 0x588D, 0x59FA, 0x518B, Gen1Charset.IS)
     val YELLOW_ES = europe(TelemetrySampler.YELLOW_ES_SHA1, 'S', 0x583D, 0x59AA, 0x518E, Gen1Charset.IS)
-    private val GAMES = listOf(YELLOW, YELLOW_DE, YELLOW_FR, YELLOW_IT, YELLOW_ES)
+    /**
+     * Red and Blue (pret/pokered's symbols, the same in both builds; their art is the same bytes, so one set of files).
+     * A DMG cart with Super Game Boy support runs as a Super Game Boy in mGBA, so the colours are the SGB palettes the
+     * game sends (data/sgb/sgb_palettes.asm), as sampled headless: the party menu's PAL_MEWMON through OBP0 (pixel 1
+     * white, 2 its second colour, 3 black), the town map's PAL_TOWNMAP - its sprite through OBP0 too, so the player
+     * there is white, light blue and black (FLY's map, headless). Their party icons have no PIKACHU shape: 14
+     * icon loads a frame.
+     */
+    private fun redBlue(sha1: String) = Gen1ArtTables(
+        sha1 = sha1,
+        font = 0x04 to 0x5A80,
+        fontPath = RED_BLUE_FONT,
+        iconPointers = 0x1C to 0x57C0,
+        iconPointerCount = 28,
+        monPartyData = 0x1C to 0x590D,
+        dexCount = 151,
+        iconsDir = RED_BLUE_ICONS,
+        iconColors = intArrayOf(0xFFFFEFFF.toInt(), 0xFFF7B58C.toInt(), 0xFF181010.toInt()),
+        townMap = 0x1C to 0x5100,
+        townMapTiles = 0x04 to 0x65A8,
+        townMapPath = RED_BLUE_TOWN_MAP,
+        townMapColors = intArrayOf(0xFFFFEFFF.toInt(), 0xFFA5D6FF.toInt(), 0xFF8CBD52.toInt(), 0xFF181010.toInt()),
+        playerSprite = 0x05 to 0x4180,
+        playerPath = RED_BLUE_PLAYER,
+        playerColors = intArrayOf(0, 0xFFFFEFFF.toInt(), 0xFFA5D6FF.toInt(), 0xFF181010.toInt()),
+    )
+    val RED = redBlue(TelemetrySampler.RED_SHA1)
+    val BLUE = redBlue(TelemetrySampler.BLUE_SHA1)
+
+    private val GAMES = listOf(YELLOW, YELLOW_DE, YELLOW_FR, YELLOW_IT, YELLOW_ES, RED, BLUE)
 
     private fun off(bank: Int, addr: Int) = if (bank == 0) addr else bank * 0x4000 + (addr - 0x4000)
 
@@ -190,7 +227,7 @@ object Gen1Art {
             val lo = rom[tile + 2 * (y % 8)].toInt() shr (7 - x % 8) and 1
             val hi = rom[tile + 2 * (y % 8) + 1].toInt() shr (7 - x % 8) and 1
             val v = lo or (hi shl 1)
-            if (v != 0) img.argb[y * 16 + x] = t.townMapColors[v]
+            if (v != 0) img.argb[y * 16 + x] = (t.playerColors ?: t.townMapColors)[v]
         }
         return img
     }

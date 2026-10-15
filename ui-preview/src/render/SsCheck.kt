@@ -86,7 +86,10 @@ fun main(args: Array<String>) {
     println("wrote ${File(out, "report.md").absolutePath}")
 }
 
-private val GAME_BOY = setOf("Pokémon Yellow", "Pokémon Crystal", "Pokémon Crystal Clear", "Pokémon Prism")
+private val GAME_BOY = setOf(
+    "Pokémon Red", "Pokémon Blue", "Pokémon Yellow", "Pokémon Gold", "Pokémon Silver", "Pokémon Crystal", "Pokémon Crystal Clear",
+    "Pokémon Prism",
+)
 
 /** Hacks without their own entry fall back to their base game's media, like the app (by the ROM's header there). */
 private val EMERALD_HACKS = listOf(

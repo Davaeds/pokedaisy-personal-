@@ -767,6 +767,12 @@ Java_com_pokedaisy_app_MgbaCore_pkRenderGbPark(JNIEnv* env, jobject thiz, jint s
     for (int i = 0; i < 5000000; i++) {
         core->step(core);   // ends on an instruction boundary (SM83_CORE_FETCH)
         if (gb->memory.ime && (gb->memory.ie & 1) && (gb->memory.io[GB_REG_LCDC] & 0x80) && !cpu->halted && !cpu->irqPending) {
+            // A spin in WRAM (Red / Blue: bank 0 holds no `jr @`) is written there first - a byte the
+            // parked game never touches again.
+            if (spin >= 0xC000 && spin < 0xDFFF) {
+                core->busWrite8(core, (uint16_t) spin, 0x18);
+                core->busWrite8(core, (uint16_t) (spin + 1), 0xFE);
+            }
             cpu->pc = (uint16_t) spin;
             cpu->memory.setActiveRegion(cpu, cpu->pc);
             return JNI_TRUE;

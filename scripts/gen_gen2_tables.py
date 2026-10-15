@@ -69,6 +69,35 @@ GAMES = {
                     landmarks={1: "NEW BARK TOWN", 2: "ROUTE 29", 0x2F: "PALLET TOWN"},
                     maps={(24, 3): 2, (24, 4): 1, (24, 5): 1, (24, 7): 1}),
     ),
+    "gold_silver": dict(
+        suffix="GoldSilver",
+        label="Pokemon Gold / Silver Version (USA, Europe)",
+        decomp="pokegold",
+        sha1s={
+            "d8b8a3600a465308c9953dfa04f0081c05bdcb94": "Gold",
+            "49b163f7e57702bc939d642a18f591de55d92dae": "Silver",
+        },
+        # pret/pokegold's symbols: every table here sits at the same address with the same bytes in both versions
+        # (checked byte for byte); only their dex pages, front pics and party icons' place differ (read from the ROM).
+        species_names=(0x6C, 0x4B74), name_len=10, species_count=251,
+        base_data=(0x14, 0x5B0B), base_size=32,
+        moves=(0x10, 0x5AFE), move_size=7, move_count=251, move_names=(0x6C, 0x5574),
+        item_names=(0x6C, 0x4000), item_count=0xFF,
+        type_names=(0x14, 0x49AE), type_count=28,
+        type_matchups=(0x0D, 0x4D01),
+        landmarks=(0x24, 0x6382), landmark_count=0x5F, kanto_landmark=0x2E, fast_ship=0x5E,
+        map_groups=(0x25, 0x40ED), map_header_size=9,
+        # Crystal kept their species, base data, moves, types and type chart byte for byte (checked with --base); their
+        # items are Crystal's but for the four Crystal filled in (CLEAR BELL, GS BALL, BLUE CARD, EGG TICKET), their
+        # landmarks one fewer (no BATTLE TOWER: from ROUTE 40 on, one id lower than Crystal's).
+        base="crystal", shares=("species", "types", "moves", "type_chart", "gen2_species"),
+        checks=dict(species={1: "BULBASAUR", 25: "PIKACHU", 152: "CHIKORITA", 249: "LUGIA", 251: "CELEBI"},
+                    types={1: (22, 3), 25: (23, 23), 152: (22, 22), 16: (0, 2), 208: (9, 4)},
+                    moves={1: ("POUND", 0, 40), 33: ("TACKLE", 0, 35), 45: ("GROWL", 0, 0), 242: ("CRUNCH", 27, 80)},
+                    items={1: "MASTER BALL", 5: "POKé BALL", 18: "POTION", 0xAD: "BERRY", 0xBF: "TM01", 0xF3: "HM01"},
+                    landmarks={1: "NEW BARK TOWN", 2: "ROUTE 29", 0x2E: "PALLET TOWN", 0x5E: "FAST SHIP"},
+                    maps={(24, 3): 2, (24, 4): 1, (24, 5): 1, (24, 7): 1}),
+    ),
     "crystal_clear": dict(
         suffix="CrystalClear",
         label="Pokemon Crystal Clear (v2.5.11 / v2.6.0, Standard Colors / Color Filter)",

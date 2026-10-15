@@ -1022,6 +1022,14 @@ open class CompanionScreenshotTest {
     @Test fun quetzal084GuideHere() = retailGuide("quetzal_084", NATIVE_QUETZAL_V084, QUETZAL_084_ROM, "HERE", kind = GameKind.QUETZAL)
     @Test fun quetzalJohtoParty() = retail("quetzal_johto", NATIVE_QUETZAL, QUETZAL_ROM, GameKind.QUETZAL, "PARTY", art = true)
     @Test fun quetzalJohtoMap() = retail("quetzal_johto", NATIVE_QUETZAL, QUETZAL_ROM, GameKind.QUETZAL, "MAP", art = true)
+    private val redRom = "Pokemon - Red Version (USA, Europe) (SGB Enhanced).gb"
+    @Test fun redParty() = yellow("red", "PARTY", cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
+    @Test fun redItems() = yellow("red", "ITEMS", cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
+    @Test fun redBattleMoves() =
+        yellow("red_battle_move2", "BATTLE", controls = true, cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
+    @Test fun redMap() = yellow("red", "MAP", cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
+    @Test fun redSettings() = yellow("red", "SETTINGS", cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
+    @Test fun redDexEntry() = yellow("red", "DEX", dexEntry = 151, cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
     @Test fun yellowParty() = yellow("yellow", "PARTY")
     @Test fun yellowItems() = yellow("yellow", "ITEMS")
     @Test fun yellowBattle() = yellow("yellow_battle", "BATTLE")
@@ -1053,6 +1061,14 @@ open class CompanionScreenshotTest {
     @Test fun yellowItParty() = yellow("yellow_it", "PARTY", cfg = yellowIt, romFile = yellowItRom)
     @Test fun yellowEsItems() = yellow("yellow_es", "ITEMS", cfg = yellowEs, romFile = yellowEsRom)
     @Test fun yellowEsDexEntry() = yellow("yellow_es", "DEX", dexEntry = 25, cfg = yellowEs, romFile = yellowEsRom)
+    @Test fun goldParty() = crystal("gold", "PARTY", gold = true)
+    @Test fun goldItems() = crystal("gold", "ITEMS", gold = true)
+    @Test fun goldBattleMoves() = crystal("gold_battle", "BATTLE", controls = true, gold = true)
+    @Test fun goldTrainer() = crystal("gold_trainer", "BATTLE", gold = true)
+    @Test fun goldMap() = crystal("gold", "MAP", gold = true)
+    @Test fun goldDexEntry() = crystal("gold", "DEX", dexEntry = 155, gold = true)
+    @Test fun silverParty() = crystal("silver", "PARTY", silver = true)
+    @Test fun silverDexEntry() = crystal("silver", "DEX", dexEntry = 155, silver = true)
     @Test fun crystalParty() = crystal("crystal", "PARTY")
     @Test fun crystalItems() = crystal("crystal", "ITEMS")
     @Test fun crystalBattle() = crystal("crystal_battle", "BATTLE")
@@ -1099,15 +1115,16 @@ open class CompanionScreenshotTest {
         /** A European cart: its config and file (in the gbc folder beside the GBA ROMs). */
         cfg: com.pokedaisy.app.companion.data.Gen1Config = com.pokedaisy.app.companion.data.GEN1_YELLOW,
         romFile: String = "Pokemon - Yellow Version - Special Pikachu Edition (USA, Europe) (CGB+SGB Enhanced).gb",
+        game: GameKind = GameKind.YELLOW,
     ) {
-        activeGame = GameKind.YELLOW
+        activeGame = game
         romLanguage = cfg.language   // another test's ROM may have left Japanese names on
         romGameCode = cfg.gameCode
         val rom = java.io.File(java.io.File(RETAIL_ROM_DIR).parentFile, "gbc/$romFile")
         if (rom.isFile) com.pokedaisy.app.companion.data.Gen1Art.extractTo(rom.readBytes(), RomArt.dirOverride!!)
         com.pokedaisy.app.companion.data.Gen1Dex.rom = if (rom.isFile) rom.readBytes() else null
         val t = com.pokedaisy.app.companion.data.readGen1Telemetry(FixtureMemoryReader.load(fixture), cfg)
-        val v = buildSnapshotView(t).copy(game = GameKind.YELLOW)
+        val v = buildSnapshotView(t).copy(game = game)
         // The icon sheets load asynchronously in the app; decode them before the snapshot.
         (v.party + v.battlePlayer + v.battleOpponent).forEach { m -> m.iconAsset?.let { GameArt.get(paparazzi.context, it) } }
         // The touch controls (FIGHT / moves) show with a battle input to drive.
@@ -1124,9 +1141,9 @@ open class CompanionScreenshotTest {
             paparazzi.snapshot {
                 AppTheme {
                     androidx.compose.runtime.CompositionLocalProvider(
-                        com.pokedaisy.app.companion.ui.theme.LocalGameFont provides com.pokedaisy.app.companion.ui.theme.rememberGameFont(GameKind.YELLOW),
-                        com.pokedaisy.app.companion.ui.theme.LocalGameTextScale provides com.pokedaisy.app.companion.ui.theme.gameTextScale(GameKind.YELLOW),
-                        com.pokedaisy.app.companion.ui.theme.LocalGameFontWidth provides com.pokedaisy.app.companion.ui.theme.gameFontWidth(GameKind.YELLOW),
+                        com.pokedaisy.app.companion.ui.theme.LocalGameFont provides com.pokedaisy.app.companion.ui.theme.rememberGameFont(game),
+                        com.pokedaisy.app.companion.ui.theme.LocalGameTextScale provides com.pokedaisy.app.companion.ui.theme.gameTextScale(game),
+                        com.pokedaisy.app.companion.ui.theme.LocalGameFontWidth provides com.pokedaisy.app.companion.ui.theme.gameFontWidth(game),
                     ) {
                         val ui = DexUiState(androidx.compose.foundation.lazy.rememberLazyListState())
                         ui.open = dexEntry
@@ -1147,16 +1164,21 @@ open class CompanionScreenshotTest {
     /** Pokémon Crystal (Game Boy Color): the Gen 2 reader on a GB fixture (wram.bin + wramx.bin), art from the rev 1 ROM;
      * [clear]: Crystal Clear v2.6.0's instead. */
     private fun crystal(fixture: String, tab: String, controls: Boolean = false, dexEntry: Int? = null, statusBar: Boolean = false,
-                        clear: Boolean = false, prism: Boolean = false) {
-        val game = if (prism) GameKind.PRISM else if (clear) GameKind.CRYSTAL_CLEAR else GameKind.CRYSTAL
+                        clear: Boolean = false, prism: Boolean = false, gold: Boolean = false, silver: Boolean = false) {
+        val game = if (prism) GameKind.PRISM else if (clear) GameKind.CRYSTAL_CLEAR else if (gold) GameKind.GOLD
+            else if (silver) GameKind.SILVER else GameKind.CRYSTAL
         val cfg = if (prism) com.pokedaisy.app.companion.data.GEN2_PRISM
-            else if (clear) com.pokedaisy.app.companion.data.GEN2_CRYSTAL_CLEAR_V2_6_0 else com.pokedaisy.app.companion.data.GEN2_CRYSTAL
+            else if (clear) com.pokedaisy.app.companion.data.GEN2_CRYSTAL_CLEAR_V2_6_0
+            else if (gold) com.pokedaisy.app.companion.data.GEN2_GOLD else if (silver) com.pokedaisy.app.companion.data.GEN2_SILVER
+            else com.pokedaisy.app.companion.data.GEN2_CRYSTAL
         activeGame = game
         com.pokedaisy.app.companion.data.activeGen2 = cfg
         romLanguage = 'E'
         romGameCode = ""
         val rom = java.io.File(java.io.File(RETAIL_ROM_DIR).parentFile,
             if (prism) "gbc/Pokemon Prism (v0.95 build 254 Hotfix 5).gbc"
+            else if (gold) "gbc/Pokemon - Gold Version (USA, Europe) (SGB Enhanced) (GB Compatible).gbc"
+            else if (silver) "gbc/Pokemon - Silver Version (USA, Europe) (SGB Enhanced) (GB Compatible).gbc"
             else if (clear) "gbc/Pokemon Crystal Clear (v2.6.0).gbc" else "gbc/Pokemon - Crystal Version (USA, Europe) (Rev 1).gbc")
         if (rom.isFile) com.pokedaisy.app.companion.data.Gen2Art.extractTo(rom.readBytes(), RomArt.dirOverride!!)
         // The cart's bytes (dex pages, item text), as PokeDaisyActivity sets them for a Game Boy ROM.

@@ -101,10 +101,16 @@ object GameTitles {
         "0aceec0ef7aa2ca5aa831554598d91f61a925591" to "Pokémon Version Jaune",
         "05bb8e99f24d498613930949730afa8024e77d08" to "Pokémon Versione Gialla",
         "1dc242039218fba50928d1afb66b70565b6b9daf" to "Pokémon Edición Amarilla",
+        // pret/pokered's roms.sha1 (Blue: the build stands in for the cart).
+        "ea9bcae617fdf159b045185467ae58b2e4a48b9a" to "Pokémon Red",
+        "d7037c83e1ae5b39bde3c30787637ba1d4c48ce2" to "Pokémon Blue",
         // Game Boy Color (pret/pokecrystal's roms.sha1): rev 0, rev 1, Australia.
         "f4cd194bdee0d04ca4eac29e09b8e4e9d818c133" to "Pokémon Crystal",
         "f2f52230b536214ef7c9924f483392993e226cfb" to "Pokémon Crystal",
         "a0fc810f1d4e124434f7be2c989ab5b5892ddf36" to "Pokémon Crystal",
+        // pret/pokegold's roms.sha1.
+        "d8b8a3600a465308c9953dfa04f0081c05bdcb94" to "Pokémon Gold",
+        "49b163f7e57702bc939d642a18f591de55d92dae" to "Pokémon Silver",
         // Crystal Clear: v2.5.11 and v2.6.0, each in Standard Colors and Color Filter.
         "a1c4da6b0057c98fe4ebea45d6812a484fc69abd" to "Pokémon Crystal Clear",
         "6fc677bf7a9db103cb9ee11ac08d26782e69ae41" to "Pokémon Crystal Clear",

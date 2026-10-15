@@ -59,7 +59,8 @@ import com.pokedaisy.app.companion.data.MonView
 import com.pokedaisy.app.companion.data.MoveView
 import com.pokedaisy.app.companion.ui.theme.AppColors
 import com.pokedaisy.app.companion.ui.theme.pixelFontFamily
-import com.pokedaisy.app.companion.data.isCrystalFamily
+import com.pokedaisy.app.companion.data.isGen2
+import com.pokedaisy.app.companion.data.isGen1
 import com.pokedaisy.app.companion.ui.theme.gbaFocusRing
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -653,8 +654,8 @@ private fun Gen1ActionButtons(
             cell(words[1], 2, Modifier.weight(1f).fillMaxHeight())
         }
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Crystal calls the bag PACK.
-            cell(if (com.pokedaisy.app.companion.data.activeGame.isCrystalFamily && words[2] != "Pack") "PACK" else words[2], 1, Modifier.weight(1f).fillMaxHeight())
+            // Gen 2 calls the bag PACK.
+            cell(if (com.pokedaisy.app.companion.data.activeGame.isGen2 && words[2] != "Pack") "PACK" else words[2], 1, Modifier.weight(1f).fillMaxHeight())
             cell(words[3], 3, Modifier.weight(1f).fillMaxHeight())
         }
     }
@@ -721,8 +722,8 @@ private fun Gen1MoveList(
 }
 
 /** A Game Boy game's buttons are plain text boxes ([PlatinumButton]). */
-internal val gen1Buttons get() = com.pokedaisy.app.companion.data.activeGame == com.pokedaisy.app.companion.data.GameKind.YELLOW ||
-    com.pokedaisy.app.companion.data.activeGame.isCrystalFamily   // Gen 2's menu is laid out the same
+internal val gen1Buttons get() = com.pokedaisy.app.companion.data.activeGame.isGen1 ||
+    com.pokedaisy.app.companion.data.activeGame.isGen2   // Gen 2's menu is laid out the same
 
 /** [text] on one line at the largest whole size from [maxSize] down to [minSize] (sp) that fits the
  * width it's given; still too long at [minSize], it ends in an ellipsis. */

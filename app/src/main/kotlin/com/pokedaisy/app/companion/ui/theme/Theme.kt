@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.geometry.Offset
@@ -44,7 +45,7 @@ import com.pokedaisy.app.companion.ui.GameArt
 import com.pokedaisy.app.companion.ui.PixelRoundedShape
 import com.pokedaisy.app.companion.ui.rememberArtGeneration
 import com.pokedaisy.app.companion.ui.soundClickable
-import com.pokedaisy.app.companion.data.isCrystalFamily
+import com.pokedaisy.app.companion.data.isGameBoyGame
 
 /**
  * A named "chrome" palette — one of 9 selectable reskins (PokéDaisy default, then
@@ -296,16 +297,10 @@ val LocalGameTextScale = androidx.compose.runtime.staticCompositionLocalOf { 1f 
 val LocalGameFontWidth = androidx.compose.runtime.staticCompositionLocalOf { 1f }
 
 /** [LocalGameFontWidth] for [game]'s own font. */
-fun gameFontWidth(game: GameKind?): Float = when (game) {
-    GameKind.YELLOW, GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM -> 0.75f
-    else -> 1f
-}
+fun gameFontWidth(game: GameKind?): Float = if (game.isGameBoyGame) 0.75f else 1f
 
 /** [LocalGameTextScale] for [game]'s own font. */
-fun gameTextScale(game: GameKind?): Float = when (game) {
-    GameKind.YELLOW, GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM -> 9f / 7f
-    else -> 1f
-}
+fun gameTextScale(game: GameKind?): Float = if (game.isGameBoyGame) 9f / 7f else 1f
 
 /** [game]'s own font from the rom-art cache, once a launch of it has written it; else null. */
 @Composable
@@ -316,9 +311,11 @@ fun rememberGameFont(game: GameKind?): FontFamily? {
     return remember(game, gen, language) {
         val path = when (game) {
             GameKind.YELLOW -> com.pokedaisy.app.companion.data.Gen1Art.yellowFont(com.pokedaisy.app.companion.data.romLanguage)
+            GameKind.RED, GameKind.BLUE -> com.pokedaisy.app.companion.data.Gen1Art.RED_BLUE_FONT
             GameKind.CRYSTAL -> com.pokedaisy.app.companion.data.Gen2Art.CRYSTAL_FONT
             GameKind.CRYSTAL_CLEAR -> com.pokedaisy.app.companion.data.Gen2Art.CRYSTAL_CLEAR_FONT
             GameKind.PRISM -> com.pokedaisy.app.companion.data.Gen2Art.PRISM_FONT
+            GameKind.GOLD, GameKind.SILVER -> com.pokedaisy.app.companion.data.Gen2Art.GOLD_SILVER_FONT
             else -> null
         } ?: return@remember null
         com.pokedaisy.app.companion.data.RomArt.file(context.filesDir, path)?.let { com.pokedaisy.app.gameFontFamily(context, it) }
@@ -460,8 +457,9 @@ private fun buildGameBackground(context: android.content.Context, game: GameKind
     // Gen 1's screens are plain white: one pixel, stretched over the tab in a single draw.
     // (Never tiled - GameBackdrop draws a tiled backdrop tile by tile, and a 1px tile at
     // the Thor's 5x was ~53,000 draws a frame: 77 ms per frame on the RenderThread.)
-    if (game == GameKind.YELLOW || game.isCrystalFamily) {
-        return GameBackground(android.graphics.Bitmap.createBitmap(intArrayOf(-1), 1, 1, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap(), false)
+    if (game.isGameBoyGame) {
+        val paper = com.pokedaisy.app.companion.ui.OptionColors.gbPaper(game).toArgb()
+        return GameBackground(android.graphics.Bitmap.createBitmap(intArrayOf(paper), 1, 1, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap(), false)
     }
     // Sword and Shield Ultimate Plus: CFRU's grid in its own red, one 32px cell tiled (RomArt).
     if (game == GameKind.SWORD_SHIELD) {

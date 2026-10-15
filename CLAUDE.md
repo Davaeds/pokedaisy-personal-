@@ -437,6 +437,20 @@ unless the half after it is a compound's (`Gen2Dex.flow`, `COMPOUND_ENDS`). Art:
 No save of its own fits it: a new game played headless, the story's D84C bit 5 (no START menu, no encounters) cleared to play
 on; the game's own TryAddMonToParty / ReceiveItem / startbattle ran through mgba_dump's new `gbfar` / `gbinject` (README).
 The user's "Crystal (USA) (patched)" file is "LOL PRISM": Crystal rev 0 whose first 32 KB only print "LOL" - not supported.
+**Red / Blue (2026-10-15)**: `GameKind.RED` / `.BLUE`, `GEN1_RED` / `GEN1_BLUE` - Yellow's reader and tables (`isGen1`; `gen_gen1_tables.py
+red` / `blue` checks every table equals Yellow's and writes nothing), RAM Yellow's + 1 from wOnSGB (CF1B) up. Blue is checked on
+pret/pokered's `pokeblue.gbc` (= the cart; the user has none). They run as a **Super Game Boy** in mGBA (DMG cart with SGB flag):
+their white / black are 0xFFEFFF / 0x181010 (`OptionColors.gbPaper` / `gbInk`, the backdrop, `RedBlueBag`, `RedBluePartyPalette`)
+and the art takes the SGB palettes (sampled headless). MEW sits apart in bank 1 (`Gen1DexTables.mewBaseStats`). Their bank 0 has no
+`jr @`: STEADY music parks on WRAM 0xCD39, which `pkRenderGbPark` (and mgba_dump's `gbpark`) writes the `jr @` into first. The
+user's Red save holds Yellow's team; in Blue its map's tileset pointers are Red's (Blue's are 0x10 lower, garbage graphics until
+`boot/blue.txt` pokes them). docs/DEVELOPMENT.md.
+**Gold / Silver (2026-10-15)**: `GameKind.GOLD` / `.SILVER` (`isGoldSilver`, both in `isGen2` with the Crystal family),
+`GEN2_GOLD` / `GEN2_SILVER` - pret/pokegold's RAM (wBattleMon / wCurOTMon / wCurBattleMon in bank 0), Crystal's structs, menus and
+look (the party menu and PACK are Crystal's colours, sampled headless), one table set (`gen_gen2_tables.py gold_silver`). Dex pages
+per version; the page bank is computed and FixPicBank is a pair table (`Gen2DexTables.dexEntryFirstBank` / `picBankFixes`). The user
+had no save: one was played headless in Gold (the same file under Silver's name). mgba_dump's `gbfar` / `gbinject` assume Crystal's
+hROMBank / FarCall - see `gold_trainer`'s README; `loadstate` broke Gold's PACK, so run captures in one go.
 **Companion options (2026-10-08)**: RESUME GAMES (`Prefs.autoResume`, top-screen Settings > LIBRARY; off =
 a launch boots the save, a return from HOME still resumes - `freshLaunch`), CLOSE COMPANION (SETTINGS, two
 screens: the Presentation goes away until BACK on the game), STATUS BAR OFF / GAME / COMPANION (`Prefs.statusBarOnCompanion`,

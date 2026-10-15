@@ -59,7 +59,7 @@
 //                        does (app/src/main/cpp/pk_cheats.c, compiled in below)
 //   cheatclear         - take every cheat out again
 //   gbpark SPIN        - GB: park the main loop on SPIN (a `jr @`) once interrupts are on
-//                        (the app's pkRenderGbPark)
+//                        (the app's pkRenderGbPark); a SPIN in WRAM gets the `jr @` written first
 //   gbcall FN A C RET  - GB: call FN with A / C until it returns to RET (pkRenderGbCall)
 //   gbloop N           - GB: run N frames and report where Gen 1's music channel state
 //                        (Gen1LoopWatch: Yellow's addresses) first repeats
@@ -408,6 +408,12 @@ static bool gb_park(struct mCore* core, uint16_t spin) {
     for (int i = 0; i < 5000000; i++) {
         core->step(core);
         if (gb->memory.ime && (gb->memory.ie & 1) && (gb->memory.io[GB_REG_LCDC] & 0x80) && !cpu->halted && !cpu->irqPending) {
+            // A spin in WRAM (Red / Blue: bank 0 holds no `jr @`) is written there first - a byte the
+            // parked game never touches again.
+            if (spin >= 0xC000 && spin < 0xDFFF) {
+                core->busWrite8(core, (uint16_t) spin, 0x18);
+                core->busWrite8(core, (uint16_t) (spin + 1), 0xFE);
+            }
             cpu->pc = spin;
             cpu->memory.setActiveRegion(cpu, cpu->pc);
             return true;

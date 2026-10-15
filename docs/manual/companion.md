@@ -24,7 +24,7 @@ Along the bottom of the companion is a row of tabs, with the SETTINGS gear at th
 
 A few more are off the bar to begin with: `CARD` (your [trainer card](trainer-card.md)), `STATES` (save states) and `CHEEVOS` ([RetroAchievements](achievements.md)).
 
-Some tabs only appear when the game has what they need. `DEX` needs the game's Pokédex data and `GUIDE` needs a guide for that game, so a game without them has fewer tabs. The bag tab also takes the game's own word for it: `PACK` in Crystal, Crystal Clear and Prism, `CUBE` in Unbound, `INVENTORY` in R.O.W.E., `POCKETS` in Super Mariomon, `BAG` everywhere else.
+Some tabs only appear when the game has what they need. `DEX` needs the game's Pokédex data and `GUIDE` needs a guide for that game, so a game without them has fewer tabs. The bag tab also takes the game's own word for it: `PACK` in Gold, Silver, Crystal, Crystal Clear and Prism, `CUBE` in Unbound, `INVENTORY` in R.O.W.E., `POCKETS` in Super Mariomon, `BAG` everywhere else.
 
 ### Choosing your tabs
 

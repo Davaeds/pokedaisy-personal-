@@ -26,6 +26,9 @@ data class Gen1DexTables(
      * feet / inches and pounds x 10 (4 bytes), and print with their own characters. */
     val metric: Boolean = false,
     val charset: Gen1Charset = Gen1Charset.EN,
+    /** Red / Blue keep MEW apart (added last, in bank 1): its base stats ([BaseStats] holds 150) and its pics' bank. */
+    val mewBaseStats: Pair<Int, Int>? = null,
+    val mewPicsBank: Int = 0,
 )
 
 val GEN1_DEX_YELLOW = Gen1DexTables(
@@ -40,6 +43,21 @@ val GEN1_DEX_YELLOW = Gen1DexTables(
     internalToDex = gen1InternalToDexYellow,
     owned = 0xD2F6L,
     seen = 0xD309L,
+)
+
+/**
+ * Red and Blue (pret/pokered: every address the same in both builds): their own dex pages (Yellow rewrote the text),
+ * palettes - Super Game Boy ones, as the game shows them on one (mGBA runs a DMG cart with SGB support as one) - and
+ * MEW apart in bank 1 ([Gen1DexTables.mewBaseStats]).
+ */
+private val GEN1_DEX_RED = GEN1_DEX_YELLOW.copy(
+    dexEntryPointers = 0x10 to 0x447E,
+    monsterPalettes = 0x1C to 0x65C8,
+    cgbPalettes = 0x1C to 0x6660,   // SuperPalettes: the same 4 RGB colours per id as CGBBasePalettes
+    owned = 0xD2F7L,
+    seen = 0xD30AL,
+    mewBaseStats = 0x01 to 0x425B,
+    mewPicsBank = 0x01,
 )
 
 /** The European Yellows: English's tables but for the dex pages' text and palettes (port_gen1.py, checked by contents). */
@@ -63,6 +81,9 @@ val POKEDEX_YELLOW_DE = POKEDEX_YELLOW_METRIC.copy(gen1 = GEN1_DEX_YELLOW_DE)
 val POKEDEX_YELLOW_FR = POKEDEX_YELLOW_METRIC.copy(gen1 = GEN1_DEX_YELLOW_FR)
 val POKEDEX_YELLOW_IT = POKEDEX_YELLOW_METRIC.copy(gen1 = GEN1_DEX_YELLOW_IT)
 val POKEDEX_YELLOW_ES = POKEDEX_YELLOW_METRIC.copy(gen1 = GEN1_DEX_YELLOW_ES)
+/** Red's and Blue's: one set of tables over each cart's own bytes (two objects, so a dex cache never crosses them). */
+val POKEDEX_RED = POKEDEX_YELLOW.copy(gen1 = GEN1_DEX_RED)
+val POKEDEX_BLUE = POKEDEX_YELLOW.copy(gen1 = GEN1_DEX_RED.copy())
 
 fun readGen1PokedexState(r: MemoryReader, t: Gen1DexTables, tables: PokedexTables): PokedexState {
     val owned = r.readCoreMemory(t.owned, 19)
@@ -95,6 +116,13 @@ object Gen1Dex {
         return sb.toString().split(' ').filter { it.isNotEmpty() }.joinToString(" ")
     }
 
+    private const val MEW = 151
+
+    /** [dex]'s 28 bytes of base stats: BaseStats by Dex number, MEW's apart in Red / Blue. */
+    private fun baseStatsOff(t: Gen1DexTables, dex: Int): Int =
+        t.mewBaseStats?.takeIf { dex == MEW }?.let { off(it.first, it.second) }
+            ?: (off(t.baseStats.first, t.baseStats.second) + 28 * (dex - 1))
+
     private fun internalOf(t: Gen1DexTables, dex: Int): Int = t.internalToDex.indexOfFirst { it == dex }
 
     fun entry(t: Gen1DexTables, dex: Int): DexEntry? {
@@ -117,7 +145,7 @@ object Gen1Dex {
         val far = o + if (t.metric) 3 else 4
         // text_far: 0x17, address, bank.
         val desc = if (u8(rom, far) == 0x17) text(rom, off(u8(rom, far + 3), u16(rom, far + 1)), chars) else ""
-        val s = off(t.baseStats.first, t.baseStats.second) + 28 * (dex - 1)
+        val s = baseStatsOff(t, dex)
         return DexEntry(
             national = dex,
             species = dex,
@@ -146,9 +174,10 @@ object Gen1Dex {
         val rom = rom ?: return null
         if (dex !in 1..151) return null
         val internal = internalOf(t, dex).takeIf { it > 0 } ?: return null
-        val s = off(t.baseStats.first, t.baseStats.second) + 28 * (dex - 1)
+        val s = baseStatsOff(t, dex)
         val ptr = u16(rom, s + 11)
         val bank = if (internal == t.fossilKabutops) t.fossilKabutopsBank
+        else if (dex == MEW && t.mewBaseStats != null) t.mewPicsBank
         else t.picsBank + t.picsBankBreaks.count { internal >= it }
         val pic = Gen1Pic.decompress(rom, off(bank, ptr)) ?: return null
         val palId = u8(rom, off(t.monsterPalettes.first, t.monsterPalettes.second) + dex)
