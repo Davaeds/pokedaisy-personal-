@@ -30,6 +30,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | Amethyst | 1.3.0, 1.4.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ |
 | Ash Gray | 4.5.3, Fork Bug Fix 1.0 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ |
 | Celia's Stupid Romhack | 1.1.4 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — |
+| Elite Redux | 2.65.3b, 2.65.4.1b | ✅ | ✅ ¹⁰ | ✅ ¹⁰ | ✅ | — | — | — | ✅ ¹⁰ | ✅ ¹⁰ | ✅ ¹⁰ | — ¹⁰ |
 | Emerald Imperium | 1.3.1 | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Emerald Kaizo | 2.0 | ✅ | ✅ | ✅ | ✅ | ✅ | — ⁴ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Emerald Legacy | 1.1.4 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -37,6 +38,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | Emerald Seaglass | 3.0 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — |
 | FireRed Rocket Edition | the one release | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ |
 | Gaia | 3.2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ |
+| Ghost Grey | 1.0.1, 1.0.2, 1.0.4 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹¹ | — | ✅ ¹¹ | ✅ ¹¹ | ✅ ¹¹ | ✅ ¹¹ |
 | Glazed | 9.2.0 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁷ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | GS Chronicles | 2.7.6 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ |
 | Heart and Soul | 2.0.6 | ✅ | ✅ | ✅ | ✅ | — | ✅ | — | ◐ ⁶ | — | ✅ | ✅ |
@@ -96,6 +98,20 @@ change to any of the places listed under "Where it's decided" updates its rows h
 9. Should work, not run on this hack yet: it is FireRed rev 0's code edited in place (Rocket Edition, Ash Gray) or a
    CFRU hack (GS Chronicles), and the tables these columns use are FireRed rev 0's / the CFRU hacks', each checked on
    other games.
+10. Elite Redux's battle menu is its own: FIGHT / INFO over POKéMON / RUN, valued 0 / 3 over 1 / 2, no BAG, and the moves
+    one column of four (`BattleInputController.MenuCells.ELITE_REDUX`). Checked headless on both builds: a written RUN cell
+    + A ran, a written move cell + A used that move; the target screen's handler was read in a forced double battle
+    (single battles never open it in this game); a trainer battle's FOE TEAM and next foe checked. EXPAND: its own WIDE
+    rows on the expansion family (`verify_wide.py`: map 440/440, battle 959/959 exact on both builds). The field reads
+    (`fieldinfo`): free / text / battle, the MACH and ACRO BIKE and SURF from gPlayerAvatar. WILD ENCOUNTERS: 0x0203D214
+    (2.65.3b) / 0x0203D21C (2.65.4.1b); off = no battle in 300 steps of Route 101's grass, 100 = one within ~24. No PC
+    anywhere: its START menu has its own PC.
+11. Ghost Grey, checked headless on v1.0.4 and v1.0.1 with its own save (FireRed rev 0's table, `FIELD_ITEMS_PORTS["BPRE0"]`):
+    a RAGECANDYBAR through ExecuteTableBasedItemEffect healed the lead 85 -> 93; the PC script opened the PC in its cave;
+    after a warp to Pewter City, DRIFBLIM taught FLY, the badge check, SetUpFieldMove_Fly and SetFlyWarpDestination flew it
+    to Viridian's Pokémon Center, controls free after; `fieldinfo` read the field free / locked with text (START menu) /
+    in battle, and the MACH BIKE (registered, SELECT) as bike 1; WILD ENCOUNTERS (0x020386DC) off = no battle in 80 walks
+    of its cave, 100 = one within two.
 
 ## What each column is
 

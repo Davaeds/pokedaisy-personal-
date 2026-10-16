@@ -68,6 +68,8 @@ data class PartyMonLayout(
     val eggMask: Int = 0x04,
     /** R.O.W.E.'s bit-packed struct ([ROWE_PARTY_MON], [decodeRoweMon]) rather than a box of substructs. */
     val rowe: Boolean = false,
+    /** Elite Redux's bit-packed struct ([ELITE_REDUX_PARTY_MON], [decodeEliteReduxMon]). */
+    val eliteRedux: Boolean = false,
 )
 
 val VANILLA_PARTY_MON = PartyMonLayout()
@@ -84,6 +86,47 @@ val VANILLA_PARTY_MON = PartyMonLayout()
 val ROWE_PARTY_MON = PartyMonLayout(
     size = 0x4C, status = 0x38, level = 0x3C, hp = 0x3E, maxHp = 0x40, flags = 0x27, eggMask = 0x80, hasStats = true, rowe = true,
 )
+
+/**
+ * Pokémon Elite Redux 2.65's 0x4C-byte struct Pokemon (its include/pokemon.h, checked against the save's party menu and
+ * summaries headless): plaintext and bit-packed like R.O.W.E.'s, but its own order. personality, otId; u32 +0x08 = move 1
+ * (11 bits) | experience (21) << 11; u32 +0x0C = moves 2 and 3 (11 bits each) | friendship; u32 +0x10 = species (16 bits) |
+ * move 4 (11) << 16; u32 +0x14 = heldItem (10) | nature (5) << 10 | isEgg << 15 | ...; EVs +0x18; a 12-byte nickname
+ * +0x26; PP +0x34 (the party's, not the box's); status +0x38, level +0x3C, HP / max HP +0x3E / +0x40, the stats after.
+ * No IVs are kept: every one is 31 (its options' Hell mode aside), but a Speed IV of 0 where speedDown (+0x32 bit 5) is set.
+ */
+val ELITE_REDUX_PARTY_MON = PartyMonLayout(
+    size = 0x4C, status = 0x38, level = 0x3C, hp = 0x3E, maxHp = 0x40, flags = 0x15, eggMask = 0x80, hasStats = true,
+    eliteRedux = true,
+)
+
+private fun decodeEliteReduxMon(raw: ByteArray, off: Int): Mon? {
+    val w08 = u32(raw, off + 0x08)
+    val w0c = u32(raw, off + 0x0C)
+    val w10 = u32(raw, off + 0x10)
+    val w14 = u32(raw, off + 0x14)
+    val species = (w10 and 0xFFFF).toInt()
+    if (species == 0) return null
+    val speedDown = (raw[off + 0x32].toInt() and 0x20) != 0
+    return Mon(
+        species = species,
+        level = raw[off + 0x3C].toInt() and 0xFF,
+        hp = u16(raw, off + 0x3E),
+        maxHp = u16(raw, off + 0x40),
+        status = u32(raw, off + 0x38),
+        moves = intArrayOf((w08 and 0x7FF).toInt(), (w0c and 0x7FF).toInt(), ((w0c shr 11) and 0x7FF).toInt(), ((w10 shr 16) and 0x7FF).toInt()),
+        pp = IntArray(NUM_MOVES) { raw[off + 0x34 + it].toInt() and 0xFF },
+        exp = (w08 shr 11) and 0x1FFFFF,
+        personality = u32(raw, off),
+        stats = MonStats(
+            ivs = List(6) { if (it == STAT_SPEED && speedDown) 0 else MAX_IV },
+            evs = List(6) { raw[off + 0x18 + it].toInt() and 0xFF },
+            nature = ((w14 shr 10) and 0x1F).toInt(),
+            stats = List(6) { u16(raw, off + 0x40 + 2 * it) },
+        ),
+        heldItem = (w14 and 0x3FF).toInt(),
+    )
+}
 
 private fun decodeRoweMon(raw: ByteArray, off: Int): Mon? {
     val w14 = u32(raw, off + 0x14)
@@ -136,6 +179,7 @@ val SOULGOLD_PARTY_MON = PartyMonLayout(
 fun decodePartyMon(raw: ByteArray, off: Int, layout: PartyMonLayout = VANILLA_PARTY_MON): Mon? {
     if (raw.size < off + layout.size) return null
     if (layout.rowe) return decodeRoweMon(raw, off)
+    if (layout.eliteRedux) return decodeEliteReduxMon(raw, off)
 
     var species: Int
     var heldItem = 0
@@ -271,13 +315,13 @@ data class BattleMonLayout(
     val abilityU16: Boolean = false,
     /** The held item (u16). */
     val item: Int = 0x2E,
-) {
-    // Every layout so far keeps these where vanilla has them (checked on each *_battle fixture).
+    /** The species (u16): every layout but Elite Redux's keeps it first. */
+    val species: Int = 0x00,
     /** Attack, Defense, Speed, Sp. Atk, Sp. Def (u16 each). */
-    val stats: Int get() = 0x02
+    val stats: Int = 0x02,
     /** statStages[8] (HP, Atk, Def, Speed, Sp. Atk, Sp. Def, accuracy, evasion; 6 = unchanged). */
-    val statStages: Int get() = 0x18
-}
+    val statStages: Int = 0x18,
+)
 
 val VANILLA_BATTLE_MON = BattleMonLayout(
     size = BATTLE_POKEMON_SIZE, moves = 0x0C, type1 = 0x21, type2 = 0x22, pp = 0x24,
@@ -297,6 +341,19 @@ val EXPANSION_BATTLE_MON = BattleMonLayout(
 /** Too Many Types 2's: expansion's, but PP a byte later (a third type byte at +0x24). */
 val TMT2_BATTLE_MON = EXPANSION_BATTLE_MON.copy(pp = 0x26)
 
+/**
+ * Elite Redux 2.65's 0x68-byte struct BattlePokemon, its own order (its source's, checked on both builds' battle dumps):
+ * experience, personality, status1 +0x08, status2, otId, species +0x14, the five stats +0x16, moves +0x20, abilities[4]
+ * +0x28 (the ability, then its three innates), HP / max HP +0x36 / +0x38, item +0x3A, statStages +0x3C, types +0x44 /
+ * +0x45 (a third at +0x46), PP +0x47, level +0x4B.
+ */
+val ELITE_REDUX_BATTLE_MON = BattleMonLayout(
+    size = 0x68, moves = 0x20, type1 = 0x44, type2 = 0x45, pp = 0x47,
+    hp = 0x36, level = 0x4B, maxHp = 0x38, status1 = 0x08,
+    ability = 0x28, abilityU16 = true, item = 0x3A,
+    species = 0x14, stats = 0x16, statStages = 0x3C,
+)
+
 /** R.O.W.E.'s: expansion's layout, the species' form id in its top 5 bits. */
 val ROWE_BATTLE_MON = EXPANSION_BATTLE_MON.copy(speciesMask = 0x7FF)
 
@@ -311,7 +368,7 @@ val SOULGOLD_BATTLE_MON = EXPANSION_BATTLE_MON.copy(size = 0x98, status1 = 0x54)
 /** Decodes one struct BattlePokemon (a gBattleMons entry) at [off]. */
 fun decodeBattleMon(raw: ByteArray, off: Int, layout: BattleMonLayout = VANILLA_BATTLE_MON): BattleMon? {
     if (raw.size < off + layout.size) return null
-    val species = u16(raw, off + 0x00) and layout.speciesMask
+    val species = u16(raw, off + layout.species) and layout.speciesMask
     if (species == 0) return null
     return BattleMon(
         species = species,

@@ -27,8 +27,10 @@ class HackGuidesTest {
     private val rocket = Game("Pokemon FireRed Rocket Edition.gba", GameKind.FIRERED, NATIVE_ROCKET_EDITION, "rocket_edition")
     private val ashGray = Game("Pokemon Ash Gray (v4.5.3).gba", GameKind.FIRERED, NATIVE_ASH_GRAY, "ash_gray")
     private val ashGrayFork = Game("Pokemon Ash Gray Fork Bug Fix (v1.0).gba", GameKind.FIRERED, NATIVE_ASH_GRAY, "ash_gray_fork")
+    private val ghostGrey = Game("Pokemon Ghost Grey (v1.0.4).gba", GameKind.FIRERED, NATIVE_GHOST_GREY, "ghost_grey")
+    private val ghostGreyV101 = Game("Pokemon Ghost Grey (v1.0.1).gba", GameKind.FIRERED, NATIVE_GHOST_GREY_V1_0_1, "ghost_grey_v101")
     private val gsChronicles = Game("Pokemon GS Chronicles (v2.7.6).gba", GameKind.GS_CHRONICLES, NATIVE_GS_CHRONICLES, "gs_chronicles")
-    private val all = listOf(odyssey, gaia, amethyst, amethyst141, celia, uvGame, swordShield, gsChronicles, rocket, ashGray, ashGrayFork)
+    private val all = listOf(odyssey, gaia, amethyst, amethyst141, celia, uvGame, swordShield, gsChronicles, rocket, ashGray, ashGrayFork, ghostGrey, ghostGreyV101)
 
     private fun load(g: Game): RomFileReader? = RomFileReader.load(RETAIL_ROM_DIR + g.rom)?.also {
         select(g)
@@ -224,6 +226,22 @@ class HackGuidesTest {
             assertTrue(GuideRomSource.wildMapKeys(g.t).isNotEmpty())
             assertNotNull(generatedWhereIs(GuideId.ASH_GRAY, { "AREA $it" }) { false })
         }
+        fireRedHack = null
+    }
+
+    /** Ghost Grey: seven badges, ERIKA next on the save (ASTON and MAJ.VOLTAGE beaten); SUMMER's team by the starter. */
+    @Test fun `ghost grey`() {
+        for (g in listOf(ghostGrey, ghostGreyV101)) {
+            load(g) ?: continue
+            assertEquals(listOf("Kabuto", "Nosegast"), GuideRomSource.party(g.t, 414)!!.map { speciesName(it.species) })
+            val p = readSaveProgress(FixtureMemoryReader.load(g.fixture), g.cfg, g.t)!!
+            assertEquals("LEADER ERIKA", GUIDE_GHOST_GREY.bosses.first { !it.isDone(p) }.title)
+            assertTrue(GuideRomSource.wildMapKeys(g.t).isNotEmpty())
+            assertNotNull(generatedWhereIs(GuideId.GHOST_GREY, { "AREA $it" }) { false })
+        }
+        val summer = GUIDE_GHOST_GREY.bosses.last()
+        val starter = { v: Int -> SaveProgress(ByteArray(0x120), ByteArray(0x200).also { it[0x31 * 2] = v.toByte() }) }
+        assertEquals(listOf(437, 436, 435), (0..2).map { summer.trainer(starter(it)) })
         fireRedHack = null
     }
 

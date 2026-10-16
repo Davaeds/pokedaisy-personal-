@@ -167,6 +167,8 @@ data class NativeConfig(
     val bag3: Bag3Layout? = null,
     // Quetzal Alpha 9 v1's "BAG4" record, read before [bag3] (v1 rewrites a v0 save's BAG3 into it on load).
     val bag4: Bag4Layout? = null,
+    // A bag kept as one "owned" bit per item id in SaveBlock1, no counts (Elite Redux); null = gBagPockets.
+    val itemFlagsBag: ItemFlagsBag? = null,
     // Map groups whose sections are named from a second table (Quetzal's Johto): read as 0x100 + id.
     val altMapSecGroups: IntRange? = null,
     // The game's money cap: Gen 3's 999,999 (Glazed's AddMoney caps at 9,999,999); above it is a wrong read.
@@ -2072,6 +2074,100 @@ val NATIVE_ASH_GRAY = NATIVE_ULTRA_VIOLET.copy(
     guideTables = GUIDE_TABLES_ASH_GRAY,
 )
 
+// Pokémon Ghost Grey (JoeyZeed; 32 MB, BPRE rev 0): v1.0.2 (sha1 74337272…) and v1.0.4 (0dafc011…) share every
+// table; v1.0.1 (20dfaea1…) differs in one move's type, so it is its own config (ActiveTables' fireRedHack picks
+// the text by config). FireRed 1.0 edited in place with HexManiacAdvance, not CFRU: Rocket Edition's repointed
+// moves / types / ability names, its ghosts in FireRed's species slots, gWildMonHeaders moved to 0x09300100, and
+// every other literal pool the config points through still naming rev 0's address. Its save (a 1.0.3 one, from
+// its Discord) loads in all three builds: the `ghost_grey*` fixtures decode with rev 0's RAM. Its region map's art
+// is its own grey (RomRegionMap).
+val NATIVE_GHOST_GREY = NATIVE_ULTRA_VIOLET.copy(
+    pokedex = POKEDEX_GHOST_GREY,
+    guideTables = GUIDE_TABLES_GHOST_GREY,
+)
+val NATIVE_GHOST_GREY_V1_0_1 = NATIVE_GHOST_GREY.copy()
+
+// Pokémon Elite Redux 2.65.4.1b (32 MB, BPEE, sha1 2f3e17e5…; 2.65.3b below): its own pokeemerald rebuild (gcc, from
+// Inclement Emerald), nothing at a retail address. Mapped headless from a save off its Discord ("v2.65 Beta2.1", Mia,
+// six Lv20s), which loads in both builds: every RAM global from dumps (the field, a scripted wild battle's menus, its
+// party menu) and checked against the game's own screens - the party menu, LUCINEON's summary, the bag, the title's
+// POKéDEX 29. Its party mon is a packed plaintext 0x4C bytes ([ELITE_REDUX_PARTY_MON]), its battle mon 0x68
+// ([ELITE_REDUX_BATTLE_MON]); the bag one "owned" bit per item ([ItemFlagsBag]); money plain at SaveBlock1 + 0x400 (the
+// game zeroes the encryption key on every load); its battle menu has no BAG and other cursor values
+// (BattleInputController.MenuCells.ELITE_REDUX). Tables from its ROM: gen_elite_redux_tables.py. A scripted trainer battle
+// (`elite_redux_trainer*`: ROXANNE) checked the FOE TEAM (gEnemyParty, the same packed mons), the foe out / next
+// (gBattlerPartyIndexes, monToSwitchIntoId +0x5E) and FOE DETAILS; HandleInputChooseTarget was read live in a forced double
+// battle (a single battle never opens the target screen in this game). The two builds share the
+// save layout, IWRAM and the battle globals up to gBattlerPartyIndexes; the rest of EWRAM sits 8 higher in 2.65.4.1b.
+val NATIVE_ELITE_REDUX_V2_65_4_1B = NativeConfig(
+    playerParty = 0x02039910L,
+    playerPartyCount = 0x0203990DL,
+    enemyParty = 0x02039AD8L,
+    monStride = 0x4C,
+    partyMonLayout = ELITE_REDUX_PARTY_MON,
+    battleMons = 0x0201C514L,
+    battleMonLayout = ELITE_REDUX_BATTLE_MON,
+    battlerPositions = 0x0201C490L,
+    battlersCount = 0x0201C484L,
+    battleTypeFlags = 0x0201C3F4L,
+    battlerPartyIndexes = 0x0201C488L,
+    battleStructPtr = 0x0201CB10L,
+    monToSwitchIntoOff = 0x5E,
+    actionCursor = 0x0201CB20L,
+    moveCursor = 0x0201CB24L,
+    battlerControllerFuncs = 0x03002080L,
+    handleInputChooseAction = 0x0805BE8DL,
+    handleInputChooseMove = 0x0805CA01L,
+    handleInputChooseTarget = 0x0805C305L,
+    waitForMonSelection = 0x0805E415L,
+    partyMenu = 0x0203960CL,
+    gMain = 0x03003420L,
+    saveBlock1Ptr = 0x0300340CL,
+    saveBlock2Ptr = 0x03003410L,
+    objectEvents = 0x02021DC4L,
+    mapHeader = 0x020277C0L,
+    bagPockets = 0,
+    bagPocketCount = 0,
+    encryptionKeyOff = -1,
+    moneyOff = 0x400L,
+    itemFlagsBag = ItemFlagsBag(0x40AL, 440, itemPocketsEliteRedux),
+    monIconTable = 0x08E31FA0L,
+    monIconPaletteIndices = 0x08E37A50L,
+    monIconPaletteTable = 0x08E38848L,
+    itemIconTable = 0x08AF1FF0L,
+    itemDescs = ItemDescTable(0x08AC6B24L, 40, 0x10, idOff = 4, count = 440),
+    eggSpecies = 2901,
+    pokedex = POKEDEX_ELITE_REDUX_V2_65_4_1B,
+    guideTables = GUIDE_TABLES_ELITE_REDUX_V2_65_4_1B,
+)
+
+// Pokémon Elite Redux 2.65.3b (sha1 5b38a681…): 2.65.4.1b's layout, its EWRAM past the battle globals 8 lower, every ROM
+// table and handler at its own address (the same save and screens checked).
+val NATIVE_ELITE_REDUX_V2_65_3B = NATIVE_ELITE_REDUX_V2_65_4_1B.copy(
+    playerParty = 0x02039908L,
+    playerPartyCount = 0x02039905L,
+    enemyParty = 0x02039AD0L,
+    battleMons = 0x0201C50CL,
+    battleStructPtr = 0x0201CB08L,
+    actionCursor = 0x0201CB18L,
+    moveCursor = 0x0201CB1CL,
+    handleInputChooseAction = 0x0805C2D5L,
+    handleInputChooseMove = 0x0805CE89L,
+    handleInputChooseTarget = 0x0805C751L,
+    waitForMonSelection = 0x0805E7E1L,
+    partyMenu = 0x02039604L,
+    objectEvents = 0x02021DBCL,
+    mapHeader = 0x020277B8L,
+    itemFlagsBag = ItemFlagsBag(0x40AL, 440, itemPocketsEliteRedux265_3),
+    monIconTable = 0x08E1FB28L,
+    monIconPaletteIndices = 0x08E255D8L,
+    monIconPaletteTable = 0x08E263D0L,
+    itemIconTable = 0x08AE4B0CL,
+    itemDescs = ItemDescTable(0x08AB9640L, 40, 0x10, idOff = 4, count = 440),
+    pokedex = POKEDEX_ELITE_REDUX_V2_65_3B,
+    guideTables = GUIDE_TABLES_ELITE_REDUX_V2_65_3B,
+)
+
 // Pokémon Sword and Shield Ultimate Plus v1.2.1.2 (32 MB, sha1 afe4c8e0…): Galar on CFRU, so
 // FireRed 1.0's code and RAM with its data repointed. The words FireRed loads its tables from
 // hold the hack's: gItems 0x093C0000 (Radical Red's address too), gMonIconTable 0x099F1EB8,
@@ -2866,11 +2962,32 @@ private fun readBag3(c: MemoryReader, cfg: NativeConfig, b: Bag3Layout): List<It
     return out
 }
 
+/**
+ * Elite Redux's bag: no pockets of slots and no counts - every item is owned or not, a bit per item id in the u16 array
+ * at SaveBlock1 + [off] (bit id % 16 of word id / 16), and the game lets an owned item be used without end. Which pocket
+ * an item shows in is its gItems entry's ([pockets], generated). Only ids below [count] (ITEMS_COUNT) are items: the
+ * save's union carries more past them. Each owned item reads as one.
+ */
+data class ItemFlagsBag(val off: Long, val count: Int, val pockets: Map<Int, Int>)
+
+private fun readItemFlagsBag(c: MemoryReader, cfg: NativeConfig, b: ItemFlagsBag): List<Item> {
+    val sb1 = saveBlock1(c, cfg)
+    if (sb1 !in 0x02000000L until 0x04000000L) return emptyList()
+    val raw = c.readCoreMemory(sb1 + b.off, (b.count + 7) / 8)
+    val out = mutableListOf<Item>()
+    for (id in 1 until b.count) {
+        if ((raw[id / 8].toInt() shr (id % 8)) and 1 != 0) out.add(Item(id, 1, b.pockets[id] ?: POCKET_ITEMS))
+        if (out.size >= BAG_MAX_ITEMS) break
+    }
+    return out
+}
+
 // gBagPockets: 5 pockets of { *itemSlots, u8 capacity }. Quantities XOR
 // SaveBlock2.encryptionKey (retail FireRed obfuscates them; Unbound leaves it 0).
 private fun readNativeBag(c: MemoryReader, cfg: NativeConfig): List<Item> {
     cfg.bag4?.let { b -> readBag4(c, cfg, b)?.let { return it } }
     cfg.bag3?.let { return readBag3(c, cfg, it) }
+    cfg.itemFlagsBag?.let { return readItemFlagsBag(c, cfg, it) }
     var key = 0
     // encryptionKeyOff < 0: Ruby/Sapphire don't obfuscate bag quantities.
     if (cfg.encryptionKeyOff >= 0) runCatching {
@@ -2931,6 +3048,7 @@ private fun Mon.withNativeGender(raw: ByteArray, off: Int, layout: PartyMonLayou
         GameKind.SWORD_SHIELD -> genderRatiosSwordShield
         GameKind.GS_CHRONICLES -> genderRatiosGsChronicles
         GameKind.MARIOMON -> if (mariomonV13) genderRatiosMariomonV13 else genderRatiosMariomon
+        GameKind.ELITE_REDUX -> genderRatiosEliteRedux
         else -> return this
     }
     // BoxPokemon +0x13 flags byte (isBadEgg:1, hasSpecies:1, isEgg:1): an egg

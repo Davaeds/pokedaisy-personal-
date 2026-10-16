@@ -453,6 +453,32 @@ class HackPokedexTest {
         }
 
     @Test
+    fun `Elite Redux entries - by dex number, its fakemon past Gen 9`() {
+        for ((file, tables) in listOf("Pokemon Elite Redux (2.65.4.1b).gba" to POKEDEX_ELITE_REDUX_V2_65_4_1B,
+                "Pokemon Elite Redux (2.65.3b).gba" to POKEDEX_ELITE_REDUX_V2_65_3B)) {
+            roms(file, GameKind.ELITE_REDUX, tables) { t ->
+                val lucineon = PokedexSource.entry(t, 1072)!!
+                assertEquals(1071 to "Bioluminescent", lucineon.species to lucineon.category)
+                assertEquals(21 to 450, lucineon.heightDm to lucineon.weightHg)
+                assertEquals(listOf("Protean"), lucineon.abilities.take(1))
+                assertEquals(644 to "Deep Black", PokedexSource.entry(t, 644)!!.let { it.species to it.category })
+                assertEquals(1, PokedexSource.speciesFor(t, 1))
+            }
+        }
+    }
+
+    @Test
+    fun `Ghost Grey entries - rev 0's tables rewritten, its own ability names`() =
+        roms("Pokemon Ghost Grey (v1.0.4).gba", GameKind.FIRERED, POKEDEX_GHOST_GREY) { t ->
+            val rowlet = PokedexSource.entry(t, 1)!!
+            assertEquals(1 to "Grass Quill", rowlet.species to rowlet.category)
+            assertEquals(3 to 15, rowlet.heightDm to rowlet.weightHg)
+            // VIVILLAIN, its summary's No012.
+            assertEquals(12, PokedexSource.entry(t, 12)!!.species)
+            assertTrue(rowlet.abilities.isNotEmpty())
+        }
+
+    @Test
     fun `Ash Gray entries - rev 0's tables`() = roms("Pokemon Ash Gray (v4.5.3).gba", GameKind.FIRERED, POKEDEX_ULTRA_VIOLET) { t ->
         val pikachu = PokedexSource.entry(t, 25)!!
         assertEquals(25 to "MOUSE", pikachu.species to pikachu.category)
@@ -544,7 +570,8 @@ class HackPokedexTest {
         for (n in listed) {
             val e = PokedexSource.entry(t, n)
             assertNotNull("entry $n", e)
-            assertTrue("entry $n category '${e!!.category}'", e.category.isNotBlank() && Gen3Text.UNKNOWN !in e.category)
+            // Elite Redux leaves some of its own fakemon's entries empty (no category or text yet, in the game too).
+            assertTrue("entry $n category '${e!!.category}'", (e.category.isNotBlank() || game == GameKind.ELITE_REDUX) && Gen3Text.UNKNOWN !in e.category)
             // TMT2's MissingNo. (No. 1034) has deliberately glitched text.
             if (!(game == GameKind.TMT2 && n == 1034)) {
                 assertTrue("entry $n description '${e.description}'", Gen3Text.UNKNOWN !in e.description)

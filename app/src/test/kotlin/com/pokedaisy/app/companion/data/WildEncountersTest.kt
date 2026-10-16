@@ -51,6 +51,9 @@ class WildEncountersTest {
         "Super Mariomon (v1.2.1).gba" to 0x02039CC4L,
         "Super Mariomon (v1.3).gba" to 0x02039CC4L,
         "Super Mariomon (v1.5.2 Anniversary).gba" to 0x0203A6ACL,
+        // Elite Redux (its own gcc pokeemerald): 2.65.4.1b reads the player's coordinates before the header lookup's call.
+        "Pokemon Elite Redux (2.65.3b).gba" to 0x0203D214L,
+        "Pokemon Elite Redux (2.65.4.1b).gba" to 0x0203D21CL,
         // Not found: no WILD ENCOUNTERS there.
         "Pokemon Emerald Rogue (v2.2.1-EX).gba" to 0L,
         "Pokemon Quetzal (Alpha 9.0) (English).gba" to 0L,

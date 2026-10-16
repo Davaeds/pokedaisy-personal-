@@ -139,6 +139,7 @@ object BestEffort {
             Candidate("ULTRA_VIOLET", GameKind.FIRERED, NATIVE_ULTRA_VIOLET, ULTRA_VIOLET, "Pokémon Ultra Violet"),
             Candidate("ROCKET_EDITION", GameKind.FIRERED, NATIVE_ROCKET_EDITION, FIRERED, "Pokémon FireRed Rocket Edition"),
             Candidate("ASH_GRAY", GameKind.FIRERED, NATIVE_ASH_GRAY, FIRERED, "Pokémon Ash Gray"),
+            Candidate("GHOST_GREY", GameKind.FIRERED, NATIVE_GHOST_GREY, FIRERED, "Pokémon Ghost Grey"),
             Candidate("SWORD_SHIELD", GameKind.SWORD_SHIELD, NATIVE_SWORD_SHIELD, FIRERED, "Sword and Shield Ultimate Plus"),
             Candidate("GS_CHRONICLES", GameKind.GS_CHRONICLES, NATIVE_GS_CHRONICLES, FIRERED, "Pokémon GS Chronicles"),
             Candidate("RECHARGED_YELLOW_V1_8_0", GameKind.RECHARGED_YELLOW, NATIVE_RECHARGED_YELLOW_V1_8_0, FIRERED, "Pokémon Recharged Yellow v1.8"),
@@ -165,6 +166,8 @@ object BestEffort {
             Candidate("IMPERIUM", GameKind.IMPERIUM, NATIVE_IMPERIUM, EMERALD, "Emerald Imperium"),
             Candidate("QUETZAL", GameKind.QUETZAL, NATIVE_QUETZAL, EMERALD, "Pokémon Quetzal"),
             Candidate("QUETZAL_ES", GameKind.QUETZAL, NATIVE_QUETZAL_ES, EMERALD, "Pokémon Quetzal (ES)"),
+            Candidate("ELITE_REDUX_V2_65_4_1B", GameKind.ELITE_REDUX, NATIVE_ELITE_REDUX_V2_65_4_1B, EMERALD, "Pokémon Elite Redux 2.65.4.1b"),
+            Candidate("ELITE_REDUX_V2_65_3B", GameKind.ELITE_REDUX, NATIVE_ELITE_REDUX_V2_65_3B, EMERALD, "Pokémon Elite Redux 2.65.3b"),
             Candidate("MARIOMON_V1_5_2", GameKind.MARIOMON, NATIVE_MARIOMON_V1_5_2, EMERALD, "Super Mariomon v1.5.2"),
             Candidate("MARIOMON_V1_5_1", GameKind.MARIOMON, NATIVE_MARIOMON_V1_5_1, EMERALD, "Super Mariomon v1.5.1"),
             Candidate("MARIOMON_V1_3", GameKind.MARIOMON, NATIVE_MARIOMON_V1_3, EMERALD, "Super Mariomon v1.3"),
@@ -477,20 +480,20 @@ object BestEffort {
         return u16le(e, 0) == 1 && u16le(e, 2) == 7 && u16le(e, 4) == 69
     }
 
-    /** Above every species id the configs know (SoulGold's egg is 1578). */
-    private const val MAX_SPECIES = 2047
+    /** Above every species id the configs know (Elite Redux's egg is 2901). */
+    private const val MAX_SPECIES = 4095
 
     /** The globals the decoders read the running game's tables by ([activeGame] and friends). */
     private object Globals {
         class Saved(
             val game: GameKind, val lang: Char, val code: String, val sg12: Boolean, val am141: Boolean, val mm13: Boolean, val frHack: HackText?,
-            val q084: Boolean, val emHack: HackText?,
+            val q084: Boolean, val emHack: HackText?, val er3: Boolean,
         )
 
-        fun save() = Saved(activeGame, romLanguage, romGameCode, soulGoldV12, amethystV141, mariomonV13, fireRedHack, quetzalV084, emeraldHack)
+        fun save() = Saved(activeGame, romLanguage, romGameCode, soulGoldV12, amethystV141, mariomonV13, fireRedHack, quetzalV084, emeraldHack, eliteRedux265_3)
         fun restore(s: Saved) {
             activeGame = s.game; romLanguage = s.lang; romGameCode = s.code; soulGoldV12 = s.sg12; amethystV141 = s.am141
-            mariomonV13 = s.mm13; fireRedHack = s.frHack; quetzalV084 = s.q084; emeraldHack = s.emHack
+            mariomonV13 = s.mm13; fireRedHack = s.frHack; quetzalV084 = s.q084; emeraldHack = s.emHack; eliteRedux265_3 = s.er3
         }
         fun set(c: Candidate) {
             activeGame = c.kind
@@ -502,6 +505,7 @@ object BestEffort {
             emeraldHack = emeraldHackFor(c.cfg)
             mariomonV13 = c.cfg === NATIVE_MARIOMON_V1_3 || c.cfg === NATIVE_MARIOMON_V1_2_2 || c.cfg === NATIVE_MARIOMON_V1_2_1
             quetzalV084 = c.cfg.quetzalV084
+            eliteRedux265_3 = c.cfg === NATIVE_ELITE_REDUX_V2_65_3B
         }
     }
 }

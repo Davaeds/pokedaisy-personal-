@@ -676,6 +676,7 @@ open class CompanionScreenshotTest {
         com.pokedaisy.app.companion.data.emeraldHack = com.pokedaisy.app.companion.data.emeraldHackFor(cfg)
         com.pokedaisy.app.companion.data.mariomonV13 = cfg === NATIVE_MARIOMON_V1_3
         com.pokedaisy.app.companion.data.quetzalV084 = cfg.quetzalV084
+        com.pokedaisy.app.companion.data.eliteRedux265_3 = cfg === com.pokedaisy.app.companion.data.NATIVE_ELITE_REDUX_V2_65_3B
         romLanguage = cfg.language
         romGameCode = cfg.gameCode
         resetNativeBagCache()
@@ -956,6 +957,23 @@ open class CompanionScreenshotTest {
     @Test fun ashGrayMap() = retail("ash_gray", NATIVE_AG, AG_ROM, GameKind.FIRERED, "MAP", art = true, romMap = true)
     @Test fun ashGrayBattle() = retail("ash_gray_battle", NATIVE_AG, AG_ROM, GameKind.FIRERED, "BATTLE", art = true)
     @Test fun ashGrayGuideHere() = retailGuide("ash_gray", NATIVE_AG, AG_ROM, "HERE", kind = GameKind.FIRERED)
+    // Elite Redux: its save in 2.65.4.1b (the fixtures' READMEs); Emerald's Hoenn map and party art from its ROM.
+    @Test fun eliteReduxParty() = retail("elite_redux", NATIVE_ER, ER_ROM, GameKind.ELITE_REDUX, "PARTY", art = true)
+    @Test fun eliteReduxItems() = retail("elite_redux", NATIVE_ER, ER_ROM, GameKind.ELITE_REDUX, "ITEMS", art = true)
+    @Test fun eliteReduxMap() = retail("elite_redux", NATIVE_ER, ER_ROM, GameKind.ELITE_REDUX, "MAP", art = true)
+    @Test fun eliteReduxBattle() = retail("elite_redux_battle", NATIVE_ER, ER_ROM, GameKind.ELITE_REDUX, "BATTLE", art = true)
+    // Its battle menu has no BAG: FIGHT, then POKéMON and RUN.
+    @Test fun eliteReduxBattleMenu() = retail("elite_redux_battle", NATIVE_ER, ER_ROM, GameKind.ELITE_REDUX, "BATTLE", art = true, controls = true)
+    @Test fun eliteReduxDexEntry() = retail("elite_redux", NATIVE_ER, ER_ROM, GameKind.ELITE_REDUX, "DEX", entry = 1072, art = true)
+    @Test fun eliteReduxGuideHere() = retailGuide("elite_redux", NATIVE_ER, ER_ROM, "HERE", kind = GameKind.ELITE_REDUX)
+    // Ghost Grey: its 1.0.3 save in v1.0.4 (the fixtures' READMEs), its grey map from the ROM.
+    @Test fun ghostGreyParty() = retail("ghost_grey", NATIVE_GG, GG_ROM, GameKind.FIRERED, "PARTY", art = true)
+    @Test fun ghostGreyItems() = retail("ghost_grey", NATIVE_GG, GG_ROM, GameKind.FIRERED, "ITEMS", art = true)
+    @Test fun ghostGreyMap() = retail("ghost_grey", NATIVE_GG, GG_ROM, GameKind.FIRERED, "MAP", art = true, romMap = true)
+    @Test fun ghostGreyBattle() = retail("ghost_grey_battle", NATIVE_GG, GG_ROM, GameKind.FIRERED, "BATTLE", art = true)
+    @Test fun ghostGreyDexEntry() = retail("ghost_grey", NATIVE_GG, GG_ROM, GameKind.FIRERED, "DEX", entry = 12, art = true)
+    @Test fun ghostGreyGuideBoss() = retailGuide("ghost_grey", NATIVE_GG, GG_ROM, "NEXT BOSS", kind = GameKind.FIRERED)
+    @Test fun ghostGreyGuideHere() = retailGuide("ghost_grey", NATIVE_GG, GG_ROM, "HERE", kind = GameKind.FIRERED)
     // Sword and Shield Ultimate Plus: Galar on CFRU, its sampled party / bag look, its map from the ROM.
     @Test fun swordShieldParty() = retail("sword_shield_up", NATIVE_SS, SS_ROM, GameKind.SWORD_SHIELD, "PARTY", art = true)
     @Test fun swordShieldItems() = retail("sword_shield_up", NATIVE_SS, SS_ROM, GameKind.SWORD_SHIELD, "ITEMS", art = true)
@@ -1228,6 +1246,8 @@ open class CompanionScreenshotTest {
         describe: Boolean = false, romMap: Boolean = false,
         /** The move advice: PARTY > LEARN on the first Pokémon with something to replace, or a TM's party row. */
         learn: Boolean = false, tmRow: Boolean = false,
+        /** The battle tab's touch controls (FIGHT / BAG / POKéMON / RUN), with a battle input to drive. */
+        controls: Boolean = false,
     ) {
         val rom = RomFileReader.load(RETAIL_ROM_DIR + romFile) ?: return
         if (art) RomArt.extractTo(java.io.File(RETAIL_ROM_DIR + romFile).readBytes(), RomArt.dirOverride!!)
@@ -1288,7 +1308,15 @@ open class CompanionScreenshotTest {
                 )
             }
             else if (describe) AppTheme { ItemsScreen(v.items, androidx.compose.ui.Modifier.fillMaxSize(), initialItemId = v.items.first().itemId) }
-            else if (entry == null) CompanionScreen(v, SampleCompanion.Slots, SampleCompanion.Settings(), initialTab = tab)
+            else if (entry == null) CompanionScreen(
+                v, SampleCompanion.Slots, SampleCompanion.Settings(), initialTab = tab,
+                battleInput = if (!controls) null else object : com.pokedaisy.app.companion.BattleInput {
+                    override val busy = false
+                    override fun selectAction(actionIndex: Int) {}
+                    override fun selectMove(moveIndex: Int) {}
+                    override fun back() {}
+                },
+            )
             else AppTheme {
                 val ui = DexUiState(androidx.compose.foundation.lazy.rememberLazyListState())
                 ui.open = entry
@@ -1674,6 +1702,10 @@ private const val RE_ROM = "Pokemon FireRed Rocket Edition.gba"
 private const val AG_ROM = "Pokemon Ash Gray (v4.5.3).gba"
 private val NATIVE_RE get() = com.pokedaisy.app.companion.data.NATIVE_ROCKET_EDITION
 private val NATIVE_AG get() = com.pokedaisy.app.companion.data.NATIVE_ASH_GRAY
+private const val GG_ROM = "Pokemon Ghost Grey (v1.0.4).gba"
+private const val ER_ROM = "Pokemon Elite Redux (2.65.4.1b).gba"
+private val NATIVE_ER get() = com.pokedaisy.app.companion.data.NATIVE_ELITE_REDUX_V2_65_4_1B
+private val NATIVE_GG get() = com.pokedaisy.app.companion.data.NATIVE_GHOST_GREY
 private val NATIVE_SS get() = com.pokedaisy.app.companion.data.NATIVE_SWORD_SHIELD
 private const val RY_ROM = "Pokemon Recharged Yellow (v1.9.7).gba"
 private const val RY180_ROM = "Pokemon Recharged Yellow (v1.8.0).gba"

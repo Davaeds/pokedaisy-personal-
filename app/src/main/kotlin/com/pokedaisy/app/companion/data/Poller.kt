@@ -287,6 +287,7 @@ class TelemetrySampler {
             val base = baseCfg ?: nativeCfg
             soulGoldV12 = base === NATIVE_SOULGOLD_V1_2 || base === NATIVE_SOULGOLD_V1_2B || base === NATIVE_SOULGOLD_V1_2C
             amethystV141 = base === NATIVE_AMETHYST_V1_4_1
+            eliteRedux265_3 = base === NATIVE_ELITE_REDUX_V2_65_3B
             fireRedHack = fireRedHackFor(base)
             emeraldHack = emeraldHackFor(base)
             mariomonV13 = base === NATIVE_MARIOMON_V1_3 || base === NATIVE_MARIOMON_V1_2_2 || base === NATIVE_MARIOMON_V1_2_1
@@ -420,6 +421,13 @@ class TelemetrySampler {
             // ROM past that (i.e. exactly the large hacks this check exists
             // for) and the hash would always come back null.
             val hash = runCatching { sha1HexChunked(reader, 0x08000000L, size) }.getOrNull()
+            // FireRed 1.0 hacks edited in place past 16 MB (Ghost Grey): run as FireRed with their own names.
+            fireRedHackConfig(hash)?.let {
+                kind = GameKind.FIRERED
+                nativeCfg = it
+                ramVerified = true   // rev 0's battle code and cursors: a written cell + A checked headless on each
+                return
+            }
             when (hash) {
                 UNBOUND_V2_1_1_1_SHA1 -> kind = GameKind.UNBOUND
                 UNBOUND_V2_1_1_1_FR_SHA1 -> { kind = GameKind.UNBOUND; nativeCfg = NATIVE_UNBOUND_FR }
@@ -483,6 +491,8 @@ class TelemetrySampler {
                 MARIOMON_V1_3_SHA1 -> { kind = GameKind.MARIOMON; nativeCfg = NATIVE_MARIOMON_V1_3 }
                 MARIOMON_V1_2_2_SHA1 -> { kind = GameKind.MARIOMON; nativeCfg = NATIVE_MARIOMON_V1_2_2 }
                 MARIOMON_V1_2_1_SHA1 -> { kind = GameKind.MARIOMON; nativeCfg = NATIVE_MARIOMON_V1_2_1 }
+                ELITE_REDUX_V2_65_3B_SHA1 -> { kind = GameKind.ELITE_REDUX; nativeCfg = NATIVE_ELITE_REDUX_V2_65_3B }
+                ELITE_REDUX_V2_65_4_1B_SHA1 -> { kind = GameKind.ELITE_REDUX; nativeCfg = NATIVE_ELITE_REDUX_V2_65_4_1B }
                 else -> {
                     kind = GameKind.EMERALD
                     unsupportedRom(reader, code, size, hash, "unrecognized Emerald-based ROM hack " +
@@ -805,10 +815,22 @@ class TelemetrySampler {
         const val ASH_GRAY_V4_5_3_SHA1 = "1ee1557db1e4c2e0e94c6306efcc40506bc40cc9"
         const val ASH_GRAY_FORK_BUG_FIX_V1_0_SHA1 = "92ed82145c013069472153391c7aab1cfbf37b75"
 
-        /** The config of a FireRed 1.0 hack edited in place that runs as FireRed (Rocket Edition, Ash Gray), or null. */
+        // Pokémon Elite Redux 2.65.3b and 2.65.4.1b (BPEE, 32 MB; a pokeemerald rebuild of its own) - host-side masked
+        // hashes (GPIO bytes zero, so a plain `shasum`). Each its own build: RAM and ROM tables moved between them.
+        const val ELITE_REDUX_V2_65_3B_SHA1 = "5b38a681b6924ef3e0bb9f6cfbf22426c4c4e523"
+        const val ELITE_REDUX_V2_65_4_1B_SHA1 = "2f3e17e55c6afe23da97ec0f96a067eeb142ad15"
+        // Pokémon Ghost Grey v1.0.1, v1.0.2 and v1.0.4 (BPRE rev 0, 32 MB; JoeyZeed) - host-side masked hashes (GPIO
+        // bytes zero, so a plain `shasum`).
+        const val GHOST_GREY_V1_0_1_SHA1 = "20dfaea1d5317cf95fe0b493208edce7d50b865f"
+        const val GHOST_GREY_V1_0_2_SHA1 = "74337272566a74625d6dedefe47d2d153eb48ec1"
+        const val GHOST_GREY_V1_0_4_SHA1 = "0dafc0116b74406a2df491e26ccb40dd362fb0b7"
+
+        /** The config of a FireRed 1.0 hack edited in place that runs as FireRed (Rocket Edition, Ash Gray, Ghost Grey), or null. */
         fun fireRedHackConfig(hash: String?): NativeConfig? = when (hash) {
             FIRERED_ROCKET_EDITION_UNVERSIONED_SHA1 -> NATIVE_ROCKET_EDITION
             ASH_GRAY_V4_5_3_SHA1, ASH_GRAY_FORK_BUG_FIX_V1_0_SHA1 -> NATIVE_ASH_GRAY
+            GHOST_GREY_V1_0_2_SHA1, GHOST_GREY_V1_0_4_SHA1 -> NATIVE_GHOST_GREY
+            GHOST_GREY_V1_0_1_SHA1 -> NATIVE_GHOST_GREY_V1_0_1
             else -> null
         }
 
@@ -928,6 +950,8 @@ class TelemetrySampler {
             MOEMON_QUETZAL_V0_8_4_ALPHA_ES_Hotfix_SHA1,
             ORANGE_ISLANDS_V5_7_BETA_SHA1, ORANGE_ISLANDS_UNVERSIONED_SHA1,
             FIRERED_ROCKET_EDITION_UNVERSIONED_SHA1, ASH_GRAY_V4_5_3_SHA1, ASH_GRAY_FORK_BUG_FIX_V1_0_SHA1,
+            GHOST_GREY_V1_0_1_SHA1, GHOST_GREY_V1_0_2_SHA1, GHOST_GREY_V1_0_4_SHA1,
+            ELITE_REDUX_V2_65_3B_SHA1, ELITE_REDUX_V2_65_4_1B_SHA1,
             ULTRA_VIOLET_V1_22_SHA1, SWORD_SHIELD_ULTIMATE_PLUS_V1_2_1_2_SHA1, SWORD_SHIELD_ULTIMATE_PLUS_V1_2_1_2_CASUAL_SHA1,
             SWORD_SHIELD_ULTIMATE_PLUS_V1_2_1_2_PERFORMANCE_SHA1, SWORD_SHIELD_ULTIMATE_PLUS_V1_2_1_2_CASUAL_PERFORMANCE_SHA1,
             RECHARGED_YELLOW_V1_8_0_SHA1, RECHARGED_YELLOW_V1_9_0_SHA1, RECHARGED_YELLOW_V1_9_4_SHA1,

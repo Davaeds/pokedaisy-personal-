@@ -74,7 +74,34 @@ class BattleInputController(
      * A once it's there - so the move already highlighted is one press. Null = the blind walk
      * ([queueCellLocked]: LEFT, UP, then RIGHT / DOWN, A, a settling gap after each).
      */
-    data class CursorAddrs(val action: Long, val move: Long)
+    data class CursorAddrs(val action: Long, val move: Long, val menus: MenuCells = MenuCells.GEN3)
+
+    /**
+     * How the battle menus lay out their cursor values. [GEN3]: both are 2x2 grids, the value = column + 2 x row, and an
+     * action's value is its index (0 FIGHT, 1 BAG, 2 POKéMON, 3 RUN). [ELITE_REDUX]: FIGHT / INFO over POKéMON / RUN, valued
+     * 0 / 3 over 1 / 2, no BAG (its own battle menu, checked headless: a written 2 + A ran, 1 + A opened the party), and the
+     * moves one column of four (DOWN = the next move).
+     */
+    enum class MenuCells {
+        GEN3, ELITE_REDUX;
+
+        /** The cursor value for Gen 3's action [index], or -1 where this menu has no such cell. */
+        fun actionValue(index: Int): Int = when (this) {
+            GEN3 -> index
+            ELITE_REDUX -> when (index) { 0 -> 0; 2 -> 1; 3 -> 2; else -> -1 }
+        }
+
+        /** Where cursor [value] sits: column (0 / 1) and row. */
+        fun col(value: Int, move: Boolean): Int = when (this) {
+            GEN3 -> value and 1
+            ELITE_REDUX -> if (move) 0 else if (value == 2 || value == 3) 1 else 0
+        }
+
+        fun row(value: Int, move: Boolean): Int = when (this) {
+            GEN3 -> (value shr 1) and 1
+            ELITE_REDUX -> if (move) value else if (value == 1 || value == 2) 1 else 0
+        }
+    }
 
     @Volatile
     var cursorAddrs: CursorAddrs? = null
@@ -663,8 +690,11 @@ class BattleInputController(
     /** Picks [index]'s cell on the action menu or ([move]) the move grid: straight there from the read
      * cursor when [cursorAddrs] are known ([drivePickLocked]), else the blind walk. */
     private fun pickCellLocked(index: Int, move: Boolean) {
+        val menus = cursorAddrs?.menus ?: MenuCells.GEN3
+        val value = if (move) index else menus.actionValue(index)
+        if (value < 0) return log("no cell for action $index on this game's menu")
         if (cursorAddrs == null) return queueCellLocked(col(index), row(index))
-        pickCell = index
+        pickCell = value
         pickMove = move
         pickPresses = 0
     }
@@ -696,10 +726,11 @@ class BattleInputController(
             return
         }
         if (++pickPresses > MAX_PICK_PRESSES) return pickFallbackLocked("cursor stayed on $cur")
+        val m = addrs.menus
         pressLocked(
             when {
-                col(cur) != col(pickCell) -> if (col(pickCell) == 1) MgbaCore.Key.RIGHT else MgbaCore.Key.LEFT
-                else -> if (row(pickCell) == 1) MgbaCore.Key.DOWN else MgbaCore.Key.UP
+                m.col(cur, pickMove) != m.col(pickCell, pickMove) -> if (m.col(pickCell, pickMove) == 1) MgbaCore.Key.RIGHT else MgbaCore.Key.LEFT
+                else -> if (m.row(pickCell, pickMove) > m.row(cur, pickMove)) MgbaCore.Key.DOWN else MgbaCore.Key.UP
             },
         )
     }
@@ -709,7 +740,14 @@ class BattleInputController(
         log("pick of cell $pickCell falls back to the blind walk: $why")
         val cell = pickCell
         pickCell = -1
-        queueCellLocked(col(cell), row(cell))
+        val m = cursorAddrs?.menus ?: MenuCells.GEN3
+        if (m == MenuCells.GEN3) return queueCellLocked(col(cell), row(cell))
+        // A column of moves: to the top (UP wraps nowhere past it), then DOWN to the row.
+        if (pickMove) {
+            repeat(NUM_MOVE_ROWS) { pressAndSettleLocked(MgbaCore.Key.UP) }
+            repeat(m.row(cell, true)) { pressAndSettleLocked(MgbaCore.Key.DOWN) }
+            pressLocked(MgbaCore.Key.A)
+        } else queueCellLocked(m.col(cell, false), m.row(cell, false))
     }
 
     /**
@@ -746,6 +784,7 @@ class BattleInputController(
 
     private companion object {
         const val ACTION_RUN = 3
+        const val NUM_MOVE_ROWS = 3            // UPs that reach the top of a one-column move list from anywhere
         const val PARTY_MENU_SLOT_ID = 9L      // struct PartyMenu.slotId, both games
         const val PARTY_MENU_CANCEL = 7        // slotId on CANCEL (after the last mon), both games
         const val MENU_TIMEOUT_FRAMES = 240    // the menu's fade-in drops presses for ~50 frames (headless, both games)

@@ -836,7 +836,8 @@ private const val REPEL_ICON_ITEM = 86
 private fun BallCount(item: ItemView, m: GbaTextMetrics, text: GbaTextMetrics) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         ItemIcon(item.iconAsset, hudItemSize(m))
-        GbaText("x${item.quantity}", ink.text, ink.shadow, text)
+        // Elite Redux keeps no counts: the ball alone.
+        if (com.pokedaisy.app.companion.data.bagHasCounts) GbaText("x${item.quantity}", ink.text, ink.shadow, text)
     }
 }
 
@@ -1191,7 +1192,7 @@ private fun HudBagPanel(
                                     .soundClickable { pickedId = item.itemId },
                             ) {
                                 ItemIcon(item.iconAsset, icon, Modifier.align(Alignment.Center).offset(y = -u * 2))
-                                if (item.pocket != POCKET_KEY_ITEMS) {
+                                if (item.pocket != POCKET_KEY_ITEMS && com.pokedaisy.app.companion.data.bagHasCounts) {
                                     GbaText("x${item.quantity}", c.text, c.shadow, small, Modifier.align(Alignment.BottomEnd).padding(end = u * 2, bottom = u))
                                 }
                             }

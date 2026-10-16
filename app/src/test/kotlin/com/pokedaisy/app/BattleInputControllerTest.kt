@@ -340,6 +340,77 @@ class BattleInputControllerTest {
         assertEquals(2, game.moveCursor[0])
     }
 
+    // ---- Elite Redux: FIGHT / INFO over POKéMON / RUN valued 0 / 3 over 1 / 2, no BAG, a column of moves ----
+
+    private val elite = BattleInputController(input, game, log = {}, writer = { addr, b ->
+        when (addr) {
+            in ACTION_CURSOR until ACTION_CURSOR + 4 -> { game.actionCursor[(addr - ACTION_CURSOR).toInt()] = b[0].toInt(); true }
+            in MOVE_CURSOR until MOVE_CURSOR + 4 -> { game.moveCursor[(addr - MOVE_CURSOR).toInt()] = b[0].toInt(); true }
+            else -> false
+        }
+    }).apply {
+        cursorAddrs = BattleInputController.CursorAddrs(ACTION_CURSOR, MOVE_CURSOR, BattleInputController.MenuCells.ELITE_REDUX)
+    }
+
+    private fun runElite(frames: Int) {
+        var last = 0
+        repeat(frames) {
+            elite.tick()
+            val now = input.mask
+            val new = now and last.inv()
+            last = now
+            for ((bit, name) in KEYS) if (new and bit != 0) { game.presses += name; if (name == "A") elite.onState(0, BATTLE_INPUT_BUSY) }
+        }
+    }
+
+    @Test fun eliteReduxRunAndPokemonAreItsOwnCells() {
+        elite.onState(0, BATTLE_INPUT_ACTION_SELECT)
+        elite.selectAction(2) // POKéMON
+        runElite(30)
+        assertEquals(1, game.actionCursor[0])
+        elite.onState(0, BATTLE_INPUT_ACTION_SELECT)
+        elite.selectAction(3) // RUN
+        runElite(30)
+        assertEquals(2, game.actionCursor[0])
+        assertEquals("A", game.presses.first())
+    }
+
+    @Test fun eliteReduxHasNoBag() {
+        game.actionCursor[0] = 0
+        elite.onState(0, BATTLE_INPUT_ACTION_SELECT)
+        elite.selectAction(1) // BAG: not on its menu - nothing is pressed
+        runElite(30)
+        assertEquals(emptyList<String>(), game.presses)
+        assertEquals(0, game.actionCursor[0])
+    }
+
+    @Test fun eliteReduxMovesAreAColumn() {
+        // Unwritable: the cursor is walked, DOWN through the column (never RIGHT).
+        val walk = BattleInputController(input, game, log = {}).apply {
+            cursorAddrs = BattleInputController.CursorAddrs(ACTION_CURSOR, MOVE_CURSOR, BattleInputController.MenuCells.ELITE_REDUX)
+        }
+        game.moveCursor[0] = 0
+        walk.onState(0, BATTLE_INPUT_MOVE_SELECT)
+        walk.selectMove(2)
+        var last = 0
+        repeat(60) {
+            walk.tick()
+            val now = input.mask
+            val new = now and last.inv()
+            last = now
+            for ((bit, name) in KEYS) if (new and bit != 0) {
+                game.presses += name
+                when (name) {
+                    "DOWN" -> game.moveCursor[0] = minOf(3, game.moveCursor[0] + 1)
+                    "UP" -> game.moveCursor[0] = maxOf(0, game.moveCursor[0] - 1)
+                    "A" -> walk.onState(0, BATTLE_INPUT_BUSY)
+                }
+            }
+        }
+        assertEquals(listOf("DOWN", "DOWN", "A"), game.presses)
+        assertEquals(2, game.moveCursor[0])
+    }
+
     @Test fun onlyTheLastPressOfASequenceIsHeard() {
         // Move 1 highlighted, move 2 wanted: LEFT and DOWN muted (FF mutes the game while muteGame), the A heard.
         game.moveCursor[0] = 1

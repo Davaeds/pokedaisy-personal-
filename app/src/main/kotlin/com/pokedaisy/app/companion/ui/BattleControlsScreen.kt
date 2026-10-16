@@ -326,13 +326,15 @@ private fun ActionButtons(
         }
         // All three the same height; RUN sits [RunDrop] lower than its neighbours (one level, and
         // slimmer, under ONE-TAP MOVES' cards).
-        val drop = if (oneTapMoves) 0.dp else RunDrop
+        // Without a BAG (Elite Redux) RUN and POKéMON sit level.
+        val drop = if (oneTapMoves || !com.pokedaisy.app.companion.data.battleHasBag) 0.dp else RunDrop
         Row(
             modifier = if (oneTapMoves) Modifier.fillMaxWidth().height(60.dp) else Modifier.fillMaxWidth().weight(1f),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             val side = PaddingValues(horizontal = 4.dp)
-            PlatinumButton(
+            // Elite Redux's battle menu has no BAG (FIGHT / INFO over POKéMON / RUN).
+            if (com.pokedaisy.app.companion.data.battleHasBag) PlatinumButton(
                 fill = BagOrange, frame = BagOrangeDark,
                 modifier = Modifier.weight(1f).fillMaxHeight().padding(bottom = drop),
                 enabled = enabled, contentPadding = side, pressesGame = true, onClick = { battleInput?.selectAction(1) },

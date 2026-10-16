@@ -16,7 +16,7 @@ It's on by default. Turn it off, or change how it looks, in `HUD`, in the `SCREE
 | --- | --- | --- |
 | Party | Each Pokémon's icon, level and HP bar. A status like `PSN` or `SLP` sits on the icon, and a fainted Pokémon is faded with `FNT`. | Open that Pokémon's summary, the same one the `PARTY` tab shows. Up and down step through your team. |
 | Minimap | The region map around you, with your head on the spot you're in and the place's name under it. | Open the whole map, with `PLACES` and `FLY`. |
-| Poké Balls | The balls in your bag and how many of each. | Open the bag on its `POKé BALLS` pocket. |
+| Poké Balls | The balls in your bag and how many of each (Elite Redux keeps no counts, so just the balls there). | Open the bag on its `POKé BALLS` pocket. |
 | Steps left | While an item that keeps wild Pokémon away is working, a window by your balls shows its icon and the steps it has left, counting down as you walk, over a bar that drains from green to yellow to red. The count turns gold for the last 20 steps, and the window goes when the effect wears off. It shows for the games whose [bag](bag.md) can use those items. | Open the bag. |
 | `PC` | Your game's own PC, opened right where you stand, so you can withdraw or deposit Pokémon without walking to a Pokémon Center. The small arrow on its corner means it opens the game's own screen, not one of the HUD's. It shows for the games whose [bag](bag.md) has the `PC` button. | |
 | `BAG` | A compact bag: the pockets as tabs and your items as a grid with counts. Pick an item to read about it, and `USE` it where the companion can. | |

@@ -1109,6 +1109,25 @@ kaizo` -> `EmeraldTextKaizoGen.kt`), so its names show as the ROM has them; gWil
 (`GUIDE_TABLES_EMERALD_KAIZO`); trainers, base stats and TM compatibility are rewritten in place (read live). Detected by
 the small-BPEE hash check. The user has no Kaizo save: the `emerald_kaizo*` fixtures are retail Emerald's save booted in
 it. The GUIDE's hand-written pages are retail Emerald's; NEXT BOSS and HERE read Kaizo's own tables.
+**Elite Redux 2.65.3b / 2.65.4.1b (2026-10-16)** (`GameKind.ELITE_REDUX`, `NATIVE_ELITE_REDUX_*`): its own pokeemerald rebuild
+(gcc), 32 MB BPEE; its source is public but untagged, so every address came from the ROMs and headless dumps of its one save
+(`~/Downloads/Game ROMs & Emulation/rom saves from discord/saves/`). It breaks several engine assumptions, each a switch now:
+a packed plaintext 0x4C-byte party mon (`ELITE_REDUX_PARTY_MON`: no IVs - all 31, `speedDown` = Speed 0 -, the nature stored);
+a 0x68-byte BattlePokemon with species at +0x14 (`BattleMonLayout.species` / `stats` / `statStages` are fields now); the bag one
+owned bit per item, no counts (`NativeConfig.itemFlagsBag`, `bagHasCounts`: the ITEMS tab drops "× N"); money plain (it zeroes
+the encryption key); a battle menu with no BAG (`battleHasBag`) whose cursor values are FIGHT 0 / POKéMON 1 / RUN 2 / INFO 3 and
+whose moves are a column (`BattleInputController.MenuCells.ELITE_REDUX`, picked by the activity for this kind); species ids to
+2901 (BestEffort's MAX_SPECIES 4095); dex flags by dex number in SaveBlock1, ability names behind pointers
+(`PokedexTables.abilityNamePtr`), categories behind pointers up to 20 chars, trainer names behind pointers
+(`GuideTables.trainerNamePtr`). Its gym leaders have several teams levelled to the level cap: no NEXT BOSS, HERE only. Emerald's
+party slots (names in its mixed case), backdrop, bag and Hoenn map (RomArt finds them in its ROM). The builds differ: EWRAM past
+the battle globals +8 in 2.65.4.1b, every ROM table moved (`eliteRedux265_3`: 2.65.3b's few name / type / move differences).
+EXPAND / field reads / WILD ENCOUNTERS (2026-10-16): its own WIDE rows on the EX family (R.O.W.E.'s 12-bit metatiles / 2048
+primaries, object gfx ids 271+ from vars, no sprite palette tag list: SPRITE_PAL_TAGS 0 like Rogue), exact on both builds; its
+wild switch 0x0203D214 / 0x0203D21C (2.65.4.1b reads the player's coordinates before the header lookup: gccRead's call window is
+11 lines now). Its R button is an auto run of its own. Trainer battles: gBattleTypeFlags' TRAINER is vanilla's 8, gEnemyParty the same packed mons (`elite_redux_trainer*` fixtures); a single
+battle never opens the target screen (no move targets user-or-selected), so its handler was read in a forced double battle.
+No field items, FLY or card; its START menu has its own PC.
 **Emerald Legacy v1.1.4 (2026-10-14)**: BPEE, 16 MB, but a rebuild - its public source (`$DECOMPS/pokelegacy`, tag V1.1.4)
 built with agbcc is the release byte for byte, so take every address from that ELF (`nm`) and every struct offset / constant
 from agbcc compiling `offsetof` against its headers, never from retail. Runs as `GameKind.EMERALD` under `LEGACY_TEXT`
@@ -1181,6 +1200,14 @@ Ash Gray redrew the region map (its Orange Islands): `ownRegionMap` sends the MA
 save of their own: retail FireRed's `.srm` boots in all three builds (`native-capture/boot/firered_hack.txt`: B presses past
 Ash Gray's quest-log recap); battles, one-press picks, the switch, a Potion through ExecuteTableBasedItemEffect and EXPAND
 (`verify_wide.py`) checked headless. Ash Gray's NEXT BOSS skips CASCADE / RAINBOW (scripts hand them over, no battle).
+**Ghost Grey (2026-10-16)**: v1.0.1 / v1.0.2 / v1.0.4, a 32 MB FireRed rev 0 hack edited in place (HexManiacAdvance, not CFRU),
+so it rides the same path from the big-BPRE check (`fireRedHackConfig` runs before the CFRU hashes): Rocket Edition's repointed
+moves / FAIRY / ability names, its ghosts in FireRed's 411 species slots (`gen_firered_hack_tables.py ghost_grey` -> `GhostGreyGen.kt`;
+`groups`: v1.0.1 differs in PURIFY's type only, a small `HackText` over v1.0.2's, so `NATIVE_GHOST_GREY_V1_0_1` is its own config
+object - `fireRedHackFor` goes by identity). Its own save (1.0.3, from its Discord: `~/Downloads/Game ROMs & Emulation/rom saves
+from discord/`) loads in all three. Seven badges on FireRed's flags 0x821..0x827 (0x820 never given); Cinnabar's leftover script
+also sets 0x826, and SUMMER's sets 0x827 before the battle (her trainer flag marks her beaten). Its repel items last 250 / 200 / 250. USE, the PC, FLY, the field reads, the bike and WILD ENCOUNTERS were each
+checked headless on v1.0.4 and v1.0.1 (docs/ROM_FEATURES.md's note 11).
 **GS Chronicles v2.7.6 (2026-10-13)** (`GameKind.GS_CHRONICLES`, `NATIVE_GS_CHRONICLES`): Johto and Kanto on CFRU (32 MB BPRE
 rev 0, Ruki Studios), FireRed rev 0's RAM (every RAM global's pool word is rev 0's) with its tables repointed
 (`gen_cfru_tables.py gs_chronicles`; gBattleMoves at an odd 0x09D10BE3). Gotchas: its gItems is indexed by slot and the

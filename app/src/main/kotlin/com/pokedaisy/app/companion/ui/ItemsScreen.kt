@@ -504,6 +504,15 @@ private val RedBlueBag = YellowBag.copy(
     backdrop = Color(0xFFFFEFFF) to Color(0xFFFFEFFF),
 )
 
+/** Pokémon Ghost Grey's bag (headless): Yellow's black-on-white boxes with its grey row lines, on white. */
+private val GhostGreyBag = YellowBag.copy(
+    panelLayers = listOf(Color.Black to 1, Color.White to 1, Color.Black to 1, Color.White to 1),
+    divider = Color(0xFFADADAD),
+    text = Color.Black, tabText = Color.Black, tabUnderline = Color.Black,
+    descLayers = listOf(Color.Black to 1, Color.White to 1, Color.Black to 1), descText = Color.Black,
+    iconBoxEdge = Color.Black,
+)
+
 /** Whether [ItemsBackdrop] replaces the party backdrop behind this game's Items tab. */
 fun hasItemsBackdrop(game: GameKind): Boolean = bagPaletteFor(game).backdrop != null
 
@@ -575,7 +584,9 @@ private fun lightBagFor(game: GameKind): BagPalette = when (game) {
     GameKind.PRISM -> CrystalBag
     GameKind.MARIOMON -> MariomonBag
     // Too Many Types 2's, Glazed's, Imperium's and Quetzal's bags are Emerald's; Gaia's and Celia's are FireRed's.
-    GameKind.TMT2, GameKind.GLAZED, GameKind.IMPERIUM, GameKind.QUETZAL -> EmeraldBag
+    // Elite Redux's bag screen is Emerald's too.
+    GameKind.TMT2, GameKind.GLAZED, GameKind.IMPERIUM, GameKind.QUETZAL, GameKind.ELITE_REDUX -> EmeraldBag
+    GameKind.FIRERED -> if (com.pokedaisy.app.companion.data.runningGhostGrey) GhostGreyBag else FireRedBag
     else -> FireRedBag
 }
 
@@ -1064,7 +1075,10 @@ private fun ItemRow(
         if (marked) {
             ShadowedPixelIcon(PixelIcons.itemAction, pal.text, pal.textShadow, m, cell = cell, modifier = Modifier.padding(end = u * 4))
         }
-        GbaText("× ${item.quantity}", pal.text, pal.textShadow, m, modifier = Modifier.padding(end = u * 4))
+        // Elite Redux's bag keeps no counts (an item is owned or not), and shows none.
+        if (com.pokedaisy.app.companion.data.bagHasCounts) {
+            GbaText("× ${item.quantity}", pal.text, pal.textShadow, m, modifier = Modifier.padding(end = u * 4))
+        }
     }
 }
 

@@ -600,12 +600,18 @@ class PokeDaisyActivity : Activity() {
         // Orange Islands is retail FireRed rev 0's RAM and party menu, edited in place.
         game == com.pokedaisy.app.companion.data.GameKind.ORANGE_ISLANDS ->
             BattleInputController.SwitchAddrs(partyMenu = 0x0203B0A0L, party = 0x02024284L)
-        // So are Ultra Violet, Rocket Edition and Ash Gray (FireRed 1.0 edited in place, ActiveTables' fireRedHack;
+        // So are Ultra Violet, Rocket Edition, Ash Gray and Ghost Grey (FireRed 1.0 edited in place, ActiveTables' fireRedHack;
         // their fixtures' READMEs: a written POKéMON cell + DOWN, A, SHIFT sent party slot 1 in).
         game == com.pokedaisy.app.companion.data.GameKind.FIRERED && com.pokedaisy.app.companion.data.runningFireRedHack != null ->
             BattleInputController.SwitchAddrs(partyMenu = 0x0203B0A0L, party = 0x02024284L)
         game == com.pokedaisy.app.companion.data.GameKind.TMT2 ->
             BattleInputController.SwitchAddrs(partyMenu = 0x0203242CL, party = 0x02032C94L)
+        // Elite Redux (both builds): gPartyMenu from its config, a two-column grid (DOWN 0 -> 2, RIGHT 2 -> 3), its packed
+        // 0x4C-byte party mons (the personality first, as the switch reads it). Headless: A, SHIFT on slot 2 put it out.
+        game == com.pokedaisy.app.companion.data.GameKind.ELITE_REDUX ->
+            telemetry.knownPartyMenu()?.let { (menu, party) ->
+                BattleInputController.SwitchAddrs(partyMenu = menu, party = party, monStride = 0x4C, grid = true)
+            }
         game == com.pokedaisy.app.companion.data.GameKind.AMETHYST ->
             BattleInputController.SwitchAddrs(partyMenu = 0x0203B0A0L, party = 0x02024284L, grid = true)
         // Unbound (EN / FR): FireRed's gPartyMenu / gPlayerParty (CFRU keeps its EWRAM) under CFRU's two-column party
@@ -1265,7 +1271,12 @@ class PokeDaisyActivity : Activity() {
                 if (snap.connected) battleSwitchAddrs = switchAddrsFor(snap.game)
                 // The menus' cursors, so a FIGHT / move tap goes straight to its cell (NativeConfig.actionCursor).
                 if (snap.connected) battleCursorAddrs = telemetry.knownCursorAddrs()
-                    ?.let { (action, move) -> BattleInputController.CursorAddrs(action = action, move = move) }
+                    ?.let { (action, move) ->
+                        // Elite Redux's own menu: FIGHT / INFO over POKéMON / RUN, valued 0 / 3 over 1 / 2, moves in a column.
+                        val menus = if (snap.game == com.pokedaisy.app.companion.data.GameKind.ELITE_REDUX)
+                            BattleInputController.MenuCells.ELITE_REDUX else BattleInputController.MenuCells.GEN3
+                        BattleInputController.CursorAddrs(action = action, move = move, menus = menus)
+                    }
                 if (snap.connected) battleGen1Menus = snap.game.isGen1 ||
                     snap.game.isGen2   // the same 2x2 menu and move column
                 // party.isNotEmpty(), not just connected: `connected` flips true as

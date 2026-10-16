@@ -34,6 +34,8 @@ data class GuideTables(
     val trainerStride: Int = 0x28,
     val trainerNameOff: Int = 4,
     val trainerNameLen: Int = 12,
+    /** The record holds a POINTER to the name at [trainerNameOff], not the name (Elite Redux). */
+    val trainerNamePtr: Boolean = false,
     val trainerSizeOff: Int = 0x20,
     val trainerPartyOff: Int = 0x24,
     /** pokeemerald-expansion's struct TrainerMon (always custom moves); null = vanilla's party structs. */
@@ -193,7 +195,9 @@ private const val MAP_GROUP_UNDEFINED = 0xFF
 
 /** Whether the running ROM has these tables where [t] says: its probe trainer (FireRed's BROCK) has the right name. */
 fun guideTablesMatchRom(c: MemoryReader, t: GuideTables): Boolean = runCatching {
-    val name = c.readCoreMemory(t.trainers + t.probeTrainer.toLong() * t.trainerStride + t.trainerNameOff, t.trainerNameLen)
+    val at = t.trainers + t.probeTrainer.toLong() * t.trainerStride + t.trainerNameOff
+    val name = if (t.trainerNamePtr) c.readCoreMemory(u32le(c.readCoreMemory(at, 4), 0), t.trainerNameLen)
+        else c.readCoreMemory(at, t.trainerNameLen)
     Gen3Text.decode(name) == t.probeName && c.readCoreMemory(t.wildHeaders, 1)[0].toInt() and 0xFF != MAP_GROUP_UNDEFINED
 }.getOrDefault(false)
 
@@ -905,6 +909,48 @@ val GUIDE_TABLES_ASH_GRAY = GUIDE_TABLES_ULTRA_VIOLET.copy(
     wildHeaders = 0x088CD1F8L,
     guide = GuideId.ASH_GRAY,
     mapGroups = 0x0873E2F4L,
+)
+
+/**
+ * Pokémon Elite Redux 2.65.4.1b: HERE only (its wild Pokémon by map). Its gWildMonHeaders are 28 bytes - land, water, rock
+ * smash, a hidden set, fishing, honey (HERE reads the four it knows); gTrainers 0x38 bytes with a name POINTER (265 is a
+ * ROXANNE), its TrainerMons 28 bytes (level +0: 0 = the player's level cap). NEXT BOSS isn't given: its leaders have several
+ * teams each, levelled to the cap and picked at run time. SaveBlock1's flags / vars at +0x1978 / +0x1C78 (767 flag bytes).
+ */
+val GUIDE_TABLES_ELITE_REDUX_V2_65_4_1B = GuideTables(
+    trainers = 0x089B723CL,
+    learnsets = 0,
+    wildHeaders = 0x08FD3A50L,
+    sb1FlagsOff = 0x1978,
+    sb1VarsOff = 0x1C78,
+    flagBytes = 767,
+    probeTrainer = 265,
+    probeName = "Roxanne",
+    guide = GuideId.ELITE_REDUX,
+    trainerStride = 0x38,
+    trainerNameLen = 20,
+    trainerNamePtr = true,
+    trainerSizeOff = 0x18,
+    trainerPartyOff = 0x1C,
+    trainerMon = TrainerMonLayout(stride = 28, movesOff = 8, speciesOff = 2, itemOff = 4, levelOff = 0),
+    wildLayout = WildLayout(stride = 28, land = 0, water = 1, rockSmash = 2, fishing = 4),
+    mapGroups = 0x091F54A0L,
+)
+
+/** 2.65.3b's: the same shapes at its own addresses. */
+val GUIDE_TABLES_ELITE_REDUX_V2_65_3B = GUIDE_TABLES_ELITE_REDUX_V2_65_4_1B.copy(
+    trainers = 0x089A9DC0L,
+    wildHeaders = 0x08FC13D4L,
+    mapGroups = 0x0917995CL,
+)
+
+/** Pokémon Ghost Grey: rev 0's gTrainers (414 is its first leader, ASTON), learnsets and gMapGroups, its own
+ * gWildMonHeaders (0x09300100, all 14 literal-pool words); mixed-case text. */
+val GUIDE_TABLES_GHOST_GREY = GUIDE_TABLES_ULTRA_VIOLET.copy(
+    wildHeaders = 0x09300100L,
+    guide = GuideId.GHOST_GREY,
+    mapGroups = 0x083526A8L,
+    probeName = "Aston",
 )
 
 /**

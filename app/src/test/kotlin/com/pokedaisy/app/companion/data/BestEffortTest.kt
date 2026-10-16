@@ -34,6 +34,7 @@ class BestEffortTest {
         Game("Pokemon Orange Islands.gba", "orange_islands", "BPRE", "ORANGE_ISLANDS"),
         Game("Pokemon FireRed Rocket Edition.gba", "rocket_edition", "BPRE", "ROCKET_EDITION"),
         Game("Pokemon Ash Gray (v4.5.3).gba", "ash_gray", "BPRE", "ASH_GRAY"),
+        Game("Pokemon Ghost Grey (v1.0.4).gba", "ghost_grey", "BPRE", "GHOST_GREY"),
         // Recharged Yellow's ROM carries other languages' name tables too (French species after its own): no config's
         // names cover it, so never sure - but its own reads the party name for name and comes first (below).
         Game("Pokemon Recharged Yellow (v1.8.0).gba", "recharged_yellow_v180", "BPRE", null),
@@ -64,6 +65,7 @@ class BestEffortTest {
         Game("Pokemon Sword and Shield Ultimate Plus (v1.2.1.2).gba", "sword_shield_up", "BPRE", "SWORD_SHIELD"),
         Game("Pokemon GS Chronicles (v2.7.6).gba", "gs_chronicles", "BPRE", "GS_CHRONICLES"),
         Game("Super Mariomon (v1.5.1 Anniversary).gba", "mariomon_v1_5_1", "BPEE", "MARIOMON_V1_5_1"),
+        Game("Pokemon Elite Redux (2.65.4.1b).gba", "elite_redux", "BPEE", "ELITE_REDUX_V2_65_4_1B"),
         Game("Super Mariomon (v1.3).gba", "mariomon_v1_3", "BPEE", "MARIOMON_V1_3"),
     )
 

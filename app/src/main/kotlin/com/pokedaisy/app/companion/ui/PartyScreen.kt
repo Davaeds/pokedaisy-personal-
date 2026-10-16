@@ -437,8 +437,33 @@ private val RedBluePartyPaletteLight = redBluePartyPalette(Color(0xFF181010), Co
 private val RedBluePartyPaletteNight = redBluePartyPalette(Color(0xFFE8E8E8), Color(0xFF181818), Color(0xFF3A3A3A))
 val RedBluePartyPalette: PartyPalette get() = if (OptionColors.dark) RedBluePartyPaletteNight else RedBluePartyPaletteLight
 
+/**
+ * Pokémon Ghost Grey (headless, its party menu): four greys - white slots in a black line, the cursor's slot light grey,
+ * black text with no shadow, the HP bar black on white under a white-on-black "HP", a grey ghost's face where FireRed has
+ * its Poké Ball. Dark mode turns it round like Yellow's.
+ */
+private fun ghostGreyPartyPalette(ink: Color, paper: Color, cursor: Color, ghost: Color) = FireRedPartyPalette.copy(
+    normal = PartySlotColors(ink, paper, paper, paper, band = paper, text = ink, textShadow = Color.Transparent),
+    selected = PartySlotColors(ink, cursor, cursor, cursor, band = cursor, text = ink, textShadow = Color.Transparent),
+    fainted = PartySlotColors(ink, paper, paper, paper, band = paper, text = ink, textShadow = Color.Transparent),
+    text = ink, textShadow = Color.Transparent,
+    male = ink, maleShadow = Color.Transparent,
+    female = ink, femaleShadow = Color.Transparent,
+    hpFrame = ink, hpInner = paper,
+    hpLabel = paper, hpLabelShade = paper,
+    hpGreen = HpBarColors(ink, ink), hpYellow = HpBarColors(ink, ink), hpRed = HpBarColors(ink, ink),
+    hpEmpty = HpBarColors(paper, paper),
+    ball = mapOf('K' to ghost, 'R' to cursor, 'H' to cursor, 'W' to paper),
+)
+private val GhostGreyPartyPaletteLight =
+    ghostGreyPartyPalette(Color.Black, Color.White, Color(0xFFADADAD), Color(0xFF525252))
+private val GhostGreyPartyPaletteNight =
+    ghostGreyPartyPalette(Color(0xFFE8E8E8), Color(0xFF181818), Color(0xFF525252), Color(0xFFADADAD))
+val GhostGreyPartyPalette: PartyPalette get() = if (OptionColors.dark) GhostGreyPartyPaletteNight else GhostGreyPartyPaletteLight
+
 /** The generic slot's palette for [game] - add a palette here to restyle a game. */
 fun partyPaletteFor(game: GameKind): PartyPalette = when (game) {
+    GameKind.FIRERED -> if (com.pokedaisy.app.companion.data.runningGhostGrey) GhostGreyPartyPalette else FireRedPartyPalette
     GameKind.EMERALD_ROGUE -> RoguePartyPalette
     GameKind.GAIA -> GaiaPartyPalette
     GameKind.LAZARUS -> LazarusPartyPalette
@@ -497,14 +522,24 @@ private val RechargedEmeraldPartyStyle: PartySlotStyle by lazy {
     )
 }
 
+/** Elite Redux's party slots: Emerald's, but the names in its own mixed case ("Zekrom"), as its party menu prints them. */
+private val EliteReduxPartyStyle by lazy { EmeraldPartyStyle.copy(upperCaseNames = false) }
+
 /** The in-game party-slot look for [game], or null for games that don't have one yet. */
 fun partySlotStyleFor(game: GameKind): PartySlotStyle? = when (game) {
-    GameKind.FIRERED -> if (romGameCode.isEmpty()) FireRedPartyStyle else localPartyStyle(FireRedPartyStyle, fireRed = true)
+    GameKind.FIRERED -> when {
+        // Ghost Grey's grey slots aren't FireRed's art: its palette slot.
+        com.pokedaisy.app.companion.data.runningGhostGrey -> null
+        romGameCode.isEmpty() -> FireRedPartyStyle
+        else -> localPartyStyle(FireRedPartyStyle, fireRed = true)
+    }
     GameKind.EMERALD -> when {
         com.pokedaisy.app.companion.data.runningEmeraldHack != null -> RechargedEmeraldPartyStyle
         romGameCode.isEmpty() -> EmeraldPartyStyle
         else -> localPartyStyle(EmeraldPartyStyle, fireRed = false)
     }
+    // Elite Redux's party menu is Emerald's slots (its ROM kept the art: RomArt's partyem/) in a two-column grid.
+    GameKind.ELITE_REDUX -> EliteReduxPartyStyle
     GameKind.HEART_AND_SOUL -> HeartAndSoulPartyStyle
     GameKind.UNBOUND -> UnboundPartyStyle
     GameKind.RADICAL_RED -> RadicalRedPartyStyle

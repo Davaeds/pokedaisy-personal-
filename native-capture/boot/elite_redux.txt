@@ -1,0 +1,14 @@
+# Pokémon Elite Redux (2.65.3b / 2.65.4.1b) with its "v2.65 Beta2.1" save: the GAME FREAK and Pokémon splashes and the
+# title (A skips each), CONTINUE (its own window), then the field in Rustboro City's Pokémon Center (frame ~2310).
+# Checked headless 2026-10-16 in both builds.
+wait 600
+press A
+wait 300
+press A
+wait 300
+press A
+wait 300
+press A
+wait 400
+press A
+wait 400

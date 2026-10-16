@@ -437,8 +437,8 @@ private fun recolorBackdrop(bmp: android.graphics.Bitmap?, to: IntArray): androi
 fun rememberGameBackground(game: GameKind): GameBackground? {
     val context = LocalContext.current
     val gen = rememberArtGeneration()
-    // Recharged Emerald runs as EMERALD with its own backdrop.
-    val hack = com.pokedaisy.app.companion.data.runningEmeraldHack != null
+    // Recharged Emerald runs as EMERALD and Ghost Grey as FIRERED, each with its own backdrop.
+    val hack = com.pokedaisy.app.companion.data.runningEmeraldHack != null || com.pokedaisy.app.companion.data.runningGhostGrey
     return remember(game, gen, hack) {
         // Kept across visits: the ITEMS backdrop crossfade unmounts this one, and
         // rebuilding it recoloured 38k pixels on the main thread each time.
@@ -457,8 +457,10 @@ private fun buildGameBackground(context: android.content.Context, game: GameKind
     // Gen 1's screens are plain white: one pixel, stretched over the tab in a single draw.
     // (Never tiled - GameBackdrop draws a tiled backdrop tile by tile, and a 1px tile at
     // the Thor's 5x was ~53,000 draws a frame: 77 ms per frame on the RenderThread.)
-    if (game.isGameBoyGame) {
-        val paper = com.pokedaisy.app.companion.ui.OptionColors.gbPaper(game).toArgb()
+    // Ghost Grey's party menu is plain white too.
+    val ghostGrey = game == GameKind.FIRERED && com.pokedaisy.app.companion.data.runningGhostGrey
+    if (game.isGameBoyGame || ghostGrey) {
+        val paper = if (ghostGrey) -1 else com.pokedaisy.app.companion.ui.OptionColors.gbPaper(game).toArgb()
         return GameBackground(android.graphics.Bitmap.createBitmap(intArrayOf(paper), 1, 1, android.graphics.Bitmap.Config.ARGB_8888).asImageBitmap(), false)
     }
     // Sword and Shield Ultimate Plus: CFRU's grid in its own red, one 32px cell tiled (RomArt).
@@ -473,6 +475,8 @@ private fun buildGameBackground(context: android.content.Context, game: GameKind
         GameKind.EMERALD -> (if (com.pokedaisy.app.companion.data.runningEmeraldHack != null) com.pokedaisy.app.companion.data.RomArt.RE_BACKDROP
             else "partybg/emerald.png") to false
         GameKind.HEART_AND_SOUL -> "partybg/hns.png" to false
+        // Elite Redux kept Emerald's party backdrop (and its ROM has the art).
+        GameKind.ELITE_REDUX -> "partybg/emerald.png" to false
         GameKind.UNBOUND, GameKind.RADICAL_RED, GameKind.ODYSSEY, GameKind.AMETHYST, GameKind.GS_CHRONICLES -> "partybg/cfru_tile.png" to true
         else -> "partybg/firered.png" to false
     }

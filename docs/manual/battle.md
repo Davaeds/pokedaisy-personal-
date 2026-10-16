@@ -29,6 +29,8 @@ What each button does:
 - `POKéMON` opens your party on the companion to switch (see [Switching during a battle](#switching-during-a-battle)).
 - `RUN` runs away, and clears the "got away" message for you too.
 
+Elite Redux has no bag in its battle menu, so there the tab shows `RUN` and `POKéMON` side by side under `FIGHT`, with no `BAG`.
+
 > [!NOTE]
 > The touch buttons work in FireRed and Emerald and a growing list of hacks, in single battles. In other games, and in double battles, use your controls as usual: `INFO` and `SUGGESTIONS` still work. The [Supported games](supported-games.md) page lists what each game has.
 

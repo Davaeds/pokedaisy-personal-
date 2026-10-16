@@ -90,6 +90,16 @@ class RomRegionMapTest {
         }
     }
 
+    /** Ghost Grey (v1.0.1 and v1.0.4): its own grey Kanto on FireRed's four screens, its renamed towns. */
+    @Test fun ghostGreyHasItsKanto() {
+        for (rom in listOf("Pokemon Ghost Grey (v1.0.1).gba", "Pokemon Ghost Grey (v1.0.4).gba")) {
+            val m = read(rom)
+            assertEquals(4, m.images.size)
+            assertEquals(MapSecInfo("Celidon City", 0, 13, 8, 1, 1), m.sections[94])
+            assertEquals(MapSecInfo("Jaspar Town", 0, 20, 5, 3, 1), m.sections[110])
+        }
+    }
+
     /** Unbound's French translation: English's map, French names (its revision byte is 0x9E, not 0). */
     @Test fun unboundFrenchHasBorriusInFrench() {
         val m = read("Pokemon Unbound (v2.1.1.1) (French).gba")

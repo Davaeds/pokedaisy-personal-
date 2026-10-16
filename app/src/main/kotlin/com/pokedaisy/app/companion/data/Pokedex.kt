@@ -115,6 +115,8 @@ data class PokedexTables(
     /** Bytes from one ability name to the next; 0 = [abilityNameLength]
      * (expansion's gAbilitiesInfo has a description and AI rating after it). */
     val abilityNameStride: Int = 0,
+    /** Each [abilityNameStride]-byte record starts with a POINTER to the name, not the name (Elite Redux). */
+    val abilityNamePtr: Boolean = false,
     /** gSpeciesInfo offset of a third (hidden) ability byte; -1 = none (vanilla). */
     val hiddenAbilityOff: Int = -1,
     /** After the category on the dex page, in the game's own casing ("" = none: German, French). */
@@ -821,6 +823,7 @@ val POKEDEX_QUETZAL = PokedexTables(
     entryStride = 12,
     entriesBySpecies = true,
     entryCategoryPtr = true,
+    entryCategoryLen = 20,
     entryHeightOff = 4,
     entryDescOff = 8,
     baseStats = BaseStatsLayout(stride = 0x24, genderOff = 0x12, eggGroupsOff = 0x16, abilitiesOff = 0x18, abilityU16 = true),
@@ -973,6 +976,10 @@ val POKEDEX_ULTRA_VIOLET = POKEDEX_ORANGE_ISLANDS.copy(
 /** FireRed Rocket Edition: rev 0's tables but its ability names, repointed to 0x08950000; its mixed-case text. */
 val POKEDEX_ROCKET_EDITION = POKEDEX_ULTRA_VIOLET.copy(abilityNames = 0x08950000L, categorySuffix = "Pokémon")
 
+/** Pokémon Ghost Grey: Rocket Edition's layout - rev 0's tables rewritten in place (its ghosts' entries), its
+ * ability names at 0x08950000, its mixed-case text. */
+val POKEDEX_GHOST_GREY = POKEDEX_ROCKET_EDITION
+
 /**
  * Pokémon Sword and Shield Ultimate Plus v1.2.1.2 (CFRU): every table found through the
  * literal-pool word FireRed 1.0 loads it from (entries 0x09A04D08, front pics 0x099EDB5C,
@@ -1034,6 +1041,52 @@ val POKEDEX_GS_CHRONICLES = PokedexTables(
     flags = CFRU_DEX_FLAGS,
     probeCategory = "Seed",
     evoLayout = EvoLayout(EvoScheme.CFRU, table = 0x097AC008L, perMon = 16),
+)
+
+/**
+ * Pokémon Elite Redux 2.65.4.1b: one National dex of 1222 (its own fakemon past Gen 9: LUCINEON is No. 1072), its forms and
+ * Redux forms sharing their base species' number (the page shows the first). Every table from its ROM: gPokedexEntries
+ * 0x18 bytes by dex number (a POINTER to the category, height / weight +4 / +6, the text's pointer +8), vanilla's front
+ * pictures and palettes (LZ77), gBaseStats 0x2C bytes (genderRatio +0x12, egg groups +0x16, three u16 abilities from +0x18 -
+ * its three innates after them aren't shown), species -> dex number by species from 0, the ability names behind a pointer in
+ * 196-byte records. The flags are SaveBlock1's, a bit per dex number (seen +0x2E54, caught +0x2F10, 188 bytes): the save's
+ * 29 caught = its title screen's POKéDEX 29.
+ */
+val POKEDEX_ELITE_REDUX_V2_65_4_1B = PokedexTables(
+    entries = 0x08B3EB60L,
+    frontPics = 0x089625A8L,
+    palettes = 0x08581F34L,
+    speciesInfo = 0x08C033E4L,
+    speciesToNational = 0x08C004AEL,
+    abilityNames = 0x08FD95E8L,
+    footprints = 0,
+    abilityNameLength = 20,
+    abilityNameStride = 196,
+    abilityNamePtr = true,
+    hiddenAbilityOff = 0x1C,
+    categorySuffix = "Pokémon",
+    entryStride = 0x18,
+    entryCategoryPtr = true,
+    entryCategoryLen = 20,
+    entryHeightOff = 4,
+    entryDescOff = 8,
+    speciesCount = 2902,
+    nationalCount = 1222,
+    regionName = null,
+    flags = DexFlags(DexFlagBlock.SAVE_BLOCK_1, 0x2E54, 0x2F10, 188),
+    nationalMagicOff = -1,
+    probeCategory = "Seed",
+    baseStats = BaseStatsLayout(stride = 0x2C, genderOff = 0x12, eggGroupsOff = 0x16, abilitiesOff = 0x18, abilityU16 = true),
+)
+
+/** 2.65.3b: the same shapes at its own addresses. */
+val POKEDEX_ELITE_REDUX_V2_65_3B = POKEDEX_ELITE_REDUX_V2_65_4_1B.copy(
+    entries = 0x08B31300L,
+    frontPics = 0x08955B38L,
+    palettes = 0x0857D07CL,
+    speciesInfo = 0x08BF5B84L,
+    speciesToNational = 0x08BF2C4EL,
+    abilityNames = 0x08FC6DE4L,
 )
 
 /**
@@ -1259,7 +1312,7 @@ val POKEDEX_SOULGOLD_V1_2C = POKEDEX_SOULGOLD_V1_2.copy(
 fun pokedexMatchesRom(c: MemoryReader, t: PokedexTables): Boolean = runCatching {
     // Through the weight: 14-byte categories (R.O.W.E., Recharged Yellow) put it at +0x10.
     val e = c.readCoreMemory(t.entries + t.entryStride, maxOf(0x10, t.entryHeightOff + 4))
-    val category = if (t.entryCategoryPtr) Gen3Text.decode(c.readCoreMemory(u32le(e, 0), 13)) else Gen3Text.decode(e, 0, t.entryCategoryLen)
+    val category = if (t.entryCategoryPtr) Gen3Text.decode(c.readCoreMemory(u32le(e, 0), t.entryCategoryLen + 1)) else Gen3Text.decode(e, 0, t.entryCategoryLen)
     category.equals(t.probeCategory, ignoreCase = true) &&
         u16le(e, t.entryHeightOff) == t.probeHeight && u16le(e, t.entryHeightOff + 2) == t.probeWeight &&
         u16le(c.readCoreMemory(t.speciesToNational + 2L * (t.probeSpecies - 1), 2), 0) == 1 &&
@@ -1554,7 +1607,9 @@ object PokedexSource {
 
     private fun ability(t: PokedexTables, id: Int): String {
         val stride = if (t.abilityNameStride > 0) t.abilityNameStride else t.abilityNameLength
-        return Gen3Text.decode(rd(t.abilityNames + id.toLong() * stride, t.abilityNameLength))
+        val at = t.abilityNames + id.toLong() * stride
+        if (t.abilityNamePtr) return Gfx.u32(rd(at, 4), 0).takeIf(Gfx::inRom)?.let { Gen3Text.decode(rd(it, t.abilityNameLength)) }.orEmpty()
+        return Gen3Text.decode(rd(at, t.abilityNameLength))
     }
 
     private fun readEntry(t: PokedexTables, national: Int): DexEntry? {
@@ -1570,7 +1625,7 @@ object PokedexSource {
         val abilities = listOf(abilityAt(bs.abilitiesOff), abilityAt(bs.abilitiesOff + if (bs.abilityU16) 2 else 1))
             .filter { it != 0 }.distinct().map { ability(t, it) }
         val hidden = t.hiddenAbilityOff.takeIf { it >= 0 }?.let { abilityAt(it) }?.takeIf { it != 0 }?.let { ability(t, it) }
-        val category = if (t.entryCategoryPtr) Gfx.u32(e, 0).takeIf(Gfx::inRom)?.let { Gen3Text.decode(rd(it, 13)) }.orEmpty()
+        val category = if (t.entryCategoryPtr) Gfx.u32(e, 0).takeIf(Gfx::inRom)?.let { Gen3Text.decode(rd(it, t.entryCategoryLen + 1)) }.orEmpty()
             else Gen3Text.decode(e, 0, t.entryCategoryLen)
         return DexEntry(
             national = national,

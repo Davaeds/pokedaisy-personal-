@@ -157,6 +157,13 @@ HACKS = [
            a=dict(MAP_GROUPS=0x0873E2F4, OBJ_GFX_INFO=0x0839FDB0))
       for v, sha, save in [("v4.5.3", "1ee1557db1e4c2e0e94c6306efcc40506bc40cc9", "ash_gray"),
                            ("Fork Bug Fix v1.0", "92ed82145c013069472153391c7aab1cfbf37b75", "ash_gray_fork")]],
+    # Pokémon Ghost Grey (32 MB): FireRed rev 0 edited in place with rev 0's map groups and object tables, booted with
+    # its own 1.0.3 save (its boot script: the splash, CONTINUE, the quest log recap's B presses).
+    *[dict(name=f"Ghost Grey {v}", sha1=sha, family="FR", mapped=True, save=save, boot_file="ghost_grey.txt",
+           a=dict(MAP_GROUPS=0x083526A8, OBJ_GFX_INFO=0x0839FDB0))
+      for v, sha, save in [("v1.0.1", "20dfaea1d5317cf95fe0b493208edce7d50b865f", "ghost_grey_v101"),
+                           ("v1.0.2", "74337272566a74625d6dedefe47d2d153eb48ec1", "ghost_grey_v102"),
+                           ("v1.0.4", "0dafc0116b74406a2df491e26ccb40dd362fb0b7", "ghost_grey")]],
     # Binary Emerald hacks: Emerald's code, mapped the same way.
     dict(name="Glazed 9.2.0", sha1="e10105d8544469c6a11ca2cf510289981df3c3b0", family="EM", mapped=True,
          save="glazed", a=dict(MAP_GROUPS=0x08486578)),
@@ -304,6 +311,23 @@ HACKS = [
              COORD_OFFSET_Y=0x0203BABC, SPRITE_ORDER=0x0203BA78, GMAIN=0x030055C0, PAN_OFF=-4, METATILE_SIZE=24,
              METATILE_MASK=0x7FF, PRIMARY_OVERRIDE=1024, OBJ_GFX_INFO=0x084FF660, OBJ_PALETTES=0x084F7F00,
              OBJ_FACING=0x084F4860, ELEVATION_PRIO=0x084F4CD0, **SG_OBJECTS)),
+    # Elite Redux: its own gcc pokeemerald (not expansion) with expansion-like objects (a u16 graphicsId at +4,
+    # spriteId +0x23; templates' graphicsId a u16 at +2, byte 1 padding - no clones) and R.O.W.E.'s maps (12-bit metatile
+    # ids, 2048 primary metatiles). Its GetObjectEventGraphicsInfo (inlined): ids 271.. from VAR_OBJ_GFX_ID_* (vars at
+    # SaveBlock1 + 0x1C78), 270 the table's end; templates at 0x1378, flags 0x600 on. No sSpritePaletteTags list (its
+    # NPCs' palette tags are nowhere in RAM). The builds share the IWRAM; 2.65.4.1b's EWRAM sits 8 on from the objects.
+    *[dict(name=f"Elite Redux {v}", sha1=sha, family="EX", save=save, boot_file="elite_redux.txt", script=script, a=dict(
+          VMAP=0x03002210, MAP_HEADER=hdr, MAP_GROUPS=groups, SAVE_BLOCK1_PTR=0x0300340C, CAMERA_OFFSET=0x030021A0,
+          OBJECT_EVENTS=oe, SPRITES=spr, COORD_OFFSET=coord, COORD_OFFSET_Y=coord + 2, SPRITE_ORDER=order,
+          GMAIN=0x03003420, CONTROLS_LOCKED=0x03004518, METATILE_MASK=0xFFF, PRIMARY_OVERRIDE=2048,
+          OBJ_GFX_VAR_FROM=271, OBJ_GFX_COUNT=270, TEMPLATE_KIND_AT=1, SB1_OFFSETS=0x1378 | 0x1C78 << 16, **objs))
+      for v, sha, save, script, hdr, groups, oe, spr, coord, order, objs in [
+          ("2.65.3b", "5b38a681b6924ef3e0bb9f6cfbf22426c4c4e523", "elite_redux_v2653", 0x081F6154, 0x020277B8, 0x0917995C,
+           0x02021DBC, 0x0203D218, 0x0203E7A4, 0x0203E3DC,
+           dict(OBJ_GFX_INFO=0x08A69538, OBJ_PALETTES=0x08A6E13C, OBJ_FACING=0x08A66E14, ELEVATION_PRIO=0x08A70EE8)),
+          ("2.65.4.1b", "2f3e17e55c6afe23da97ec0f96a067eeb142ad15", "elite_redux", 0x081F3984, 0x020277C0, 0x091F54A0,
+           0x02021DC4, 0x0203D220, 0x0203E7AC, 0x0203E3E4,
+           dict(OBJ_GFX_INFO=0x08A76A00, OBJ_PALETTES=0x08A7B604, OBJ_FACING=0x08A742DC, ELEVATION_PRIO=0x08A7E3B0))]],
 ]
 FAMILY = {"BPR": "FR", "BPG": "FR", "BPE": "EM", "AXV": "RS", "AXP": "RS"}
 # Hacks under a game code of their own (only taken by SHA-1, as every hack).

@@ -26,7 +26,7 @@ package com.pokedaisy.app.companion.data
 // NativeReader.kt. Heart and Soul and Lazarus now have their own
 // ROM-extracted tables (*Hns.kt / *Lazarus.kt, scripts/gen_expansion_tables.py).
 enum class GameKind { FIRERED, EMERALD, UNBOUND, GAIA, RADICAL_RED, ODYSSEY, HEART_AND_SOUL, LAZARUS, ROWE, EMERALD_ROGUE, AMETHYST, EMERALD_SEAGLASS, CELIA, TMT2, SOULGOLD, YELLOW, GLAZED, IMPERIUM, QUETZAL, ORANGE_ISLANDS, RECHARGED_YELLOW, MARIOMON, SWORD_SHIELD, GS_CHRONICLES, CRYSTAL, CRYSTAL_CLEAR, PRISM,
-    GOLD, SILVER, RED, BLUE }
+    GOLD, SILVER, RED, BLUE, ELITE_REDUX }
 
 @Volatile
 var activeGame: GameKind = GameKind.FIRERED
@@ -134,6 +134,8 @@ fun fireRedHackFor(cfg: NativeConfig?): HackText? = when {
     cfg === NATIVE_ULTRA_VIOLET -> fireRedHackUltraViolet
     cfg === NATIVE_ROCKET_EDITION -> fireRedHackRocketEdition
     cfg === NATIVE_ASH_GRAY -> fireRedHackAshGray
+    cfg === NATIVE_GHOST_GREY -> fireRedHackGhostGrey
+    cfg === NATIVE_GHOST_GREY_V1_0_1 -> fireRedHackGhostGreyV101
     else -> null
 }
 
@@ -144,6 +146,15 @@ var fireRedHack: HackText? = null
 
 /** The running game is a FireRed hack edited in place ([fireRedHack]), its text laid over FireRed's. */
 val runningFireRedHack: HackText? get() = fireRedHack?.takeIf { activeGame == GameKind.FIRERED }
+
+/** The running game's bag counts its items (Elite Redux's keeps one "owned" bit per item: [ItemFlagsBag]). */
+val bagHasCounts: Boolean get() = activeGame != GameKind.ELITE_REDUX
+
+/** The running game's battle menu has a BAG (Elite Redux's is FIGHT / INFO over POKéMON / RUN). */
+val battleHasBag: Boolean get() = activeGame != GameKind.ELITE_REDUX
+
+/** Pokémon Ghost Grey is running (any build): its party menu, bag and backdrop are its own greys, not FireRed's colours. */
+val runningGhostGrey: Boolean get() = runningFireRedHack.let { it != null && (it === fireRedHackGhostGrey || it === fireRedHackGhostGreyV101) }
 
 /** The Emerald hack that runs as EMERALD with its own names (Recharged Emerald: [emeraldHackFor]); null
  * for Emerald itself and every other game. Set with [activeGame] by the Poller. */
@@ -194,6 +205,12 @@ private inline val nationalDexSpecies get() =
 // (confirmed wrong for Lazarus: its real item id 28 isn't vanilla's
 // "Lemonade").
 private inline val rogue get() = activeGame == GameKind.EMERALD_ROGUE
+// Pokémon Elite Redux: its own species / moves / items / map sections (gen_elite_redux_tables.py); 2.65.3b's few
+// differences over 2.65.4.1b's when [eliteRedux265_3] (set by the Poller).
+private inline val eliteRedux get() = activeGame == GameKind.ELITE_REDUX
+
+/** Elite Redux 2.65.3b is running (its few names / types / moves over 2.65.4.1b's). Set with [activeGame] by the Poller. */
+var eliteRedux265_3 = false
 
 // Odyssey reuses vanilla's unused "???" type (9) as Fairy (CLEFAIRY is 9/9).
 private val typeNamesOdyssey: Map<Int, String> by lazy { typeNames + (9 to "Fairy") }
@@ -226,6 +243,7 @@ val activeSpeciesNames: Map<Int, String> get() = localText?.species ?: when {
     gsChronicles -> speciesNamesGsChronicles
     rechargedYellow -> speciesNamesRechargedYellow
     mariomon -> if (mariomonV13) speciesNamesMariomonV13 else speciesNamesMariomon
+    eliteRedux -> if (eliteRedux265_3) speciesNamesEliteRedux265_3 else speciesNamesEliteRedux
     else -> frHack?.speciesMerged ?: speciesNames
 }
 val activeMoveData: Map<Int, MoveInfo> get() = localText?.moveData ?: when {
@@ -251,6 +269,7 @@ val activeMoveData: Map<Int, MoveInfo> get() = localText?.moveData ?: when {
     rechargedYellow -> moveDataRechargedYellow
     mariomon -> if (mariomonV13) moveDataMariomonV13 else moveDataMariomon
     amethyst -> moveDataAmethyst   // both versions' (GitHub #96: past Gen 3's 354 they read "Move#N")
+    eliteRedux -> if (eliteRedux265_3) moveDataEliteRedux265_3 else moveDataEliteRedux
     else -> frHack?.movesMerged ?: moveData
 }
 val activeItemNames: Map<Int, String> get() = localText?.items ?: when {
@@ -278,6 +297,7 @@ val activeItemNames: Map<Int, String> get() = localText?.items ?: when {
     gsChronicles -> itemNamesGsChronicles
     rechargedYellow -> itemNamesRechargedYellow
     mariomon -> itemNamesMariomon
+    eliteRedux -> if (eliteRedux265_3) itemNamesEliteRedux265_3 else itemNamesEliteRedux
     else -> frHack?.itemsMerged ?: itemNames
 }
 val activeSpeciesTypeData: Map<Int, SpeciesTypes> get() = when {
@@ -302,6 +322,7 @@ val activeSpeciesTypeData: Map<Int, SpeciesTypes> get() = when {
     gsChronicles -> speciesTypeDataGsChronicles
     mariomon -> if (mariomonV13) speciesTypeDataMariomonV13 else speciesTypeDataMariomon
     emeraldLegacy -> speciesTypeDataEmeraldLegacy
+    eliteRedux -> if (eliteRedux265_3) speciesTypeDataEliteRedux265_3 else speciesTypeDataEliteRedux
     else -> frHack?.typesMerged ?: speciesTypeData
 }
 /** Emerald Legacy: retail's types (unchanged, checked against its gSpeciesInfo), plus its Deoxys forms at 412-414. */
@@ -328,6 +349,7 @@ val activeTypeEffectiveness: Map<Int, Int> get() = when {
     rowe -> typeEffectivenessRowe
     orangeIslands -> typeEffectivenessOrangeIslands
     mariomon -> typeEffectivenessMariomon
+    eliteRedux -> typeEffectivenessEliteRedux
     else -> frHack?.typeChart ?: typeEffectiveness
 }
 val activeTypeNames: Map<Int, String> get() = when {
@@ -349,6 +371,7 @@ val activeTypeNames: Map<Int, String> get() = when {
     rowe -> typeNamesRowe
     orangeIslands -> typeNamesOrangeIslands
     mariomon -> typeNamesMariomon
+    eliteRedux -> typeNamesEliteRedux
     else -> frHack?.typeNamesMerged ?: typeNames
 }
 val activeMapSecData: Map<Int, MapSecInfo> get() = localText?.mapSecData ?: when {
@@ -376,6 +399,8 @@ val activeMapSecData: Map<Int, MapSecInfo> get() = localText?.mapSecData ?: when
     gsChronicles -> mapSecDataGsChronicles
     rechargedYellow -> mapSecDataRechargedYellow
     mariomon -> if (mariomonV13) mapSecDataMariomonV13 else mapSecDataMariomon
+    // Emerald's Hoenn sections and rects (and its own few past them), on Emerald's map.
+    eliteRedux -> mapSecDataEliteRedux
     else -> frHack?.mapSecsMerged ?: mapSecData
 }
 /**
@@ -470,7 +495,7 @@ val activeRegionMapImages: Array<String> get() = when {
     seaglass -> regionMapImagesSeaglass
     // Recharged Emerald's own Hoenn (RomArt's RE_REGION_*), on Emerald's layout: Emerald's boxes and cursor grid.
     emerald && runningEmeraldHack != null -> regionMapImagesRechargedEmerald
-    emerald || tmt2 -> regionMapImagesEmerald
+    emerald || tmt2 || eliteRedux -> regionMapImagesEmerald
     hns -> regionMapImagesHns
     lazarus -> regionMapImagesLazarus
     soulGold -> regionMapImagesSoulGold
@@ -535,6 +560,7 @@ fun GameKind.displayName(): String = when (this) {
     GameKind.ORANGE_ISLANDS -> "Pokémon Orange Islands"
     GameKind.SWORD_SHIELD -> "Sword and Shield Ultimate Plus"
     GameKind.GS_CHRONICLES -> "Pokémon GS Chronicles"
+    GameKind.ELITE_REDUX -> "Pokémon Elite Redux"
     GameKind.RECHARGED_YELLOW -> "Pokémon Recharged Yellow"
     GameKind.MARIOMON -> "Super Mariomon"
     GameKind.CRYSTAL -> "Pokémon Crystal"

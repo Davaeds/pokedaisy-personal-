@@ -1,0 +1,39 @@
+# Pokémon Ghost Grey (v1.0.1 / v1.0.2 / v1.0.4) with its 1.0.3 save: the JOEY ZEED splash (A skips it), the title
+# ("PRESS START IF YOU DARE"), CONTINUE, then FireRed's quest-log recap ("Previously on your quest...", four pages),
+# which B skips. Checked headless 2026-10-16: the field (a cave room) by frame ~2000 in all three builds.
+wait 600
+press A
+wait 300
+press A
+wait 300
+press A
+wait 300
+press B
+wait 45
+press B
+wait 45
+press B
+wait 45
+press B
+wait 45
+press B
+wait 45
+press B
+wait 45
+press B
+wait 45
+press B
+wait 45
+press B
+wait 45
+press B
+wait 45
+press B
+wait 45
+press B
+wait 45
+press B
+wait 45
+press B
+wait 45
+wait 200

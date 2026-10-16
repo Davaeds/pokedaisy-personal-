@@ -51,6 +51,13 @@ class MoneyTest {
         assertEquals(246468L, money("rocket_edition", NATIVE_ROCKET_EDITION))
         assertEquals(246468L, money("ash_gray", NATIVE_ASH_GRAY))
         assertEquals(246468L, money("ash_gray_fork", NATIVE_ASH_GRAY))
+        // Elite Redux's save in both builds: plain (it zeroes the encryption key), its trainer card shows BP instead.
+        assertEquals(999_900L, money("elite_redux", NATIVE_ELITE_REDUX_V2_65_4_1B))
+        assertEquals(999_900L, money("elite_redux_v2653", NATIVE_ELITE_REDUX_V2_65_3B))
+        // Ghost Grey's 1.0.3 save in each build (its trainer card: ₽163300).
+        assertEquals(163300L, money("ghost_grey", NATIVE_GHOST_GREY))
+        assertEquals(163300L, money("ghost_grey_v102", NATIVE_GHOST_GREY))
+        assertEquals(163300L, money("ghost_grey_v101", NATIVE_GHOST_GREY_V1_0_1))
         assertEquals(5000L, money("sword_shield_up", NATIVE_SWORD_SHIELD))
         assertEquals(13000L, money("gs_chronicles", NATIVE_GS_CHRONICLES))
         assertEquals(13000L, money("gs_chronicles_swapped", NATIVE_GS_CHRONICLES))

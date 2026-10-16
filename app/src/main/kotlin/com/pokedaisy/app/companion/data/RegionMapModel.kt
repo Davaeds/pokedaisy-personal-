@@ -134,7 +134,7 @@ fun activeRegionMap(): RegionMapModel? {
     val layouts = when (activeGame) {
         // Recharged Yellow keeps FireRed's region map screens and cursor grids.
         GameKind.FIRERED, GameKind.RECHARGED_YELLOW -> regionLayoutsFireRed
-        GameKind.EMERALD, GameKind.EMERALD_SEAGLASS, GameKind.TMT2 -> regionLayoutsEmerald
+        GameKind.EMERALD, GameKind.EMERALD_SEAGLASS, GameKind.TMT2, GameKind.ELITE_REDUX -> regionLayoutsEmerald
         GameKind.EMERALD_ROGUE -> regionLayoutsRogue
         GameKind.LAZARUS -> regionLayoutsLazarus
         GameKind.SOULGOLD -> regionLayoutsSoulGold

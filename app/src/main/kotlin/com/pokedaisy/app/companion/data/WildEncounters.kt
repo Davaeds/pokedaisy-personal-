@@ -88,19 +88,19 @@ object WildEncounters {
 
     /**
      * gcc's StandardWildEncounter at [o]: `ldr rA, =switch; ldrb rB, [rA]`, up to six lines of argument shuffling,
-     * `cmp rB, #1` and its branch, the header lookup's call within the next three lines and 0xFFFF (HEADER_NONE) loaded
-     * within three after it. The switch, or null.
+     * `cmp rB, #1` and its branch, the header lookup's call within the next eleven lines (Elite Redux 2.65.4.1b reads the
+     * player's coordinates first: nine lines) and 0xFFFF (HEADER_NONE) loaded within three after it. The switch, or null.
      */
     private fun gccRead(b: ByteBuffer, o: Int): Long? {
         val switch = pool(b, o) ?: return null
-        if (switch !in 0x02000000L until 0x02040000L || o + 2 * 20 > b.limit()) return null
+        if (switch !in 0x02000000L until 0x02040000L || o + 2 * 28 > b.limit()) return null
         val ra = (u16(b, o) shr 8) and 7
         val ld = u16(b, o + 2)
         if (ld and 0xFFC0 != 0x7800 || (ld shr 3) and 7 != ra) return null
         val rb = ld and 7
         val cmp = (2..8).firstOrNull { u16(b, o + 2 * it) == 0x2800 or (rb shl 8) or 1 } ?: return null
         if (u16(b, o + 2 * cmp + 2) shr 12 != 0xD) return null
-        val bl = (cmp + 2..cmp + 4).firstOrNull { u16(b, o + 2 * it) shr 11 == 0b11110 && u16(b, o + 2 * it + 2) shr 11 == 0b11111 }
+        val bl = (cmp + 2..cmp + 12).firstOrNull { u16(b, o + 2 * it) shr 11 == 0b11110 && u16(b, o + 2 * it + 2) shr 11 == 0b11111 }
             ?: return null
         val ffff = (bl + 2..bl + 4).any { u16(b, o + 2 * it) shr 11 == 0b01001 && pool(b, o + 2 * it) == 0xFFFFL }
         return if (ffff) switch else null

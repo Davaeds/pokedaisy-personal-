@@ -40,6 +40,7 @@ Any GBA or Game Boy game plays in PokeDaisy. "Supported" is about the companion 
 | Pokémon Ultra Violet | 1.22 |
 | Pokémon FireRed Rocket Edition | its one release |
 | Pokémon Ash Gray | 4.5.3, and its Fork Bug Fix 1.0 build |
+| Pokémon Ghost Grey | 1.0.1, 1.0.2 and 1.0.4 |
 | Sword and Shield Ultimate Plus | 1.2.1.2, plus its three patches |
 | Pokémon GS Chronicles | 2.7.6 |
 | Pokémon Recharged Yellow | 1.8.0, 1.9.0, 1.9.4 and 1.9.7 |
@@ -54,6 +55,7 @@ Any GBA or Game Boy game plays in PokeDaisy. "Supported" is about the companion 
 | Moemon Quetzal | English and Spanish Alpha 0.8.4 Hotfix |
 | Super Mariomon | 1.2.1 to 1.3, 1.5.1 and 1.5.2 |
 | Pokémon Recharged Emerald | 2.2.5 and 2.2.8, and Rebalanced 2.2.8 |
+| Pokémon Elite Redux | 2.65.3b and 2.65.4.1b |
 | Emerald Rogue | 2.2.1-EX |
 | Pokémon SoulGold | 1.1.4, and three builds of 1.2 |
 | Pokémon R.O.W.E. | 2.1.9.1 Experimental |

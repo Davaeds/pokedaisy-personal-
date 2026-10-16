@@ -14,7 +14,7 @@ The tab's name follows the game: `BAG` in most games, `PACK` in Gold, Silver, Cr
 
 The pockets run down the left like folder tabs. `ALL` shows everything at once; the others are the game's own pockets (items, balls, TMs and HMs, berries, key items, and whatever extra pockets a hack adds). Only pockets with something in them get a tab.
 
-Each row has the item's name and how many you have. TMs and HMs show the move they teach after their number, the way the game's TM case does. In Prism TMs never run out, so each one shows a count of 1.
+Each row has the item's name and how many you have. TMs and HMs show the move they teach after their number, the way the game's TM case does. In Prism TMs never run out, so each one shows a count of 1. Elite Redux keeps no counts at all (an item you have can be used again and again), so its rows show names only.
 
 The button under the pockets changes the order. Each tap moves to the next: the game's own order, by name, by type, or by count (most first).
 
@@ -67,12 +67,12 @@ To take a held item back, open the Pokémon's summary on the party tab and tap `
 It only works while you're walking around. If a menu, a conversation or a battle is open, it tells you so (close the game's menus first). Items that need the game's own screens, like the ones that raise a level or make a Pokémon evolve, and letters, aren't offered here.
 
 > [!NOTE]
-> This works in FireRed, LeafGreen, Ruby, Sapphire and Emerald (in every language PokeDaisy supports, except the Japanese Ruby, Sapphire and Emerald), and in Unbound, Radical Red, Gaia, Odyssey, Amethyst, Orange Islands, Ultra Violet, FireRed Rocket Edition, Ash Gray, Sword and Shield Ultimate Plus, GS Chronicles, Glazed, Emerald Kaizo and Recharged Emerald. In other games, use items in the game as normal; the bag tab updates by itself.
+> This works in FireRed, LeafGreen, Ruby, Sapphire and Emerald (in every language PokeDaisy supports, except the Japanese Ruby, Sapphire and Emerald), and in Unbound, Radical Red, Gaia, Odyssey, Amethyst, Orange Islands, Ultra Violet, FireRed Rocket Edition, Ash Gray, Ghost Grey, Sword and Shield Ultimate Plus, GS Chronicles, Glazed, Emerald Kaizo and Recharged Emerald. In other games, use items in the game as normal; the bag tab updates by itself.
 
 ## The PC from anywhere
 
 In FireRed, LeafGreen, Emerald, Ruby and Sapphire, the bag tab has a `PC` button above the sort button (its small arrow means it opens the game's own screen, not a companion page). Tap it and the game's own PC opens right where you're standing, the same menu a PC in a Pokémon Center gives you: take Pokémon out, put them away and move them between boxes (and, outside Ruby and Sapphire, move their items). Back out of it as usual and you're on the field again.
 
-It works in every language, and on hacks that kept those games' code: Glazed, Emerald Kaizo, Emerald Legacy, Gaia, Odyssey, Orange Islands, Ultra Violet and the CFRU hacks (Unbound, Radical Red, Amethyst, Sword and Shield Ultimate Plus). Heart and Soul, SoulGold, Lazarus and Emerald Imperium have the `PC` button too, but not the bag's `USE`, `GIVE` and `TAKE` yet.
+It works in every language, and on hacks that kept those games' code: Glazed, Emerald Kaizo, Emerald Legacy, Gaia, Odyssey, Orange Islands, Ultra Violet, Ghost Grey and the CFRU hacks (Unbound, Radical Red, Amethyst, Sword and Shield Ultimate Plus). Heart and Soul, SoulGold, Lazarus and Emerald Imperium have the `PC` button too, but not the bag's `USE`, `GIVE` and `TAKE` yet.
 
 Like `USE`, it only works while you're walking around: with a menu, a conversation or a battle open, it says so instead.
