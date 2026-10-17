@@ -155,9 +155,16 @@ static void pkTeardown(void) {
     pthread_rwlock_wrlock(&pk_coreLock);
     pkRewindOff();
     if (g.core) {
+        // The Game Boy core closes the save VFile itself (GBUnloadROM: sramRealVf->close); the
+        // GBA core leaves it to us. Closing it again here was a double close: fdsan's abort in
+        // _vfdClose, or a free of freed memory (Crashlytics, 1.2.1's Game Boy games).
+        bool coreClosesSave = !pk_is_gba(g.core);
         pk_cheats_clear(g.core);        // and forgets the ROM bytes it kept
         g.core->deinit(g.core);         // unloads ROM, flushes save VFile
         g.core = NULL;
+        if (coreClosesSave) {
+            g.saveVf = NULL;
+        }
     }
     if (g.saveVf) {
         g.saveVf->close(g.saveVf);
