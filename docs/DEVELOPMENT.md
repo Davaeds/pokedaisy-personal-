@@ -1260,7 +1260,17 @@ only keeps a 256x256 ring of tiles in VRAM (`field_camera.c`), so the rest would
   math: the battlers), windows continued past the edges (the opening band spans the whole width), blending and
   brightness. BG0-2 (text, menus, animations) aren't drawn past 240; where BG3 is transparent (the text box rows)
   the strip goes on with the game's own edge pixel of that row - the solid dark band the text box and menus sit on
-  (the glow there looked muddy, the user's call). Per-scanline registers: games rewrite scroll / windows between lines (the intro's sliding
+  (the glow there looked muddy, the user's call). The text box rows (from y 112, `BATTLE_TEXT_TOP`) are always holes past
+  the edges, so that band goes on even where a hack's BG3 has light tiles there (GitHub #114). Where BG3 alone can't
+  go on, a side's strip mirrors BG1-3 in from the edge instead (`battleMirrorX`, stacked by priority; BG0, the text,
+  stays out): a background that is one 256 px picture twice over (BG3's two screen blocks equal above the text box:
+  SoulGold's forest), BG3 that doesn't continue past that edge (`battleEdgeBroken`: the colour step across the edge,
+  summed over the scene rows, well past the steps between the columns inside - SoulGold's Route 29, trees to the
+  edge and bare sky past it) or scenery on BG1 / BG2 at the edges (`battleSceneOffBg3`: retail's intro dust and
+  rocks too, which used to stop 44 px in). Otherwise BG3 is drawn as VRAM has it: retail's message / menu / RUN
+  frames are byte-identical to before, and mirrored, its foe platform ending at the edge grew a second one.
+  Checked headless on FireRed / Emerald (11 points each against the old code) and SoulGold, and on the Thor.
+  Per-scanline registers: games rewrite scroll / windows between lines (the intro's sliding
   halves), so a hook on mGBA's `drawScanline` copies DISPCNT..BLDY as each line is drawn (it runs at HBlank's start,
   before that HBlank's DMA writes the next line's values). Checked like the map: captured with only BG3 + OBJ on
   (`layers 0x18`), the rebuild of the middle matched every battle frame of both games pixel for pixel - intro slide,

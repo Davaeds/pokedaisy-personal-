@@ -899,7 +899,8 @@ bring it back without a genuinely different idea.
 Removed NPCs are drawn where last seen, not at home (`rememberObjects`). Unbound's stutter at map borders is the game's
 own lag (frames dropped by its map loading, headless too), not the app's - see docs/DEVELOPMENT.md's WIDE section.
 **Battles are wide** (BG3 is 512 px in VRAM): drawn like a wider PPU, with per-scanline registers from a hook on mGBA's
-`drawScanline`; check battle changes with `layers 0x18` + `widecheck all` (BG3 + OBJ only: the middle must match exactly).
+`drawScanline` (where BG3 alone can't go on - a 256 px picture repeated, a broken seam, scenery on BG1 / BG2 - a side mirrors
+BG1-3 in from its edge; the text box rows always continue the dark band: GitHub #114); check battle changes with `layers 0x18` + `widecheck all` (BG3 + OBJ only: the middle must match exactly).
 The map uses those per-line registers too (windows, scroll, layer enables - Flash caves, transition wedges); weather
 sprites are repeated 256 px into the margins. A change to drawing gets the sweep (docs/DEVELOPMENT.md's WIDE section):
 warps to caves, gyms, weather routes on both games with BG0 off, every map frame exact.

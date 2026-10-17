@@ -1379,6 +1379,102 @@ static void drawRegion(const struct Snap* s, int cx, int cy, int href, int vref,
 // BG0-2 (text, menus, animations) have nothing meaningful past 240 and aren't drawn; where BG3 is
 // transparent (the text box rows) the strip is a hole, filled with the game's own edge pixel of that row
 // (the dark band the text box and menus sit on), so the band simply goes on to the screen's edges.
+//
+// Where BG3 alone can't go on, the strips are mirrored in from the edges instead, BG1-3 as the PPU stacks them
+// (BG0 is the text), each side on its own (GitHub #114, SoulGold): a background that is one 256 px picture
+// repeated (its two screen blocks the same, above the text box) has no scenery past the screen, only the
+// picture's other side; BG3 past an edge that doesn't go on from it (Route 29: trees to the edge, bare sky past
+// it - battleEdgeBroken); a scene drawn partly on BG1 / BG2 (retail's intro dust and rocks too), which would
+// stop dead at the edges with only BG3 past them. Retail's BG3 is scenery all 512 px across: drawn as VRAM has
+// it (mirrored, the foe's platform ending at the edge grew a second one). The text box rows
+// (from BATTLE_TEXT_TOP) are always holes past the edges, so the dark band goes on even where a hack's BG3 has
+// light tiles there.
+
+/** Where the battle's text box / action menu rows start (tile row 14, in every Gen 3 battle layout). */
+#define BATTLE_TEXT_TOP 112
+
+/** BG3's 64x32 tilemap at screen base `scr` is one 256 px picture twice over (its rows above the text box). */
+static bool battleBgRepeats(const uint8_t* vram, uint32_t scr) {
+    if (scr + 0x1000 > 0x10000) return false;
+    return memcmp(vram + scr, vram + scr + 0x800, (BATTLE_TEXT_TOP / 8) * 32 * 2) == 0;
+}
+
+/** A battle column past the screen's edges, mirrored back into it (again and again, for a window past 240 more). */
+static int battleMirrorX(int sx) {
+    int m = ((sx % (2 * PK_WIDE_W)) + 2 * PK_WIDE_W) % (2 * PK_WIDE_W);
+    return m < PK_WIDE_W ? m : 2 * PK_WIDE_W - 1 - m;
+}
+
+/** Text BG `n`'s colour index at screen (x, y), with line y's registers ([useLine] first): any size, 4 or 8 bpp;
+ * 0 = transparent. *pal gets the palette offset to add (P index). */
+static int bgPixel(int n, int x, int y, int* pal) {
+    const uint8_t* vram = (const uint8_t*) G->video.vram;
+    uint16_t cnt = io(0x08 + 2 * n);
+    uint32_t chr = ((cnt >> 2) & 3) * 0x4000u, scr = ((cnt >> 8) & 31) * 0x800u;
+    int wide = (cnt >> 14) & 1, tall = cnt >> 15;
+    int bx = (x + (io(0x10 + 4 * n) & 0x1FF)) & (wide ? 511 : 255);
+    int by = (y + (io(0x12 + 4 * n) & 0x1FF)) & (tall ? 511 : 255);
+    uint32_t at = scr + (uint32_t) ((bx >> 8) + (by >> 8) * (wide ? 2 : 1)) * 0x800 + 2 * (uint32_t) (((by >> 3) & 31) * 32 + ((bx >> 3) & 31));
+    if (at + 2 > 0x10000) return 0;
+    uint16_t e = le16(vram + at);
+    int px = bx & 7, py = by & 7;
+    if (e & 0x400) px = 7 - px;
+    if (e & 0x800) py = 7 - py;
+    if (cnt & 0x80) {   // 256 colours
+        uint32_t off = chr + (e & 0x3FFu) * 64 + (uint32_t) (py * 8 + px);
+        *pal = 0;
+        return off < 0x10000 ? vram[off] : 0;
+    }
+    uint32_t off = chr + (e & 0x3FFu) * 32 + (uint32_t) (py * 4 + px / 2);
+    *pal = (e >> 12) * 16;
+    return off < 0x10000 ? (px & 1 ? vram[off] >> 4 : vram[off] & 15) : 0;
+}
+
+/** BG3's colour at screen (x, y) as 15-bit BGR (the backdrop where it's transparent); line y's registers. */
+static uint16_t bg3Colour(int x, int y) {
+    int pal, ci = bgPixel(3, x, y, &pal);
+    return P[ci ? pal + ci : 0];
+}
+
+static int colourJump(uint16_t a, uint16_t b) {
+    int d = 0;
+    for (int k = 0; k < 15; k += 5) d += abs(((a >> k) & 31) - ((b >> k) & 31));
+    return d;
+}
+
+/** BG3 doesn't go on past this edge (side 0 left, 1 right): over the scene rows, the step from the screen's last
+ * column to the first one past it is well beyond the steps between the columns inside (retail's scenery goes on
+ * with none; Route 29's trees in SoulGold end there, the sky past them). Summed in 5-bit colour steps. */
+static bool battleEdgeBroken(int side) {
+    int out = side ? PK_WIDE_W : -1, edge = side ? PK_WIDE_W - 1 : 0, in1 = side ? PK_WIDE_W - 2 : 1, in2 = side ? PK_WIDE_W - 3 : 2;
+    int seam = 0, a = 0, b = 0;
+    for (int y = 0; y < BATTLE_TEXT_TOP; y++) {
+        useLine(y);
+        if (!(io(0) & 0x0800)) continue;
+        uint16_t e = bg3Colour(edge, y), i1 = bg3Colour(in1, y);
+        seam += colourJump(bg3Colour(out, y), e);
+        a += colourJump(e, i1);
+        b += colourJump(i1, bg3Colour(in2, y));
+    }
+    int inside = a < b ? a : b;
+    return seam > 2 * inside + 4 * BATTLE_TEXT_TOP;
+}
+
+/** BG1 or BG2 draws part of the scene at the screen's edges (above the text box) this frame. */
+static bool battleSceneOffBg3(void) {
+    for (int y = 0; y < BATTLE_TEXT_TOP; y++) {
+        useLine(y);
+        uint16_t disp = io(0);
+        for (int n = 1; n <= 2; n++) {
+            if (!(disp & (0x100 << n))) continue;
+            for (int x = 0; x < PK_WIDE_W; x += PK_WIDE_W - 1) {
+                int pal;
+                if ((windowLayers(x, y) & (1 << n)) && bgPixel(n, x, y, &pal)) return true;
+            }
+        }
+    }
+    return false;
+}
 
 static bool inBattleScreen(void) {
     if (!(r8((uint32_t) (C[PK_WIDE_GMAIN] + C[PK_WIDE_INBATTLE_OFF])) & 2)) return false;   // gMain.inBattle
@@ -1391,6 +1487,10 @@ static bool inBattleScreen(void) {
 static void drawBattleRegion(int x0, int y0, int x1, int y1, bool skipFrame, uint32_t* dst, int stride, uint32_t alpha) {
     const uint8_t* vram = (const uint8_t*) G->video.vram;
     int w = x1 - x0, h = y1 - y0;
+    uint32_t repeatsScr = UINT32_MAX;   // the screen base [repeats] was worked out for
+    bool repeats = false;
+    bool offBg3 = (x0 < 0 || x1 > PK_WIDE_W) && battleSceneOffBg3();
+    bool broken[2] = { x0 < 0 && battleEdgeBroken(0), x1 > PK_WIDE_W && battleEdgeBroken(1) };
     for (int j = 0; j < h; j++) {
         int y = y0 + j;
         if (y < 0 || y >= PK_WIDE_H) {
@@ -1408,6 +1508,10 @@ static void drawBattleRegion(int x0, int y0, int x1, int y1, bool skipFrame, uin
         uint16_t disp = io(0), cnt = io(0x0E);
         uint32_t chr = ((cnt >> 2) & 3) * 0x4000u, scr = ((cnt >> 8) & 31) * 0x800u;
         int hofs = io(0x1C) & 0x1FF, vofs = io(0x1E) & 0x1FF, my = (y + vofs) & 255;
+        if (scr != repeatsScr) {
+            repeatsScr = scr;
+            repeats = battleBgRepeats(vram, scr);
+        }
         for (int x = 0; x < w; x++) {
             int sx = x0 + x, ci = 0;
             if (skipFrame && onFrame(sx, y)) {
@@ -1417,7 +1521,24 @@ static void drawBattleRegion(int x0, int y0, int x1, int y1, bool skipFrame, uin
             }
             uint16_t e = 0;
             int wl = windowLayers(sx, y);   // its window's layers, and whether effects apply there (0x20)
-            if ((disp & 0x0800) && (wl & 8)) {
+            bool outside = sx < 0 || sx >= PK_WIDE_W;
+            if (outside && (repeats || offBg3 || broken[sx >= PK_WIDE_W]) && y < BATTLE_TEXT_TOP) {
+                // Mirrored in: BG1-3 at the column as far inside the screen, stacked by priority (then BG number).
+                int mxs = battleMirrorX(sx), wm = windowLayers(mxs, y), layer = 5, pr = 4, pal = 0;
+                for (int p = 0; p < 4 && !ci; p++)
+                    for (int n = 1; n <= 3 && !ci; n++)
+                        if ((disp & (0x100 << n)) && (wm & (1 << n)) && (io(0x08 + 2 * n) & 3) == p && (ci = bgPixel(n, mxs, y, &pal)))
+                            layer = n, pr = p;
+                uint32_t c32 = color(P[ci ? pal + ci : 0], alpha);
+                dst[j * stride + x] = wm & 0x20 ? brightness(c32, layer) : c32;
+                prioBuf[j][x] = (uint8_t) pr;
+                layerBuf[j][x] = (uint8_t) layer;
+                below[j][x] = c32;
+                takenBuf[j][x] = 0;
+                holeBuf[j][x] = !ci;
+                continue;
+            }
+            if ((disp & 0x0800) && (wl & 8) && !(outside && y >= BATTLE_TEXT_TOP)) {
                 int mx = (sx + hofs) & 511;
                 e = le16(vram + scr + (uint32_t) (mx >> 8) * 0x800 + 2 * (uint32_t) (((my >> 3) & 31) * 32 + ((mx >> 3) & 31)));
                 int px = mx & 7, py = my & 7;

@@ -30,7 +30,7 @@ With `EXPAND` you see more of the route around you instead of black bars. The st
 
 A few things worth knowing:
 
-- **Battles are wide too.** The battle scenery carries on past the edges, and Pokémon, trainers and health boxes slide in from off screen.
+- **Battles are wide too.** The battle scenery carries on past the edges, and Pokémon, trainers and health boxes slide in from off screen. Some hacks only draw their battle scenes as wide as the screen; there the scene is mirrored out from its edges so it still flows on. The dark band behind the text and the battle menu runs right across.
 - **Weather and caves work.** Fog, ash and rain reach the screen's edges, and a dark cave stays dark around your light.
 - **Menus and the title screen** can't be extended, so there the strips glow softly with the colours at the game's edges, and fade back into the map when you return to it.
 - **Supported games:** FireRed, LeafGreen, Emerald, Ruby and Sapphire (every language and revision), plus Unbound, Radical Red, Lazarus, SoulGold, Heart and Soul, Gaia, Odyssey, Amethyst 1.3.0, Glazed, Seaglass, Emerald Imperium, Emerald Legacy, Emerald Rogue, Too Many Types 2, Recharged Yellow, Super Mariomon, Ultra Violet, FireRed Rocket Edition, Ash Gray, Ghost Grey, Elite Redux, Sword and Shield Ultimate Plus, GS Chronicles and Celia's hack.
