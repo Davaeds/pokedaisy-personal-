@@ -4,6 +4,7 @@
 import Pixel from '../components/Pixel.astro';
 import { frameCss } from '../lib/pixel.js';
 import HeroDevice from '../components/HeroDevice.astro';
+import HeroSingleDevice from '../components/HeroSingleDevice.astro';
 import data from '../data/compat.json';
 
 const games = new Set(data.matrix.rows.map((r) => r.game)).size;
@@ -30,20 +31,21 @@ const games = new Set(data.matrix.rows.map((r) => r.game)).size;
           <h1><span class="red">POKE</span>DAISY</h1>
         </div>
         <div class="dialog f-dialog">
-          <p>Play your Pokémon games on the top screen. See everything about your game on the bottom one.</p>
+          <p>Play your Pokémon games. See everything about them on your second screen, or right beside the game.</p>
           <span class="more"><Pixel name="more" scale={1} /></span>
         </div>
         <div class="chips">
           <span class="chip f-pillGreen">FREE &amp; OPEN SOURCE</span>
           <span class="chip f-pillRed">{games} GAMES &amp; ROM HACKS</span>
-          <span class="chip f-pillBlue">DUAL-SCREEN ANDROID</span>
+          <span class="chip f-pillBlue">ONE OR TWO SCREENS</span>
           <span class="chip f-pillYellow">GB · GBC · GBA</span>
         </div>
       </div>
 
       <div class="dev"><HeroDevice still /></div>
-      <span class="tag t1 chip f-chip"><Pixel name="tv" scale={0.667} /> THE GAME</span>
-      <span class="tag t2 chip f-chip"><Pixel name="logo" scale={0.5} /> YOUR COMPANION</span>
+      <div class="dev1"><HeroSingleDevice still /></div>
+      <span class="tag t1 chip f-chip"><Pixel name="dual" scale={0.5} /> TWO SCREENS</span>
+      <span class="tag t2 chip f-chip"><Pixel name="single" scale={0.5} /> ONE SCREEN</span>
     </div>
   </body>
 </html>
@@ -78,9 +80,11 @@ const games = new Set(data.matrix.rows.map((r) => r.game)).size;
   .chips { display: flex; flex-wrap: wrap; gap: 12px; }
   .chip { display: inline-flex; align-items: center; gap: 10px; font-size: 16px; line-height: 1; padding: 8px 12px; white-space: nowrap; }
 
-  .dev .textbox { display: none; }
-  .dev { position: absolute; right: 84px; top: 24px; width: 418px; --px: 3px; }
-  .tag { position: absolute; filter: drop-shadow(8px 8px 0 rgba(29, 27, 38, 0.14)); }
-  .t1 { left: 660px; top: 140px; }
-  .t2 { left: 590px; top: 548px; }
+  .dev .textbox, .dev1 .textbox { display: none; }
+  .dev { position: absolute; right: 56px; top: 24px; width: 380px; --px: 3px; }
+  .dev1 { position: absolute; left: 640px; top: 330px; width: 400px; --px: 3px; z-index: 2; }
+  .dev1 .device { max-width: none; filter: drop-shadow(12px 12px 0 rgba(29, 27, 38, 0.22)); }
+  .tag { position: absolute; z-index: 3; filter: drop-shadow(8px 8px 0 rgba(29, 27, 38, 0.14)); }
+  .t1 { right: 40px; top: 12px; }
+  .t2 { left: 664px; top: 306px; }
 </style>

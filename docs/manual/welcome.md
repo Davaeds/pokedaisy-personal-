@@ -6,15 +6,15 @@ order: 1
 keywords: [about, intro, introduction, overview, what is, getting started, manual, help, faq, emulator, gba]
 ---
 
-PokeDaisy is a Game Boy Advance player for Android, made for Pokémon games. On a dual-screen handheld like the AYN Thor, your game runs on the top screen and the bottom screen becomes a live **companion** that reads the game while you play: your party, your bag, the map you're on, how the current battle is going, your Pokédex and a guide that hints before it tells.
+PokeDaisy is a Game Boy, Game Boy Color and Game Boy Advance player for Android, made for Pokémon games. Beside your game runs a live **companion** that reads it while you play: your party, your bag, the map you're on, how the current battle is going, your Pokédex and a guide that hints before it tells. On a dual-screen handheld like the AYN Thor, the companion gets the bottom screen to itself. On a handheld with one screen it slides in beside the game, and on a phone held upright it sits under it.
 
-You never have to pause and open a menu to check a Pokémon's moves or look up what an attack does against a type. Glance down, and it's there, drawn in the game's own menu style.
+You never have to pause and open a menu to check a Pokémon's moves or look up what an attack does against a type. One glance, and it's there, drawn in the game's own menu style.
 
 ![The companion's PARTY tab on the bottom screen: six Pokémon with their levels and HP bars, drawn like the game's party screen](shots/companion-party.png "The companion's PARTY tab")
 
 ## What you need
 
-- **An Android device running Android 8.0 or newer.** A dual-screen handheld gets the most out of it, but a single-screen handheld or a phone works too.
+- **An Android device running Android 8.0 or newer.** A handheld with two screens or one, or a phone.
 - **Your own games.** PokeDaisy comes with no games at all. Use ROMs you dumped yourself from cartridges you own: `.gba` files (Game Boy and Game Boy Color `.gb` / `.gbc` work too), loose or inside a `.zip` or `.7z`.
 - **A supported game for the companion.** Any Game Boy, Game Boy Color or GBA game plays, but the companion only reads the games it knows: FireRed, LeafGreen, Emerald, Ruby, Sapphire, Yellow and a long list of ROM hacks. [Supported games](supported-games.md) has the full list and the exact versions.
 

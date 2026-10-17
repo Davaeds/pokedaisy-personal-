@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="https://pokedaisy.com/og.png" alt="PokeDaisy: dual-screen Game Boy, Game Boy Color and GBA player for the AYN Thor, Pokemon games and ROM hacks, free and open source" width="100%">
+<img src="https://pokedaisy.com/og.png" alt="PokeDaisy: Game Boy, Game Boy Color and GBA player with a live companion, on two screens or one, for Pokemon games and ROM hacks, free and open source" width="100%">
 
-<h3>Play Pokemon on the top screen. See everything about your game on the bottom one.</h3>
+<h3>Play your Pokemon games. See everything about them on your second screen, or right beside the game.</h3>
 
 <p>
   <a href="https://github.com/lidor30/pokedaisy/releases/latest"><img src="https://img.shields.io/github/v/release/lidor30/pokedaisy?label=release&color=2f81f7" alt="Latest PokeDaisy release"></a>
@@ -20,11 +20,12 @@
 
 </div>
 
-PokeDaisy is a Game Boy, Game Boy Color and GBA player for dual-screen Android
-handhelds, made for Pokemon FireRed, LeafGreen, Emerald, Ruby, Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal
-and popular ROM hacks of every generation. The game runs on the top screen. The
-bottom screen is a live companion that reads your game as you play: your party, your bag, the map, battle matchups, your Pokedex, and a
-spoiler-free guide. Everything is drawn in the game's own menu style.
+PokeDaisy is a Game Boy, Game Boy Color and GBA player for Android handhelds with two screens or one,
+made for Pokemon FireRed, LeafGreen, Emerald, Ruby, Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal
+and popular ROM hacks of every generation. Next to the game runs a live companion that reads it as you
+play: your party, your bag, the map, battle matchups, your Pokedex, and a spoiler-free guide. On a
+dual-screen handheld it gets the bottom screen to itself; on one screen it slides in beside the game, or
+sits under it on a phone held upright. Everything is drawn in the game's own menu style.
 
 ## Devices
 
@@ -83,7 +84,7 @@ it. You can also check from **Settings > VERSION**.
 
 ## Features
 
-### The companion (bottom screen)
+### The companion
 
 - **PARTY** - your team with HP, levels and status, in your game's own party
   screen. Tap one for its full summary: stats, moves, EXP, and what it's
@@ -128,7 +129,7 @@ under LANGUAGE in either Settings screen. Species, move and item names and the G
 </details>
 
 <details>
-<summary><strong>The player (top screen)</strong></summary>
+<summary><strong>The player</strong></summary>
 
 - **Fast-forward** with a speed cap (1.5× to 10×, or no cap), plus slow motion. **Smart** fast-forward
   drops to normal speed in menus and on the map, and keeps battles fast. **Game speed** (on the bottom

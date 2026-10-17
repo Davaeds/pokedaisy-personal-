@@ -66,8 +66,8 @@ import Pixel from './Pixel.astro';
 
   const MESSAGES: Record<string, (v: any, r: any) => string> = {
     supported: (v) => v.version
-      ? `The companion knows this exact version of ${v.title}. Party, battles, map and more on the second screen.`
-      : `The companion reads ${v.title}. Party, battles, map and more on the second screen.`,
+      ? `The companion knows this exact version of ${v.title}. Party, battles, map and more, on a second screen or beside the game.`
+      : `The companion reads ${v.title}. Party, battles, map and more, on a second screen or beside the game.`,
     'unknown-hack': (v) => `A ${v.base}-based ROM hack we don't know yet. It still plays, but the companion screen only says "not supported". Ask for it below!`,
     'in-progress': (v) => `${v.title} ${v.version} plays in PokeDaisy, but its companion is still being built. It's coming!`,
     'retail-hack': (v) => `A ROM hack built on ${v.base}. Only the original game is supported so far.`,

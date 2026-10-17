@@ -6,7 +6,7 @@ order: 3
 keywords: [dual screen, two screens, thor, ayn, retroid, duo, anbernic, rg ds, single screen, pocket 6, phone, portrait, landscape, rotate, rotation, tablet, side panel, window, modal, popup, companion view, display, bottom screen, top screen]
 ---
 
-PokeDaisy is at its best with two screens: the game on top, the companion below. It also works on handhelds with one screen and on phones, where the companion moves beside or under the game instead. This page covers each setup and the settings that go with it.
+PokeDaisy works with two screens or one. With two, the game is on top and the companion below. With one, the companion slides in beside the game, and on a phone held upright it sits under it. This page covers each setup and the settings that go with it.
 
 ## Dual-screen handhelds
 
