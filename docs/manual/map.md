@@ -51,6 +51,8 @@ The game's own rules still apply: you need the badge that allows it and you have
 
 It works in FireRed, LeafGreen, Emerald, Ruby and Sapphire in every language and on these hacks: Unbound, Radical Red, Ultra Violet, Ghost Grey, Gaia, Odyssey, Amethyst, Sword and Shield Ultimate Plus, Orange Islands, Glazed (its first region), Emerald Legacy, Heart and Soul, SoulGold, Lazarus and Emerald Imperium.
 
+On the Game Boy it works in Red, Blue, Yellow (in every language) and Crystal. The list is the one the game's own map would give you: in Red, Blue and Yellow every town you've been to, and in Crystal the towns you've been to in the region you're in (Kanto's once you've reached the Indigo Plateau).
+
 ## Which games get a picture
 
 No game art comes with PokeDaisy. The map picture is rebuilt from your own ROM, once, the first time you play a game, and kept after that. So the very first time, the map can take a moment to appear.

@@ -66,6 +66,8 @@
 //   gbfar BANK ADDR A BC DE HL - GB (hex): call BANK:ADDR between frames to its return, registers put back
 //   gbinject TRAMP BANK ADDR [AT] - GB (hex): make the game call BANK:ADDR from its frame wait (runs on in `wait`s)
 //   gbpoke BANK ADDR BYTE.. - GB (hex): write WRAM bank BANK's bytes at ADDR
+//   gbpeek BANK ADDR N - GB (hex): print N bytes of WRAM bank BANK at ADDR (C000-CFFF ignores the bank)
+//   gbcallat AT FN A B HL - GB (hex): the game calls FN (A, B, HL) from its loop at AT, back there after (pk_gb_call_at)
 //   gbvdump DIR        - GB: VRAM (both banks), OAM and the Color palettes into DIR
 //   romcheck ROMFILE   - compare the ROM as the companion reads it (bus +
 //                        pk_cheats_overlay) and as RA hashes it (swapped) with
@@ -116,6 +118,7 @@
 #if __has_include("../app/src/main/cpp/pk_wide.c")
 #include "../app/src/main/cpp/pk_wide.c"
 #include "../app/src/main/cpp/pk_wide_gb.c"
+#include "../app/src/main/cpp/pk_gb_field.c"
 #define HAVE_PK_WIDE 1
 #endif
 #endif
@@ -411,6 +414,14 @@ static void cmdVdump(const char* outDir) {
 #define PK_CALL_SENTINEL 0x080000C0u
 
 // --- Game Boy: the app's pkRenderGbPark / pkRenderGbCall, for Gen 1's music ---
+// A Color WRAM bank's D000-DFFF bytes, whatever SVBK maps there now (the app's pk_gb_read_banked).
+static bool pk_gb_read_bank(struct mCore* core, unsigned bank, uint16_t addr, uint8_t* dst, int len) {
+    struct GB* gb = (struct GB*) core->board;
+    if (bank > 7 || addr + len > 0xE000 || !gb->memory.wram) return false;
+    memcpy(dst, gb->memory.wram + bank * GB_SIZE_WORKING_RAM_BANK0 + (addr - 0xD000), (size_t) len);
+    return true;
+}
+
 static bool gb_park(struct mCore* core, uint16_t spin) {
     struct GB* gb = (struct GB*) core->board;
     struct SM83Core* cpu = (struct SM83Core*) core->cpu;
@@ -935,6 +946,23 @@ int main(int argc, char** argv) {
             uint8_t outA = 0;
             bool ok = gb_far(core, (uint8_t) bank, (uint16_t) addr, (uint8_t) a, (uint16_t) bc, (uint16_t) de, (uint16_t) hl, 0xFF9D, &outA);
             printf("gbfar %02x:%04x: %s, a=%02x\n", bank, addr, ok ? "returned" : "DID NOT RETURN", outA);
+        } else if (!strcmp(cmd, "gbpeek")) {
+            unsigned bank = 0, addr = 0, cnt = 1;
+            sscanf(line, "%*s %x %x %x", &bank, &addr, &cnt);
+            uint8_t buf[256];
+            if (cnt > sizeof buf) cnt = sizeof buf;
+            if (bank >= 1 && addr >= 0xD000 && addr < 0xE000 && pk_gb_read_bank(core, bank, (uint16_t) addr, buf, (int) cnt)) {
+            } else for (unsigned k = 0; k < cnt; k++) buf[k] = core->busRead8(core, (uint16_t) (addr + k));
+            printf("gbpeek %x:%04x:", bank, addr);
+            for (unsigned k = 0; k < cnt; k++) printf(" %02x", buf[k]);
+            printf("\n");
+        } else if (!strcmp(cmd, "gbcallat")) {
+            // gbcallat AT FN A B HL: the app's pkGbCallAt - Yellow's PC anywhere (Bankswitch into the PC tile's routine
+            // from the overworld loop).
+            unsigned at = 0, fn = 0, a = 0, b = 0, hl = 0;
+            sscanf(line, "%*s %x %x %x %x %x", &at, &fn, &a, &b, &hl);
+            bool ok = pk_gb_call_at(core, (uint16_t) at, (uint16_t) fn, (uint8_t) a, (uint8_t) b, (uint16_t) hl, 2);
+            printf("gbcallat %04x -> %04x(a=%02x): %s\n", at, fn, a, ok ? "called" : "THE LOOP DIDN'T COME BY");
         } else if (!strcmp(cmd, "gbinject")) {
             // gbinject TRAMP BANK ADDR [AT]: make the game itself call BANK:ADDR from where it waits for the next frame,
             // interrupts on, so a routine that runs for many frames (a script's battle) plays out in the following

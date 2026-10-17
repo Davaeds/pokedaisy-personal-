@@ -575,6 +575,12 @@ interface GameCalls {
     fun call(fn: Long, a0: Int = 0, a1: Int = 0, a2: Int = 0, a3: Int = 0): Long
     fun read(addr: Long, len: Int): ByteArray
     fun write(addr: Long, bytes: ByteArray): Boolean
+
+    /** A Game Boy cart's own bytes at [off] (it's bank-switched: not all on the bus); null on the GBA. */
+    fun rom(off: Long, len: Int): ByteArray? = null
+
+    /** A Game Boy game calls [fn] from its main loop at [at] (GbField.kt, MgbaCore.pkGbCallAt). */
+    fun gbCallAt(at: Int, fn: Int, a: Int, b: Int, hl: Int): Boolean = false
 }
 
 /**

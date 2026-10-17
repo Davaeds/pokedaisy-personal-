@@ -1614,6 +1614,41 @@ ZOOM's steps are whole Game Boy pixels: 7.5 -> 6 / 5 / 4 / 3 on 1080 rows). Addr
   Silver and the Crystal hacks (Crystal's engine, their own addresses), battles past the edges, walking frames for Gen 1's
   off-screen NPCs.
 
+## PC, FLY and WILD ENCOUNTERS on the Game Boy (`GbField.kt`)
+
+The GBA's ways in (FieldItems.kt's calls between frames, ScriptContext_SetupScript, sWildEncountersDisabled) have no
+counterpart in Gen 1 / 2, so each game is driven the way its own code already goes, from pret/pokeyellow's and
+pret/pokered's and pret/pokecrystal's sources (`$DECOMPS/pokeyellow`, `pokered`, `pokecrystal`: their builds are the retail
+carts, so their `.sym` files give every address; the German / French / Italian / Spanish Yellows' come from
+`scripts/port_gen1.py`, the PC routine and the visited-towns flag by their code bytes). Gen 1 is one `GbField.Gen1` class
+with a config per cart (`GB_FIELD_YELLOW`, `_DE`, `_FR`, `_IT`, `_ES`, `GB_FIELD_RED_BLUE`: Blue's code is Red's at every
+address used); Crystal rev 0 / rev 1 / Australia share one. The code each action leans on is checked in the cart first
+(`GbField.codeMatches`, `GbFieldTest`: the bytes include the RAM addresses the code uses, so each Gen 1 cart matches its own
+config and no other).
+
+- **Crystal** has a queue for a script the overworld runs once the player stands free: `RunMemScript`, from
+  `PlayerEvents` (wMapReentryScriptQueueFlag, its bank and address, D45C-D45F in WRAM bank 1). The PC queues the standard
+  `PCScript` (2F:41A9: opentext, special PokemonCenterPC, closetext), FLY sets wDefaultSpawnpoint and queues the field
+  move's own `FlyFunction.FlyScript` (03:4AA3). A step that's under way finishes first (headless: queued mid-step, the
+  PC opened as the step ended). `CheckWildEncounterCooldown` lets a step roll only once wWildEncounterCooldown counts
+  down from 1 or 0, so holding it at 5 stops random encounters and nothing else.
+- **Gen 1** has no queue. Its PC is the Pokémon Center PC tile's routine past its facing check (18:66F4: auto text box,
+  then PrintPredefTextID of the PC's text), called through the game's `Bankswitch` - the predef text table points into
+  that bank; called from bank 0 it printed "33 error." - from the overworld loop right after its frame wait
+  (OverworldLoopLessDelay + 3): `pk_gb_field.c`'s `pk_gb_call_at` steps the core to that PC, pushes it as the return
+  address and sets PC / A / B / HL, giving up after two more frame waits (the loop isn't running). FLY writes what the town
+  map's A leaves for the loop (wDestinationMap, BIT_FLY_WARP, BIT_USED_FLY) plus (Yellow) Func_1510's Pikachu hiding; the loop
+  then runs HandleFlyWarpOrDungeonWarp. Encounters roll a random byte against wGrassRate / wWaterRate, so 0 never meets
+  anything; they're zeroed every frame out of battle (wGrassRate doubles as a link battle's enemy name) and put back
+  from the map's wild data in ROM (LoadWildData's walk of WildDataPointers) when the setting is ON again.
+- A queued action the game doesn't take within `GbField.TAKE_FRAMES` (a menu opened meanwhile) is withdrawn and the tap
+  answered "not now". Game Boy field jobs count as busy unless `pk_wide_gb.c`'s scene says FIELD; a cart with no EXPAND
+  row (no scene: the European Yellows, Red / Blue) goes by Gen1's RAM checks alone - the walk counter, wFontLoaded bit 0
+  (a text box), wJoyIgnore, the scripted-movement and warp flags. Its START menu sets none of them, but the loop isn't
+  running then, so the PC's call gives up and a flight is withdrawn.
+- Headless: mgba_dump's `gbpoke` (WRAM bank writes), `gbpeek` and `gbcallat AT FN A B HL` (the app's `pk_gb_call_at`).
+  What was run is in docs/ROM_FEATURES.md's note 13.
+
 ## Overlays
 
 SCREEN > OVERLAY (both screens' Settings; `Prefs.overlay`, a `OverlayChoice.key`: `""` none - the

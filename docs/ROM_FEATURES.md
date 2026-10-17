@@ -8,11 +8,11 @@ change to any of the places listed under "Where it's decided" updates its rows h
 
 | Game | Version | EXPAND | Battle buttons | One-press picks | POKéMON switch | Field items | FLY | Trainer card | Field reads | Bike / surf | Wild encounters | PC anywhere |
 | ---- | ------- | :----: | :------------: | :-------------: | :------------: | :---------: | :-: | :----------: | :---------: | :---------: | :-------------: | :---------: |
-| Yellow (GB) | USA/Europe | ✅ ¹² | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
-| Yellow (GB) | DE / FR / IT / ES | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
-| Red / Blue (GB) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
+| Yellow (GB) | USA/Europe | ✅ ¹² | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ |
+| Yellow (GB) | DE / FR / IT / ES | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ |
+| Red / Blue (GB) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ |
 | Gold / Silver (GBC) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
-| Crystal (GBC) | USA, USA/Europe rev 1, AU | ✅ ¹² | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
+| Crystal (GBC) | USA, USA/Europe rev 1, AU | ✅ ¹² | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ |
 | Crystal Clear (GBC) | 2.5.11, 2.6.0 (4 builds) | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Prism (GBC) | 0.95 build 254 | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Polished Crystal (GBC) | 3.2.0 - 3.2.3 (16 builds) | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
@@ -139,6 +139,22 @@ change to any of the places listed under "Where it's decided" updates its rows h
     New Bark Town (its name sign up), in and out of a house, the START menu, OPTION, SAVE, a wild battle and RUN: every
     map frame exact but those the game wrote VRAM or a palette in mid-frame. The other languages' Yellows, Red / Blue,
     Gold / Silver and the Crystal hacks aren't mapped yet (—).
+13. FLY, WILD ENCOUNTERS and PC anywhere on Red / Blue, Yellow (all five languages) and Crystal (rev 0, rev 1, Australia)
+    are `GbField.kt`, each the game's own way in (pret/pokered's, pokeyellow's and pokecrystal's sources; the European
+    Yellows' addresses mapped by scripts/port_gen1.py; each cart's code checked in it first: `GbFieldTest` finds every Gen 1
+    cart's own config and no other's). Crystal queues a map script the overworld runs once the player stands free
+    (RunMemScript): the PC is the standard PC script, FLY its field move's script after wDefaultSpawnpoint; its encounters
+    wait while wWildEncounterCooldown is held at 5. Gen 1's PC is the Pokémon Center PC tile's routine, called from the
+    overworld loop through Bankswitch (`pk_gb_field.c`, `MgbaCore.pkGbCallAt`); FLY sets what the town map's A leaves
+    (destination, BIT_FLY_WARP / BIT_USED_FLY, Yellow's Pikachu hidden); encounters are the map's wGrassRate / wWaterRate
+    held at 0 and put back from its wild data. Checked headless with mgba_dump (`gbpoke`, `gbcallat`): every cart's PC (in
+    its own language) opened over the field and backed out of; flights to Pewter (all six Gen 1 configs, Blue on pret's
+    pokeblue.gbc) and Cherrygrove landing at their Pokémon Centers; Crystal's Route 29 grass with no battle in 100 steps
+    (one within ~15 without), Yellow's Route 1 at a forced rate of 255 meeting one at once; then on the Thor: Crystal's PC
+    from PACK, Yellow's FLY to Vermilion from MAP. The European Yellows and Red / Blue have no EXPAND scene, so their PC /
+    FLY go by RAM alone (the walk counter, wFontLoaded's text box bit, the joypad and warp flags). FLY's list is the game's
+    own (Gen 1: the visited towns in town map order; Crystal: the visited flypoints of the region the Fly map would show).
+    Gold / Silver and the Crystal hacks: not yet (their RAM moved).
 
 ## What each column is
 
@@ -203,11 +219,12 @@ change to any of the places listed under "Where it's decided" updates its rows h
   Emerald Legacy (`FIELD_ITEMS_EMERALD_LEGACY`, `FLY_EMERALD_LEGACY`, `PC_EMERALD_LEGACY`): its source at V1.1.4 built with
   agbcc is the release byte for byte, so every address is its ELF's and every CRC its own code's (retail's functions,
   their calls moved; FLAG_BADGE06_GET 0x8CC). Flown headless four times in a row (Oldale, Littleroot, both twice: no
-  reload trouble as on Kaizo), the PC opened and closed, a Potion used on a damaged Pokémon.
+  reload trouble as on Kaizo), the PC opened and closed, a Potion used on a damaged Pokémon. Red, Blue, Yellow and Crystal:
+  `GbField.kt` (note 13).
 - **PC anywhere** (the BAG's `PC`): `FieldItemFns.pc` (`Pc.kt`): the retail tables, `FieldItemsPortsGen.kt`'s
   (`scripts/port_field_items.py` maps them, each entry checked against its gSpecials) and the hacks that use those
   tables; gated on ScriptContext_SetupScript / the PC special's CRCs and its gSpecials entry. Opened headless on
-  Ruby rev 1, German Emerald, Japanese FireRed and Unbound.
+  Ruby rev 1, German Emerald, Japanese FireRed and Unbound. Red, Blue, Yellow and Crystal: `GbField.kt` (note 13).
 - **Field reads**: every row of `pk_wide_games.h` with CONTROLS_LOCKED, `PK_WIDE_ROMS` and the pending hacks'
   `PK_FIELD_ONLY_ROMS` (`pk_field_knows`, `WideScreen.fieldGameFor`); RUN INDOORS not on Ruby / Sapphire. RUN INDOORS'
   gMapHeader bit was checked on retail FireRed / Emerald; the hacks are assumed to keep it.
@@ -223,7 +240,8 @@ change to any of the places listed under "Where it's decided" updates its rows h
   SoulGold, Lazarus, Recharged Yellow, Seaglass, Imperium, Too Many Types 2, Heart and Soul, R.O.W.E., Super Mariomon).
   Each gcc one walked headless: warped onto grass (Seaglass and Imperium on water) with the `warp` script command, OFF
   gave 180 steps without a battle, NORMAL one within 80 (SoulGold v1.1.4 and v1.2, Recharged Yellow v1.8.0 and v1.9.7,
-  Mariomon v1.3 and v1.5.2). Not Emerald Rogue or Quetzal (their checks aren't found).
+  Mariomon v1.3 and v1.5.2). Not Emerald Rogue or Quetzal (their checks aren't found). Red, Blue, Yellow and Crystal:
+  `GbField.kt`, held by the engine every frame while OFF (note 13).
 - **Trainer card**: `NativeConfig.trainerCard` (Emerald Legacy's: its own card style, `CardStyle.LEGACY`, for its fifth
   star's black card). SoulGold (every build), Lazarus and Recharged Yellow (every build) draw their own cards
   (`CardStyle.SOULGOLD` / `.LAZARUS` / `.RECHARGED_YELLOW`): their art found from headless VRAM dumps of the open card and

@@ -109,6 +109,12 @@ class EmulatorEngine(
     @Volatile var wildFlag = 0L
     @Volatile var wildEncounters = 100
 
+    /** A Game Boy game's PC / FLY / WILD ENCOUNTERS ([com.pokedaisy.app.companion.data.GbField], its code checked), or
+     * null. WILD ENCOUNTERS OFF holds the game's own encounter state every frame ([gbWildHeld]). */
+    @Volatile var gbField: com.pokedaisy.app.companion.data.GbField? = null
+    /** Whether [gbField]'s wild encounters were held last frame (null = not known yet: put back once on the field). */
+    private var gbWildHeld: Boolean? = null
+
     /** ZOOM and the look-around over WIDE: asked for the window to draw before each frame ([EmulatorView.camera]). */
     @Volatile var wideCamera: WideCamera? = null
 
@@ -512,7 +518,13 @@ class EmulatorEngine(
         override fun call(fn: Long, a0: Int, a1: Int, a2: Int, a3: Int) = MgbaCore.pkCall(fn, a0, a1, a2, a3)
         override fun read(addr: Long, len: Int) = InProcessReader.readCoreMemory(addr, len)
         override fun write(addr: Long, bytes: ByteArray) = MgbaCore.pkWriteBytes(addr, bytes)
+        override fun rom(off: Long, len: Int) = MgbaCore.pkRomRead(off, len)
+        override fun gbCallAt(at: Int, fn: Int, a: Int, b: Int, hl: Int) = MgbaCore.pkGbCallAt(at, fn, a, b, hl)
     }
+
+    /** A Game Boy game's field, as its scene says (pk_wide_gb.c's screen match: no text box, menu or battle); a game
+     * with no scene (no EXPAND row: the European Yellows, Red / Blue) leaves it to [gbField]'s own RAM checks. */
+    private val gbOnField get() = wideScene == WideCamera.SCENE_FIELD || wideScene == -1
 
     fun requestSaveState(slot: Int) { pendingSave = slot.coerceIn(SaveStates.SLOT_MIN, SaveStates.SLOT_MAX) }
     fun requestLoadState(slot: Int) { pendingLoad = slot.coerceIn(SaveStates.SLOT_MIN, SaveStates.SLOT_MAX) }
@@ -829,6 +841,14 @@ class EmulatorEngine(
                     wildApplied = wildFlag
                     fieldMovesKnown = false
                 }
+                // WILD ENCOUNTERS on a Game Boy game: held every frame while OFF, put back once on the field when ON.
+                gbField?.let { gf ->
+                    val hold = wildEncounters == 0
+                    runCatching {
+                        if (hold) { gf.holdWild(gameCalls); gbWildHeld = true }
+                        else if (gbWildHeld != false && gbOnField && gf.releaseWild(gameCalls)) gbWildHeld = false
+                    }.onFailure { Log.e("pokedaisy", "Game Boy wild encounters failed", it) }
+                } ?: run { gbWildHeld = null }
                 val wildKeep = if (wildFlag != 0L) wildEncounters else 100
                 fieldState = if (gba && fieldGame != WideScreen.OFF) MgbaCore.pkFieldState(runIndoors, wildKeep) else 0
                 if (fieldState and MgbaCore.FIELD_AVATAR != 0) fieldMovesKnown = true
@@ -1115,7 +1135,9 @@ class EmulatorEngine(
                 return@repeat
             }
             // Not with a menu screen or the region map up either: the game itself only uses items from its bag.
-            runCatching { job.run(gameCalls, !gba || job.inBattle || menuOpen || mapOpen) }
+            // A Game Boy game: its scene must be the plain field.
+            val busy = job.inBattle || if (gba) menuOpen || mapOpen else !gbOnField
+            runCatching { job.run(gameCalls, busy) }
                 .onFailure { Log.e("pokedaisy", "field item job failed", it) }
         }
         pendingSuspend?.let { target ->

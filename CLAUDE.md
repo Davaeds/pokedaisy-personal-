@@ -418,6 +418,14 @@ STEADY FF music runs on Gen1MusicRenderer with Crystal's tables (`GEN2_MUSIC_CRY
 MusicID, never the stale `wMusicID`; each recorded after PlayMusic(0), since `_PlayMusic` leaves unused channels playing the
 last song). No GUIDE, CARD or trainer-battle fixture yet. The POKéMON switch: see the switch
 paragraph's Game Boy part (`GbPartySwitch`).
+**PC anywhere, FLY and WILD ENCOUNTERS on the Game Boy (2026-10-18, Red, Blue, Yellow in five languages, Crystal)**:
+`GbField.kt`, each the game's own way in (no GBA calls exist there; Gen 1 = `GbField.Gen1`, a config per cart): Crystal
+queues a map script (RunMemScript's wMapReentryScript*: PCScript, or FlyFunction.FlyScript after wDefaultSpawnpoint) and
+holds wWildEncounterCooldown; Gen 1's PC is the PC tile's routine called through Bankswitch from the overworld loop
+(`pk_gb_field.c`'s `pk_gb_call_at`, `MgbaCore.pkGbCallAt`; mgba_dump's `gbcallat`), its FLY the town map's warp flags,
+its encounters the map's rates held at 0 (put back from ROM). Code checked in the cart first (`GbFieldTest`: each Gen 1
+cart matches only its own config). Carts without an EXPAND scene go by RAM alone. docs/DEVELOPMENT.md's Game Boy field
+section.
 **Crystal Clear (2026-10-14)**: v2.5.11 / v2.6.0, each a Standard Colors and a Color Filter build (palettes apart, the same
 bytes): `GameKind.CRYSTAL_CLEAR` on the Gen 2 reader (`isCrystalFamily` for every Crystal look / behaviour), by SHA-1
 (`crystalClearConfigFor`). pokecrystal rebuilt without symbols: RAM mapped with `scripts/port_gen1.py` (now any pret .sym:

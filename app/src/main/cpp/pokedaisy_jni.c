@@ -26,6 +26,7 @@
 #include "pk_cheats.h"
 #include "pk_rewind.h"
 #include "pk_wide.h"
+#include "pk_gb_field.h"
 
 #define LOG_TAG "pokedaisy/jni"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
@@ -1020,11 +1021,21 @@ Java_com_pokedaisy_app_MgbaCore_pkReadBytes(JNIEnv* env, jobject thiz, jlong add
 
 // Writes `bytes` to the player's core at GBA address `addr` - EWRAM / IWRAM only,
 // so nothing else (I/O, VRAM, ROM) can be poked through it. The emu thread, between
-// frames: FieldItems puts a SetMonData argument in scratch RAM with it.
+// frames: FieldItems puts a SetMonData argument in scratch RAM with it. A Game Boy
+// game: its WRAM only, a Color bank by (bank << 16) | D000-DFFF (pk_gb_write).
 JNIEXPORT jboolean JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkWriteBytes(JNIEnv* env, jobject thiz, jlong addr, jbyteArray bytes) {
     jsize len = (*env)->GetArrayLength(env, bytes);
     uint32_t a = (uint32_t) addr;
+    if (g.core && !pk_is_gba(g.core)) {
+        jbyte* gbBytes = len > 0 ? (*env)->GetByteArrayElements(env, bytes, NULL) : NULL;
+        if (!gbBytes) {
+            return JNI_FALSE;
+        }
+        bool ok = pk_gb_write(g.core, a, (const uint8_t*) gbBytes, len);
+        (*env)->ReleaseByteArrayElements(env, bytes, gbBytes, JNI_ABORT);
+        return ok ? JNI_TRUE : JNI_FALSE;
+    }
     bool ram = (a >= 0x02000000u && a + (uint32_t) len <= 0x02040000u) || (a >= 0x03000000u && a + (uint32_t) len <= 0x03008000u);
     if (len <= 0 || !ram || !g.core || !pk_is_gba(g.core)) {
         return JNI_FALSE;
@@ -1038,6 +1049,13 @@ Java_com_pokedaisy_app_MgbaCore_pkWriteBytes(JNIEnv* env, jobject thiz, jlong ad
     }
     (*env)->ReleaseByteArrayElements(env, bytes, b, JNI_ABORT);
     return JNI_TRUE;
+}
+
+// A Game Boy game's own call from its main loop (pk_gb_call_at): the game runs on to `at`, then calls `fn` with A = `a`,
+// B = `b`, HL = `hl` and comes back to `at`. The emu thread, between frames - Yellow's PC anywhere (GbField.kt).
+JNIEXPORT jboolean JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkGbCallAt(JNIEnv* env, jobject thiz, jint at, jint fn, jint a, jint b, jint hl) {
+    return pk_gb_call_at(g.core, (uint16_t) at, (uint16_t) fn, (uint8_t) a, (uint8_t) b, (uint16_t) hl, 2) ? JNI_TRUE : JNI_FALSE;
 }
 
 // Same as pkReadBytes, from the FF-music render core (rg): FfMusicRenderer

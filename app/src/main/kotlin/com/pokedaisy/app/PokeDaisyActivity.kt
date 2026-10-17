@@ -321,6 +321,43 @@ class PokeDaisyActivity : Activity() {
         return support
     }
 
+    /** A Game Boy game's PC / FLY / WILD ENCOUNTERS ([com.pokedaisy.app.companion.data.GbField]): English Yellow and
+     * Crystal, their code checked in the cart once per ROM. */
+    @Volatile private var gbFieldCache: Pair<String, com.pokedaisy.app.companion.data.GbField?>? = null
+
+    private fun gbField(): com.pokedaisy.app.companion.data.GbField? {
+        if (!romIsGameBoy) return null
+        val game = telemetry.snapshot.value.game
+        val field = com.pokedaisy.app.companion.data.GbField.forGame(game) ?: return null
+        val key = "$game/${com.pokedaisy.app.companion.data.romLanguage}/${field.javaClass.simpleName}"
+        gbFieldCache?.let { (k, v) -> if (k == key) return v }
+        if (!::engine.isInitialized || !engine.running) return null
+        val ok = runCatching { field.codeMatches { off, len -> MgbaCore.pkRomRead(off, len) } }.getOrElse { return null }
+        Log.i("pokedaisy", "Game Boy field actions (${field.javaClass.simpleName}): ${if (ok) "code found" else "code not found"}")
+        val v = field.takeIf { ok }
+        gbFieldCache = key to v
+        return v
+    }
+
+    /** Runs a Game Boy field action ([start], emu thread: true = the game has it, or has it queued) and, [GbField.TAKE_FRAMES]
+     * later, [done] (main thread) with whether the game took it - a queued one it didn't take is withdrawn. */
+    private fun gbFieldAction(
+        field: com.pokedaisy.app.companion.data.GbField,
+        start: (com.pokedaisy.app.companion.data.GameCalls) -> Boolean,
+        refused: () -> Unit,
+        done: (Boolean) -> Unit,
+    ) {
+        engine.requestFieldItemJob(telemetry.snapshot.value.inBattle) { calls, busy ->
+            val started = !busy && runCatching { start(calls) }.getOrElse { Log.e("pokedaisy", "Game Boy field action failed", it); false }
+            if (!started) { runOnUiThread(refused); return@requestFieldItemJob }
+            engine.requestFieldItemJob(false, com.pokedaisy.app.companion.data.GbField.TAKE_FRAMES) { c, _ ->
+                val took = runCatching { field.taken(c) }.getOrDefault(false)
+                Log.i("pokedaisy", "Game Boy field action: ${if (took) "taken" else "not taken, withdrawn"}")
+                runOnUiThread { done(took) }
+            }
+        }
+    }
+
     private val itemUse = object : com.pokedaisy.app.companion.ItemUse {
         override val repelVar get() = fieldItemSupport()?.fns?.repelVar
         override fun canUse(itemId: Int) = fieldItemSupport()?.canUse(itemId) == true
@@ -381,13 +418,28 @@ class PokeDaisyActivity : Activity() {
         override fun take(target: com.pokedaisy.app.companion.data.PartyTarget, done: (com.pokedaisy.app.companion.data.ItemUseOutcome) -> Unit) =
             onGame(failed, done) { s, calls, busy -> com.pokedaisy.app.companion.data.takeFromMon(s, target, busy, calls) }
 
-        override fun canPc() = fieldItemSupport()?.canPc == true
+        override fun canPc() = fieldItemSupport()?.canPc == true || gbField() != null
 
         // The PC is worked with the game's buttons: an open companion window steps aside once it's up.
-        override fun openPc(done: (com.pokedaisy.app.companion.data.ItemUseOutcome) -> Unit) =
+        override fun openPc(done: (com.pokedaisy.app.companion.data.ItemUseOutcome) -> Unit) {
+            val gb = gbField()
+            if (gb != null && ::engine.isInitialized && engine.running) {
+                val notNow = com.pokedaisy.app.companion.data.ItemUseOutcome(
+                    if (telemetry.snapshot.value.inBattle) com.pokedaisy.app.companion.data.ItemUseResult.IN_BATTLE
+                    else com.pokedaisy.app.companion.data.ItemUseResult.NOT_NOW,
+                )
+                var result = com.pokedaisy.app.companion.data.ItemUseResult.FAILED
+                gbFieldAction(gb, { c -> result = gb.openPc(c); result == com.pokedaisy.app.companion.data.ItemUseResult.USED },
+                    refused = { done(if (result == com.pokedaisy.app.companion.data.ItemUseResult.FAILED) failed else notNow) }) { took ->
+                    if (took) closeCompanionWindow()
+                    done(if (took) com.pokedaisy.app.companion.data.ItemUseOutcome(com.pokedaisy.app.companion.data.ItemUseResult.USED) else notNow)
+                }
+                return
+            }
             onGame(failed, { o -> if (o.result == com.pokedaisy.app.companion.data.ItemUseResult.USED) closeCompanionWindow(); done(o) }) { s, calls, busy ->
                 com.pokedaisy.app.companion.data.ItemUseOutcome(com.pokedaisy.app.companion.data.openPc(s.fns, busy, calls))
             }
+        }
     }
 
     /** What the QUICK MENU's tiles do here ([quickMenu]). */
@@ -516,9 +568,25 @@ class PokeDaisyActivity : Activity() {
     /** FLY on the MAP tab (Fly.kt): two steps on the emu thread - the checks, controls locked and the fade to black,
      * then once it's black the game's own Fly map choice. */
     private val flyAction = object : com.pokedaisy.app.companion.FlyAction {
-        override fun canFly() = fieldItemSupport()?.canFly == true
+        override fun canFly() = fieldItemSupport()?.canFly == true || gbField() != null
 
         override fun targets(done: (com.pokedaisy.app.companion.data.FlyTargets) -> Unit) {
+            val gb = gbField()
+            if (gb != null && ::engine.isInitialized && engine.running) {
+                val inBattle = telemetry.snapshot.value.inBattle
+                engine.requestFieldItemJob(inBattle) { calls, busy ->
+                    val out = when {
+                        busy -> com.pokedaisy.app.companion.data.FlyTargets(
+                            if (inBattle) com.pokedaisy.app.companion.data.FlyResult.IN_BATTLE else com.pokedaisy.app.companion.data.FlyResult.NOT_NOW,
+                        )
+                        else -> runCatching { gb.flyTargets(calls) }
+                            .getOrElse { com.pokedaisy.app.companion.data.FlyTargets(com.pokedaisy.app.companion.data.FlyResult.FAILED) }
+                    }
+                    Log.i("pokedaisy", "fly targets: $out")
+                    runOnUiThread { done(out) }
+                }
+                return
+            }
             val support = fieldItemSupport()
             if (support == null || !support.canFly || !::engine.isInitialized || !engine.running) {
                 done(com.pokedaisy.app.companion.data.FlyTargets(com.pokedaisy.app.companion.data.FlyResult.FAILED))
@@ -537,6 +605,18 @@ class PokeDaisyActivity : Activity() {
         }
 
         override fun fly(mapsec: Int, targets: com.pokedaisy.app.companion.data.FlyTargets, done: (com.pokedaisy.app.companion.data.FlyResult) -> Unit) {
+            val gb = gbField()
+            if (gb != null && ::engine.isInitialized && engine.running) {
+                var result = com.pokedaisy.app.companion.data.FlyResult.NOT_NOW
+                gbFieldAction(gb, { c -> result = gb.fly(mapsec, targets, c); result == com.pokedaisy.app.companion.data.FlyResult.OK },
+                    refused = { done(result) }) { took ->
+                    Log.i("pokedaisy", "fly to $mapsec: ${if (took) "flying" else "not taken"}")
+                    // The flight is the game's to show: the window over it goes.
+                    if (took) closeCompanionWindow()
+                    done(if (took) com.pokedaisy.app.companion.data.FlyResult.OK else com.pokedaisy.app.companion.data.FlyResult.NOT_NOW)
+                }
+                return
+            }
             val support = fieldItemSupport()
             if (support == null || !support.canFly || !::engine.isInitialized || !engine.running) {
                 done(com.pokedaisy.app.companion.data.FlyResult.FAILED)
@@ -734,7 +814,7 @@ class PokeDaisyActivity : Activity() {
             Prefs(this@PokeDaisyActivity).wildEncounters = percent
             if (::engine.isInitialized) engine.wildEncounters = percent
         }
-        override val wildEncountersSupported get() = fieldGame != WideScreen.OFF && wildFlag != 0L
+        override val wildEncountersSupported get() = (fieldGame != WideScreen.OFF && wildFlag != 0L) || gbField() != null
         override val ffToggled get() = if (::engine.isInitialized) engine.fastForwardToggled else false
         override fun setFfToggled(on: Boolean) {
             if (::engine.isInitialized) engine.setFastForwardToggled(on)
@@ -1175,6 +1255,8 @@ class PokeDaisyActivity : Activity() {
         wideGame = WideScreen.gameFor(crc)
         fieldGame = if (gameBoy) WideScreen.OFF else WideScreen.fieldGameFor(crc)
         wildFlag = 0L
+        gbFieldCache = null
+        if (::engine.isInitialized) engine.gbField = null
         if (!gameBoy) Thread({
             val flag = com.pokedaisy.app.companion.data.WildEncounters.find(r)
             Log.i("pokedaisy", "wild encounters: switch %08X".format(flag))
@@ -1279,6 +1361,8 @@ class PokeDaisyActivity : Activity() {
                             BattleInputController.MenuCells.ELITE_REDUX else BattleInputController.MenuCells.GEN3
                         BattleInputController.CursorAddrs(action = action, move = move, menus = menus)
                     }
+                // WILD ENCOUNTERS on a Game Boy game is held by the engine, frame by frame.
+                if (snap.connected && romIsGameBoy) engine.gbField = gbField()
                 if (snap.connected) battleGen1Menus = snap.game.isGen1 ||
                     snap.game.isGen2   // the same 2x2 menu and move column
                 // party.isNotEmpty(), not just connected: `connected` flips true as
