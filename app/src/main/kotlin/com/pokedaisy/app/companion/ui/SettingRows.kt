@@ -104,7 +104,7 @@ val SETTING_KEYWORDS: Map<String, String> = mapOf(
     "OVERLAY" to "overlay overlays border borders bezel bezels frame skin retroarch background wallpaper decoration",
     "COMPANION" to "portrait phone bottom position layout",
     "COMPANION VIEW" to "single screen one screen window modal popup middle center side panel docked layout",
-    "SWAP SCREENS" to "dual screen display switch top bottom",
+    "SWAP SCREENS" to "dual screen display switch top bottom tv cast mirror mirroring smart view hdmi external",
     "SINGLE SCREEN" to "one screen single screen dual screen multitask multitasking second screen free other apps window modal popup",
     "SPEED OPTIONS" to "scene speeds battle speed text speed menu speed ff mode ff music fast forward smart steady",
     "DISPLAY OPTIONS" to "status bar shaders filter overlay border frame companion position portrait",

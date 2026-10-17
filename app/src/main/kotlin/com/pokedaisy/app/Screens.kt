@@ -92,6 +92,31 @@ object Screens {
     /** SWAP SCREENS only means something with two. */
     fun hasSecond(context: Context) = second(context) != null
 
+    private val displayType = runCatching { Display::class.java.getMethod("getType") }.getOrNull()
+
+    /**
+     * [display] is plugged in or cast to rather than built into the device: HDMI / USB (Display.TYPE_EXTERNAL, 2), a
+     * Wi-Fi display such as Samsung's Smart View (TYPE_WIFI, 3) or a cast's virtual one (TYPE_VIRTUAL, 5) - read through
+     * the hidden Display.getType(). The Thor's bottom screen is TYPE_INTERNAL; the emulator's overlay displays (4) stand
+     * in for one. Unknown (the method gone) = built in, as before.
+     */
+    fun isExternal(display: Display): Boolean = when (typeOf(display)) {
+        2, 3, 5 -> true
+        else -> false
+    }
+
+    /** Display.getType(), or null where it can't be read. */
+    fun typeOf(display: Display): Int? = runCatching { displayType?.invoke(display) as? Int }.getOrNull()
+
+    /** SWAP SCREENS for the second screen there is: [Prefs.swapScreensExternal] for a TV, else [Prefs.swapScreens]. */
+    fun swapped(context: Context, prefs: Prefs, display: Display? = second(context)): Boolean =
+        if (display != null && isExternal(display)) prefs.swapScreensExternal else prefs.swapScreens
+
+    fun setSwapped(context: Context, prefs: Prefs, on: Boolean) {
+        val display = second(context)
+        if (display != null && isExternal(display)) prefs.swapScreensExternal = on else prefs.swapScreens = on
+    }
+
     /** The second screen's width / height, or null with one. */
     fun secondAspect(context: Context): Float? {
         val size = Point().also { p -> second(context)?.let { @Suppress("DEPRECATION") it.getRealSize(p) } ?: return null }

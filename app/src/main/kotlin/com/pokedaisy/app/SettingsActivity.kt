@@ -180,7 +180,7 @@ class SettingsActivity : ComponentActivity() {
 
     /** The game's screen's width / height: this one, or the second screen with SWAP SCREENS on. */
     private fun gameScreenAspect(): Float =
-        if (prefs.swapScreens) Screens.secondAspect(this) ?: screenAspect else screenAspect
+        if (Screens.swapped(this, prefs)) Screens.secondAspect(this) ?: screenAspect else screenAspect
 
     /** SWAP SCREENS only means something with two. */
     private val hasSecondScreen by lazy { Screens.hasSecond(this) }
@@ -584,8 +584,8 @@ class SettingsActivity : ComponentActivity() {
                 revision++
             }.takeIf { !usesSecondScreen },
             // Game and companion trade screens; the game picks it up on resume.
-            SettingRow(tk("SWAP SCREENS"), onOff(prefs.swapScreens), subtitle = "Game and companion trade screens") {
-                prefs.swapScreens = !prefs.swapScreens
+            SettingRow(tk("SWAP SCREENS"), onOff(Screens.swapped(this, prefs)), subtitle = "Game and companion trade screens") {
+                Screens.setSwapped(this, prefs, !Screens.swapped(this, prefs))
                 revision++
             }.takeIf { usesSecondScreen },
             // Two screens played on one: the second is free for other apps, the companion opens over the game.

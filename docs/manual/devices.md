@@ -27,6 +27,10 @@ Some devices treat their bottom screen as the main display, which would put the 
 
 You'll find it in the `SCREEN` group of Settings on the top screen and of the companion's `SETTINGS`. It only shows on a device with a second screen. Flipped from the companion, it swaps right away; flipped from the top-screen Settings, the game picks it up when you go back to it.
 
+### On a TV
+
+Casting your phone to a TV (Smart View, screen mirroring) or plugging one in gives your device a second screen. PokeDaisy puts the game on the TV and keeps the companion on your phone, so you can play on the big screen with your party, bag and map in hand. Want it the other way round? Turn off `SWAP SCREENS`. A TV keeps its own choice, apart from a built-in second screen's.
+
 ### CLOSE COMPANION
 
 Want the bottom screen for something else while you play, like a video or a chat app? At the very bottom of the companion's `SETTINGS`, under `CLOSE GAME` and `RESTART GAME`, tap `CLOSE COMPANION`. The game keeps running and the bottom screen is free for other apps. Press `BACK` on the game to bring the companion back.

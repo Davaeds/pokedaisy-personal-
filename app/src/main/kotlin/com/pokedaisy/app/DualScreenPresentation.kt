@@ -99,7 +99,7 @@ class DualScreenPresentation(
         super.onStart()
         goFullScreen()
         owner.resume()
-        android.util.Log.i("pokedaisy", "companion presentation shown on display ${display.displayId} (${display.name})")
+        android.util.Log.i("pokedaisy", "companion presentation shown on display ${display.displayId} (${display.name}, type ${Screens.typeOf(display)})")
     }
 
     override fun onStop() {

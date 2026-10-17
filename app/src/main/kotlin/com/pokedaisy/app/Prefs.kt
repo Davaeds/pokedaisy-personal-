@@ -348,6 +348,13 @@ class Prefs(context: Context) {
         get() = p.getBoolean("swap_screens", false)
         set(v) = p.edit().putBoolean("swap_screens", v).apply()
 
+    /** SWAP SCREENS while the second screen is an external one (a TV over HDMI or cast - [Screens.isExternal]): its own
+     * setting, on by default - the game on the TV, the companion in hand (GitHub #138: Smart View on a Galaxy Flip put
+     * the companion on the TV). Kept apart, so a Thor's choice and a TV's don't overwrite each other. */
+    var swapScreensExternal: Boolean
+        get() = p.getBoolean("swap_screens_external", true)
+        set(v) = p.edit().putBoolean("swap_screens_external", v).apply()
+
     /** Two screens: play on one anyway - the second is left free for other apps and the companion opens over the
      * game, as on a one-screen device (see PokeDaisyActivity.syncPresentation). A player's request: multitask
      * without closing PokéDaisy. */

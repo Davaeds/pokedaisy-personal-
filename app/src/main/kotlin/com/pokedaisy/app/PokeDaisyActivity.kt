@@ -786,7 +786,7 @@ class PokeDaisyActivity : Activity() {
         override fun closeGame() {
             exitGame()   // drives the normal onPause()/onStop() lifecycle, which already suspends+saves
         }
-        override val canCloseCompanion get() = secondScreen() != null && !Prefs(this@PokeDaisyActivity).swapScreens
+        override val canCloseCompanion get() = secondScreen()?.let { !Screens.swapped(this@PokeDaisyActivity, Prefs(this@PokeDaisyActivity), it) } == true
         override fun closeCompanion() {
             runOnUiThread {
                 companionClosed = true
@@ -912,7 +912,7 @@ class PokeDaisyActivity : Activity() {
                 if (on && ::sidePanel.isInitialized && sidePanel.enabled) sidePanel.openPanel()
             }
         }
-        override val swapScreens get() = Prefs(this@PokeDaisyActivity).swapScreens
+        override val swapScreens get() = Screens.swapped(this@PokeDaisyActivity, Prefs(this@PokeDaisyActivity))
         override val portraitUnderGame get() =
             if (::portraitPanel.isInitialized && portraitPanel.enabled) Prefs(this@PokeDaisyActivity).portraitCompanionUnderGame else null
         override fun setPortraitUnderGame(on: Boolean) {
@@ -926,7 +926,7 @@ class PokeDaisyActivity : Activity() {
             runOnUiThread { sidePanel.setWindow(on) }
         }
         override fun setSwapScreens(on: Boolean) {
-            Prefs(this@PokeDaisyActivity).swapScreens = on
+            Screens.setSwapped(this@PokeDaisyActivity, Prefs(this@PokeDaisyActivity), on)
             // The companion that asked moves screens: it comes back on SETTINGS, on SWAP SCREENS.
             companionStartTab = "SETTINGS"
             companionStartRow = "SWAP SCREENS"
@@ -1549,7 +1549,7 @@ class PokeDaisyActivity : Activity() {
     private fun syncPresentation() {
         if (!::engine.isInitialized) return
         val target: Display? = secondScreen()
-        val swap = target != null && Prefs(this).swapScreens && !debugMirror
+        val swap = target != null && Screens.swapped(this, Prefs(this), target) && !debugMirror
         if (companionClosed && target != null && !swap) {
             presentation?.let { it.dismiss(); it.releaseContent() }
             presentation = null
