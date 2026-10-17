@@ -1,8 +1,9 @@
 // The r/PokeDaisy banners (docs/reddit-banners/): the daisy logo and wordmark on the app's blue over a
-// pixel meadow (and a Ko-fi page banner, 1200x400), built from the website's own sprites (website/src/lib/pixel.js) and its Pixel Operator
+// pixel meadow (and a Ko-fi page banner, 1200x400, and a Patreon one, 2500x625), built from the website's own sprites (website/src/lib/pixel.js) and its Pixel Operator
 // font. No creatures and no game art: the two handhelds are drawn here with plain screens. Writes the
 // PNGs with headless Chrome: Reddit's at 2x (it asks for at least 1072x128 desktop / 1080x128 mobile),
-// Ko-fi's at exactly 1200x400 (3:1, so nothing is cropped).
+// Ko-fi's at exactly 1200x400 (3:1, so nothing is cropped), Patreon's at exactly 2500x625 (4:1). Also a square
+// profile picture (1024x1024) and a light banner on the website cover's page (1280x640 at 2x).
 //
 //     node scripts/gen_reddit_banners.mjs
 import { spawn } from 'node:child_process';
@@ -133,6 +134,74 @@ ${sprites}
 </body>`;
 }
 
+// The square profile picture: the logo alone on the banners' blue, kept inside the circle Patreon / Reddit crop it to.
+function avatarPage({ size, logoScale, unit }) {
+  const { w: lw, h: lh, svg } = spriteSvg('logo');
+  return `<!doctype html><meta charset="utf-8"><style>
+* { margin: 0; box-sizing: border-box; }
+html, body { width: ${size}px; height: ${size}px; overflow: hidden; }
+body { position: relative; display: flex; align-items: center; justify-content: center; background:
+  radial-gradient(circle at 50% 30%, rgba(255,255,255,.22), transparent 60%),
+  radial-gradient(circle at 50% 100%, rgba(7,40,120,.30), transparent 55%),
+  linear-gradient(180deg, #0E65F1 0%, #2f84fa 100%); }
+body::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(rgba(255,255,255,.16) 1px, transparent 1.4px); background-size: ${unit * 6}px ${unit * 6}px; }
+.logo { position: relative; width: ${lw * logoScale}px; height: ${lh * logoScale}px; line-height: 0; filter: drop-shadow(${unit}px ${unit}px 0 rgba(5,30,100,.35)); }
+.logo svg { width: 100%; height: 100%; display: block; }
+</style><body><span class="logo">${svg}</span></body>`;
+}
+
+// The website cover's light page (blobs, dot grid, faded logos) with the wordmark and a meadow along the bottom.
+SPRITES.cloudLight = { ...SPRITES.cloud, pal: { ...SPRITES.cloud.pal, L: '#cfe0f4' } };
+function lightPage({ w, h, unit, logoScale, font, kicker, grassRows, sky, ghosts, ground, flowerX }) {
+  const gh = grassRows * unit;
+  const place = (name, x, bottom, s, flip = false, cls = '') => {
+    const { w: sw, h: sh, svg } = spriteSvg(name);
+    return `<span class="sp ${cls}" style="left:${x}px;bottom:${bottom}px;width:${sw * s}px;height:${sh * s}px;${flip ? 'transform:scaleX(-1);' : ''}">${svg}</span>`;
+  };
+  const clouds = sky.map(([x, top, s = unit]) => place('cloudLight', x, h - top - 8 * s, s, false, 'cloud')).join('');
+  const faded = ghosts.map(([x, top, s, rot = 0]) => {
+    const { svg } = spriteSvg('logo');
+    return `<span class="ghost" style="left:${x}px;top:${top}px;width:${32 * s}px;height:${32 * s}px;transform:rotate(${rot}deg)">${svg}</span>`;
+  }).join('');
+  const props = ground.map(([n, x, s, f = false]) => place(n, x, gh - unit * 2, s, f, 'prop')).join('');
+  const flowers = flowerX.map((fx, i) => place('daisy', fx, unit * (i % 2 ? 1 : 3), unit)).join('');
+  const { w: lw, h: lh, svg } = spriteSvg('logo');
+  const sh = font / 16;
+  return `<!doctype html><meta charset="utf-8"><style>
+@font-face { font-family: PX; src: url('${FONT}'); }
+* { margin: 0; box-sizing: border-box; }
+html, body { width: ${w}px; height: ${h}px; overflow: hidden; }
+body { position: relative; font-family: PX; color: #1d1b26; background: #f7f6fb; -webkit-font-smoothing: none; }
+.blob { position: absolute; border-radius: 50%; filter: blur(${w * 0.055}px); opacity: .7; }
+.b1 { width: ${w * 0.48}px; height: ${w * 0.48}px; left: ${-w * 0.16}px; top: ${-w * 0.2}px; background: #ffd2cc; }
+.b2 { width: ${w * 0.41}px; height: ${w * 0.41}px; right: ${-w * 0.12}px; top: ${-w * 0.09}px; background: #fff0b0; }
+.b3 { width: ${w * 0.55}px; height: ${w * 0.47}px; left: ${w * 0.28}px; bottom: ${-w * 0.3}px; background: #d6e2ff; }
+.dots { position: absolute; inset: 0; background-image: radial-gradient(rgba(29,27,38,.09) ${unit / 2}px, transparent ${unit / 2 + 0.5}px); background-size: ${unit * 6}px ${unit * 6}px; }
+.ghost { position: absolute; opacity: .16; line-height: 0; }
+.ghost svg, .sp svg { width: 100%; height: 100%; display: block; }
+.sp { position: absolute; line-height: 0; }
+.cloud { filter: drop-shadow(${unit}px ${unit}px 0 rgba(29,27,38,.07)); }
+.prop { filter: drop-shadow(${unit}px ${unit}px 0 rgba(29,27,38,.12)); }
+.grass { position: absolute; left: 0; bottom: 0; }
+.center { position: absolute; left: 0; right: 0; top: 0; bottom: ${gh}px; display: flex; align-items: center; justify-content: center; gap: ${unit * 6}px; }
+.logo { width: ${lw * logoScale}px; height: ${lh * logoScale}px; line-height: 0; filter: drop-shadow(${unit * 2}px ${unit * 2}px 0 rgba(29,27,38,.13)); }
+.logo svg { width: 100%; height: 100%; display: block; }
+.text { display: flex; flex-direction: column; align-items: flex-start; gap: ${unit * 4}px; }
+.word { font-size: ${font}px; line-height: 1; letter-spacing: ${sh}px; white-space: nowrap;
+  text-shadow: ${sh}px 0 0 currentColor, ${sh * 1.6}px ${sh * 1.6}px 0 rgba(29,27,38,.13), ${sh * 2.6}px ${sh * 1.6}px 0 rgba(29,27,38,.13); }
+.red { color: #e83028; }
+.kicker { font-size: ${kicker}px; line-height: 1; letter-spacing: ${kicker / 16}px; color: #404048; white-space: nowrap; text-shadow: ${kicker / 8}px ${kicker / 8}px 0 #d8d8d0; }
+</style><body>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="dots"></div>
+${faded}
+${clouds}
+${grass(w, unit, grassRows)}
+${flowers}
+${props}
+<div class="center"><span class="logo">${svg}</span><div class="text"><div class="word"><span class="red">POKE</span>DAISY</div><div class="kicker">FREE &amp; OPEN SOURCE POKÉMON COMPANION</div></div></div>
+</body>`;
+}
+
 // Desktop: 1072 x 128, scenery flanking the wordmark.
 const BANNERS = {
   'banner-desktop': [2, page({
@@ -159,9 +228,30 @@ const BANNERS = {
       ['bsingle', 968, 3],
     ],
   })],
+  // Patreon: 2500 x 625 at 1x (4:1), drawn at whole 6 / 8 / 10 px steps.
+  'patreon-banner': [1, page({
+    w: 2500, h: 625, logoScale: 10, font: 176, scale: 8, kicker: 48, grassRows: 9, flowerX: [690, 1120, 1390, 1740],
+    sky: [[260, 40], [1180, 20], [1960, 70], [2230, 190]],
+    flank: [
+      ['tree', 24, 8], ['bdual', 170, 8], ['coffee', 546, 6],
+      ['coffee', 1858, 6, true], ['bsingle', 1976, 6], ['tree', 2360, 8, true],
+    ],
+  })],
+  // Square profile picture, 1024 x 1024 at 1x.
+  'avatar': [1, avatarPage({ size: 1024, logoScale: 20, unit: 8 })],
+  // The light cover, 1280 x 640 (the website's og.png size) drawn at 2x.
+  'light-banner': [2, lightPage({
+    w: 1280, h: 640, unit: 4, logoScale: 6, font: 120, kicker: 30, grassRows: 12, flowerX: [250, 470, 760, 1010, 1180],
+    sky: [[90, 70, 5], [540, 34, 4], [1010, 96, 5], [720, 150, 3], [1120, 250, 3]],
+    ghosts: [[1150, -40, 5, 15], [-50, 300, 4, -12], [540, 440, 3, 25]],
+    ground: [
+      ['tree', 20, 7], ['tree', 112, 5], ['fence', 200, 4], ['fence', 232, 4], ['tallgrass', 300, 5], ['tallgrass', 342, 5],
+      ['tallgrass', 900, 5], ['fence', 1016, 4], ['fence', 1048, 4], ['tree', 1092, 5, true], ['tree', 1148, 7, true],
+    ],
+  })],
 };
 
-// Each page is rendered at 2x by headless Chrome (a throwaway profile, so an open Chrome doesn't take the job).
+// Each page is rendered at its own device scale by headless Chrome (a throwaway profile, so an open Chrome doesn't take the job).
 const tmp = mkdtempSync(join(tmpdir(), 'pokedaisy-banners-'));
 try {
   for (const [name, [dsf, html]] of Object.entries(BANNERS)) {
