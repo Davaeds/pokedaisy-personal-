@@ -265,16 +265,25 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
     // thread that has already exited - a bind or unbind sent then was lost (and
     // the next GL thread could read a freed buffer). See PokeDaisyActivity.arrangeScreens.
 
-    /** Called once after the core is up; [wideBuffer] is [MgbaCore.pkWideBuffer] (null: no WIDE for this core). */
+    /**
+     * Emu thread, once after the core is up and before its first frame; [wideBuffer] is
+     * [MgbaCore.pkWideBuffer] (null: no WIDE for this core). The buffers go to the renderer right
+     * here, never through a post: a bind still queued when the core stopped (a quick pause, SWAP
+     * SCREENS, a restart) landed after the unbind and left the freed buffers bound, and the next
+     * core's [publishFrame] copied out of them (a SIGSEGV in libc's memmove, Crashlytics).
+     */
     fun bindCore(buffer: ByteBuffer, wideBuffer: ByteBuffer?, width: Int, height: Int) {
         renderer.bind(buffer, wideBuffer, width, height)
-        frameW = width
-        frameH = height
         // ZOOM / the look-around work in the game's own pixels: the GBA's 240x160, a Game Boy's 160x144.
         camera.frameW = width
         camera.frameH = height
-        // A built-in frame is drawn around the game's own size (a Game Boy's is smaller).
-        post { refreshOverlay(); reportGamePixel() }
+        post {
+            frameW = width
+            frameH = height
+            // A built-in frame is drawn around the game's own size (a Game Boy's is smaller).
+            refreshOverlay()
+            reportGamePixel()
+        }
     }
 
     /** Emu thread, right after a frame has run: hands the finished frame to the GL thread - the
@@ -489,10 +498,11 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
             dirtyGeometry = true
         }
 
-        /** Drops the buffer reference; [onDrawFrame] just clears until the next [bind]. */
+        /** Drops the buffer references; [onDrawFrame] just clears until the next [bind]. */
         fun unbind() = synchronized(lock) {
             synchronized(frameLock) {
                 buffer = null
+                wideBuffer = null   // pkDeinit frees it too: the next core's wide frames read it until its bind
                 fresh = false
             }
         }

@@ -1231,10 +1231,11 @@ class PokeDaisyActivity : Activity() {
             gen1Music = this@PokeDaisyActivity.gen1Music
             onCoreReady = { w, h ->
                 MgbaCore.pkVideoBuffer()?.let { buf ->
+                    // Here on the emu thread, before the first frame (see EmulatorView.bindCore).
+                    view.bindCore(buf, MgbaCore.pkWideBuffer(), w, h)
                     runOnUiThread {
                         stage.aspect = w.toFloat() / h   // 3:2, or a Game Boy's 10:9
                         touchControls.shoulders = !gameBoy
-                        view.bindCore(buf, MgbaCore.pkWideBuffer(), w, h)
                     }
                 }
             }
