@@ -1,5 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Request a game
+    url: https://github.com/lidor30/pokedaisy/discussions/new?category=game-requests
+    about: Ask for a game or ROM hack the companion doesn't read yet, and upvote the ones you want.
+  - name: Suggest a feature
+    url: https://github.com/lidor30/pokedaisy/discussions/new?category=ideas
+    about: Share an idea for PokeDaisy, and upvote the ones you want.
   - name: Check a ROM first
     url: https://pokedaisy.com/compatibility/
     about: See whether the companion can read your ROM - it's checked in your browser, never uploaded.

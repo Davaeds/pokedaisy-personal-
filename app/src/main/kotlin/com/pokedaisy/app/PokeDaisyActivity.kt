@@ -287,7 +287,7 @@ class PokeDaisyActivity : Activity() {
         BestEffortShare.share(this, r)
     }
 
-    /** NOT SUPPORTED's ASK FOR SUPPORT: the ROM's SHA-1 off the UI thread, then the issue in a browser. */
+    /** NOT SUPPORTED's ASK FOR SUPPORT: the ROM's SHA-1 off the UI thread, then the request form in a browser. */
     private val askForSupport: () -> Unit = {
         rom?.let { r ->
             Thread({

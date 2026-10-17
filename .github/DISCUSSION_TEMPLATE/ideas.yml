@@ -1,6 +1,4 @@
-name: Feature request
-description: An idea for PokeDaisy.
-labels: [enhancement]
+labels: [feature request]
 body:
   - type: textarea
     id: idea

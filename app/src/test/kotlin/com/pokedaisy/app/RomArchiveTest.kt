@@ -79,11 +79,10 @@ class RomArchiveTest {
         assertFalse(RomIdentity.looksLikeRom(tmp.newFile("photo.gba").apply { writeBytes(Random(5).nextBytes(4096).also { it[0xB2] = 0 }) }))
     }
 
-    /** ASK FOR SUPPORT pre-fills rom_request.yml by field id: name, code, size, SHA-1 - for a zip, the ROM inside. */
+    /** ASK FOR SUPPORT fills the website's game request form through the #hash: name, code, size, SHA-1 - for a zip, the ROM inside. */
     @Test fun supportRequestUrl() {
         val url = RomSupportRequest.url(zip("My Hack (v1.0).zip", "My Hack (v1.0).gba" to rom), "abc123")
-        assertTrue(url, url.startsWith("https://github.com/lidor30/pokedaisy/issues/new?template=rom_request.yml&"))
-        assertTrue(url, "title=ROM%20support%3A%20My%20Hack%20%28v1.0%29" in url)
+        assertTrue(url, url.startsWith("https://pokedaisy.com/feedback/#game=My%20Hack%20%28v1.0%29&"))
         assertTrue(url, "game_code=BPRE%20%28rev%201%29" in url)
         assertTrue(url, "size=${1 shl 20}" in url)
         assertTrue(url, url.endsWith("sha1=abc123"))

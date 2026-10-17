@@ -1,8 +1,9 @@
 // The website's feedback form (src/pages/feedback.astro) for players without a GitHub account: a game
 // request, a bug report or a feature idea. One definition, shared by the page (fields, checks, the
-// Firestore write) and the Cloud Function (index.js) that turns a submission into a GitHub issue - so
-// they can't drift apart. Field ids and labels mirror .github/ISSUE_TEMPLATE/*.yml, and the limits here
-// are firestore.rules' limits: change the three together.
+// Firestore write) and the Cloud Function (index.js) that posts a submission on GitHub - a game request or
+// an idea as a discussion in its `category`, a bug as an issue - so they can't drift apart. Field ids and
+// labels mirror .github/DISCUSSION_TEMPLATE/*.yml and .github/ISSUE_TEMPLATE/bug_report.yml, and the limits
+// here are firestore.rules' limits: change the three together.
 
 export const DEVICES = ['AYN Thor', 'Retroid Pocket Duo', 'Another dual-screen device', 'A single-screen device'];
 
@@ -13,7 +14,8 @@ export const FORMS = {
   game: {
     title: 'Request a game',
     issueTitle: (v) => `ROM support: ${v.game}`,
-    labels: ['enhancement'],
+    category: 'game-requests',
+    labels: ['game request'],
     fields: [
       field('game', 'Game and version', 'input', 120, true, '', 'Pokémon Unbound v2.1.1.1'),
       field('official_page', 'Official page', 'input', 300, false, 'Where the hack is published (its PokéCommunity thread, website, Discord...). Never a ROM.'),
@@ -40,7 +42,8 @@ export const FORMS = {
   feature: {
     title: 'Suggest a feature',
     issueTitle: (v) => `Idea: ${firstLine(v.idea, 70)}`,
-    labels: ['enhancement'],
+    category: 'ideas',
+    labels: ['feature request'],
     fields: [
       field('idea', 'What would you like?', 'textarea', 4000, true, 'What it would do, and when you\'d use it.'),
       field('game', 'Game', 'input', 120, false, 'If it\'s about one game in particular.'),
@@ -48,7 +51,7 @@ export const FORMS = {
   },
 };
 
-/** An optional way to reach the sender. Kept in Firestore only - never put on the public issue. */
+/** An optional way to reach the sender. Kept in Firestore only - never put on the public post. */
 export const CONTACT_MAX = 200;
 
 const SHA1 = /^[0-9a-f]{40}$/;
@@ -97,13 +100,16 @@ export function toFirestore(sub) {
   return { fields };
 }
 
-/** Links in the text: a submission full of them is held back (spam) instead of becoming an issue. */
+/** Links in the text: a submission full of them is held back (spam) instead of being posted. */
 export function linkCount(sub) {
   return Object.values(sub.values).join('\n').match(/https?:\/\//g)?.length ?? 0;
 }
 
-/** The GitHub issue for a submission: the issue form's own layout (### Label, then the answer). */
-export function toIssue(sub) {
+/**
+ * The GitHub post for a submission, in the form's own layout (### Label, then the answer): a discussion in
+ * `category` (game requests, ideas), else an issue (bugs).
+ */
+export function toPost(sub) {
   const form = FORMS[sub.kind];
   const body = form.fields.map((f) => {
     const v = sub.values[f.id];
@@ -111,5 +117,5 @@ export function toIssue(sub) {
     return `### ${f.label}\n\n${answer}`;
   });
   body.push('---\n_Sent from the website\'s form (no GitHub account)._');
-  return { title: form.issueTitle(sub.values), body: body.join('\n\n'), labels: form.labels };
+  return { title: form.issueTitle(sub.values), body: body.join('\n\n'), labels: form.labels, category: form.category ?? null };
 }

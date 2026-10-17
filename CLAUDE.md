@@ -1489,8 +1489,8 @@ none while a battle script steers. Binding a key to a button takes it off every 
 later one).
 **NOT SUPPORTED / ASK FOR SUPPORT**: the library tags ROMs whose cached verdict is unsupported (`RomFolder.unsupported`;
 imported ROMs are checked into the same cache by `checkImported`, linked ones by the scan); the companion's NOT SUPPORTED
-page and the library INFO of such a ROM open `RomSupportRequest.url` - rom_request.yml prefilled by field id with the
-file name, game code, size and SHA-1, like the website's ROM check.
+page and the library INFO of such a ROM open `RomSupportRequest.url` - the website's game request form (`/feedback/`)
+prefilled through its #hash with the file name, game code, size and SHA-1, like the website's ROM check.
 **BEST EFFORT** (`BestEffort.kt`): an unsupported ROM of a Gen 3 base game (header code BPR/BPG/BPE/AXV/AXP) is read
 through every `BestEffort.candidates` config of that family, **automatically** (the sampler every 5 samples while
 unsettled; there is no TRY button). What a config would *show* is checked against the ROM, not just its RAM - a Galar hack
@@ -1577,18 +1577,22 @@ fails while it's stale: `UPDATE_SITE_DATA=1 ./gradlew :app:testDebugUnitTest --t
 Deployed to Firebase Hosting (`pokedaisy.com`) by `.github/workflows/website.yml` **only with an app release**
 (the user's rule: the site never lists games the downloadable APK can't run): a published, non-pre-release release
 deploys its tag's `website/`; pushes to main only build + test; a manual run takes a release tag (redeploy / roll
-back). A site-only fix therefore waits for the next release (or a manual run of the current tag after moving it); the checker's ASK FOR SUPPORT pre-fills `.github/ISSUE_TEMPLATE/rom_request.yml` by field id.
+back). A site-only fix therefore waits for the next release (or a manual run of the current tag after moving it); the checker's ASK FOR SUPPORT opens the feedback form, prefilled through its #hash.
 The site's game matrix is README's Supported games table; a row of all "—" means detected but no companion yet,
 so the export lists it under `inProgress` - off the matrix, and "in progress" in the ROM check (none since R.O.W.E.
 got its companion, 2026-10-09).
 The site's demos and art never use real Pokémon / move / item names or the games' art (the user's rule).
 **Feedback without GitHub** (`website/src/pages/feedback.astro`, `/feedback/`): game request / bug / idea, written
-to Firestore `feedback` (write-only, `firestore.rules`) and posted as a GitHub issue by `website/functions/index.js`
+to Firestore `feedback` (write-only, `firestore.rules`) and posted on GitHub by `website/functions/index.js` (game requests /
+ideas as discussions in the `game-requests` / `ideas` categories via GraphQL, bugs as issues)
 (2nd-gen Firestore trigger, secret `GITHUB_TOKEN`, Blaze plan; setup in website/README.md). One definition,
-`functions/feedback-form.js`, feeds the page, the function and the issue layout (mirrors .github/ISSUE_TEMPLATE);
-change it with the rules (`test/feedback.test.js` checks they agree). The contact field never reaches the issue.
-The site's REPORT A BUG / REQUEST A GAME / SUGGEST A FEATURE go there (it links on to GitHub); the ROM check adds
-NO GITHUB ACCOUNT? next to ASK FOR SUPPORT, filled in through the URL's #hash. Astro needs Node 22.12+ (this Mac's
+`functions/feedback-form.js`, feeds the page, the function and the post layout (mirrors .github/DISCUSSION_TEMPLATE and
+bug_report.yml); change it with the rules (`test/feedback.test.js` checks they agree). The contact never reaches the post.
+The site's REPORT A BUG / REQUEST A GAME / SUGGEST A FEATURE go there (it links on to GitHub).
+**GitHub layout (2026-10-18)**: Issues are for bugs (and accepted work); game requests and ideas are Discussions
+(Game requests / Ideas, open-ended, upvoted). Labels: type `bug` / `game request` / `feature request` / `question`, topic
+(`companion`, `display / expand`, ...), status `fixed in next release` / `needs info` / `planned`. `rom_request.yml` stays
+only for older apps' ASK FOR SUPPORT; its issues get converted to Game requests. Astro needs Node 22.12+ (this Mac's
 default 22.1 can't build it: use `~/.nvm/versions/node/v22.23.3/bin`).
 
 **Library order + NEW** (`LibraryOrder.kt`): the header's sort button picks NAME / LAST PLAYED / DATE ADDED

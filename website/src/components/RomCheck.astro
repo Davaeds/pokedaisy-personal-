@@ -64,7 +64,6 @@ import Pixel from './Pixel.astro';
   import data from '../data/compat.json';
   import { checkFile } from '../lib/compat.js';
 
-  const REPO = 'https://github.com/lidor30/pokedaisy';
   const MESSAGES: Record<string, (v: any, r: any) => string> = {
     supported: (v) => v.version
       ? `The companion knows this exact version of ${v.title}. Party, battles, map and more on the second screen.`
@@ -103,26 +102,8 @@ import Pixel from './Pixel.astro';
       rows.append(dt, dd);
     };
 
-    const requestLink = (r: any) => {
-      // Pre-fills .github/ISSUE_TEMPLATE/rom_request.yml's fields (by id) - never the file.
-      const params = new URLSearchParams({
-        template: 'rom_request.yml',
-        title: `ROM support: ${r.name.replace(/\.[^.]+$/, '')}`,
-        game_code: r.code ? `${r.code} (rev ${r.rev})` : 'Game Boy',
-        size: String(r.size),
-        sha1: r.sha1,
-      });
-      const a = document.createElement('a');
-      a.className = 'btn f-btn h-btnHot small';
-      a.href = `${REPO}/issues/new?${params}`;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.textContent = 'ASK FOR SUPPORT';
-      return a;
-    };
-
-    // The same request without a GitHub account: the website's form, filled in through the #hash
-    // (stays in the browser - a hash isn't sent to the server).
+    // ASK FOR SUPPORT: the website's game request form, filled in through the #hash (stays in the browser -
+    // a hash isn't sent to the server). It posts to GitHub's Game requests, or links there for an account.
     const formLink = (r: any) => {
       const params = new URLSearchParams({
         game: r.name.replace(/\.[^.]+$/, ''),
@@ -133,7 +114,7 @@ import Pixel from './Pixel.astro';
       const a = document.createElement('a');
       a.className = 'btn f-btn h-btnHot small';
       a.href = `/feedback/#${params}`;
-      a.textContent = 'NO GITHUB ACCOUNT? ASK HERE';
+      a.textContent = 'ASK FOR SUPPORT';
       return a;
     };
 
@@ -162,7 +143,7 @@ import Pixel from './Pixel.astro';
         if (r.sha1) row('SHA-1', r.sha1, true);
         message.textContent = MESSAGES[v.status === 'unsupported' ? v.reason : v.status](v, r);
         if (r.sha1 && (['unknown-hack', 'retail-hack', 'revision', 'other-game', 'gb'].includes(v.reason))) {
-          actions.append(requestLink(r), formLink(r));
+          actions.append(formLink(r));
         }
       } catch (e) {
         const stamp = document.createElement('span');

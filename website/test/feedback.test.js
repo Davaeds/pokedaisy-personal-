@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { FORMS, DEVICES, clean, validate, toFirestore, toIssue, linkCount } from '../functions/feedback-form.js';
+import { FORMS, DEVICES, clean, validate, toFirestore, toPost, linkCount } from '../functions/feedback-form.js';
 
 const SHA1 = '41cb23d8dccc8ebd7c649cd8fbb58eeace6e2fdc';
 
@@ -36,20 +36,25 @@ test('only the kind\'s own fields are sent', () => {
   });
 });
 
-test('the issue follows the template, and keeps the contact off it', () => {
+test('the post follows the form, and keeps the contact off it', () => {
   const sub = clean('bug', {
     app_version: '1.2.0', device: 'AYN Thor', game: 'Emerald', what_happened: 'The map is blank\nafter a battle',
     logs: 'E/x: ```boom```', contact: 'secret@example.com',
   });
-  const issue = toIssue(sub);
+  const issue = toPost(sub);
   assert.equal(issue.title, 'Bug: The map is blank');
   assert.deepEqual(issue.labels, ['bug']);
+  assert.equal(issue.category, null);
   assert.match(issue.body, /^### PokeDaisy version\n\n1\.2\.0\n\n### Device\n\nAYN Thor/);
   assert.match(issue.body, /### How to make it happen\n\n_No response_/);
   assert.match(issue.body, /```shell\nE\/x: '''boom'''\n```/);
   assert.doesNotMatch(issue.body, /secret@example\.com/);
-  assert.equal(toIssue(clean('game', { game: 'Gaia v3.2', sha1: SHA1 })).title, 'ROM support: Gaia v3.2');
-  assert.equal(toIssue(clean('feature', { idea: 'x'.repeat(100) })).title.length, 'Idea: '.length + 70);
+  const game = toPost(clean('game', { game: 'Gaia v3.2', sha1: SHA1 }));
+  assert.equal(game.title, 'ROM support: Gaia v3.2');
+  assert.equal(game.category, 'game-requests');
+  assert.deepEqual(game.labels, ['game request']);
+  assert.equal(toPost(clean('feature', { idea: 'Dark mode' })).category, 'ideas');
+  assert.equal(toPost(clean('feature', { idea: 'x'.repeat(100) })).title.length, 'Idea: '.length + 70);
 });
 
 test('links are counted (the function holds back a link-stuffed one)', () => {
@@ -71,4 +76,13 @@ test('firestore.rules accepts exactly the form\'s fields and limits', () => {
   }
   for (const d of DEVICES) assert.ok(rules.includes(`'${d}'`), `device ${d} in the rules`);
   assert.match(rules, /contact\.size\(\) <= 200/);
+});
+
+test('each discussion form matches its kind\'s fields and labels', () => {
+  for (const [kind, file] of [['game', 'game-requests'], ['feature', 'ideas']]) {
+    const yml = readFileSync(new URL(`../../.github/DISCUSSION_TEMPLATE/${file}.yml`, import.meta.url), 'utf8');
+    assert.equal(FORMS[kind].category, file);
+    assert.deepEqual([...yml.matchAll(/^    id: ([a-z_0-9]+)$/gm)].map((m) => m[1]), FORMS[kind].fields.map((f) => f.id), `${file}.yml's fields`);
+    assert.match(yml, new RegExp(`^labels: \\[${FORMS[kind].labels[0]}\\]$`, 'm'), `${file}.yml's label`);
+  }
 });

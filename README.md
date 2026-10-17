@@ -198,7 +198,7 @@ under LANGUAGE in either Settings screen. Species, move and item names and the G
   - See its **info**: ROM, save file and save states.
   - Give it its own **save folder** (another emulator's, so both keep playing the same save).
 - Games the companion can't read yet are tagged **NOT SUPPORTED**. Their INFO, and the companion's own notice,
-  have an **ASK FOR SUPPORT** button that opens a GitHub issue with the ROM's file name and SHA-1 (never the ROM).
+  have an **ASK FOR SUPPORT** button that opens a game request with the ROM's file name and SHA-1 (never the ROM).
 - **Best effort** for those: in game, PokeDaisy reads the ROM as each game it knows, by itself, and keeps the one
   that fits. A different build of a supported version is then just supported; a hack that shares a supported
   game's memory gets party, bag, map and battles (tagged **PARTIALLY SUPPORTED**, with whatever didn't match -
@@ -311,7 +311,7 @@ first time you open one.
 
 </details>
 
-Want another game supported? [Open an issue](https://github.com/lidor30/pokedaisy/issues).
+Want another game supported? Ask in [Game requests](https://github.com/lidor30/pokedaisy/discussions/categories/game-requests), and upvote the ones you want.
 
 ## Privacy
 

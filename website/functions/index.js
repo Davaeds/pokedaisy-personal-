@@ -1,10 +1,12 @@
-// Turns each website feedback submission (Firestore `feedback/{id}`, written by src/pages/feedback.astro
-// under firestore.rules) into a GitHub issue on lidor30/pokedaisy, in the matching issue template's
-// layout and labels. The submission is checked again here (the rules can't read every limit), one with
-// lots of links is held back as likely spam, and the result is written onto the document: `issue`
-// (number + url) or `status` ('held' / 'invalid' / 'failed'). The sender's contact never leaves Firestore.
+// Posts each website feedback submission (Firestore `feedback/{id}`, written by src/pages/feedback.astro
+// under firestore.rules) on lidor30/pokedaisy, in the matching form's layout and labels: a game request or an
+// idea as a discussion in its category (Game requests / Ideas), a bug as an issue. The submission is checked
+// again here (the rules can't read every limit), one with lots of links is held back as likely spam, and the
+// result is written onto the document: `issue` / `discussion` (number + url) or `status` ('held' / 'invalid'
+// / 'failed'). The sender's contact never leaves Firestore.
 //
-// Needs the Blaze plan and a fine-grained GitHub token with Issues: read and write on that one repository:
+// Needs the Blaze plan and a fine-grained GitHub token on that one repository with Issues: read and write
+// and Discussions: read and write:
 //   firebase functions:secrets:set GITHUB_TOKEN
 //   firebase deploy --only functions,firestore:rules
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
@@ -12,12 +14,13 @@ import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions';
 import { initializeApp } from 'firebase-admin/app';
 import { FieldValue } from 'firebase-admin/firestore';
-import { clean, validate, linkCount, toIssue } from './feedback-form.js';
+import { clean, validate, linkCount, toPost } from './feedback-form.js';
 
 initializeApp();
 
 const GITHUB_TOKEN = defineSecret('GITHUB_TOKEN');
-const REPO = 'lidor30/pokedaisy';
+const OWNER = 'lidor30';
+const NAME = 'pokedaisy';
 /** More links than this in one submission: held for a look in the console instead of posted. */
 const MAX_LINKS = 3;
 
@@ -31,24 +34,65 @@ export const feedbackToGithub = onDocumentCreated(
     const done = (fields) => snap.ref.update({ ...fields, processedAt: FieldValue.serverTimestamp() });
     if (!sub || Object.keys(validate({ ...sub, contact: '' })).length) return done({ status: 'invalid' });
     if (linkCount(sub) > MAX_LINKS) return done({ status: 'held' });
-    const issue = toIssue(sub);
+    const post = toPost(sub);
     try {
-      const res = await fetch(`https://api.github.com/repos/${REPO}/issues`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${GITHUB_TOKEN.value()}`,
-          Accept: 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-          'User-Agent': 'pokedaisy-feedback',
-        },
-        body: JSON.stringify(issue),
-      });
-      if (!res.ok) throw new Error(`GitHub ${res.status}: ${(await res.text()).slice(0, 300)}`);
-      const created = await res.json();
+      if (post.category) {
+        const created = await createDiscussion(post);
+        return done({ discussion: { number: created.number, url: created.url } });
+      }
+      const { title, body, labels } = post;
+      const created = await github(`https://api.github.com/repos/${OWNER}/${NAME}/issues`, { title, body, labels });
       return done({ issue: { number: created.number, url: created.html_url } });
     } catch (e) {
-      logger.error('feedback: issue not created', { id: event.params.id, error: String(e) });
+      logger.error('feedback: not posted', { id: event.params.id, error: String(e) });
       return done({ status: 'failed' });
     }
   },
 );
+
+async function github(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${GITHUB_TOKEN.value()}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'pokedaisy-feedback',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`GitHub ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  return res.json();
+}
+
+async function graphql(query, variables) {
+  const answer = await github('https://api.github.com/graphql', { query, variables });
+  if (answer.errors?.length) throw new Error(`GitHub GraphQL: ${JSON.stringify(answer.errors).slice(0, 300)}`);
+  return answer.data;
+}
+
+/** A discussion in `post.category` (by slug), labelled like the form. A label that doesn't take isn't a failure. */
+async function createDiscussion(post) {
+  const { repository: repo } = await graphql(
+    `query($owner: String!, $name: String!, $slug: String!, $label: String!) {
+      repository(owner: $owner, name: $name) { id discussionCategory(slug: $slug) { id } label(name: $label) { id } }
+    }`,
+    { owner: OWNER, name: NAME, slug: post.category, label: post.labels[0] ?? '' },
+  );
+  if (!repo?.discussionCategory) throw new Error(`no discussion category '${post.category}'`);
+  const { createDiscussion: { discussion } } = await graphql(
+    `mutation($repo: ID!, $category: ID!, $title: String!, $body: String!) {
+      createDiscussion(input: { repositoryId: $repo, categoryId: $category, title: $title, body: $body }) {
+        discussion { id number url }
+      }
+    }`,
+    { repo: repo.id, category: repo.discussionCategory.id, title: post.title, body: post.body },
+  );
+  if (repo.label) {
+    await graphql(
+      `mutation($id: ID!, $labels: [ID!]!) { addLabelsToLabelable(input: { labelableId: $id, labelIds: $labels }) { clientMutationId } }`,
+      { id: discussion.id, labels: [repo.label.id] },
+    ).catch((e) => logger.warn('feedback: discussion not labelled', { number: discussion.number, error: String(e) }));
+  }
+  return discussion;
+}

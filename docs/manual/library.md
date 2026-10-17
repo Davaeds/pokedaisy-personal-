@@ -144,7 +144,7 @@ Prefer the library without the cursor and legend? Turn off `DUAL-SCREEN LAUNCHER
 - **SAVE STATES**: how many of the 10 slots are used, the newest one and the resume state.
 - **RetroAchievements**: whether the game has an achievement set, and how many you've earned if you're signed in.
 
-For a game the companion doesn't support, `ASK FOR SUPPORT` opens a game request on GitHub with the file's name, size and fingerprint filled in. The ROM itself is never sent.
+For a game the companion doesn't support, `ASK FOR SUPPORT` opens a game request on the PokeDaisy website with the file's name, size and fingerprint filled in. The ROM itself is never sent.
 
 ## Supported, partly supported and not supported
 

@@ -1,17 +1,18 @@
 ---
 // Feedback without a GitHub account: a game request, a bug report or a feature idea, written straight to
-// Firestore (write-only, firestore.rules) and turned into a GitHub issue by functions/index.js. The fields
-// and checks come from functions/feedback-form.js, shared with that function and mirroring the issue
-// templates. The ROM check links here with its readings in the URL's #hash (never sent to the server).
+// Firestore (write-only, firestore.rules) and posted on GitHub by functions/index.js (requests and ideas as
+// discussions, bugs as issues). The fields and checks come from functions/feedback-form.js, shared with that
+// function and mirroring the GitHub forms. The ROM check links here with its readings in the URL's #hash (never sent to the server).
 import Base from '../layouts/Base.astro';
 import Pixel from '../components/Pixel.astro';
 import { FORMS, DEVICES, CONTACT_MAX } from '../../functions/feedback-form.js';
 import { REPO_URL } from '../lib/releases.js';
 
+// The kind's own GitHub form, for people with an account, and where a sent one shows up.
 const kinds = [
-  ['game', 'REQUEST A GAME', 'logo', 0.334, 'rom_request.yml'],
-  ['bug', 'REPORT A BUG', 'bug', 0.667, 'bug_report.yml'],
-  ['feature', 'SUGGEST A FEATURE', 'guide', 0.5, 'feature_request.yml'],
+  ['game', 'REQUEST A GAME', 'logo', 0.334, 'discussions/new?category=game-requests', 'discussions/categories/game-requests'],
+  ['bug', 'REPORT A BUG', 'bug', 0.667, 'issues/new?template=bug_report.yml', 'issues'],
+  ['feature', 'SUGGEST A FEATURE', 'guide', 0.5, 'discussions/new?category=ideas', 'discussions/categories/ideas'],
 ] as const;
 ---
 <Base
@@ -23,10 +24,11 @@ const kinds = [
       <span class="eyebrow">FEEDBACK</span>
       <h1 class="heading">Tell PokeDaisy what you need</h1>
       <p class="lead">Ask for a game, report a bug or share an idea. No GitHub account needed: what you send here
-        becomes an issue on <a href={`${REPO_URL}/issues`}>PokeDaisy's GitHub</a>, where anyone can follow it.</p>
+        goes up on <a href={REPO_URL}>PokeDaisy's GitHub</a>, where anyone can follow it. Game requests and ideas
+        land in <a href={`${REPO_URL}/discussions`}>Discussions</a>, where people upvote the ones they want.</p>
     </div>
 
-    <form class="feedback" data-feedback novalidate>
+    <form class="feedback" data-feedback novalidate data-where={JSON.stringify(Object.fromEntries(kinds.map((k) => [k[0], `${REPO_URL}/${k[5]}`])))}>
       <div class="kinds" role="radiogroup" aria-label="What are you sending?">
         {kinds.map(([kind, label, icon, scale], i) => (
           <label class="kind btn f-btn h-btnHot">
@@ -37,7 +39,7 @@ const kinds = [
       </div>
 
       <div class="f-card sheet">
-        {kinds.map(([kind, , , , template]) => (
+        {kinds.map(([kind, , , , form]) => (
           <fieldset class="fields" data-kind={kind} hidden={kind !== 'game'}>
             <legend class="sr">{FORMS[kind].title}</legend>
             {kind === 'game' && (
@@ -59,7 +61,7 @@ const kinds = [
                 <span class="ferr tiny" data-error={f.id}></span>
               </label>
             ))}
-            <p class="tiny muted">Have a GitHub account? <a href={`${REPO_URL}/issues/new?template=${template}`}>Open it on GitHub</a> instead.</p>
+            <p class="tiny muted">Have a GitHub account? <a href={`${REPO_URL}/${form}`}>Post it on GitHub</a> instead.</p>
           </fieldset>
         ))}
 
@@ -83,7 +85,7 @@ const kinds = [
     <div class="f-card sheet thanks" data-thanks hidden>
       <span class="thanks-art"><Pixel name="logo" scale={2} /></span>
       <h2 class="heading">Thanks!</h2>
-      <p class="lead">It's on its way. It shows up on <a href={`${REPO_URL}/issues`}>PokeDaisy's GitHub issues</a> in a minute or two.</p>
+      <p class="lead">It's on its way. It shows up on <a data-where href={`${REPO_URL}/${kinds[0][5]}`}>PokeDaisy's GitHub</a> in a minute or two.</p>
       <button class="btn f-btn h-btnHot small" type="button" data-again>SEND ANOTHER</button>
     </div>
   </section>
@@ -189,6 +191,7 @@ const kinds = [
       if (!res.ok) throw new Error(String(res.status));
       form.reset();
       form.querySelector<HTMLInputElement>(`input[name=kind][value=${sub.kind}]`)!.checked = true;
+      thanks.querySelector<HTMLAnchorElement>('[data-where]')!.href = JSON.parse(form.dataset.where!)[sub.kind];
       form.hidden = true;
       thanks.hidden = false;
       thanks.scrollIntoView({ behavior: 'smooth', block: 'center' });

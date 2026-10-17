@@ -41,7 +41,7 @@ import java.util.Date
 class GameInfo(
     val title: String,
     val sections: List<Section>,
-    /** A ROM the companion can't read: ASK FOR SUPPORT's issue ([RomSupportRequest]). */
+    /** A ROM the companion can't read: ASK FOR SUPPORT's request form ([RomSupportRequest]). */
     val supportUrl: String? = null,
     /** The ROM's SHA-1 when a best-effort match is kept for it: FORGET MATCH. */
     val bestEffortSha1: String? = null,
@@ -248,7 +248,7 @@ fun GameInfoDialog(
             Spacer(Modifier.height(m.u * 4))
             Row(Modifier.fillMaxWidth()) {
                 info.supportUrl?.let { url ->
-                    // Not read by the companion: a GitHub issue with the file's name and SHA-1 (never the ROM).
+                    // Not read by the companion: a game request with the file's name and SHA-1 (never the ROM).
                     OptionButton(tr("ASK FOR SUPPORT"), m, onClick = { onOpenUrl(url) })
                 }
                 info.gamePick?.let {

@@ -108,9 +108,9 @@ You can open the picker again any time:
 
 When the companion can't read a game at all, every tab except `SETTINGS` shows a `NOT SUPPORTED` page. The game itself keeps running normally on the top screen; you lose the companion, not the game.
 
-Want it supported? Tap `ASK FOR SUPPORT`, on that page or in the game's library `INFO`. It opens a GitHub issue form filled in with the file's name, game code, size and SHA-1, so the right version can be found. It never sends the ROM itself.
+Want it supported? Tap `ASK FOR SUPPORT`, on that page or in the game's library `INFO`. It opens the game request form on the [feedback page](https://pokedaisy.com/feedback/), filled in with the file's name, game code, size and SHA-1, so the right version can be found. You don't need a GitHub account. It never sends the ROM itself.
 
-No GitHub account? The [feedback page](https://pokedaisy.com/feedback/) takes game requests too.
+Every request goes up in [Game requests](https://github.com/lidor30/pokedaisy/discussions/categories/game-requests) on GitHub. Upvote the games you want: the most wanted ones help decide what comes next.
 
 > [!TIP]
 > Before you ask, run the file through the [ROM check](https://pokedaisy.com/compatibility/). If it's a supported hack in a different version, getting the listed version is the quickest fix.

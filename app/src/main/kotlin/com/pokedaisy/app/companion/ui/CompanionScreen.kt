@@ -122,7 +122,7 @@ fun CompanionScreen(
     itemUse: com.pokedaisy.app.companion.ItemUse? = null,
     /** FLY on the MAP tab (Fly.kt); null = no button. */
     fly: com.pokedaisy.app.companion.FlyAction? = null,
-    /** NOT SUPPORTED's ASK FOR SUPPORT (a GitHub issue with the ROM's name and SHA-1); null hides it. */
+    /** NOT SUPPORTED's ASK FOR SUPPORT (a game request with the ROM's name and SHA-1); null hides it. */
     askForSupport: (() -> Unit)? = null,
     /** WHICH GAME IS THIS? ([com.pokedaisy.app.companion.data.BestEffort]): the player's answers; null = no picker. */
     gamePick: com.pokedaisy.app.companion.GamePickActions? = null,
@@ -833,7 +833,7 @@ private fun UnsupportedView(
                 if (askForSupport != null) {
                     Spacer(Modifier.height(m.u * 4))
                     GbaText(
-                        tr("Opens a GitHub issue with the ROM's file name and SHA-1 - never the ROM itself."),
+                        tr("Opens a game request with the ROM's file name and SHA-1 - never the ROM itself."),
                         OptionColors.label.copy(alpha = 0.7f), OptionColors.labelShadow, small, maxLines = 2,
                     )
                 }

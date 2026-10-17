@@ -49,11 +49,12 @@ By hand (this skips the release rule - deploy from a release tag's checkout): `n
 ## Feedback form (no GitHub account)
 
 `/feedback/` (`src/pages/feedback.astro`) lets anyone request a game, report a bug or suggest a feature. The
-fields, limits and the GitHub issue's layout live in one file, `functions/feedback-form.js`, which mirrors
-`.github/ISSUE_TEMPLATE/*.yml`; `firestore.rules` holds the same limits (`test/feedback.test.js` fails if they
+fields, limits and the GitHub post's layout live in one file, `functions/feedback-form.js`, which mirrors
+`.github/DISCUSSION_TEMPLATE/*.yml` and `.github/ISSUE_TEMPLATE/bug_report.yml`; `firestore.rules` holds the same limits (`test/feedback.test.js` fails if they
 drift). A submission is written straight to Firestore's `feedback` collection (write-only: nobody can read one
-back through the API) and the Cloud Function in `functions/index.js` posts it as a GitHub issue, then notes the
-issue number on the document. The optional contact (email / Discord) stays in Firestore; it's never on the issue.
+back through the API) and the Cloud Function in `functions/index.js` posts it on GitHub - a game request or an idea
+as a discussion (Game requests / Ideas), a bug as an issue - then notes the number on the document. The optional
+contact (email / Discord) stays in Firestore; it's never on the post.
 A submission with more than 3 links is held (`status: 'held'`) for a look in the Firebase console.
 
 One-time setup (none of it goes through the website workflow, which deploys hosting only):
@@ -62,7 +63,7 @@ One-time setup (none of it goes through the website workflow, which deploys host
 2. Switch the project to the **Blaze** plan (Cloud Functions and Secret Manager need it; this traffic stays
    within the free tier).
 3. Make a GitHub **fine-grained token**: repository access *only* `lidor30/pokedaisy`, permission
-   *Issues: Read and write*, nothing else. Then, from `website/`:
+   *Issues: Read and write* and *Discussions: Read and write*, nothing else. Then, from `website/`:
    `npx firebase-tools functions:secrets:set GITHUB_TOKEN` (paste the token).
 4. Deploy the rules and the function: `npx firebase-tools deploy --only firestore:rules,functions`
    (redo after changing `firestore.rules` or `functions/`).
