@@ -418,8 +418,14 @@ address and every table the companion reads at the same place (their .sym files 
   `PokemonPicPointers` through `FixPicBank.PicsBanks` (the stored bank is an index from "Pics 1" plus PICS_FIX), Gen 2's
   LZ (`Gen2Lz`), placed in the 7x7 box as PadFrontpic does, coloured with `PokemonPalettes`. Item descriptions come from
   `ItemDescriptions`, a TM's from its move (`TMHMMoves` -> `MoveDescriptions`), as PrintItemDescription does.
-- **Not done**: GUIDE, STEADY FF music (Gen 2's sound engine isn't Gen 1's: STEADY plays the game's audio sped up), the
-  POKéMON switch, a trainer-battle fixture, the TRAINER CARD.
+- **STEADY FF music** (2026-10-18): Gen1MusicRenderer drives Gen 2's sound engine too (`GEN2_MUSIC_CRYSTAL*`, `crystal = true`):
+  a song is the id the first music channel that's on carries (its struct's MusicID: `wMusicID` stays stale after a save's
+  map music comes back - 0x08 over ROUTE 29's channels on the Thor); PlayMusic (00:3B97) takes it in DE (the render core's
+  call sets DE from c); the park is 0x28B2 (`18 FE` inside SaveScreen's `jr z` / `cp`); the loop state is each music
+  channel's Flags1, MusicAddress / LastMusicAddress, NoteDuration and LoopCount (`gbloop N crystal`). `_PlayMusic` restarts
+  only the channels a song uses, so each one is recorded after PlayMusic(0) (`_InitSound`): HEAL "looped" the last song's
+  drums every 3.6 s before that. On the Thor: ROUTE 29 62.3 s, NEW BARK 37.5 s, the wild battle 36.5 s, HEAL ends.
+- **Not done**: GUIDE, the POKéMON switch, a trainer-battle fixture, the TRAINER CARD.
 
 **Pokémon Gold and Silver** (Game Boy Color; `GEN2_GOLD` / `GEN2_SILVER`, `GameKind.GOLD` / `.SILVER`): pret/pokegold
 builds both carts byte for byte (`pokegold.gbc` / `pokesilver.gbc`, its roms.sha1), and the two keep every RAM address at the
@@ -439,7 +445,8 @@ same place (their .sym files agree on all of WRAM / HRAM). What differs from Cry
   this cart's PACK listing "?" items (RAM identical), so the save and fixtures come from single runs fed commands live. Gold's
   hROMBank is FF9F (`gbfar` writes Crystal's FF9D) and its FarCall takes a = bank, hl = address (`gbinject`'s trampoline is
   Crystal's): `gold_trainer`'s README has the trainer battle's workaround (a 15-byte trampoline poked over it).
-- **Not done**: GUIDE, STEADY FF music, the TRAINER CARD (as Crystal).
+- **Not done**: GUIDE, STEADY FF music (Crystal's engine: a `GEN2_MUSIC_*` row with Gold / Silver's addresses), the
+  TRAINER CARD.
 
 **Polished Crystal** (Game Boy Color; Rangi42's open-source hack of Crystal; `GameKind.POLISHED_CRYSTAL`, `GEN2_POLISHED_CRYSTAL` /
 `_FAITHFUL`): versions 3.2.0 to 3.2.3, each in a normal, a faithful (the original games' types, moves and three item names) and
@@ -534,7 +541,7 @@ no symbol file (3% of bank 0 is where Crystal has it), so:
   with the species' two icon colours (02:622C, 8 bytes each) over black; the town maps in the default RED POKéGEAR's
   colours (the player picks the gear's and the PACK's colours at the start). No player head: the character is the player's
   own model and colours.
-- **Not done**: GUIDE, the POKéMON switch, the CARD, STEADY FF music (as Crystal), its own trainer data, and its features
+- **Not done**: GUIDE, the POKéMON switch, the CARD, STEADY FF music (Crystal's tables at its addresses), its own trainer data, and its features
   (the Nuzlocke mode, following Pokémon, the character's own look).
 
 **Pokémon Prism** (Game Boy Color; RainbowDevs' Crystal-engine hack with its own regions, Naljo and Rijon, plus parts
@@ -1498,7 +1505,7 @@ only keeps a 256x256 ring of tiles in VRAM (`field_camera.c`), so the rest would
   pixel for pixel on both games (2026-10-09). Not covered yet: weather drawn over the field (rain sprites, fog on
   BG0) stops at the GBA's edges; scanline effects aren't extended.
 
-### WIDE on the Game Boy (`pk_wide_gb.c`, Pokémon Yellow)
+### WIDE on the Game Boy (`pk_wide_gb.c`, Pokémon Yellow and Crystal)
 
 Since 2026-10-18 English Yellow (CRC32 `7d527d62`) has EXPAND, ZOOM and the look-around too. `pk_wide.c` hands every call
 to `pk_wide_gb.c` while a Game Boy game is configured (`pk_wide_gb_knows` / `_configure`, same CRC lookup); the frame is
@@ -1527,9 +1534,11 @@ ZOOM's steps are whole Game Boy pixels: 7.5 -> 6 / 5 / 4 / 3 on 1080 rows). Addr
   while the field still matches (a wild battle sets it before its flashes and wipe); OFF in the battle; MENU for a menu
   screen (party, Pokédex: too few map tiles); FADE on a white / black frame, and for 30 frames after the field on a
   screen of map tiles that matches nothing (a door: the new map's VRAM goes up a third a frame - the zoom holds).
-- **Off the field: plain bars** (the user's call): battles and menu screens get the screen's own background, flat - the
-  colour most of the frame has (`gbBackground`, sampled every 4 px: white in Yellow; the edges alone gave the trainer
-  card's red border), crossfaded 16 frames; the GBA's glow looked smeared against Gen 1's plain screens. SAVE's prompt
+- **Off the field: plain bars** (the user's call): battles and menu screens get the screen's own background, flat - per
+  row, the most common colour in the outer 32 px of both sides over the rows 32 above and below (`gbBackgroundRows`;
+  above / below the frame, its top / bottom row's): white in Yellow's menus, battles and trainer card (its thin red border
+  doesn't win), black over Crystal's Pokégear and its light colour beside the text box (the user's call). One row's own
+  sides striped the bars where an icon or the SWITCH box touched an edge; the band evens that out. Crossfaded 16 frames; the GBA's glow looked smeared against Gen 1's plain screens. SAVE's prompt
   blanks the screen behind its boxes but for a corner of the map: fewer than 120 map tiles, but all where the field last
   was (`gbExact` on the last matching snapshot) - the field still, so the strips keep the map. OPTION keeps them too (the
   user's call): `wBattleAndStartSavedMenuItem` = OPTION (5, counted with the POKéDEX row: one less before
@@ -1544,12 +1553,52 @@ ZOOM's steps are whole Game Boy pixels: 7.5 -> 6 / 5 / 4 / 3 on 1080 rows). Addr
 - **Checked** headless (`wideon`, `widecheck`, `wideview -160 -72 480 288`, `widerec`) on the English save: out of
   Vermilion City's Pokémon Center, around the city, north into Route 6 and back, the START menu, the Pokédex, a wild
   battle's start. Every map frame matched pixel for pixel but those the game wrote a palette in while drawing (a door's
-  fade, the next map's colours at a connection, opening the START menu): `pk_wide_gb_last_torn`, from a hook on the
-  renderer's `writePalette` while `ly` < 144; `widecheck` doesn't count them. ~0.2-0.4 ms a frame at 480 x 288 with the
+  fade, the next map's colours at a connection, opening the START menu): `pk_wide_gb_last_torn`, from hooks on the
+  renderer's `writePalette` and `writeVRAM` while `ly` < 144; `widecheck` doesn't count them. ~0.2-0.4 ms a frame at 480 x 288 with the
   check; the whole-world search, a few frames at a door, ~2.5 ms.
+- **Crystal** (2026-10-18; rev 0 / rev 1 / Australia, CRC32 `ee6f5188` / `3358e30a` / `bb6dd80c`, pret/pokecrystal's
+  symbols - the same in all three; a `GB_ROMS` row with `gen` 2). The same rebuild, Gen 2's reads where they differ:
+  - RAM: D000-DFFF is always read from WRAM bank 1 (`gbRam`: Crystal switches SVBK mid-frame); `wOverworldMapBlocks`
+    (C800) has Gen 1's layout, the guess is `wOverworldMapAnchor` + `wPlayerMetatileY / X`, the border is `wMapBorderBlock`.
+    Block 0 there *is* the border (`LoadMetatiles` swaps it in: the rows above / below a map with no connection that way
+    stay 0) and ids wrap at 128 (`gbBlock`) - New Bark's south edge didn't match on the Thor before that. Crossing a
+    connection both snapshots can hold the new map half loaded (zeros), so the last exactly matching snapshot is tried
+    whenever a match isn't exact, not only under 90%.
+  - Colours: no learning. The blockset's tile byte indexes the tileset's palette map (`wTilesetPalettes`, bank $13: a
+    nibble per tile, palette + VRAM bank 1), as `_LoadOverworldAttrmapPals` builds the game's own attribute map; the BG
+    map holds the id without bit 7, so screen and world compare id + bank (`gbKey`, 0x100 = bank 1).
+  - Connections: `wNorth/South/West/EastMapConnection` (12 bytes: group, number, strip source / destination), the
+    connected map's header through `MapGroupPointers` (9 bytes, attributes at +3: height, width, blocks bank / pointer).
+  - The screen: the START menu and text boxes are drawn on the BG, re-anchored to scroll 0 (the window covers the whole
+    screen only for a moment); the map name sign is a window over the bottom rows (WY 112): tiles under a window over
+    part of the screen count as neither map nor text, and the check's middle draws the window there.
+  - NPCs: an object struct (`wObjectStructs`, kept up to a step past the screen, OFF_SCREEN) is drawn where the game
+    would draw it - its `OBJECT_SPRITE_X / Y` + offsets against the player's, who stands at (64, 60), corrected by the
+    scroll the next frame takes (`hSCX` - SCX: RAM is a frame ahead) - with its `OBJECT_FACING` frame (walking frames are
+    the tiles + $80; `STANDING` = the direction's standing frame), its tile's bank (bit 7 clear = bank 1), palette, grass
+    and priority flags as `InitSprites` builds them. Map coordinates were a blink: a wandering NPC that tries a blocked
+    step holds the target tile for a frame. Further out, `wMapObjects` without a struct, unless `wObjectMasks` (event
+    flags, time of day): standing on their own spot, facing their movement's way (`SpriteMovementData`), their tiles from
+    `wUsedSprites`, colours from `OverworldSprites` or the object's own palette; variable sprites through
+    `wVariableSprites`, a Pokémon's in palette 0. And the connected maps' people (the game loads only the player's map's
+    objects): their object events from ROM (the attributes' events pointer, in the scripts' bank: 2 filler bytes, then
+    warps 5 / coord events 8 / bg events 5 / objects 13 bytes each, every list after its count), placed through the
+    connection's offset, out unless their event flag is set (CheckObjectFlag: -1 always, any other $FFxx never) or
+    CheckObjectTime keeps them away (`wTimeOfDay` / `hHours`). The whole area's sprites are in VRAM (Crystal loads a map
+    group's set), so New Bark's people stand in the strip from Route 29.
+  - Scenes: TEXT while `wStateFlags` bit 6 (a text box, a menu); a battle from `wBattleMode` *or* `hVBlank` =
+    VBLANK_CUTSCENE (1): DoBattleTransition's flashes and wipe run on the field before `wBattleMode` is set. OPTION:
+    `wMenuSelection` = STARTMENUITEM_OPTION (5) after the START menu (same box corner tiles). OPTION loads palettes of its
+    own, so the field is drawn in the colours it last had on the plain field (`gbFieldPal`; the START menu fades them).
+  - Checked headless (fast-forward's skipped frames too: `wideskip 3`) on rev 1's save at night, and on a state pulled off
+    the Thor: Route 29 east into New Bark Town (the sign up, 118 frames), a house in and
+    out (FIELD / FADE only), the START menu, OPTION, SAVE's prompt, a wild battle from the grass to RUN and back - every
+    map frame exact but those written mid-frame (opening / closing the START menu loads the font and copies the screen
+    back in thirds); no NPC blinks in the strips standing or walking (the water / flowers animate, as in the middle).
 - **Not yet**: the other languages' Yellows (their RAM is English's + 5 from 0xD018: a `GB_ROMS` row each, plus
   `MapHeaderPointers`), Red / Blue (Yellow's + 1 from 0xCF1B, SGB palettes: `palette` takes `sgbAttributes` there), Gold /
-  Silver / Crystal (a different map engine), battles past the edges, walking frames for the off-screen NPCs.
+  Silver and the Crystal hacks (Crystal's engine, their own addresses), battles past the edges, walking frames for Gen 1's
+  off-screen NPCs.
 
 ## Overlays
 

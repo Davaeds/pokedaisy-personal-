@@ -144,8 +144,14 @@ static uint32_t wideOut[PK_WIDE_MAX_VIEW_W * PK_WIDE_MAX_VIEW_H];
 static uint32_t wideCentre[PK_WIDE_W * PK_WIDE_H];
 static struct { int frames, checked, exact, unverified, battle, torn, worst, worstFrame; double ns, maxNs; } wideStats;
 
+static int wideSkipEvery, wideSkipCount;   // wideskip N: like fast-forward, N - 1 of every N frames only noted (pk_wide_skip)
+
 static void wideAfterFrame(void) {
     if (!wideOn) return;
+    if (wideSkipEvery > 1 && ++wideSkipCount % wideSkipEvery) {
+        pk_wide_skip(core, (const uint32_t*) video);
+        return;
+    }
     struct timespec t0, t1;
     clock_gettime(CLOCK_MONOTONIC, &t0);
     pk_wide_view(core, (const uint32_t*) video, wideOut, wideView, wideCheck ? wideCentre : NULL);
@@ -193,7 +199,7 @@ static void wideAfterFrame(void) {
         wideStats.checked--;
         wideStats.unverified++;
         printf("widecheck: frame %u: %d px differ, %s written mid-frame (not counted)\n", core->frameCounter(core), miss,
-               gbGame ? "a palette" : "VRAM");
+               gbGame ? "VRAM or a palette" : "VRAM");
     } else {
         printf("widecheck: frame %u (%s): %d px differ\n", core->frameCounter(core),
                pk_wide_last_mode() == PK_WIDE_MODE_BATTLE ? "battle" : "map", miss);
@@ -436,6 +442,8 @@ static bool gb_call(struct mCore* core, uint16_t fn, uint8_t a, uint8_t c, uint1
     core->busWrite8(core, (uint16_t) (cpu->sp + 1), ret >> 8);
     cpu->a = a;
     cpu->c = c;
+    cpu->d = 0;   // and DE = c: Crystal's PlayMusic takes its song in E
+    cpu->e = c;
     cpu->halted = false;
     cpu->pc = fn;
     cpu->memory.setActiveRegion(cpu, cpu->pc);
@@ -491,20 +499,29 @@ static bool gb_far(struct mCore* core, uint8_t bank, uint16_t addr, uint8_t a, u
 
 // Gen1LoopWatch's state: Yellow's wChannelCommandPointers, ReturnAddresses (CHAN1-4),
 // SoundIDs, NoteDelayCounters, LoopCounters.
-static void gb_music_state(struct mCore* core, uint8_t* out) {
+static void gb_music_state(struct mCore* core, uint8_t* out, bool crystal) {
     static const struct { uint16_t a; int n; } R[] = {{0xC006, 8}, {0xC016, 8}, {0xC026, 4}, {0xC0B6, 4}, {0xC0BE, 4}};
+    // Crystal's channel structs (wChannel1-4, 0x32 bytes from C101): Flags1, MusicAddress + LastMusicAddress,
+    // NoteDuration, LoopCount - Gen2Music's loop state.
+    static const struct { uint16_t a; int n; } C[] = {{3, 1}, {6, 4}, {0x15, 1}, {0x18, 1}};
     int k = 0;
+    if (crystal) {
+        for (int ch = 0; ch < 4; ch++)
+            for (int r = 0; r < 4; r++)
+                for (int i = 0; i < C[r].n; i++) out[k++] = core->busRead8(core, (uint16_t) (0xC101 + 0x32 * ch + C[r].a + i));
+        return;
+    }
     for (int r = 0; r < 5; r++) for (int i = 0; i < R[r].n; i++) out[k++] = core->busRead8(core, R[r].a + i);
 }
 
-static void gb_loop(struct mCore* core, int frames) {
+static void gb_loop(struct mCore* core, int frames, bool crystal) {
     enum { W = 28 };
     uint8_t* states = malloc((size_t) frames * W);
     int still = 0;
     for (int f = 0; f < frames; f++) {
         core->runFrame(core);
         uint8_t* st = states + (size_t) f * W;
-        gb_music_state(core, st);
+        gb_music_state(core, st, crystal);
         if (f > 0 && !memcmp(st, st - W, W)) {
             if (++still >= 90) { printf("gbloop: still from frame %d - ended\n", f - 90); free(states); return; }
         } else still = 0;
@@ -977,8 +994,9 @@ int main(int argc, char** argv) {
             core->busWrite8(core, 0xFF70, oldSvbk);
             printf("gbpoke %x:%04x: %d bytes\n", bank, addr, k);
         } else if (!strcmp(cmd, "gbloop")) {
-            sscanf(line, "%*s %d", &n);
-            gb_loop(core, n);
+            char what[16] = {0};
+            sscanf(line, "%*s %d %15s", &n, what);
+            gb_loop(core, n, !strcmp(what, "crystal"));
         } else if (!strcmp(cmd, "peek32")) {
             char a[64] = {0};
             sscanf(line, "%*s %63s", a);
@@ -1072,6 +1090,11 @@ int main(int argc, char** argv) {
             if (v.w > PK_WIDE_MAX_VIEW_W) v.w = PK_WIDE_MAX_VIEW_W;
             if (v.h > PK_WIDE_MAX_VIEW_H) v.h = PK_WIDE_MAX_VIEW_H;
             if (v.w > 0 && v.h > 0) wideView = v;
+        } else if (!strcmp(cmd, "wideskip")) {
+            // wideskip N: fast-forward's way from now on - only every Nth frame drawn, the others noted (0 / 1: all drawn).
+            sscanf(line, "%*s %d", &n);
+            wideSkipEvery = n;
+            wideSkipCount = 0;
         } else if (!strcmp(cmd, "widecheck")) {
             char what[16] = {0};
             sscanf(line, "%*s %15s", what);
@@ -1118,6 +1141,11 @@ int main(int argc, char** argv) {
             // How the last frame went: its mode (0 glow, 1 map, 2 battle), tilemap score (0..1000, -1 untried), torn.
             printf("wideinfo: frame %u mode %d score %d torn %d close %d scene %d\n", core->frameCounter(core), pk_wide_last_mode(),
                    pk_wide_last_score(), pk_wide_last_torn(), pk_wide_wants_close(), pk_wide_scene());
+            if (gbGame) {   // and the Game Boy's registers as the frame ended
+                const uint8_t* io = ((struct GB*) core->board)->memory.io;
+                printf("wideinfo: lcdc %02x scx %d scy %d wx %d wy %d\n", io[GB_REG_LCDC], io[GB_REG_SCX], io[GB_REG_SCY],
+                       io[GB_REG_WX], io[GB_REG_WY]);
+            }
             sscanf(line, "%*s %255s", arg1);
             if (!strcmp(arg1, "lines") && !gbGame) {   // `wideinfo lines`: BG1's scroll per line as drawn, and as latched
                 printf("wideinfo: latched BG1 %d,%d; per line:", G->memory.io[0x14 >> 1] & 0x1FF, G->memory.io[0x16 >> 1] & 0x1FF);

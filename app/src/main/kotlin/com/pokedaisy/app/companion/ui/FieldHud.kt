@@ -835,7 +835,9 @@ private const val REPEL_ICON_ITEM = 86
 @Composable
 private fun BallCount(item: ItemView, m: GbaTextMetrics, text: GbaTextMetrics) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        ItemIcon(item.iconAsset, hudItemSize(m))
+        // The Game Boy games have no item icons: a drawn ball in the icon's place.
+        if (item.iconAsset != null) ItemIcon(item.iconAsset, hudItemSize(m))
+        else PixelArt(PixelIcons.pokeBall, CAUGHT_BALL, Modifier.size(hudItemSize(m)).padding(hudItemSize(m) / 8))
         // Elite Redux keeps no counts: the ball alone.
         if (com.pokedaisy.app.companion.data.bagHasCounts) GbaText("x${item.quantity}", ink.text, ink.shadow, text)
     }
@@ -848,7 +850,8 @@ private fun HudButtons(p: HudParts, vertical: Boolean, framed: Boolean = true, m
     val buttons = buildList<@Composable () -> Unit> {
         // Left of BAG: the game's own PC, not a HUD panel: the corner arrow says it leaves for the game ([PixelIcons.inGame]).
         p.pc?.let { openPc -> add { HudButton(PC_ICON, PC_COLORS, tk("PC"), null, p.m, framed, inGame = true, onClick = openPc) } }
-        if (p.bag) add { HudButton(BAG_ICON, BAG_COLORS, tk("BAG"), null, p.m, framed) { p.open(FieldHudPanel.BAG, -1) } }
+        // The game's own word for its bag (CUBE, PACK, ITEM...), as the tab chip has it.
+        if (p.bag) add { HudButton(BAG_ICON, BAG_COLORS, companionTabLabel("ITEMS"), null, p.m, framed) { p.open(FieldHudPanel.BAG, -1) } }
         if (p.wildButton) {
             val uncaught = p.wild.orEmpty().distinctBy { it.species }.count { !it.caught }
             add { HudButton(GRASS_ICON, GRASS_COLORS, tk("WILD"), uncaught.takeIf { it > 0 }?.toString(), p.m, framed) { p.open(FieldHudPanel.WILD, 0) } }
@@ -1144,7 +1147,8 @@ private fun panelPlace(dock: Boolean, top: Boolean, u: Dp, inset: PaddingValues)
 }
 
 /**
- * The compact BAG: pocket tabs, the items as a grid of icons with counts, the picked one's name and text, and USE
+ * The compact BAG: pocket tabs, the items as a grid of icons with counts (a list of names where the game has no item
+ * pictures: the Game Boy games), the picked one's name and text, and USE
  * where the game lets the app use it (FieldItems): straight away, or on the Pokémon picked from the party under it.
  * Items used on a move (PP) are left to the BAG tab.
  */
@@ -1159,6 +1163,8 @@ private fun HudBagPanel(
         .filter { pk -> snapshot.items.any { it.pocket == pk } }
     var pocket by remember { mutableStateOf(startPocket.takeIf { it in pockets } ?: pockets.firstOrNull() ?: POCKET_ITEMS) }
     val items = snapshot.items.filter { it.pocket == pocket }
+    // The bag as a whole, so every pocket looks the same: no item has a picture.
+    val noItemPictures = snapshot.items.all { it.iconAsset == null }
     var pickedId by remember(pocket) { mutableStateOf(items.firstOrNull()?.itemId) }
     val picked = items.firstOrNull { it.itemId == pickedId }
     // What the last USE did, for the item it was done with; the party pick a USE on a Pokémon opened.
@@ -1168,7 +1174,7 @@ private fun HudBagPanel(
     val c = ink
     HudPanelScrim(onClose, align) { window ->
         Column(place.width(u * 300).hudPanel(u).then(window).padding(u * 7), verticalArrangement = Arrangement.spacedBy(u * 4)) {
-            PanelHeading(BAG_ICON, BAG_COLORS, tk("BAG"), m, onClose)
+            PanelHeading(BAG_ICON, BAG_COLORS, companionTabLabel("ITEMS"), m, onClose)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(u * 2), verticalArrangement = Arrangement.spacedBy(u * 2)) {
                 pockets.forEach { pk ->
                     val on = pk == pocket
@@ -1182,7 +1188,27 @@ private fun HudBagPanel(
             // A whole screen pixel per GBA pixel, like the party icons (the HUD's corners use 2/3 of that).
             val icon = with(LocalDensity.current) { (24 * hudIconScale(m)).toDp() }
             // Two and a half rows of items, whatever the pocket holds: the half row says the rest scrolls.
-            Column(Modifier.height(u * (46 * 2 + 2 * 2 + 23)).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(u * 2)) {
+            val listHeight = u * (46 * 2 + 2 * 2 + 23)
+            if (noItemPictures) {
+                // A game with no item pictures (the Game Boy games): the pocket as a list, as their own PACK shows it -
+                // each item's name and count, the picked one's row lit.
+                Column(Modifier.height(listHeight).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(u)) {
+                    items.forEach { item ->
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .background(if (item.itemId == pickedId) c.cellOn else c.cell, PixelRoundedShape(u * 3))
+                                .soundClickable { pickedId = item.itemId }
+                                .padding(horizontal = u * 5, vertical = u * 3),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            GbaText(bagItemName(item.itemId), c.text, c.shadow, m, Modifier.weight(1f))
+                            if (item.pocket != POCKET_KEY_ITEMS && com.pokedaisy.app.companion.data.bagHasCounts) {
+                                GbaText("x${item.quantity}", c.text, c.shadow, m)
+                            }
+                        }
+                    }
+                }
+            } else Column(Modifier.height(listHeight).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(u * 2)) {
                 items.chunked(6).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(u * 2)) {
                         row.forEach { item ->

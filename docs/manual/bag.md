@@ -8,7 +8,7 @@ keywords: [items, inventory, cube, pockets, tm, hm, description, sort, use item,
 
 The bag tab shows everything you're carrying, pocket by pocket, as the game has it right now. It's handy for a quick count before a long cave, or for reading what an item does without digging through the game's menus.
 
-The tab's name follows the game: `BAG` in most games, `PACK` in Gold, Silver, Crystal, Crystal Clear and Prism, `CUBE` in Unbound, `INVENTORY` in R.O.W.E. and `POCKETS` in Super Mariomon. The screen itself is drawn like that game's bag.
+The tab's name follows the game: `BAG` in most games, `ITEM` in Red, Blue and Yellow, `PACK` in Gold, Silver, Crystal, Crystal Clear and Prism, `CUBE` in Unbound, `INVENTORY` in R.O.W.E. and `POCKETS` in Super Mariomon. The HUD's bag uses the same name. The screen itself is drawn like that game's bag.
 
 ## Pockets and sorting
 

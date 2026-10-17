@@ -414,7 +414,9 @@ no Crystal save: one was played headless in rev 1 with mgba_dump's `savestate` /
 the `crystal` fixture's README) and written to RetroArch's saves under each release's name; it loads in all three. Gen 2 can
 miss a one-frame press outside its menus (hold 3 frames headless); the battle menus take the controls' one-frame presses.
 Battle controls ride the Gen 1 path (`battleGen1Menus`): `readGen2BattleInput` reads `_2DMenu`'s cursor and checks the ▶.
-No GUIDE, STEADY music (falls back to SPED-UP), CARD or trainer-battle fixture yet. The POKéMON switch: see the switch
+STEADY FF music runs on Gen1MusicRenderer with Crystal's tables (`GEN2_MUSIC_CRYSTAL*`: the song is the playing channel's
+MusicID, never the stale `wMusicID`; each recorded after PlayMusic(0), since `_PlayMusic` leaves unused channels playing the
+last song). No GUIDE, CARD or trainer-battle fixture yet. The POKéMON switch: see the switch
 paragraph's Game Boy part (`GbPartySwitch`).
 **Crystal Clear (2026-10-14)**: v2.5.11 / v2.6.0, each a Standard Colors and a Color Filter build (palettes apart, the same
 bytes): `GameKind.CRYSTAL_CLEAR` on the Gen 2 reader (`isCrystalFamily` for every Crystal look / behaviour), by SHA-1
@@ -792,7 +794,7 @@ up was too big, so its pixels aren't whole screen pixels), each part hideable (`
 party or minimap, the balls over the buttons + a MAP button right of WILD, all bottom left and left-aligned (the user's call), and
 SETTINGS > HUD > LAYOUT is greyed out saying the screen is too small (`FieldHudFit.tight`, Compose state). DOCK whose bar is wider than
 the picture falls back to CORNERS. The
-game is **never paused** under its panels (the user's call). Shown only while `EmulatorEngine.onField` (GBA, on the field screen positively - `FfMenuWatch.onField`, the learned field callback2, so a new game's naming screen doesn't pass for field - no battle /
+game is **never paused** under its panels (the user's call). Shown only while `EmulatorEngine.onField` (GBA, on the field screen positively - `FfMenuWatch.onField`, the learned field callback2, so a new game's naming screen doesn't pass for field; a Game Boy game: pk_wide_gb.c's scene says FIELD - with EXPAND off the engine keeps it configured with nothing drawn, `gbSceneGame` / `pk_wide_probe`, Yellow and Crystal - no battle /
 region map / held frame, and at EXPAND `pkWideScene` FIELD; FADE holds; on after 20 field frames, off at once) and the snapshot has a
 game out of battle; off on a phone held upright (to do later). Without EXPAND every layout but RAILS keeps to the game's picture (`EmulatorView.onGameRect` -> `FieldHud(frame)`; RAILS take the room beside it). The ComposeView sits over the game view (`GameStageLayout.overGame`)
 above the touch pad (untouched areas fall through) and keeps clear of the pad's rows (`TouchControlsView.clearTop` / `clearBottom`);
@@ -873,13 +875,17 @@ OVERLAY: a BG0 picture over the field; BATTLE_START: `sTransitionData` set, `PK_
 menu) - one timed ease-in-out per event, started before anything shows (the user's complaint: the old exponential
 ease reacted to the wipe already on screen, while the margins dissolved); the right stick moves the view (stays
 standing, glides back when walking). docs/DEVELOPMENT.md's WIDE section.
-**EXPAND on the Game Boy (2026-10-18, English Yellow)**: `pk_wide_gb.c`, which `pk_wide.c` hands every call to while a Game
-Boy game is configured (same CRC lookup; frame 160x144: `pk_wide_frame_w`, `WideCamera.frameW`). Gen 1's field rebuilt from
-`wOverworldMap` + the ROM blockset + VRAM + the renderer's Color palettes, connected maps from the ROM; the screen found by
-matching the BG map (or the full-screen window a text box uses) against that world, never from RAM alone; off-screen NPCs
-drawn standing from wSpriteStateData. Same rule as the GBA: `widecheck` must find the middle exact (frames the game wrote a
-palette in mid-frame aren't counted: `pk_wide_gb_last_torn`). Battles / menus get plain bars in the screen's background colour
-(the user's call: white in Yellow - the trainer card too - no glow), SAVE's prompt and OPTION keep the map. docs/DEVELOPMENT.md's "WIDE on the Game Boy".
+**EXPAND on the Game Boy (2026-10-18, English Yellow, then Crystal)**: `pk_wide_gb.c`, which `pk_wide.c` hands every call to
+while a Game Boy game is configured (same CRC lookup; frame 160x144: `pk_wide_frame_w`, `WideCamera.frameW`). The field rebuilt
+from the overworld block array + the ROM blockset + VRAM + the renderer's Color palettes, connected maps from the ROM; the screen
+found by matching the BG map (or the full-screen window a Gen 1 text box uses) against that world, never from RAM alone;
+off-screen NPCs drawn from RAM (Gen 1's wSpriteStateData, Crystal's object structs and map objects; Crystal's connected maps' people from
+their ROM object events). Crystal (`gen` 2 rows):
+colours from the tileset's palette map, D000-DFFF read from WRAM bank 1, its battle transition (`hVBlank` 1) as the battle's
+start. Same rule as the GBA: `widecheck` must find the middle exact (frames the game wrote VRAM or a palette in mid-frame aren't
+counted: `pk_wide_gb_last_torn`). Battles / menus get plain bars in the screen's background colour by bands of rows (the user's call: white
+in Yellow - the trainer card too - no glow; black beside the Pokégear's top part), SAVE's prompt and OPTION keep the map (OPTION in the field's last colours).
+docs/DEVELOPMENT.md's "WIDE on the Game Boy".
 **Transitions (2026-10-12, FireRed first)**: FireRed's map preview (a BG0 picture over the field on entering a forest /
 cave) dims the map around it, frame and margins (`overlayDim`; mGBA's output pixels carry their layer in the top byte,
 `fromBg`, so BG0's own pixels are left alone). **AUTO ZOOM IN** (SETTINGS on either screen, under ASPECT, shown only on EXPAND; `Prefs.expandZoomOnText`, ON):

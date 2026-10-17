@@ -2144,6 +2144,12 @@ void pk_wide_skip(struct mCore* core, const uint32_t* frame) {
     pk_wide_view(core, frame, NULL, v, NULL);
 }
 
+void pk_wide_probe(struct mCore* core, const uint32_t* frame, int skip) {
+    static uint32_t px;
+    struct PkWideView v = { 0, 0, 1, 1 };
+    if (gbGame) pk_wide_view(core, frame, skip ? NULL : &px, v, NULL);
+}
+
 static int viewInner(struct mCore* core, const uint32_t* frame, uint32_t* out, struct PkWideView v, uint32_t* centre) {
     if (gbGame) return pk_wide_gb_view(core, frame, out, v, centre);
     realFrame = frame;

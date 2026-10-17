@@ -167,6 +167,24 @@ class FieldHudScreenshotTest {
         snap = snapshot.copy(items = snapshot.items + (1..14).map { ItemView(it, "Ball $it", it, spriteAsset("items", it), POCKET_ITEMS) }),
     )
 
+    /** A Game Boy game's balls: no item icons, so a drawn ball in their place. */
+    @Test fun ballsWithoutIcons() = shot(
+        FieldHudStyle(),
+        snap = snapshot.copy(items = snapshot.items.map { if (it.pocket == POCKET_POKE_BALLS) it.copy(iconAsset = null) else it }),
+    )
+
+    /** The bag under the game's own word: Unbound's CUBE, on the button and the panel. */
+    @Test fun bagOwnWord() {
+        activeGame = GameKind.UNBOUND
+        shot(FieldHudStyle(), panel = FieldHudPanel.BAG)
+    }
+
+    /** The BAG of a game without item pictures (the Game Boy games): a list of names. */
+    @Test fun bagOpenWithoutIcons() = shot(
+        FieldHudStyle(), panel = FieldHudPanel.BAG,
+        snap = snapshot.copy(items = snapshot.items.map { it.copy(iconAsset = null) }),
+    )
+
     @Test fun bagOpenWindow() = shot(FieldHudStyle(look = FieldHudLook.WINDOW), panel = FieldHudPanel.BAG)
 
     @Test fun bagOpenDock() = shot(FieldHudStyle(FieldHudLayout.DOCK), panel = FieldHudPanel.BAG)

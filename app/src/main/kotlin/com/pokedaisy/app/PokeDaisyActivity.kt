@@ -1171,7 +1171,7 @@ class PokeDaisyActivity : Activity() {
         // GBA art fingerprints, FireRed's region_map.c); its click is borrowed.
         val gameBoy = RomIdentity.isGameBoy(r)
         romIsGameBoy = gameBoy
-        // EXPAND: the GBA games pk_wide.c knows, and Game Boy ones pk_wide_gb.c does (Yellow); the field reads are GBA only.
+        // EXPAND: the GBA games pk_wide.c knows, and Game Boy ones pk_wide_gb.c does (Yellow, Crystal); the field reads are GBA only.
         wideGame = WideScreen.gameFor(crc)
         fieldGame = if (gameBoy) WideScreen.OFF else WideScreen.fieldGameFor(crc)
         wildFlag = 0L
@@ -1195,7 +1195,7 @@ class PokeDaisyActivity : Activity() {
         // A Game Boy cart's POKéDEX pages are read from its bytes (bank-switched: not on the bus whole); a few MB at most.
         val gbRom = if (gameBoy) runCatching { r.readBytes() }.getOrNull() else null
         com.pokedaisy.app.companion.data.Gen1Dex.rom = gbRom
-        // STEADY FF music: a Gen 1 cart's songs come from its own sound engine (Gen1MusicRenderer).
+        // STEADY FF music: a Gen 1 cart's (and Crystal's) songs come from its own sound engine (Gen1MusicRenderer).
         gen1Music = gbRom?.let {
             val sha1 = java.security.MessageDigest.getInstance("SHA-1").digest(it).joinToString("") { b -> "%02x".format(b) }
             com.pokedaisy.app.companion.data.Gen1Music.forSha1(sha1)
@@ -1678,7 +1678,11 @@ class PokeDaisyActivity : Activity() {
         if (::portraitPanel.isInitialized) portraitPanel.expand = aspect == GameAspect.WIDE
         view.stretch = aspect == GameAspect.STRETCH
         view.wide = aspect == GameAspect.WIDE
-        if (::engine.isInitialized) engine.wideGame = if (aspect == GameAspect.WIDE) wideGame else WideScreen.OFF
+        if (::engine.isInitialized) {
+            engine.wideGame = if (aspect == GameAspect.WIDE) wideGame else WideScreen.OFF
+            // A Game Boy game's field read for the HUD is pk_wide_gb.c's scene, EXPAND or not.
+            engine.gbSceneGame = if (romIsGameBoy) wideGame else WideScreen.OFF
+        }
         view.gbaColors = prefs.gbaColors
         CompanionColors.set(
             prefs.gbaColors && prefs.companionShaders,

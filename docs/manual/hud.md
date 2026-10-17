@@ -10,6 +10,8 @@ Modern Pokémon games keep the important things on screen while you explore: you
 
 It's on by default. Turn it off, or change how it looks, in `HUD`, in the `SCREEN` group of Settings on either screen.
 
+On the Game Boy it shows in Yellow (the English cart) and Crystal too, with or without `EXPAND`. Those games have no pictures for their items, so your balls show as a plain drawn ball with the count, and the bag lists your items by name, the way their own bag does.
+
 ## What it shows
 
 | Part | What you see | Tap it to |
@@ -19,7 +21,7 @@ It's on by default. Turn it off, or change how it looks, in `HUD`, in the `SCREE
 | Poké Balls | The balls in your bag and how many of each (Elite Redux keeps no counts, so just the balls there). | Open the bag on its `POKé BALLS` pocket. |
 | Steps left | While an item that keeps wild Pokémon away is working, a window by your balls shows its icon and the steps it has left, counting down as you walk, over a bar that drains from green to yellow to red. The count turns gold for the last 20 steps, and the window goes when the effect wears off. It shows for the games whose [bag](bag.md) can use those items. | Open the bag. |
 | `PC` | Your game's own PC, opened right where you stand, so you can withdraw or deposit Pokémon without walking to a Pokémon Center. The small arrow on its corner means it opens the game's own screen, not one of the HUD's. It shows for the games whose [bag](bag.md) has the `PC` button. | |
-| `BAG` | A compact bag: the pockets as tabs and your items as a grid with counts. Pick an item to read about it, and `USE` it where the companion can. | |
+| `BAG` | A compact bag: the pockets as tabs and your items as a grid with counts. Pick an item to read about it, and `USE` it where the companion can. The button and the bag carry the game's own name for it, like the [bag tab](bag.md) (`PACK`, `CUBE`, `ITEM`...). | |
 | `WILD` | This area's wild Pokémon: by grass, water, fishing rod or rock, with their levels and how often they show up. Ones you haven't seen stay `???`, and a ball marks the ones you've caught. The red number on the button counts the ones you haven't caught yet. | |
 
 The game keeps running while the map, bag, wild list or a summary is open. Tap anywhere around it, or press `BACK`, to close it. With the `GLASS` and `WHITE GLASS` looks these open in see-through panels too.

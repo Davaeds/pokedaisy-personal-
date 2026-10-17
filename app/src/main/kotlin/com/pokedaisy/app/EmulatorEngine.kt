@@ -73,6 +73,9 @@ class EmulatorEngine(
 
     /** WIDE's native tables for this game ([WideScreen.gameFor]), or [WideScreen.OFF]; applied between frames. */
     @Volatile var wideGame = WideScreen.OFF
+    /** A Game Boy game pk_wide_gb.c knows (its [WideScreen.gameFor]), EXPAND on or not: with EXPAND off it's configured
+     * anyway with nothing drawn, for its scene (the FIELD HUD's field read: a Game Boy game has no FfMenuWatch). */
+    @Volatile var gbSceneGame = WideScreen.OFF
 
     /** The same tables for the field reads behind SCENE SPEEDS' TEXT, AUTO-RUN and RUN INDOORS, EXPAND on or off
      * ([WideScreen.gameFor], [WideScreen.OFF] = a game they don't know); applied between frames. */
@@ -309,7 +312,8 @@ class EmulatorEngine(
 
     /**
      * FIELD HUD: the player is on the plain overworld - a GBA game on its field screen (FfMenuWatch: learned from the
-     * player's first steps, then remembered per ROM), no battle or region map up,
+     * player's first steps, then remembered per ROM), a Game Boy game's screen matched to its map (pk_wide_gb.c's
+     * SCENE_FIELD, [gbSceneGame]), no battle or region map up,
      * and at EXPAND (whose scene is known every frame, [MgbaCore.pkWideScene]) no text box, map preview or battle
      * transition either; a fade between maps changes nothing. Comes on [FIELD_SETTLE_FRAMES] after the field is
      * back (a conversation's lines don't make the HUD blink), goes at once. Set on the emu thread.
@@ -705,14 +709,18 @@ class EmulatorEngine(
                     MgbaCore.pkSetRewind(rewindWanted)
                     rewindApplied = rewindWanted
                 }
-                val wideWanted = wideGame
+                val probeOnly = wideGame == WideScreen.OFF && gbSceneGame != WideScreen.OFF
+                val wideWanted = if (probeOnly) gbSceneGame else wideGame
                 if (wideWanted != wideApplied) {
                     MgbaCore.pkWideConfigure(wideWanted)
                     wideApplied = wideWanted
                     wideCamera?.reset()
                 }
                 val camera = wideCamera
-                if (wideApplied != WideScreen.OFF && camera != null) {
+                if (probeOnly) {
+                    MgbaCore.pkWideSetView(0, 0, 0, 0)   // nothing drawn: the native side only works out the scene
+                    wideScene = MgbaCore.pkWideScene()
+                } else if (wideApplied != WideScreen.OFF && camera != null) {
                     // Never worth the game: a camera that throws leaves the plain frame on screen for this run.
                     try {
                         // Fast-forward runs several frames per screen refresh: only one of them is ever seen, so only
@@ -798,12 +806,14 @@ class EmulatorEngine(
                 mapOpen = gba && RegionMapWatch.isOpen(InProcessReader)
                 // A shop's screens count as the field: its clerk talks inside them (GitHub #41).
                 menuOpen = gba && FfMenuWatch.tick(InProcessReader) && !ShopWatch.isOpen(InProcessReader)
-                if (wideApplied == WideScreen.OFF || wideCamera == null) wideScene = -1
+                if (wideApplied == WideScreen.OFF || (wideCamera == null && !probeOnly)) wideScene = -1
                 // A fade between two maps keeps whatever the HUD was doing.
                 if (wideScene != WideCamera.SCENE_FADE) {
                     // The field's own screen, positively (FfMenuWatch): "no menu found" isn't enough - a game whose field
                     // screen isn't learned yet (a new game) never reports a menu, so its naming screen passed as field.
-                    val field = gba && FfMenuWatch.onField && !mapOpen && !battleInput.holdFrame &&
+                    // A Game Boy game: its scene (pk_wide_gb.c's screen match, with EXPAND or without) must say FIELD.
+                    val screen = if (gba) FfMenuWatch.onField && !mapOpen else wideScene == WideCamera.SCENE_FIELD
+                    val field = screen && !battleInput.holdFrame &&
                         battleInput.gameState == com.pokedaisy.app.companion.data.BATTLE_INPUT_NONE &&
                         (wideScene == -1 || wideScene == WideCamera.SCENE_FIELD)
                     fieldFrames = if (field) fieldFrames + 1 else 0

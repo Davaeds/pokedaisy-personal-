@@ -12,7 +12,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | Yellow (GB) | DE / FR / IT / ES | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Red / Blue (GB) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Gold / Silver (GBC) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
-| Crystal (GBC) | USA, USA/Europe rev 1, AU | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
+| Crystal (GBC) | USA, USA/Europe rev 1, AU | ✅ ¹² | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Crystal Clear (GBC) | 2.5.11, 2.6.0 (4 builds) | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Prism (GBC) | 0.95 build 254 | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Polished Crystal (GBC) | 3.2.0 - 3.2.3 (16 builds) | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
@@ -133,8 +133,12 @@ change to any of the places listed under "Where it's decided" updates its rows h
     the Game Boy"): the field and its text boxes / START menu / SAVE prompt / OPTION, ZOOM and the look-around; battles
     and menu screens get plain bars in the screen's background (white), not a wider scene. Checked headless with `widecheck` on a walk through Vermilion City's Pokémon Center, the city and
     Route 6 and back (zoomed out to 480 x 288): every map frame matched the real one pixel for pixel but the four the game
-    wrote a palette in mid-frame (a door's fade, a connection's new colours). The other languages' Yellows and Red / Blue
-    aren't mapped yet (—).
+    wrote a palette in mid-frame (a door's fade, a connection's new colours). Crystal (rev 0, rev 1, Australia: the same
+    RAM) has the same, with its own reads: the tileset's palette map for the colours, the object structs and the map's
+    objects for the NPCs off screen, its battle transition for the pull-in. Checked on rev 1's save at night: Route 29 into
+    New Bark Town (its name sign up), in and out of a house, the START menu, OPTION, SAVE, a wild battle and RUN: every
+    map frame exact but those the game wrote VRAM or a palette in mid-frame. The other languages' Yellows, Red / Blue,
+    Gold / Silver and the Crystal hacks aren't mapped yet (—).
 
 ## What each column is
 

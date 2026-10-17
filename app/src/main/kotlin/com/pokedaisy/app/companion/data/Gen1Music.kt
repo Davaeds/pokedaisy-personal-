@@ -2,7 +2,7 @@ package com.pokedaisy.app.companion.data
 
 /**
  * A Game Boy Pokémon game's music, for STEADY FF music (the GB twin of [FfMusicKey] /
- * [M4aSongs]): Gen 1 plays a song through its audio engine's four music channels
+ * [M4aSongs]; Crystal's engine too, [GEN2_MUSIC_CRYSTAL]): Gen 1 plays a song through its audio engine's four music channels
  * (wChannelSoundIDs CHAN1-4; CHAN5-8 are sound effects and cries), from one of
  * several audio banks (wAudioROMBank), so a song is its (bank, id) - song ids repeat
  * across banks. The render core starts one by calling the game's own PlayMusic
@@ -24,6 +24,12 @@ data class Gen1MusicTables(
     val channelState: List<Pair<Long, Int>>,
     /** Every song, as (bank, id): the background pass renders each once. */
     val songs: List<Pair<Int, Int>>,
+    /** Crystal's engine (pret/pokecrystal): a song is its id alone (bank 0 in the key), read off the first music channel
+     * that's on ([musicChannelFlags]: each one's Flags1, bit 0; the channel's MusicID is the struct's first word) - not
+     * `wMusicID`, which a save's map music comes back without (it read 0x08 over ROUTE 29's channels on the Thor) - and
+     * PlayMusic takes it in DE (the render core's call puts the id there). */
+    val crystal: Boolean = false,
+    val musicChannelFlags: List<Long> = emptyList(),
 )
 
 val GEN1_MUSIC_YELLOW = Gen1MusicTables(
@@ -83,9 +89,37 @@ val GEN1_MUSIC_RED = GEN1_MUSIC_YELLOW.copy(
 )
 val GEN1_MUSIC_BLUE = GEN1_MUSIC_RED.copy(sha1 = TelemetrySampler.BLUE_SHA1)
 
+/**
+ * Crystal (rev 0, rev 1, Australia: pret/pokecrystal, the same addresses in all three). Gen 2's sound engine: songs are ids
+ * 1..0x66 (MUSIC_TITLE .. MUSIC_MOBILE_CENTER) with their banks in its own pointer table; PlayMusic (00:3B97) takes the id in
+ * DE. Its channel structs are 0x32 bytes from wChannel1 (C101): Flags1 +3, MusicAddress / LastMusicAddress +6, NoteDuration
+ * +0x15, LoopCount +0x18. The park: 0x28B2, the `18 FE` inside SaveScreen's `jr z, .down` / `cp UP` (nothing jumps there).
+ * Checked headless (mgba_dump gbpark / gbcall / `gbloop N crystal`): NEW BARK TOWN loops at 37.6 s, CHERRYGROVE CITY 22.9 s,
+ * the Johto wild battle 36.6 s after a 15.7 s intro, ROUTE 29 62.3 s; HEAL ends by itself - once the render core starts each
+ * song from silence (Gen1MusicRenderer: _PlayMusic leaves the channels a song doesn't use playing the last one's).
+ */
+private fun crystalMusic(sha1: String) = Gen1MusicTables(
+    sha1 = sha1,
+    playMusic = 0x3B97,
+    spin = 0x28B2,
+    audioRomBank = 0L,
+    channelSoundIds = 0xC101L,    // wChannel1MusicID (unused: current() reads each channel's)
+    channelState = (0 until 4).flatMap { ch ->
+        val b = 0xC101L + 0x32L * ch
+        listOf(b + 3 to 1, b + 6 to 4, b + 0x15 to 1, b + 0x18 to 1)
+    },
+    songs = (1..0x66).map { 0 to it },
+    crystal = true,
+    musicChannelFlags = (0 until 4).map { 0xC104L + 0x32L * it },
+)
+
+val GEN2_MUSIC_CRYSTAL = crystalMusic(TelemetrySampler.CRYSTAL_SHA1)
+val GEN2_MUSIC_CRYSTAL_REV1 = crystalMusic(TelemetrySampler.CRYSTAL_REV1_SHA1)
+val GEN2_MUSIC_CRYSTAL_AU = crystalMusic(TelemetrySampler.CRYSTAL_AU_SHA1)
+
 object Gen1Music {
     private val GAMES = listOf(GEN1_MUSIC_YELLOW, GEN1_MUSIC_YELLOW_DE, GEN1_MUSIC_YELLOW_FR, GEN1_MUSIC_YELLOW_IT, GEN1_MUSIC_YELLOW_ES,
-        GEN1_MUSIC_RED, GEN1_MUSIC_BLUE)
+        GEN1_MUSIC_RED, GEN1_MUSIC_BLUE, GEN2_MUSIC_CRYSTAL, GEN2_MUSIC_CRYSTAL_REV1, GEN2_MUSIC_CRYSTAL_AU)
 
     fun forSha1(sha1: String): Gen1MusicTables? = GAMES.firstOrNull { it.sha1 == sha1 }
 
@@ -100,6 +134,13 @@ object Gen1Music {
 
     /** What [r]'s music channels are playing, or null (silence / unreadable). */
     fun current(r: MemoryReader, t: Gen1MusicTables): String? = runCatching {
+        if (t.crystal) {
+            // The first music channel that's on: its own MusicID (the struct's first word, 3 bytes before Flags1).
+            val flags = t.musicChannelFlags.firstOrNull { (r.readCoreMemory(it, 1)[0].toInt() and 1) != 0 } ?: return null
+            val b = r.readCoreMemory(flags - 3, 2)
+            val id = (b[0].toInt() and 0xFF) or ((b[1].toInt() and 0xFF) shl 8)
+            return if (id in 1..0xFF) key(0, id) else null
+        }
         val ids = r.readCoreMemory(t.channelSoundIds, 4)
         val id = ids.map { it.toInt() and 0xFF }.firstOrNull { it != 0 } ?: return null
         key(r.readCoreMemory(t.audioRomBank, 1)[0].toInt() and 0xFF, id)

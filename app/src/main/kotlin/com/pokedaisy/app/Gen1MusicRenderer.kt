@@ -167,7 +167,11 @@ class Gen1MusicRenderer(
 
         /** PlayMusic(id, bank) from the parked loop; true once its channels are playing it. */
         private fun start(bank: Int, id: Int, key: String): Boolean {
-            if (!MgbaCore.pkRenderGbCall(tables.playMusic, id, bank, tables.spin)) return false
+            // Crystal's _PlayMusic restarts only the channels the new song has, so a song after another kept what that
+            // one left on the rest (HEAL looped the last song's drums): PlayMusic(0) - _InitSound - silences them first.
+            if (tables.crystal && !MgbaCore.pkRenderGbCall(tables.playMusic, 0, 0, tables.spin)) return false
+            // Gen 1: a = id, c = bank; Crystal's PlayMusic reads DE, which the call sets from c.
+            if (!MgbaCore.pkRenderGbCall(tables.playMusic, id, if (tables.crystal) id else bank, tables.spin)) return false
             repeat(START_FRAMES) {
                 MgbaCore.pkRenderRunFrame()
                 MgbaCore.pkRenderReadAudio(scratch)

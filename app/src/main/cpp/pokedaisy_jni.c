@@ -418,6 +418,10 @@ Java_com_pokedaisy_app_MgbaCore_pkRunFrame(JNIEnv* env, jobject thiz) {
             g.wideCrc = 0;
             g.wideW = g.wideH = 0;
         }
+    } else if (g.wide && g.wideCrc && !pk_is_gba(g.core) && pkWideFrameFits()) {
+        // A Game Boy game with EXPAND off: its scene alone (the FIELD HUD's field read), nothing drawn.
+        pk_wide_probe(g.core, (const uint32_t*) g.video, g.wideSkipNext);
+        g.wideW = g.wideH = 0;
     } else {
         g.wideW = g.wideH = 0;
     }
@@ -795,7 +799,7 @@ Java_com_pokedaisy_app_MgbaCore_pkRenderGbPark(JNIEnv* env, jobject thiz, jint s
 // Calls the game's `fn` (bank 0) with A = `a`, C = `c` on the parked GB render core
 // and returns once it comes back to `ret` (the park loop, pushed as the return
 // address), interrupts held off meanwhile so the VBlank handler can't run halfway
-// through it. Gen 1: PlayMusic(a = song id, c = its audio bank).
+// through it. Gen 1: PlayMusic(a = song id, c = its audio bank); Crystal: PlayMusic(de = song id), so DE is set to c too.
 JNIEXPORT jboolean JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkRenderGbCall(JNIEnv* env, jobject thiz, jint fn, jint a, jint c, jint ret) {
     if (!rg.core || pk_is_gba(rg.core)) {
@@ -813,6 +817,8 @@ Java_com_pokedaisy_app_MgbaCore_pkRenderGbCall(JNIEnv* env, jobject thiz, jint f
     core->busWrite8(core, (uint16_t) (cpu->sp + 1), (uint8_t) ((ret >> 8) & 0xFF));
     cpu->a = (uint8_t) a;
     cpu->c = (uint8_t) c;
+    cpu->d = 0;   // and DE = c: Crystal's PlayMusic takes its song in E
+    cpu->e = (uint8_t) c;
     cpu->halted = false;
     cpu->pc = (uint16_t) fn;
     cpu->memory.setActiveRegion(cpu, cpu->pc);
