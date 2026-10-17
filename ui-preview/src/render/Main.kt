@@ -140,7 +140,7 @@ class FakeSettings(showHintsInitially: Boolean = true, initialTabs: List<String>
     private var ffSpeed = 4f
     private var ff = false
     private var music = com.pokedaisy.app.companion.FfMusicMode.STEADY
-    private var touch = 0
+    private var touch = com.pokedaisy.app.companion.TouchControlsStyle()
     private var hints = showHintsInitially
     override val ffMaxSpeed get() = ffSpeed
     override fun setFfMaxSpeed(v: Float) { ffSpeed = v }
@@ -151,8 +151,8 @@ class FakeSettings(showHintsInitially: Boolean = true, initialTabs: List<String>
     private var ffModeValue = com.pokedaisy.app.companion.FfMode.SMART
     override val ffMode get() = ffModeValue
     override fun setFfMode(mode: com.pokedaisy.app.companion.FfMode) { ffModeValue = mode }
-    override val touchControlsMode get() = touch
-    override fun setTouchControlsMode(v: Int) { touch = v }
+    override val touchStyle get() = touch
+    override fun setTouchStyle(style: com.pokedaisy.app.companion.TouchControlsStyle) { touch = style }
     // SCENE SPEEDS: battles at 2x, the rest SAME; AUTO-RUN on (the preview's game is one the field reads know).
     private var sceneBattle = 2f
     private var sceneText = 0f
@@ -630,6 +630,28 @@ fun withAspect(aspect: com.pokedaisy.app.companion.GameAspect, make: () -> andro
     return make()
 }
 
+/** TOUCH CONTROLS set to [style] before [make] (the activity's reset puts the defaults back first). */
+fun withTouch(style: com.pokedaisy.app.companion.TouchControlsStyle, make: () -> androidx.activity.ComponentActivity): androidx.activity.ComponentActivity {
+    Prefs(android.content.Context()).touchControlsStyle = style
+    return make()
+}
+
+/** A [w]x[h] phone at [density] with the touch controls as [style] lays them out, over the stand-in game. */
+fun touchScene(w: Int, h: Int, density: Float, style: com.pokedaisy.app.companion.TouchControlsStyle): () -> (@Composable () -> Unit) = {
+    {
+        val stage = com.pokedaisy.app.companion.ui.simulateTouchStage(w.toFloat(), h.toFloat(), density)
+        com.pokedaisy.app.companion.ui.TouchControlsPreview(stage, style, null, androidx.compose.ui.Modifier.fillMaxSize())
+    }
+}
+
+/** Taps [button] in a [w]x[h] EDIT LAYOUT at [density] (its place worked out the way the editor places it). */
+fun SkikoComposeUiTest.tapTouchButton(w: Int, h: Int, density: Float, style: com.pokedaisy.app.companion.TouchControlsStyle, button: com.pokedaisy.app.companion.TouchButton) {
+    val stage = com.pokedaisy.app.companion.ui.simulateTouchStage(w.toFloat(), h.toFloat(), density)
+    val placed = com.pokedaisy.app.companion.ui.TouchGeometry.place(style, stage.area.width, stage.area.height, density, stage.portrait)
+    val item = placed.item(button) ?: return
+    onRoot().performTouchInput { click(androidx.compose.ui.geometry.Offset(stage.area.left + item.cx, stage.area.top + item.cy)) }
+}
+
 fun fakeRelease() = com.pokedaisy.app.AppUpdater.Release(
     "1.0.5",
     "- LOAD SAVE: put another save file into a game\n- INFO on every game\n- Fixes for the ROMs folder scan",
@@ -756,6 +778,8 @@ fun activity(expandIntro: Boolean = false, start: Boolean = false, make: () -> a
     File(ctx.filesDir, "states").deleteRecursively()
     File(ctx.filesDir, "cheats").deleteRecursively()
     prefs.cheatsEnabled = false
+    prefs.touchControlsStyle = com.pokedaisy.app.companion.TouchControlsStyle()
+    prefs.portraitCompanionUnderGame = false
     prefs.lastRomPath = File(roms, names[0]).absolutePath
     names.take(3).reversed().forEach { prefs.pushRecentRom(File(roms, it).absolutePath) }
     make().also { a ->
@@ -1177,6 +1201,9 @@ fun main(args: Array<String>) {
             onNodeWithText("AUTO ZOOM IN").performScrollTo()
         },
         Shot("$g-settings-ffspeed", bw, bh, bd, companion("SETTINGS")) { onNodeWithText("FF SPEED").performClick() },
+        Shot("$g-settings-touch", bw, bh, bd, companion("SETTINGS")) {
+            onNodeWithText("TOUCH CONTROLS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        },
         // GAME BUTTONS' subtitle, further down the list.
         Shot("$g-settings-subtitles", bw, bh, bd, companion("SETTINGS")) { onNodeWithText("TWEAKS").performScrollTo() },
         Shot("$g-settings-ffmusic", bw, bh, bd, companion("SETTINGS")) { onNodeWithText("SPEED OPTIONS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick); onAllNodesWithText("FF MUSIC").onFirst().performScrollTo().performClick() },
@@ -1427,6 +1454,59 @@ fun main(args: Array<String>) {
         // A phone held upright (a Galaxy S9's 1080x2220 at 3x): the smaller text, the picture over the words, the buttons on screen.
         Shot("library-expand-intro-phone", 1080, 2220, 3f, activity(expandIntro = true) { LibraryActivity() }),
         Shot("settings-phone", 1080, 2220, 3f, activity { SettingsActivity() }),
+        // TOUCH CONTROLS: the page with its preview, on a phone both ways, and EDIT LAYOUT over the stand-in.
+        Shot("settings-touch", tw, th, td, activity { SettingsActivity() }) {
+            onNodeWithText("TOUCH CONTROLS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        },
+        Shot("settings-touch-phone", 1080, 2400, 2.625f, activity { SettingsActivity() }) {
+            onNodeWithText("TOUCH CONTROLS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        },
+        Shot("settings-touch-phone-side", 2400, 1080, 2.625f, activity { SettingsActivity() }) {
+            onNodeWithText("TOUCH CONTROLS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        },
+        // Upright, the companion under the game and the controls at the bottom of the space left below it.
+        // EXPAND + UNDER GAME upright: the controls' own strip along the bottom, the companion above it, the map above that.
+        Shot("settings-touch-phone-expand", 1080, 2400, 2.625f, activity {
+            Prefs(android.content.Context()).portraitCompanionUnderGame = true
+            Prefs(android.content.Context()).gameAspect = com.pokedaisy.app.companion.GameAspect.WIDE
+            SettingsActivity()
+        }) {
+            onNodeWithText("TOUCH CONTROLS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        },
+        Shot("settings-touch-phone-bottom", 1080, 2400, 2.625f, activity {
+            withTouch(com.pokedaisy.app.companion.TouchControlsStyle(position = com.pokedaisy.app.companion.TouchPosition.BOTTOM)) {
+                Prefs(android.content.Context()).portraitCompanionUnderGame = true
+                SettingsActivity()
+            }
+        }) {
+            onNodeWithText("TOUCH CONTROLS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        },
+        Shot("settings-touch-edit", 2400, 1080, 2.625f, activity { SettingsActivity() }) {
+            onNodeWithText("TOUCH CONTROLS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+            onNodeWithText("EDIT LAYOUT").performScrollTo().performClick()
+        },
+        Shot("settings-touch-edit-selected", 2400, 1080, 2.625f, activity { SettingsActivity() }) {
+            onNodeWithText("TOUCH CONTROLS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+            onNodeWithText("EDIT LAYOUT").performScrollTo().performClick()
+            tapTouchButton(2400, 1080, 2.625f, com.pokedaisy.app.companion.TouchControlsStyle(), com.pokedaisy.app.companion.TouchButton.A)
+        },
+        Shot("settings-touch-edit-phone", 1080, 2400, 2.625f, activity { SettingsActivity() }) {
+            onNodeWithText("TOUCH CONTROLS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+            onNodeWithText("EDIT LAYOUT").performScrollTo().performClick()
+        },
+        // Each preset as the game draws it: a 20:9 phone sideways and upright, a 16:9 one (SIDES falls back to CLASSIC).
+        *com.pokedaisy.app.companion.TouchPreset.entries.flatMap { p ->
+            val st = com.pokedaisy.app.companion.TouchControlsStyle(preset = p)
+            val n = p.name.lowercase()
+            listOf(
+                Shot("touch-$n-side", 2400, 1080, 2.625f, touchScene(2400, 1080, 2.625f, st)),
+                Shot("touch-$n-upright", 1080, 2400, 2.625f, touchScene(1080, 2400, 2.625f, st)),
+                Shot("touch-$n-16x9", 1920, 1080, 2.625f, touchScene(1920, 1080, 2.625f, st)),
+            )
+        }.toTypedArray(),
+        Shot("touch-all-extras-side", 2400, 1080, 2.625f, touchScene(2400, 1080, 2.625f, com.pokedaisy.app.companion.TouchControlsStyle(extras = com.pokedaisy.app.companion.TouchButton.extras.toSet()))),
+        Shot("touch-all-extras-upright", 1080, 2400, 2.625f, touchScene(1080, 2400, 2.625f, com.pokedaisy.app.companion.TouchControlsStyle(extras = com.pokedaisy.app.companion.TouchButton.extras.toSet()))),
+        Shot("touch-large-upright", 1080, 2400, 2.625f, touchScene(1080, 2400, 2.625f, com.pokedaisy.app.companion.TouchControlsStyle(size = com.pokedaisy.app.companion.TouchSize.HUGE, opacity = 100))),
         // The top screen's SPEED OPTIONS (FF MODE, FF MUSIC) and DISPLAY OPTIONS (STATUS BAR, SHADERS, OVERLAY).
         Shot("settings-speed", tw, th, td, activity { SettingsActivity() }) {
             onNodeWithText("SPEED OPTIONS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)

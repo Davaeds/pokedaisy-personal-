@@ -22,8 +22,8 @@ import kotlin.math.roundToInt
  * screen and as tall as the player picks - a height / width ratio, so it keeps
  * its shape across phones - from [MIN_RATIO] to everything under the game. It
  * sits along the screen's bottom, or right under the game ([arrange]'s
- * `underGame`) so the touch pad gets the screen's bottom instead. What's left
- * is the touch pad's when it's shown and fits there ([padInGap]); else black.
+ * `underGame`) so the touch controls get the screen's bottom instead. What's left
+ * is the touch controls' when it's shown and fits there ([padInGap]); else black.
  */
 object PortraitLayout {
     /** The Thor's bottom screen (1240x1080), the shape the companion is made for. */
@@ -35,7 +35,7 @@ object PortraitLayout {
     /** A drag that ends this close to the default or the largest size lands on it. */
     const val SNAP_PX = 48
 
-    /** The touch pad goes in the gap beside the companion once that's at least this much of the width. */
+    /** The touch controls go in the gap beside the companion once that's at least this much of the width. */
     private const val PAD_GAP_RATIO = 0.45f
 
     /**
@@ -67,7 +67,7 @@ object PortraitLayout {
         return stops.firstOrNull { it > ratio + 0.01f } ?: stops.first()
     }
 
-    /** The touch pad fits in a [gap]-tall strip on a [w]-wide screen. */
+    /** The touch controls fit in a [gap]-tall strip on a [w]-wide screen. */
     fun padInGap(w: Int, gap: Int): Boolean = gap >= w * PAD_GAP_RATIO
 
     /** Where the grip goes: on the companion's top edge, inside its top (no room above), or under it. */
@@ -82,7 +82,7 @@ object PortraitLayout {
         val companionHeight: Int,
         val grip: Grip,
         val gripTop: Int,
-        /** The touch pad's strip. */
+        /** The touch controls' strip. */
         val padTop: Int,
         val padBottom: Int,
     ) {
@@ -101,9 +101,19 @@ object PortraitLayout {
      * always along the bottom, a Galaxy Z Fold's battle move cards lost their
      * PWR / PP line - GitHub #136.)
      */
-    fun arrange(w: Int, h: Int, gameH: Int, gripH: Int, ratio: Float, underGame: Boolean, expand: Boolean = false): Arrangement {
-        // WIDE ([expand]): the game takes everything above the companion, which is along the bottom then (right
-        // under the game is the same place), and the touch pad lies over the game.
+    fun arrange(w: Int, h: Int, gameH: Int, gripH: Int, ratio: Float, underGame: Boolean, expand: Boolean = false, padStrip: Int = 0): Arrangement {
+        // WIDE ([expand]): the game takes everything above the companion, so right under the game and along the
+        // bottom would be the same place. UNDER GAME there gives the touch controls a strip of their own along the
+        // screen's bottom instead ([padStrip] tall, 0 = no touch controls: the same as along the bottom), the
+        // companion above it and the game above that; along the bottom they lie over the game.
+        if (expand && underGame && padStrip > 0) {
+            val strip = minOf(padStrip, h / 3)
+            val c = companionHeight(w, h, gameH, ratio, gripH + strip)
+            val stripTop = h - strip
+            val companionTop = stripTop - c
+            val gripTop = maxOf(0, companionTop - gripH)
+            return Arrangement(gripTop, gripTop, companionTop, c, Grip.ABOVE, gripTop, stripTop, h)
+        }
         @Suppress("NAME_SHADOWING") val underGame = underGame && !expand
         val c = companionHeight(w, h, gameH, ratio, gripH)
         if (underGame) {

@@ -1927,8 +1927,8 @@ object SampleCompanion {
         override fun setFfMusicMode(mode: com.pokedaisy.app.companion.FfMusicMode) {}
         override val ffMode = com.pokedaisy.app.companion.FfMode.SMART
         override fun setFfMode(mode: com.pokedaisy.app.companion.FfMode) {}
-        override val touchControlsMode = 0
-        override fun setTouchControlsMode(v: Int) {}
+        override val touchStyle = com.pokedaisy.app.companion.TouchControlsStyle()
+        override fun setTouchStyle(style: com.pokedaisy.app.companion.TouchControlsStyle) {}
         override fun gbaControlBindings() = GbaControls.Btn.entries.associateWith {
         listOf(when (it) { GbaControls.Btn.START2 -> "BUTTON_X"; GbaControls.Btn.SELECT2 -> "BUTTON_Y"; else -> "BUTTON_${it.name}" })
     }

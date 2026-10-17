@@ -44,7 +44,7 @@ With one screen, the companion becomes a panel you slide in beside the game, or,
 
 - [Fast-forward and game speed](fast-forward.md): speed through grinding, with a smart mode that slows down in menus and music that keeps its pitch.
 - [Saves, backups and save states](saves.md): ten save-state slots, automatic save backups and rewind.
-- [Controls](controls.md): remap buttons, set hotkeys, use a controller or the touch pad.
+- [Controls](controls.md): remap buttons, set hotkeys, use a controller or the touch controls.
 - [Screen, aspect and shaders](screen.md): EXPAND to see more of the map, LCD and CRT looks, a status bar, overlays.
 - [Cheats](cheats.md): GameShark, Action Replay and CodeBreaker codes.
 

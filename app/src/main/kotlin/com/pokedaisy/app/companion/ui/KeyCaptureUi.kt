@@ -99,7 +99,7 @@ fun KeyCapturePopup(capture: KeyCapture) {
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xB0000000))
-            // Taps stop here: the touch pad under it is the game's.
+            // Taps stop here: the touch controls under it is the game's.
             .clickable(interactionSource = swallow, indication = null, onClick = {})
             .padding(16.dp),
     ) {

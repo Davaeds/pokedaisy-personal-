@@ -172,8 +172,10 @@ under LANGUAGE in either Settings screen. Species, move and item names and the G
   are a second START and SELECT, like the menu and registered-item buttons in the
   DS games. **TURBO A** and **TURBO B** can go on any button (GAME BUTTONS): held, they
   press A / B over and over, in game time, so they keep up with fast-forward.
-  On-screen touch controls appear when no controller is connected, and hide once
-  a controller is used. Bluetooth and USB controllers (8BitDo, GameSir, Xbox, ...)
+  **TOUCH CONTROLS** appear when no controller is connected, and hide once a
+  controller is used: ready-made layouts (SIDES keeps them in the bars beside the
+  game), size, opacity, extra FF / QUICK MENU / turbo / state buttons, and EDIT
+  LAYOUT to drag and resize each button, with a preview, upright and sideways apart. Bluetooth and USB controllers (8BitDo, GameSir, Xbox, ...)
   connect while a game is running without restarting it, and HOME / guide works
   like a BACK tap for the companion.
 - **Settings search**: type what you're after ("key bindings", "rebind", "turbo", "box art") and the matching

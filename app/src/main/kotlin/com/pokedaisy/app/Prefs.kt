@@ -157,6 +157,46 @@ class Prefs(context: Context) {
         get() = p.getInt("touch_controls", 0)
         set(v) = p.edit().putInt("touch_controls", v).apply()
 
+    /** SETTINGS > TOUCH CONTROLS: when they show ([touchControlsMode]), the layout, size, opacity, extras and the
+     * player's own layouts per orientation ([com.pokedaisy.app.companion.TouchLayout.encode]). */
+    var touchControlsStyle: com.pokedaisy.app.companion.TouchControlsStyle
+        get() {
+            val d = com.pokedaisy.app.companion.TouchControlsStyle()
+            fun <T : Enum<T>> pick(all: Array<T>, key: String, default: T) = p.getString(key, null)?.let { n -> all.firstOrNull { it.name == n } } ?: default
+            return com.pokedaisy.app.companion.TouchControlsStyle(
+                show = com.pokedaisy.app.companion.TouchShow.entries.getOrElse(touchControlsMode) { d.show },
+                preset = pick(com.pokedaisy.app.companion.TouchPreset.values(), "touch_preset", d.preset),
+                size = pick(com.pokedaisy.app.companion.TouchSize.values(), "touch_size", d.size),
+                position = pick(com.pokedaisy.app.companion.TouchPosition.values(), "touch_position", d.position),
+                opacity = p.getInt("touch_opacity", d.opacity),
+                extras = p.getString("touch_extras", null)?.let { s ->
+                    s.split(',').mapNotNull { n -> com.pokedaisy.app.companion.TouchButton.values().firstOrNull { it.name == n && it.extra } }.toSet()
+                } ?: d.extras,
+                eightWay = p.getBoolean("touch_eight_way", d.eightWay),
+                fadeIdle = p.getBoolean("touch_fade_idle", d.fadeIdle),
+                vibration = p.getBoolean("touch_vibration", d.vibration),
+                useCustom = p.getBoolean("touch_use_custom", d.useCustom),
+                portrait = com.pokedaisy.app.companion.TouchLayout.decode(p.getString("touch_layout_portrait", null)),
+                landscape = com.pokedaisy.app.companion.TouchLayout.decode(p.getString("touch_layout_landscape", null)),
+            )
+        }
+        set(v) {
+            touchControlsMode = v.show.ordinal
+            p.edit()
+                .putString("touch_preset", v.preset.name)
+                .putString("touch_size", v.size.name)
+                .putString("touch_position", v.position.name)
+                .putInt("touch_opacity", v.opacity)
+                .putString("touch_extras", v.extras.joinToString(",") { it.name })
+                .putBoolean("touch_eight_way", v.eightWay)
+                .putBoolean("touch_fade_idle", v.fadeIdle)
+                .putBoolean("touch_vibration", v.vibration)
+                .putBoolean("touch_use_custom", v.useCustom)
+                .putString("touch_layout_portrait", v.portrait.encode())
+                .putString("touch_layout_landscape", v.landscape.encode())
+                .apply()
+        }
+
     /** Whether battle-only strategic hints (move effectiveness chips, the
      * foe's Weak-to/Resists/Immune-to summary) are shown. On by default -
      * this is an opt-out for players who'd rather figure matchups out
@@ -378,7 +418,7 @@ class Prefs(context: Context) {
         get() = p.getBoolean("companion_window", true)
         set(v) = p.edit().putBoolean("companion_window", v).apply()
 
-    /** A phone held upright: the companion right under the game, the touch pad at the screen's bottom, instead of
+    /** A phone held upright: the companion right under the game, the touch controls at the screen's bottom, instead of
      * the companion along the bottom (SETTINGS > COMPANION; see [PortraitPanel]). */
     var portraitCompanionUnderGame: Boolean
         get() = p.getBoolean("portrait_companion_under_game", false)

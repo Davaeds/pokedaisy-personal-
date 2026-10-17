@@ -120,13 +120,13 @@ import com.pokedaisy.app.companion.ui.drawPixelRoundRect
 
 /**
  * Settings, in the companion SETTINGS tab's OPTION-screen look: a hub of
- * `LABEL  VALUE` rows (FF speed / touch pad / theme open a pick-one list,
+ * `LABEL  VALUE` rows (FF speed / touch controls / theme open a pick-one list,
  * on/off rows flip in place) plus one page each for Hotkeys, Game buttons,
  * Folders and Cover art. BACK pops back to the hub; BACK on the hub leaves.
  */
 class SettingsActivity : ComponentActivity() {
 
-    private enum class Screen { HOME, SPEED, DISPLAY, HOTKEYS, CONTROLS, SHADERS, FIELD_HUD, QUICK_MENU, OVERLAYS, FOLDERS, COVER_ART, SCREENSCRAPER, HIDDEN, ACHIEVEMENTS, CHEATS, CHEAT_ADD, LICENSES, HELP }
+    private enum class Screen { HOME, SPEED, DISPLAY, HOTKEYS, CONTROLS, SHADERS, FIELD_HUD, QUICK_MENU, TOUCH, OVERLAYS, FOLDERS, COVER_ART, SCREENSCRAPER, HIDDEN, ACHIEVEMENTS, CHEATS, CHEAT_ADD, LICENSES, HELP }
 
     private lateinit var prefs: Prefs
     private var screen by mutableStateOf(Screen.HOME)
@@ -140,6 +140,10 @@ class SettingsActivity : ComponentActivity() {
     private var hotkeyClash by mutableStateOf<HotkeyClash?>(null)
     private var revision by mutableIntStateOf(0)
     private var aspectPicker by mutableStateOf(false)
+
+    /** TOUCH CONTROLS' EDIT LAYOUT, over a stand-in of the game's screen; BACK goes to it ([touchBack]) while open. */
+    private var touchEditing by mutableStateOf(false)
+    private val touchBack = com.pokedaisy.app.companion.ui.CompanionBack()
     /** HOME's scroll, kept while a sub-page is open so BACK returns to the same rows. */
     private val homeScroll = androidx.compose.foundation.ScrollState(0)
     /** HOME has put the focus on its first setting (once: coming back from a sub-page keeps where it was). */
@@ -175,6 +179,9 @@ class SettingsActivity : ComponentActivity() {
     }
     /** This screen's width / height - the top screen's, for the ASPECT preview. */
     private var screenAspect by mutableFloatStateOf(16f / 9f)
+
+    /** The window's size (px), for TOUCH CONTROLS' stand-in of the game's screen. */
+    private var rootSize by mutableStateOf(androidx.compose.ui.unit.IntSize(1920, 1080))
 
     private val filesRoot get() = getExternalFilesDir(null) ?: filesDir
 
@@ -251,12 +258,14 @@ class SettingsActivity : ComponentActivity() {
     private fun Root() {
         BackHandler(enabled = screen != Screen.HOME) { capture.cancel(); goBack() }
         BackHandler(enabled = aspectPicker) { aspectPicker = false }
+        BackHandler(enabled = touchEditing) { touchBack.back() }
         BackHandler(enabled = hotkeyClash != null) { hotkeyClash = null }
         val m = rememberGbaTextMetrics()
         val small = rememberGbaTextMetrics(textScale = 1f)
 
         Box(modifier = Modifier.fillMaxSize().onSizeChanged {
             if (it.width > 0 && it.height > 0) screenAspect = it.width.toFloat() / it.height
+            rootSize = it
         }) {
             AppBackdrop()
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -270,6 +279,7 @@ class SettingsActivity : ComponentActivity() {
                         Screen.SHADERS -> tk("SHADERS")
                         Screen.FIELD_HUD -> tk("HUD")
                         Screen.QUICK_MENU -> tk("QUICK MENU")
+                        Screen.TOUCH -> tk("TOUCH CONTROLS")
                         Screen.OVERLAYS -> tk("OVERLAY")
                         Screen.FOLDERS -> tk("FOLDERS")
                         Screen.COVER_ART -> tk("COVER ART")
@@ -297,6 +307,7 @@ class SettingsActivity : ComponentActivity() {
                     Screen.SHADERS -> ShadersScreen(m)
                     Screen.FIELD_HUD -> FieldHudScreen(m)
                     Screen.QUICK_MENU -> QuickMenuScreen(m)
+                    Screen.TOUCH -> TouchScreen(m)
                     Screen.OVERLAYS -> OverlaysScreen(m, small)
                     Screen.FOLDERS -> FoldersScreen(m, small)
                     Screen.COVER_ART -> CoverArtScreen(m, small)
@@ -317,6 +328,25 @@ class SettingsActivity : ComponentActivity() {
                     onDismiss = { selector = null },
                     badge = sel.badge,
                 )
+            }
+
+            if (touchEditing) {
+                val stage = touchStage(androidx.compose.ui.platform.LocalDensity.current.density)
+                val shot by produceState<ImageBitmap?>(null) {
+                    value = withContext(Dispatchers.IO) {
+                        runCatching { newestStateThumb()?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }.getOrNull()
+                    }
+                }
+                androidx.compose.runtime.CompositionLocalProvider(com.pokedaisy.app.companion.ui.LocalCompanionBack provides touchBack) {
+                    com.pokedaisy.app.companion.ui.TouchLayoutEditor(
+                        stage, prefs.touchControlsStyle, m, shot = shot, drawBackdrop = true,
+                        onDone = { layout ->
+                            prefs.touchControlsStyle = prefs.touchControlsStyle.withLayout(stage.portrait, layout)
+                            touchEditing = false
+                            revision++
+                        },
+                    )
+                }
             }
 
             if (aspectPicker) {
@@ -521,11 +551,11 @@ class SettingsActivity : ComponentActivity() {
             SettingRow(tk("SHADERS"), prefs.screenFilter.label, opensPage = true, subtitle = "LCD, CRT and scanline looks, smoothing") { screen = Screen.SHADERS },
             // A frame around the game: the built-in ones and imported RetroArch overlays, on their own page.
             SettingRow(tk("OVERLAY"), overlayLabel(overlayChoices(overlayStore), prefs.overlay), opensPage = true, subtitle = "A frame around the game") { screen = Screen.OVERLAYS },
-            // One screen held upright: the companion along the bottom, or right under the game (the touch pad below it).
-            SettingRow(tk("COMPANION"), portraitPlaceLabel(prefs.portraitCompanionUnderGame), subtitle = "Where it sits with the phone upright") {
-                prefs.portraitCompanionUnderGame = !prefs.portraitCompanionUnderGame
-                revision++
-            }.takeIf { !usesSecondScreen },
+            // One screen held upright: the companion along the bottom, or right under the game (the touch controls below it).
+            com.pokedaisy.app.companion.ui.uprightCompanionRow(
+                prefs.portraitCompanionUnderGame, prefs.gameAspect == com.pokedaisy.app.companion.GameAspect.WIDE,
+                touchWouldShow(prefs.touchControlsStyle),
+            ) { prefs.portraitCompanionUnderGame = it; revision++ }.takeIf { !usesSecondScreen },
         )
     }
 
@@ -647,12 +677,8 @@ class SettingsActivity : ComponentActivity() {
             SettingRow(tk("GAME BUTTONS"), null, subtitle = "Key bindings: which button presses A, B, START...", opensPage = true) { screen = Screen.CONTROLS },
             SettingRow(tk("HOTKEYS"), onOff(prefs.hotkeysEnabled), opensPage = true, subtitle = "Button combos for states, FF and more") { screen = Screen.HOTKEYS },
             SettingRow(tk("QUICK MENU"), null, subtitle = "Actions on a held button", labelBadge = com.pokedaisy.app.companion.ui.quickMenuBadge(), opensPage = true) { screen = Screen.QUICK_MENU },
-            // Takes effect the next time a game is opened.
-            SettingRow(tk("TOUCH PAD"), TOUCH_NAMES[prefs.touchControlsMode], subtitle = "The on-screen buttons") {
-                selector = Selector(tk("TOUCH PAD"), TOUCH_NAMES, TOUCH_NAMES[prefs.touchControlsMode]) {
-                    prefs.touchControlsMode = TOUCH_NAMES.indexOf(it)
-                }
-            },
+            // The on-screen buttons: when they show, layouts, size, extras, EDIT LAYOUT; the game picks it up on resume.
+            SettingRow(tk("TOUCH CONTROLS"), prefs.touchControlsStyle.show.label, labelBadge = com.pokedaisy.app.companion.ui.touchControlsBadge(), opensPage = true, subtitle = "The on-screen buttons: layout, size, extras") { screen = Screen.TOUCH },
             groupTitle(tk("APP")),
             // Tap: look for a newer release on GitHub now.
             SettingRow(tk("VERSION"), if (updates.checking) tk("CHECKING…") else BuildConfig.VERSION_NAME) { updates.check(manual = true) },
@@ -787,6 +813,60 @@ class SettingsActivity : ComponentActivity() {
                 GroupedRows(rows, m, cursor = -1, onClick = { rows[it].onClick() })
             }
         }
+    }
+
+    /**
+     * TOUCH CONTROLS: the companion's page (the preview, the rows); EDIT LAYOUT here moves the buttons over a stand-in of
+     * the game's screen laid out for the way the phone is held now. The game picks it all up on resume.
+     */
+    @Composable
+    private fun TouchScreen(m: GbaTextMetrics) {
+        @Suppress("UNUSED_EXPRESSION") revision
+        val style = prefs.touchControlsStyle
+        val rows = com.pokedaisy.app.companion.ui.touchControlsRows(
+            style, set = { prefs.touchControlsStyle = it; revision++ },
+            onEdit = { touchEditing = true },
+            underGame = prefs.portraitCompanionUnderGame.takeIf { !usesSecondScreen },
+            setUnderGame = { prefs.portraitCompanionUnderGame = it; revision++ },
+            expand = prefs.gameAspect == com.pokedaisy.app.companion.GameAspect.WIDE, touchShown = touchWouldShow(style),
+        )
+        val shot by produceState<ImageBitmap?>(null) {
+            value = withContext(Dispatchers.IO) {
+                runCatching { newestStateThumb()?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }.getOrNull()
+            }
+        }
+        com.pokedaisy.app.companion.ui.TouchControlsPage(
+            touchStage(androidx.compose.ui.platform.LocalDensity.current.density), style, shot, m, Modifier.fillMaxSize(),
+            underGame = prefs.portraitCompanionUnderGame, portraitRatio = prefs.portraitCompanionRatio,
+            expand = prefs.gameAspect == com.pokedaisy.app.companion.GameAspect.WIDE, touchShown = touchWouldShow(style),
+        ) { mod ->
+            OptionListWindow(m, mod) {
+                GroupedRows(rows, m, cursor = -1, onClick = { rows[it].onClick() })
+            }
+        }
+    }
+
+    /** Whether a game opened now would show the touch controls (SHOW, and AUTO's controller check). */
+    private fun touchWouldShow(style: com.pokedaisy.app.companion.TouchControlsStyle) = when (style.show) {
+        com.pokedaisy.app.companion.TouchShow.ALWAYS -> true
+        com.pokedaisy.app.companion.TouchShow.NEVER -> false
+        com.pokedaisy.app.companion.TouchShow.AUTO -> !Controllers.anyConnected()
+    }
+
+    /** This screen as the game's would be laid out (no game open here): its size, the companion's place upright,
+     * EXPAND with UNDER GAME's strip for the controls. */
+    private fun touchStage(density: Float): com.pokedaisy.app.companion.TouchStage {
+        val style = prefs.touchControlsStyle
+        val expand = prefs.gameAspect == com.pokedaisy.app.companion.GameAspect.WIDE
+        val w = rootSize.width.toFloat()
+        val h = rootSize.height.toFloat()
+        val strip = if (expand && h > w && prefs.portraitCompanionUnderGame && touchWouldShow(style))
+            com.pokedaisy.app.companion.ui.TouchGeometry.naturalHeight(style, w, density) else 0
+        return com.pokedaisy.app.companion.ui.simulateTouchStage(
+            w, h, density,
+            portraitRatio = prefs.portraitCompanionRatio, underGame = prefs.portraitCompanionUnderGame,
+            expand = expand, padStrip = strip,
+        )
     }
 
     /** QUICK MENU: which actions it shows, like the companion's page; its button is HOTKEYS' QUICK MENU. */
@@ -1691,7 +1771,6 @@ class SettingsActivity : ComponentActivity() {
 
     companion object {
         val RATES = floatArrayOf(0f, 1.5f, 2f, 3f, 4f, 5f, 6f, 8f, 10f)
-        val TOUCH_NAMES = listOf(tk("AUTO"), tk("ALWAYS"), tk("NEVER"))
         const val REPO_URL = "https://github.com/lidor30/pokedaisy"
         /** A ROM path: open straight on that game's CHEATS (its library menu). */
         const val EXTRA_CHEATS_ROM = "cheats_rom"

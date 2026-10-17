@@ -1,0 +1,628 @@
+package com.pokedaisy.app.companion.ui
+
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import com.pokedaisy.app.companion.TouchButton
+import com.pokedaisy.app.companion.TouchControlsStyle
+import com.pokedaisy.app.companion.TouchLayout
+import com.pokedaisy.app.companion.TouchStage
+import com.pokedaisy.app.companion.i18n.tk
+import com.pokedaisy.app.companion.i18n.tr
+import com.pokedaisy.app.companion.ui.TouchGeometry.contains
+import com.pokedaisy.app.companion.ui.theme.pixelFontFamily
+import kotlinx.coroutines.delay
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
+
+/** What the touch controls tell the game: the GBA buttons held, the extras pressed and let go, a new press. */
+class TouchInput(
+    /** The GBA buttons held ([gba]) and TURBO A / B held ([turbo]), whenever either changes. */
+    val onKeys: (gba: Int, turbo: Int) -> Unit = { _, _ -> },
+    /** FF, the QUICK MENU, SAVE / LOAD STATE: pressed (true) and let go (false). */
+    val onAction: (TouchButton, Boolean) -> Unit = { _, _ -> },
+    /** Something newly pressed: VIBRATION's tick. */
+    val onPress: () -> Unit = {},
+)
+
+/**
+ * A [w]x[h] game screen at [dp] px per dp, laid out as the game's would be (SETTINGS has no game open): held sideways
+ * the game fits in the middle and the controls have the whole screen; upright the game is across the top, the
+ * companion under it ([PortraitLayout]) and the controls in the gap when it fits, else over the game.
+ */
+fun simulateTouchStage(
+    w: Float, h: Float, dp: Float, gameAspect: Float = 1.5f, statusBar: Float = 0f,
+    portraitRatio: Float = PortraitLayout.DEFAULT_RATIO, underGame: Boolean = false, gameBoy: Boolean = false,
+    /** ASPECT > EXPAND: the game fills everything above the companion. */
+    expand: Boolean = false,
+    /** EXPAND + UNDER GAME: the touch controls' strip along the bottom ([TouchGeometry.naturalHeight]); 0 = none. */
+    padStrip: Int = 0,
+): TouchStage {
+    val portrait = h > w
+    if (!portrait) {
+        val gw = min(w, (h - statusBar) * gameAspect)
+        val gh = gw / gameAspect
+        val left = (w - gw) / 2
+        val top = (h - statusBar - gh) / 2 + statusBar
+        return TouchStage(w, h, dp, false, Rect(left, top, left + gw, top + gh), Rect(0f, 0f, w, h), null, gameAspect, gameBoy)
+    }
+    val gameH = (w / gameAspect + statusBar).roundToInt()
+    val grip = (22 * dp).roundToInt()
+    val a = PortraitLayout.arrange(w.roundToInt(), h.roundToInt(), gameH, grip, portraitRatio, underGame, expand, padStrip)
+    val gh = min(w / gameAspect, a.gameBottom - statusBar)
+    val gw = gh * gameAspect
+    val game = if (expand) Rect(0f, statusBar, w, a.gameAreaBottom.toFloat())
+        else Rect((w - gw) / 2, statusBar, (w + gw) / 2, statusBar + gh)
+    val companion = Rect(0f, a.companionTop.toFloat(), w, (a.companionTop + a.companionHeight).toFloat())
+    return TouchStage(w, h, dp, true, game, Rect(0f, a.padTop.toFloat(), w, a.padBottom.toFloat()), companion, gameAspect, gameBoy)
+}
+
+// The HUD's GLASS: see-through dark buttons with light pixel text (FieldHud's), a lighter edge to find them by.
+private val PAD_FILL = Color(0xB8121620)
+private val PAD_PRESSED = Color(0xE0505A70)
+private val PAD_EDGE = Color(0xB0FFFFFF)
+private val PAD_INK = Color(0xFFF4F6FA)
+private val PAD_SHADOW = Color(0xFF0C0F15)
+private val PAD_ON = Color(0xFFFFCF5A)
+private val PAD_SELECT = Color(0xFFFFCF5A)
+
+/** How long without a touch before FADE WHEN IDLE fades them, and how faint they get. */
+private const val IDLE_MS = 4000L
+private const val IDLE_ALPHA = 0.18f
+
+/** The on-screen state a draw needs: what's held, the D-pad's directions, FF on. */
+private class Pressed {
+    var buttons by mutableIntStateOf(0)
+    var dpad by mutableIntStateOf(0)
+    fun has(b: TouchButton) = buttons and (1 shl b.ordinal) != 0
+}
+
+/**
+ * The touch controls over the game, filling their area ([com.pokedaisy.app.TouchControlsView]). Every finger counts
+ * on every move, so a thumb slides from one direction to the next, or from B onto A, without lifting. [onPlaced]
+ * reports where everything went (the HUD keeps clear of it).
+ */
+@Composable
+fun TouchControls(
+    style: TouchControlsStyle,
+    portrait: Boolean,
+    input: TouchInput,
+    modifier: Modifier = Modifier,
+    gameAspect: Float = 1.5f,
+    gameBoy: Boolean = false,
+    ffOn: Boolean = false,
+    onPlaced: (TouchGeometry.Placed) -> Unit = {},
+) {
+    val density = LocalDensity.current
+    var measured by remember { mutableStateOf(IntSize.Zero) }
+    val placed = remember(style, portrait, measured, gameAspect, gameBoy, density.density) {
+        TouchGeometry.place(style, measured.width.toFloat(), measured.height.toFloat(), density.density, portrait, gameAspect, gameBoy)
+    }
+    LaunchedEffect(placed) { onPlaced(placed) }
+    val pressed = remember { Pressed() }
+    val currentPlaced by rememberUpdatedState(placed)
+    val currentStyle by rememberUpdatedState(style)
+    val currentInput by rememberUpdatedState(input)
+    // FADE WHEN IDLE: counts touches down; a few seconds after the last let-go, faint.
+    var touches by remember { mutableIntStateOf(0) }
+    var idle by remember { mutableStateOf(false) }
+    LaunchedEffect(style.fadeIdle, touches, pressed.buttons == 0 && pressed.dpad == 0) {
+        idle = false
+        if (style.fadeIdle && pressed.buttons == 0 && pressed.dpad == 0) {
+            delay(IDLE_MS)
+            idle = true
+        }
+    }
+    val fade by animateFloatAsState(if (idle) IDLE_ALPHA else 1f, tween(if (idle) 600 else 120), label = "touchFade")
+    val measurer = rememberTextMeasurer(24)
+    val font = pixelFontFamily()
+    Canvas(
+        modifier
+            .onSizeChanged { measured = it }
+            .graphicsLayer { alpha = style.opacity / 100f * fade }
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    var gbaWas = 0
+                    var turboWas = 0
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val p = currentPlaced
+                        val st = currentStyle
+                        val slop = 10 * p.dp
+                        var held = 0
+                        var dpad = 0
+                        for (c in event.changes) {
+                            if (!c.pressed) continue
+                            for (item in TouchGeometry.hits(p, c.position.x, c.position.y, slop)) {
+                                held = held or (1 shl item.button.ordinal)
+                                if (item.button == TouchButton.DPAD) {
+                                    dpad = dpad or TouchGeometry.dpadBits(c.position.x - item.cx, c.position.y - item.cy, item.w / 2, st.eightWay)
+                                }
+                            }
+                        }
+                        if (event.changes.any { it.pressed && !it.previousPressed }) touches++
+                        event.changes.forEach { it.consume() }
+                        val before = pressed.buttons
+                        // Newly pressed: a tick; the extras' presses / let-gos.
+                        val newly = held and before.inv()
+                        if (newly != 0 || (dpad and pressed.dpad.inv()) != 0) currentInput.onPress()
+                        for (b in TouchButton.entries) {
+                            val bit = 1 shl b.ordinal
+                            if (b.extra && b != TouchButton.TURBO_A && b != TouchButton.TURBO_B && (held xor before) and bit != 0) {
+                                currentInput.onAction(b, held and bit != 0)
+                            }
+                        }
+                        pressed.buttons = held
+                        pressed.dpad = dpad
+                        var gba = dpad
+                        var turbo = 0
+                        for (b in TouchButton.entries) if (held and (1 shl b.ordinal) != 0) {
+                            if (b == TouchButton.TURBO_A || b == TouchButton.TURBO_B) turbo = turbo or b.gba
+                            else gba = gba or b.gba
+                        }
+                        if (gba != gbaWas || turbo != turboWas) {
+                            gbaWas = gba; turboWas = turbo
+                            currentInput.onKeys(gba, turbo)
+                        }
+                    }
+                }
+            },
+    ) {
+        // The first frame draws before onSizeChanged's size has come round: place from the canvas's own.
+        val p = if (placed.w == size.width && placed.h == size.height) placed
+        else TouchGeometry.place(style, size.width, size.height, density.density, portrait, gameAspect, gameBoy)
+        drawTouchControls(p, pressed, ffOn, measurer, font)
+    }
+}
+
+/** Every control in [placed], at its place; [pressed] lit. */
+private fun DrawScope.drawTouchControls(
+    placed: TouchGeometry.Placed,
+    pressed: Pressed?,
+    ffOn: Boolean,
+    measurer: TextMeasurer,
+    font: FontFamily,
+    selected: TouchButton? = null,
+    editing: Boolean = false,
+    /** The whole set's opacity, drawn in one layer (the game's view takes it from its graphicsLayer instead). */
+    alpha: Float = 1f,
+) {
+    if (alpha < 1f) {
+        val paint = androidx.compose.ui.graphics.Paint().apply { this.alpha = alpha }
+        drawContext.canvas.saveLayer(Rect(Offset.Zero, Size(placed.w, placed.h)), paint)
+        drawTouchControls(placed, pressed, ffOn, measurer, font, selected, editing)
+        drawContext.canvas.restore()
+        return
+    }
+    // The controls' pixel: the companion's GBA pixel at this density (a whole screen pixel or more, but in a preview).
+    val step = max(1f, (placed.dp * 1.25f).roundToInt().toFloat())
+    for (item in placed.items) {
+        val on = pressed?.has(item.button) == true
+        when (item.shape) {
+            TouchGeometry.Shape.CROSS -> drawCross(item, step, pressed?.dpad ?: 0)
+            TouchGeometry.Shape.ROUND, TouchGeometry.Shape.PILL -> {
+                val r = min(item.w, item.h) / 2
+                val tl = Offset(item.left, item.top)
+                val sz = Size(item.w, item.h)
+                drawPixelRoundRect(if (on) PAD_PRESSED else PAD_FILL, tl, sz, r, step)
+                drawPixelRoundFrame(PAD_EDGE, tl, sz, r, step, step)
+                val lit = item.button == TouchButton.FF && ffOn
+                drawLabel(item, measurer, font, if (lit) PAD_ON else PAD_INK, step)
+            }
+        }
+        if (editing) {
+            val frame = if (item.button == selected) PAD_SELECT else Color(0x99FFFFFF)
+            val pad = 3 * step
+            drawRect(
+                frame, Offset(item.left - pad, item.top - pad), Size(item.w + 2 * pad, item.h + 2 * pad),
+                style = Stroke(width = if (item.button == selected) 2 * step else step, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3 * step, 2 * step))),
+            )
+        }
+    }
+}
+
+/** The D-pad: a pixel cross over a faint disc, an arrow on each arm, a held arm lit. */
+private fun DrawScope.drawCross(item: TouchGeometry.Item, step: Float, dirs: Int) {
+    val d = item.w
+    val arm = (d * 0.36f / step).roundToInt() * step
+    val cx = item.cx; val cy = item.cy
+    val r = 2 * step
+    drawPixelRoundRect(Color(0x40121620), Offset(item.left, item.top), Size(d, d), d / 2, step)
+    fun rect(l: Float, t: Float, w: Float, h: Float, inset: Float) =
+        pixelRoundRectPath(Size(w - 2 * inset, h - 2 * inset), max(0f, r - inset), step, Offset(l + inset, t + inset))
+    fun cross(inset: Float) = Path().apply {
+        op(rect(cx - arm / 2, item.top, arm, d, inset), rect(item.left, cy - arm / 2, d, arm, inset), PathOperation.Union)
+    }
+    val outer = cross(0f)
+    val inner = cross(step)
+    drawPath(inner, PAD_FILL)
+    // A held direction: its arm, from the middle out.
+    val half = d / 2 - arm / 2
+    fun lit(bit: Int, l: Float, t: Float, w: Float, h: Float) {
+        if (dirs and bit != 0) drawPath(Path().apply { op(inner, Path().apply { addRect(Rect(l, t, l + w, t + h)) }, PathOperation.Intersect) }, PAD_PRESSED)
+    }
+    lit(TouchGeometry.KEY_UP, cx - arm / 2, item.top, arm, half + arm / 2)
+    lit(TouchGeometry.KEY_DOWN, cx - arm / 2, cy, arm, half + arm / 2)
+    lit(TouchGeometry.KEY_LEFT, item.left, cy - arm / 2, half + arm / 2, arm)
+    lit(TouchGeometry.KEY_RIGHT, cx, cy - arm / 2, half + arm / 2, arm)
+    drawPath(Path().apply { op(outer, inner, PathOperation.Difference) }, PAD_EDGE)
+    // Arrows: rows of 5, 3, 1 cells, pointing out.
+    val a = max(step, (arm * 0.1f / step).roundToInt() * step)
+    val reach = d / 2 - arm * 0.42f
+    fun arrow(dx: Int, dy: Int) {
+        val tipX = cx + dx * reach
+        val tipY = cy + dy * reach
+        for (row in 0 until 3) {
+            val n = 1 + 2 * row
+            val along = row * a
+            if (dx != 0) {
+                val x = tipX - dx * (along + a)
+                drawRect(PAD_INK, Offset(min(x, x + dx * a), tipY - n * a / 2), Size(a, n * a))
+            } else {
+                val y = tipY - dy * (along + a)
+                drawRect(PAD_INK, Offset(tipX - n * a / 2, min(y, y + dy * a)), Size(n * a, a))
+            }
+        }
+    }
+    arrow(0, -1); arrow(0, 1); arrow(-1, 0); arrow(1, 0)
+}
+
+/** A button's word, in whole font pixels, with the games' three-way shadow; smaller until it fits. */
+private fun DrawScope.drawLabel(item: TouchGeometry.Item, measurer: TextMeasurer, font: FontFamily, ink: Color, step: Float) {
+    val text = tr(item.button.face)
+    if (text.isEmpty()) return
+    val round = item.shape == TouchGeometry.Shape.ROUND
+    // Caps are 9 font pixels of a 16 em: about a third of a round button's height, nearly half a pill's; two lines
+    // (TURBO over its letter) share half the height.
+    val lines = text.count { it == '\n' } + 1
+    var fp = max(1, if (lines > 1) (item.h * 0.5f / lines / 9f).toInt() else ((item.h * if (round) 0.34f else 0.44f) / 9f).roundToInt())
+    fun measure() = measurer.measure(
+        text,
+        TextStyle(fontFamily = font, fontSize = (16f * fp).toSp(), color = ink, lineHeight = (11f * fp).toSp(), textAlign = TextAlign.Center),
+    )
+    var layout = measure()
+    while (fp > 1 && layout.size.width > item.w * (if (round) 0.78f else 0.86f)) {
+        fp--
+        layout = measure()
+    }
+    val x = (item.cx - layout.size.width / 2f).roundToInt().toFloat()
+    val y = (item.cy - layout.size.height / 2f).roundToInt().toFloat()
+    val k = fp.toFloat()
+    for ((dx, dy) in listOf(k to 0f, 0f to k, k to k)) drawText(layout, color = PAD_SHADOW, topLeft = Offset(x + dx, y + dy))
+    drawText(layout, color = ink, topLeft = Offset(x, y))
+}
+
+// ---- SETTINGS' preview ---------------------------------------------------------------------------------------------
+
+/**
+ * The game's screen in miniature with the touch controls on it, as [style] lays them out: the newest savestate's
+ * picture ([shot]) or a drawn stand-in for the game, the companion's place on an upright phone, then the controls
+ * drawn by the same code the game uses. It follows every change on the page at once. Upright the whole screen would
+ * come out small in a short box, so it shows the controls' part of it as wide as the box allows: their area with a
+ * slice of what's above and below, the screen cut off where it doesn't fit (the user's call).
+ */
+@Composable
+fun TouchControlsPreview(stage: TouchStage, style: TouchControlsStyle, shot: ImageBitmap?, modifier: Modifier = Modifier) {
+    val measurer = rememberTextMeasurer(24)
+    val font = pixelFontFamily()
+    val placed = remember(stage, style) {
+        TouchGeometry.place(style, stage.area.width, stage.area.height, stage.dp, stage.portrait, stage.gameAspect, stage.gameBoy)
+    }
+    Canvas(modifier) {
+        val px = gbaPixelPx()
+        val body = 3 * px
+        // The part of the screen shown: all of it sideways; upright, the controls' area and a slice around it.
+        var top = 0f
+        var bottom = stage.h
+        if (stage.portrait) {
+            val slice = stage.w * 0.12f
+            top = (stage.area.top - slice).coerceAtLeast(0f)
+            bottom = (stage.area.bottom + slice).coerceAtMost(stage.h)
+        }
+        val k = min((size.width - 2 * body) / stage.w, (size.height - 2 * body) / (bottom - top))
+        if (stage.portrait) {
+            // Room to spare in the box: show more, around the controls, as far as the screen goes.
+            val extra = (size.height - 2 * body) / k - (bottom - top)
+            if (extra > 0f) {
+                top -= extra / 2
+                bottom += extra / 2
+                if (top < 0f) { bottom -= top; top = 0f }
+                if (bottom > stage.h) { top -= bottom - stage.h; bottom = stage.h }
+                top = top.coerceAtLeast(0f)
+            }
+        }
+        val shownH = (bottom - top) * k
+        val ox = (size.width - stage.w * k) / 2
+        val oy = (size.height - shownH) / 2
+        // The phone: a dark body around what's shown, open at an edge where the screen is cut off.
+        val cutTop = top > 0f
+        val cutBottom = bottom < stage.h
+        drawPixelRoundRect(
+            Color(0xFF1C1C22),
+            Offset(ox - body, oy - if (cutTop) 0f else body),
+            Size(stage.w * k + 2 * body, shownH + (if (cutTop) 0f else body) + (if (cutBottom) 0f else body)),
+            if (cutTop || cutBottom) px else 5 * px, px,
+        )
+        clipRect(ox, oy, ox + stage.w * k, oy + shownH) {
+            drawRect(Color.Black, Offset(ox, oy), Size(stage.w * k, shownH))
+            withTransform({ translate(ox, oy - top * k); scale(k, k, Offset.Zero) }) {
+                drawStage(stage, shot)
+                translate(stage.area.left, stage.area.top) {
+                    drawTouchControls(placed, null, false, measurer, font, alpha = style.opacity / 100f)
+                }
+            }
+        }
+    }
+}
+
+/** The screen behind the controls: the game ([shot] or the stand-in) and, upright, the companion's block. */
+private fun DrawScope.drawStage(stage: TouchStage, shot: ImageBitmap?) {
+    val g = stage.game
+    if (shot != null) {
+        drawImage(
+            shot, dstOffset = IntOffset(g.left.roundToInt(), g.top.roundToInt()),
+            dstSize = IntSize(g.width.roundToInt(), g.height.roundToInt()), filterQuality = FilterQuality.None,
+        )
+    } else {
+        clipRect(g.left, g.top, g.right, g.bottom) { drawStandIn(g) }
+    }
+    stage.companion?.let { c ->
+        // The companion: its backdrop, a title window and a list, roughly.
+        drawRect(Color(0xFF6D8FC7), c.topLeft, c.size)
+        val u = c.width / 120f
+        drawRect(OptionColors.titleFill, Offset(c.left + 4 * u, c.top + 4 * u), Size(c.width - 8 * u, 12 * u))
+        drawRect(OptionColors.listFill, Offset(c.left + 4 * u, c.top + 20 * u), Size(c.width - 8 * u, c.height - 24 * u))
+        for (i in 0 until ((c.height - 30 * u) / (10 * u)).toInt().coerceAtMost(8)) {
+            drawRect(OptionColors.muted, Offset(c.left + 10 * u, c.top + 26 * u + i * 10 * u), Size(c.width * 0.35f, 3 * u))
+        }
+    }
+}
+
+// ---- EDIT LAYOUT ---------------------------------------------------------------------------------------------------
+
+/**
+ * EDIT LAYOUT: the controls at their real size over the game (in game: the game itself shows through; in SETTINGS:
+ * [shot] or the stand-in, drawn as the game's screen would be). Drag a control to move it, pinch it or use its
+ * bar's - and + to resize it, HIDE takes it off (HIDDEN brings it back); SNAP lines them up on an 8 dp grid. DONE
+ * (or BACK) keeps the layout for the way the phone is held ([TouchStage.portrait]); RESET goes back to the preset.
+ */
+@Composable
+fun TouchLayoutEditor(
+    stage: TouchStage,
+    style: TouchControlsStyle,
+    m: GbaTextMetrics,
+    onDone: (TouchLayout) -> Unit,
+    shot: ImageBitmap? = null,
+    /** Draw the game's screen behind (SETTINGS); false = see-through, over the running game. */
+    drawBackdrop: Boolean = false,
+) {
+    val portrait = stage.portrait
+    val area = stage.area
+    // The layout being edited: every shown control's place, frozen from the current layout on the first change.
+    var layout by remember { mutableStateOf(style.layoutFor(portrait)) }
+    var selected by remember { mutableStateOf<TouchButton?>(null) }
+    var snap by remember { mutableStateOf(true) }
+    var confirmReset by remember { mutableStateOf(false) }
+    var hiddenPicker by remember { mutableStateOf(false) }
+    // A finger moving a button: the bar stays where it is meanwhile (it would hop out of the button's way otherwise).
+    var dragging by remember { mutableStateOf(false) }
+    val editStyle = style.withLayout(portrait, layout)
+    val placed = remember(editStyle, stage) {
+        TouchGeometry.place(editStyle, area.width, area.height, stage.dp, portrait, stage.gameAspect, stage.gameBoy)
+    }
+    val currentPlaced by rememberUpdatedState(placed)
+    val hidden = layout.places.filterValues { it.hidden }.keys.toList()
+    val done = { onDone(layout) }
+    CompanionBackHandler(onBack = done)
+
+    /** Freezes every shown control where it is now, then applies [change] to [b]'s place. */
+    fun edit(b: TouchButton, change: (com.pokedaisy.app.companion.TouchPlace) -> com.pokedaisy.app.companion.TouchPlace) {
+        val p = currentPlaced
+        val full = p.items.associate { it.button to TouchGeometry.placeOf(it, p.w, p.h, p.dp, layout.places[it.button]?.scale ?: 1f) } +
+            layout.places.filterValues { it.hidden }
+        val now = full[b] ?: return
+        layout = TouchLayout(full + (b to change(now)))
+    }
+
+    fun moveTo(b: TouchButton, cx: Float, cy: Float) {
+        val p = currentPlaced
+        val item = p.item(b) ?: return
+        val grid = 8 * p.dp
+        val x = if (snap) (cx / grid).roundToInt() * grid else cx
+        val y = if (snap) (cy / grid).roundToInt() * grid else cy
+        val moved = item.copy(
+            cx = x.coerceIn(item.w / 2, max(item.w / 2, p.w - item.w / 2)),
+            cy = y.coerceIn(item.h / 2, max(item.h / 2, p.h - item.h / 2)),
+        )
+        edit(b) { old -> TouchGeometry.placeOf(moved, p.w, p.h, p.dp, old.scale) }
+    }
+
+    fun resize(b: TouchButton, factor: Float) = edit(b) { old ->
+        old.copy(scale = (old.scale * factor).coerceIn(TouchLayout.MIN_SCALE, TouchLayout.MAX_SCALE))
+    }
+
+    val measurer = rememberTextMeasurer(24)
+    val font = pixelFontFamily()
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        // Where the bar goes: the top, else the bottom, else the middle - the first with no button under it (the
+        // fewest when none is clear). Upright with the buttons over the game, the top row is theirs.
+        val frozen = remember(dragging) { placed }
+        val barPlaced = if (dragging) frozen else placed
+        val density = LocalDensity.current
+        val barY = with(density) {
+            val w = constraints.maxWidth.toFloat()
+            val h = constraints.maxHeight.toFloat()
+            val barW = min(560.dp.toPx(), w)
+            val barH = 170.dp.toPx()
+            val margin = 8.dp.toPx()
+            val slots = listOf(margin, h - barH - margin, (h - barH) / 2)
+            fun covered(y: Float) = barPlaced.items.sumOf { it ->
+                val l = maxOf(it.left + area.left, (w - barW) / 2)
+                val r = minOf(it.right + area.left, (w + barW) / 2)
+                val t = maxOf(it.top + area.top, y)
+                val b = minOf(it.bottom + area.top, y + barH)
+                if (r > l && b > t) ((r - l) * (b - t)).toDouble() else 0.0
+            }
+            (slots.firstOrNull { covered(it) == 0.0 } ?: slots.minBy { covered(it) }).roundToInt()
+        }
+        Canvas(
+            Modifier.fillMaxSize().pointerInput(stage) {
+                awaitPointerEventScope {
+                    while (true) {
+                        // A finger down: the control under it (or nothing).
+                        val down = awaitPointerEvent().changes.firstOrNull { it.pressed && !it.previousPressed } ?: continue
+                        val at = down.position - area.topLeft
+                        val p = currentPlaced
+                        val hit = p.items.lastOrNull { it.contains(at.x, at.y, 6 * p.dp) }
+                        selected = hit?.button
+                        if (hit == null) continue
+                        val grab = Offset(at.x - hit.cx, at.y - hit.cy)
+                        var pinch = 0f
+                        dragging = true
+                        while (true) {
+                            val ev = awaitPointerEvent()
+                            val fingers = ev.changes.filter { it.pressed }
+                            if (fingers.isEmpty()) { dragging = false; break }
+                            ev.changes.forEach { it.consume() }
+                            if (fingers.size >= 2) {
+                                // Two fingers: the gap between them sizes the control.
+                                val gap = (fingers[0].position - fingers[1].position).getDistance()
+                                if (pinch > 0f && abs(gap / pinch - 1f) > 0.04f) { resize(hit.button, gap / pinch); pinch = gap }
+                                else if (pinch == 0f) pinch = gap
+                            } else if (pinch == 0f) {
+                                val f = fingers[0].position - area.topLeft
+                                moveTo(hit.button, f.x - grab.x, f.y - grab.y)
+                            }
+                        }
+                    }
+                }
+            },
+        ) {
+            if (drawBackdrop) {
+                drawRect(Color.Black)
+                drawStage(stage, shot)
+            }
+            // The controls' area, marked; the rest dimmed a little so the controls stand out.
+            drawRect(Color(0x55000000))
+            drawRect(Color(0x66FFFFFF), area.topLeft, area.size, style = Stroke(width = gbaPixelPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))))
+            translate(area.left, area.top) {
+                drawTouchControls(placed, null, false, measurer, font, selected, editing = true)
+            }
+        }
+        // The bar, away from the buttons ([barY]).
+        Column(
+            Modifier.align(Alignment.TopCenter).offset { IntOffset(0, barY) }.widthIn(max = 560.dp).padding(horizontal = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            OptionTitleWindow(
+                if (portrait) tr("EDIT LAYOUT: UPRIGHT") else tr("EDIT LAYOUT: SIDEWAYS"), m,
+                actions = { OptionButton(tk("DONE"), m, onClick = done, emphasis = true, sidePadding = 6) },
+            )
+            Spacer(Modifier.height(m.u * 3))
+            Row(horizontalArrangement = Arrangement.spacedBy(m.u * 3)) {
+                OptionButton(if (snap) tk("SNAP ON") else tk("SNAP OFF"), m, onClick = { snap = !snap }, sidePadding = 6)
+                if (hidden.isNotEmpty()) OptionButton(tr("HIDDEN ({0})", hidden.size), m, onClick = { hiddenPicker = true }, sidePadding = 6)
+                OptionButton(tk("RESET"), m, onClick = { confirmReset = true }, sidePadding = 6)
+            }
+            val sel = selected?.takeIf { s -> placed.item(s) != null }
+            if (sel != null) {
+                Spacer(Modifier.height(m.u * 3))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(m.u * 3),
+                    modifier = Modifier
+                        .drawBehind { drawLayeredBox(OptionColors.titleLayers.inPx(m.u.toPx()), OptionColors.titleFill, radius = 2 * m.u.toPx()) }
+                        .padding(horizontal = m.u * 8, vertical = m.u * 4),
+                ) {
+                    GbaText(tr(sel.label), OptionColors.titleText, OptionColors.titleShadow, m)
+                    Spacer(Modifier.width(m.u * 4))
+                    OptionButton("-", m, onClick = { resize(sel, 1 / 1.1f) }, sidePadding = 6)
+                    val pct = ((layout.places[sel]?.scale ?: 1f) * 100).roundToInt()
+                    GbaText("$pct%", OptionColors.value, OptionColors.valueShadow, m)
+                    OptionButton("+", m, onClick = { resize(sel, 1.1f) }, sidePadding = 6)
+                    OptionButton(tk("HIDE"), m, onClick = { edit(sel) { it.copy(hidden = true) }; selected = null }, sidePadding = 6)
+                }
+            } else {
+                // In a window of its own: over a bright game, text on the backdrop can't be read.
+                Spacer(Modifier.height(m.u * 3))
+                val small = rememberGbaTextMetrics(1f, gameScaled = false)
+                Box(
+                    Modifier
+                        .drawBehind { drawLayeredBox(OptionColors.titleLayers.inPx(m.u.toPx()), OptionColors.titleFill, radius = 2 * m.u.toPx()) }
+                        .padding(horizontal = m.u * 8, vertical = m.u * 4),
+                ) {
+                    GbaText(tr("Drag to move. Tap to resize or hide."), OptionColors.titleText, OptionColors.titleShadow, small)
+                }
+            }
+        }
+        if (hiddenPicker) {
+            OptionSelector(
+                tk("SHOW AGAIN"), hidden, hidden.first(), { tr(it.label) }, m,
+                onPick = { b -> layout = TouchLayout(layout.places - b); hiddenPicker = false },
+                onDismiss = { hiddenPicker = false },
+            )
+        }
+        if (confirmReset) {
+            OptionConfirm(
+                tk("RESET LAYOUT?"),
+                if (portrait) tr("Every button goes back to where {0} puts it, upright.", tr(style.preset.label))
+                else tr("Every button goes back to where {0} puts it, sideways.", tr(style.preset.label)),
+                tk("RESET"), m,
+                onConfirm = { layout = TouchLayout(); selected = null; confirmReset = false },
+                onDismiss = { confirmReset = false },
+            )
+        }
+    }
+}

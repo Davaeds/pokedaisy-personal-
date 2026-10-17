@@ -9,4 +9,7 @@ object Screens {
     fun isOnMainDisplay(activity: Any) = true
     fun reopenOnMainDisplay(activity: Any) = false
     fun bringToMainDisplay(activity: Any) {}
+    /** The Thor's bottom screen is built in: SWAP SCREENS is [Prefs.swapScreens]. */
+    fun swapped(context: android.content.Context, prefs: Prefs): Boolean = prefs.swapScreens
+    fun setSwapped(context: android.content.Context, prefs: Prefs, on: Boolean) { prefs.swapScreens = on }
 }

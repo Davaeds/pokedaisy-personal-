@@ -20,11 +20,11 @@ import com.pokedaisy.app.companion.ui.SidePanelCompanion
  * The companion on a single-screen device held upright (a phone in portrait):
  * the game across the top of the screen ([GameStageLayout.topAligned]), the
  * companion under it, always open - along the screen's bottom, or right under
- * the game with the touch pad below it ([Prefs.portraitCompanionUnderGame]; see
+ * the game with the touch controls below it ([Prefs.portraitCompanionUnderGame]; see
  * [PortraitLayout.arrange]). Its height is the player's
  * ([Prefs.portraitCompanionRatio]): drag the grip on its edge, or tap it to step
  * through small / the Thor's shape / everything under the game. The gap left
- * takes the touch pad when it's shown and fits; else the pad lies over the game
+ * takes the touch controls when it's shown and fits; else the pad lies over the game
  * as usual. The grip has a strip of its own and never covers the game; only a
  * screen too short for anything else puts it inside the companion's top. BACK is the companion's back
  * ([back]).
@@ -56,6 +56,14 @@ class PortraitPanel(
         }
     private var underGame = prefs.portraitCompanionUnderGame
 
+    /** The touch controls' own strip along the bottom (px) for EXPAND + UNDER GAME; 0 while they're hidden. */
+    var padStrip = 0
+        set(v) {
+            if (field == v) return
+            field = v
+            apply()
+        }
+
     private var panel: View? = null
     private var gripView: View? = null
     private val grip = mutableStateOf(PortraitLayout.Grip.ABOVE)
@@ -67,8 +75,8 @@ class PortraitPanel(
     private val gameH get() = root.gameHeightFor(screenW)
     private val gripH get() = gripView?.height ?: 0
     /** The grip's strip, kept free in either placement ([PortraitLayout.arrange]). */
-    private val reserve get() = gripH
-    private fun arrangement() = PortraitLayout.arrange(screenW, screenH, gameH, gripH, ratio, underGame, expand)
+    private val reserve get() = gripH + if (expand && underGame && padStrip > 0) minOf(padStrip, screenH / 3) else 0
+    private fun arrangement() = PortraitLayout.arrange(screenW, screenH, gameH, gripH, ratio, underGame, expand, padStrip)
 
     // A rotation, the status bar coming or going, a Game Boy game's 10:9: lay out again.
     private val relayout = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
@@ -119,6 +127,13 @@ class PortraitPanel(
         ratio = prefs.portraitCompanionRatio
         underGame = prefs.portraitCompanionUnderGame
         apply()
+    }
+
+    /** Where the companion is on the screen (px), for TOUCH CONTROLS' preview; null while off. */
+    fun companionBounds(): androidx.compose.ui.geometry.Rect? {
+        val v = panel ?: return null
+        val lp = v.layoutParams as FrameLayout.LayoutParams
+        return androidx.compose.ui.geometry.Rect(0f, lp.topMargin.toFloat(), screenW.toFloat(), (lp.topMargin + lp.height).toFloat())
     }
 
     /** A BACK tap; false = not ours (held sideways, or a second screen has the companion). */

@@ -14,10 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.viewinterop.AndroidView
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
-import com.pokedaisy.app.TouchControlsView
 import com.pokedaisy.app.companion.data.DecompIconSource
 import com.pokedaisy.app.companion.data.GameKind
 import com.pokedaisy.app.companion.data.NATIVE_FIRERED_REV1
@@ -32,7 +30,7 @@ import kotlin.math.roundToInt
 /**
  * A phone held upright (PortraitPanel): the game across the top, the companion
  * docked under it at the size the player picked, the grip on its top edge, and
- * the touch pad in the gap between when there's no controller. On a Pixel 6
+ * the touch controls in the gap between when there's no controller. On a Pixel 6
  * (1080x2400, 420 dpi - the common modern phone shape; a Galaxy S2x is 1080x2340).
  * Laid out with PortraitLayout, the same math the app's views use; the game is
  * a drawn stand-in (Paparazzi can't run the core). See CompanionScreenshotTest.
@@ -64,16 +62,16 @@ class PortraitScreenshotTest {
     /** The default: the companion at the Thor bottom screen's shape, a controller connected. */
     @Test fun controller() = paparazzi.snapshot { Scene(PortraitLayout.DEFAULT_RATIO, touchPad = false) }
 
-    /** No controller: the touch pad takes the gap between game and companion. */
+    /** No controller: the touch controls takes the gap between game and companion. */
     @Test fun touchPad() = paparazzi.snapshot { Scene(PortraitLayout.DEFAULT_RATIO, touchPad = true) }
 
-    /** The smallest companion: the most room for the touch pad. */
+    /** The smallest companion: the most room for the touch controls. */
     @Test fun smallest() = paparazzi.snapshot { Scene(PortraitLayout.MIN_RATIO, touchPad = true) }
 
     /** Dragged all the way up: everything under the game but the grip's strip, which keeps the companion's room its own. */
     @Test fun tallest() = paparazzi.snapshot { Scene(10f, touchPad = true) }
 
-    /** SETTINGS > COMPANION > UNDER GAME: the companion right under the game, the touch pad at the screen's bottom. */
+    /** SETTINGS > COMPANION > UNDER GAME: the companion right under the game, the touch controls at the screen's bottom. */
     @Test fun underGame() = paparazzi.snapshot { Scene(PortraitLayout.DEFAULT_RATIO, touchPad = true, underGame = true) }
 
     @Test fun underGameSmallest() = paparazzi.snapshot { Scene(PortraitLayout.MIN_RATIO, touchPad = true, underGame = true) }
@@ -95,8 +93,9 @@ class PortraitScreenshotTest {
             val a = PortraitLayout.arrange(w, h, gameH, gripH, ratio, underGame)
             FakeGame(Modifier.fillMaxWidth().height(px(a.gameBottom)))
             if (touchPad) {
-                AndroidView(
-                    factory = { TouchControlsView(it) },
+                // The game's TouchControlsView hosts this composable (a ComposeView in an AndroidView doesn't draw here).
+                TouchControls(
+                    com.pokedaisy.app.companion.TouchControlsStyle(), portrait = true, input = TouchInput(),
                     modifier = Modifier.fillMaxWidth().offset(y = px(a.padTop)).height(px(a.padBottom - a.padTop)),
                 )
             }

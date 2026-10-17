@@ -31,6 +31,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
@@ -120,14 +121,13 @@ class PokeDaisyActivity : Activity() {
     private val pads = HashMap<Int, String>()
 
     /**
-     * A real button played the game: AUTO hides the touch pad from then on, even for a
+     * A real button played the game: AUTO hides the touch controls from then on, even for a
      * controller that doesn't call itself a gamepad (some 8BitDo / GameSir modes show
      * up as a keyboard), until a device goes away.
      */
     private var physicalPadUsed = false
 
-    private fun isGamepad(d: InputDevice) = !d.isVirtual &&
-        d.sources and (InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK) != 0
+    private fun isGamepad(d: InputDevice) = Controllers.isGamepad(d)
 
     private var rom: File? = null
     /** What the emulator and the ROM readers load for [rom]: the file itself, or an
@@ -163,7 +163,7 @@ class PokeDaisyActivity : Activity() {
     /** BACK for the FIELD HUD's panels (map, bag, wild, summary): the first thing a BACK tap closes. */
     private val hudBack = com.pokedaisy.app.companion.ui.CompanionBack()
     /** The FIELD HUD over the game (see [buildFieldHud]) and what it follows: SETTINGS > HUD, the phone's
-     * orientation (none upright, for now), the touch pad's rows it keeps clear of, the engine's [EmulatorEngine.onField]. */
+     * orientation (none upright, for now), the touch controls' rows it keeps clear of, the engine's [EmulatorEngine.onField]. */
     private lateinit var fieldHud: ComposeView
     private val hudOn = androidx.compose.runtime.mutableStateOf(true)
     private val hudStyle = androidx.compose.runtime.mutableStateOf(com.pokedaisy.app.companion.FieldHudStyle())
@@ -208,7 +208,7 @@ class PokeDaisyActivity : Activity() {
     /** No second screen for the companion: it's in [sidePanel] or [portraitPanel], by the screen's orientation. */
     private var singleScreen = false
     private var debugMirror = false
-    /** The game's stage (game, status bar, touch pad, HUD, side panel): the activity's
+    /** The game's stage (game, status bar, touch controls, HUD, side panel): the activity's
      * content, or the second screen's with SWAP SCREENS (see [syncPresentation]). */
     private lateinit var stage: GameStageLayout
     /** The companion as the activity's content while the screens are swapped, with its owner. */
@@ -834,11 +834,16 @@ class PokeDaisyActivity : Activity() {
             Prefs(this@PokeDaisyActivity).ffMode = mode
             if (::engine.isInitialized) engine.ffMode = mode
         }
-        override val touchControlsMode get() = Prefs(this@PokeDaisyActivity).touchControlsMode
-        override fun setTouchControlsMode(v: Int) {
-            Prefs(this@PokeDaisyActivity).touchControlsMode = v
-            syncTouchControls()
+        override val touchStyle get() = Prefs(this@PokeDaisyActivity).touchControlsStyle
+        override fun setTouchStyle(style: com.pokedaisy.app.companion.TouchControlsStyle) {
+            Prefs(this@PokeDaisyActivity).touchControlsStyle = style
+            runOnUiThread { syncTouchControls() }
         }
+        override val touchStage get() = measuredTouchStage()
+        override fun touchPreviewShot() = newestStateShot()
+        override fun editTouchLayout() = runOnUiThread { openTouchEditor() }
+        override val touchRevision get() = touchRev.intValue
+        override val touchControlsShown get() = ::touchControls.isInitialized && touchControls.visibility == View.VISIBLE
         override fun gbaControlBindings() = GbaControls.rawBindings(getExternalFilesDir(null) ?: filesDir)
         override val keyCapture get() = this@PokeDaisyActivity.keyCapture
         override fun setGbaControlBinding(btn: GbaControls.Btn, keyName: String) {
@@ -995,9 +1000,11 @@ class PokeDaisyActivity : Activity() {
         override val swapScreens get() = Screens.swapped(this@PokeDaisyActivity, Prefs(this@PokeDaisyActivity))
         override val portraitUnderGame get() =
             if (::portraitPanel.isInitialized && portraitPanel.enabled) Prefs(this@PokeDaisyActivity).portraitCompanionUnderGame else null
+        override val uprightUnderGame get() =
+            if (secondScreen() == null) Prefs(this@PokeDaisyActivity).portraitCompanionUnderGame else null
         override fun setPortraitUnderGame(on: Boolean) {
             Prefs(this@PokeDaisyActivity).portraitCompanionUnderGame = on
-            runOnUiThread { portraitPanel.refresh() }
+            runOnUiThread { portraitPanel.refresh(); syncTouchControls() }
         }
         override val companionWindow get() =
             if (::sidePanel.isInitialized && sidePanel.enabled) Prefs(this@PokeDaisyActivity).companionWindow else null
@@ -1116,7 +1123,8 @@ class PokeDaisyActivity : Activity() {
             visibility = View.GONE
         }
         touchControls = TouchControlsView(this).apply {
-            onMask = { bits -> input.setTouchBits(bits) }
+            onMask = ::onTouchKeys
+            onAction = ::onTouchAction
             onPlaced = { syncHudClear() }
             visibility = View.GONE
         }
@@ -1141,7 +1149,7 @@ class PokeDaisyActivity : Activity() {
             addView(view, gameParams)
             addView(statusBar, FrameLayout.LayoutParams(-2, -2))
             addView(touchControls, FrameLayout.LayoutParams(-1, -1))
-            // Over the touch pad: a tap on the HUD is the HUD's, anywhere else falls through to the pad.
+            // Over the touch controls: a tap on the HUD is the HUD's, anywhere else falls through to the pad.
             addView(fieldHud, FrameLayout.LayoutParams(-1, -1))
             // The HUD's messages top-right: FPS / CPU has the top-left corner.
             addView(hud, FrameLayout.LayoutParams(-2, -2).apply {
@@ -1183,7 +1191,7 @@ class PokeDaisyActivity : Activity() {
         root.setViewTreeLifecycleOwner(owner)
         root.setViewTreeSavedStateRegistryOwner(owner)
         root.setViewTreeViewModelStoreOwner(owner)
-        // Its panel and tabs above the FIELD HUD (which sits above the touch pad).
+        // Its panel and tabs above the FIELD HUD (which sits above the touch controls).
         sidePanel = SidePanel(root, view, touchControls, Prefs(this), panelBack, panelKeys, playClick, under = fieldHud, onWindow = ::onCompanionWindow, companion = {
             val snap by telemetry.snapshot.collectAsState()
             CompanionScreen(snap, stateSlots, companionSettings, battleInput, back = panelBack, keys = panelKeys, clickSound = playClick, achievements = RetroAchievements, statusBar = companionStatusBar, itemUse = itemUse, fly = flyAction, askForSupport = askForSupport, gamePick = gamePick, shareBestEffort = shareBestEffort)
@@ -1318,6 +1326,7 @@ class PokeDaisyActivity : Activity() {
                     runOnUiThread {
                         stage.aspect = w.toFloat() / h   // 3:2, or a Game Boy's 10:9
                         touchControls.shoulders = !gameBoy
+                        syncTouchControls()   // a Game Boy's controls (no L / R) are shorter: EXPAND's strip follows
                     }
                 }
             }
@@ -1342,7 +1351,10 @@ class PokeDaisyActivity : Activity() {
                 runOnUiThread { showHud(text) }
             }
             onSpeedChanged = { label -> runOnUiThread { showHud(label) } }
-            onFastForwardToggledChanged = { on -> Prefs(this@PokeDaisyActivity).ffToggled = on }
+            onFastForwardToggledChanged = { on ->
+                Prefs(this@PokeDaisyActivity).ffToggled = on
+                runOnUiThread { if (::touchControls.isInitialized) touchControls.ffOn = on }
+            }
             onFfMusicChanged = { clip -> runOnUiThread { ffMusicPlayer.setClip(clip) } }
             onFfMusicWanted = { key -> ffMusicRenderer?.request(key) }
             ffMusicWillRender = { key -> ffMusicRenderer?.willRender(key) == true }
@@ -1684,6 +1696,8 @@ class PokeDaisyActivity : Activity() {
         portraitPanel.setEnabled(on && portrait)
         // Upright, the game drops its overlay (and gets it back sideways).
         syncGameScreen()
+        // The touch controls' own layout for the way the phone is held.
+        syncTouchControls()
     }
 
     /** Locked to landscape with a second screen (the Thor's top one); else the device's rotation decides. */
@@ -1760,6 +1774,8 @@ class PokeDaisyActivity : Activity() {
         // A phone upright: WIDE fills everything above the companion, the map going on above and below the game.
         stageLayout?.expand = aspect == GameAspect.WIDE
         if (::portraitPanel.isInitialized) portraitPanel.expand = aspect == GameAspect.WIDE
+        // EXPAND decides whether UNDER GAME gives the touch controls a strip of their own.
+        syncTouchControls()
         view.stretch = aspect == GameAspect.STRETCH
         view.wide = aspect == GameAspect.WIDE
         if (::engine.isInitialized) {
@@ -1904,7 +1920,7 @@ class PokeDaisyActivity : Activity() {
         }
     }
 
-    /** The touch pad's button rows, for the FIELD HUD to keep clear of. */
+    /** The touch controls' button rows, for the FIELD HUD to keep clear of. */
     private fun syncHudClear() {
         if (::touchControls.isInitialized) hudClear.value = touchControls.clearTop to touchControls.clearBottom
     }
@@ -1940,19 +1956,138 @@ class PokeDaisyActivity : Activity() {
     private fun clockText(): String =
         android.text.format.DateFormat.getTimeFormat(this).format(java.util.Date())
 
-    /** Show the on-screen controls per the Settings mode (default: only with no gamepad). */
+    /** Show the on-screen controls per SETTINGS > TOUCH CONTROLS > SHOW (AUTO: only with no controller), in its style. */
     private fun syncTouchControls() {
         if (!::touchControls.isInitialized) return
-        val show = when (Prefs(this).touchControlsMode) {
-            1 -> true
-            2 -> false
-            else -> !physicalPadUsed && InputDevice.getDeviceIds().none { id ->
-                InputDevice.getDevice(id)?.let(::isGamepad) == true
+        val style = Prefs(this).touchControlsStyle
+        val show = touchEditor == null && when (style.show) {
+            com.pokedaisy.app.companion.TouchShow.ALWAYS -> true
+            com.pokedaisy.app.companion.TouchShow.NEVER -> false
+            com.pokedaisy.app.companion.TouchShow.AUTO -> !physicalPadUsed && !Controllers.anyConnected()
+        }
+        touchControls.style = style
+        touchControls.portrait = ::portraitPanel.isInitialized && portraitPanel.enabled
+        touchControls.gameAspect = if (::stage.isInitialized) stage.aspect else 1.5f
+        if (::engine.isInitialized) touchControls.ffOn = engine.fastForwardToggled
+        touchControls.visibility = if (show) View.VISIBLE else View.GONE
+        // EXPAND + UNDER GAME upright: the controls' own strip under the companion (none while they're hidden).
+        if (::portraitPanel.isInitialized) {
+            val prefs = Prefs(this)
+            val w = stage.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
+            portraitPanel.padStrip = if (show && portraitPanel.enabled && portraitPanel.expand && prefs.portraitCompanionUnderGame)
+                com.pokedaisy.app.companion.ui.TouchGeometry.naturalHeight(style, w.toFloat(), resources.displayMetrics.density, !touchControls.shoulders)
+            else 0
+        }
+        syncHudClear()
+        if (!show) { input.setTouchBits(0); touchHeld = 0 }
+    }
+
+    /** The touch controls' buttons: the game's, or the QUICK MENU's while it's open (each newly held one a press). Its
+     * scrim takes new touches then, so that's a finger already down (the MENU button's) sliding on. */
+    private var touchHeld = 0
+    private fun onTouchKeys(gba: Int, turbo: Int) {
+        val newly = gba and touchHeld.inv()
+        touchHeld = gba
+        if (quickMenu.open) {
+            input.setTouchBits(0)
+            menuKeyFor(newly)?.let { quickMenu.key(it) }
+            return
+        }
+        input.setTouchBits(gba, turbo)
+    }
+
+    /** When the touch controls' FF went down: a short tap turns FF on / off, a longer press is FF while held. */
+    private var touchFfDownAt = 0L
+
+    /** The touch controls' extras: FF, the QUICK MENU, SAVE / LOAD STATE (the hotkeys' own actions). */
+    private fun onTouchAction(button: com.pokedaisy.app.companion.TouchButton, down: Boolean) {
+        if (!::engine.isInitialized) return
+        when (button) {
+            com.pokedaisy.app.companion.TouchButton.FF -> {
+                if (down) {
+                    touchFfDownAt = android.os.SystemClock.uptimeMillis()
+                    engine.setFastForwardHeld(true)
+                } else {
+                    engine.setFastForwardHeld(false)
+                    if (android.os.SystemClock.uptimeMillis() - touchFfDownAt < TOUCH_FF_TAP_MS) engine.toggleFastForward()
+                }
+            }
+            com.pokedaisy.app.companion.TouchButton.QUICK_MENU -> if (down) handleHotkey(Hotkeys.Event(Hotkeys.Action.QUICK_MENU, true))
+            com.pokedaisy.app.companion.TouchButton.SAVE_STATE -> if (down) handleHotkey(Hotkeys.Event(Hotkeys.Action.SAVE_STATE, true))
+            com.pokedaisy.app.companion.TouchButton.LOAD_STATE -> if (down) handleHotkey(Hotkeys.Event(Hotkeys.Action.LOAD_STATE, true))
+            else -> {}
+        }
+    }
+
+    /** The game's screen as the touch controls see it: the stage, the game's picture, the controls' area (an upright
+     * phone's gap, or beside a docked side panel), the companion under the game upright. Null before it's laid out. */
+    private fun measuredTouchStage(): com.pokedaisy.app.companion.TouchStage? {
+        if (!::stage.isInitialized || stage.width == 0 || stage.height == 0) return null
+        val w = stage.width.toFloat()
+        val h = stage.height.toFloat()
+        val lp = touchControls.layoutParams as android.widget.FrameLayout.LayoutParams
+        val area = androidx.compose.ui.geometry.Rect(lp.leftMargin.toFloat(), lp.topMargin.toFloat(), w - lp.rightMargin, h - lp.bottomMargin)
+        val aspect = stage.aspect
+        val portrait = ::portraitPanel.isInitialized && portraitPanel.enabled
+        // EXPAND: the map fills the game's whole view.
+        val game = if (::portraitPanel.isInitialized && portraitPanel.expand) {
+            androidx.compose.ui.geometry.Rect(view.left.toFloat(), view.top.toFloat(), view.right.toFloat(), view.bottom.toFloat())
+        } else hudFrame.value?.translate(view.left.toFloat(), view.top.toFloat()) ?: run {
+            val gw = minOf(view.width.toFloat(), view.height * aspect)
+            val gh = gw / aspect
+            val l = view.left + (view.width - gw) / 2
+            val t = view.top + if (portrait) 0f else (view.height - gh) / 2
+            androidx.compose.ui.geometry.Rect(l, t, l + gw, t + gh)
+        }
+        return com.pokedaisy.app.companion.TouchStage(
+            w, h, resources.displayMetrics.density, portrait, game, area,
+            companion = if (portrait) portraitPanel.companionBounds() else null,
+            gameAspect = aspect, gameBoy = !touchControls.shoulders,
+        )
+    }
+
+    /** The newest savestate's picture of this game, for TOUCH CONTROLS' preview; null = none. */
+    private fun newestStateShot(): androidx.compose.ui.graphics.ImageBitmap? = runCatching {
+        states?.allSlots()?.mapNotNull { it.thumb }?.maxByOrNull { it.lastModified() }
+            ?.let { android.graphics.BitmapFactory.decodeFile(it.path) }?.asImageBitmap()
+    }.getOrNull()
+
+    /** EDIT LAYOUT over the running game (TOUCH CONTROLS' row on the companion): the companion's window steps aside,
+     * the controls themselves hide while their stand-ins are moved, and DONE / BACK keeps the layout. */
+    private var touchEditor: ComposeView? = null
+    private val touchRev = androidx.compose.runtime.mutableIntStateOf(0)
+    private val touchEditBack = com.pokedaisy.app.companion.ui.CompanionBack()
+
+    private fun openTouchEditor() {
+        if (touchEditor != null) return
+        val st = measuredTouchStage() ?: return
+        if (::sidePanel.isInitialized) sidePanel.closeWindow()
+        val editor = ComposeView(this).apply {
+            setContent {
+                androidx.compose.runtime.CompositionLocalProvider(com.pokedaisy.app.companion.ui.LocalCompanionBack provides touchEditBack) {
+                    com.pokedaisy.app.companion.ui.TouchLayoutEditor(
+                        st, Prefs(this@PokeDaisyActivity).touchControlsStyle, com.pokedaisy.app.companion.ui.rememberGbaTextMetrics(),
+                        onDone = { layout ->
+                            val prefs = Prefs(this@PokeDaisyActivity)
+                            prefs.touchControlsStyle = prefs.touchControlsStyle.withLayout(st.portrait, layout)
+                            closeTouchEditor()
+                        },
+                    )
+                }
             }
         }
-        touchControls.visibility = if (show) View.VISIBLE else View.GONE
-        syncHudClear()
-        if (!show) input.setTouchBits(0)
+        touchEditor = editor
+        input.setTouchBits(0)
+        stage.addView(editor, android.widget.FrameLayout.LayoutParams(-1, -1))
+        syncTouchControls()
+    }
+
+    private fun closeTouchEditor() {
+        val editor = touchEditor ?: return
+        touchEditor = null
+        stage.removeView(editor)
+        touchRev.intValue++
+        syncTouchControls()
     }
 
     // --- input ---------------------------------------------------------------
@@ -2121,6 +2256,8 @@ class PokeDaisyActivity : Activity() {
     }
 
     private fun companionBackTap() {
+        // EDIT LAYOUT over the game: BACK is its DONE.
+        if (touchEditor != null) { touchEditBack.back(); return }
         if (companionClosed) {
             // The companion was closed: BACK brings it back.
             companionClosed = false
@@ -2386,6 +2523,9 @@ class PokeDaisyActivity : Activity() {
     }
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+
+    /** A touch FF shorter than this turns FF on / off; longer, it was FF while held. */
+    private val TOUCH_FF_TAP_MS = 300L
 
     /** See the debug-mirror comment at the `addView` call site. The
      * ViewTreeLifecycleOwner this needs is set on the root content view in

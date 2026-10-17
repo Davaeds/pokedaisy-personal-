@@ -76,7 +76,7 @@ enum class BattleButtonsWindow { MOVES, PARTY }
 /**
  * The battle buttons in the room right of [core] (px: where the GBA's own picture is in this box; null = its middle
  * at the box's height, EXPAND's battle). [shown] false fades them out. No room for them (STRETCH, a docked side
- * panel, a narrow screen) = nothing. [clearTop] / [clearBottom] (px): the touch pad's rows, kept clear.
+ * panel, a narrow screen) = nothing. [clearTop] / [clearBottom] (px): the touch controls' rows, kept clear.
  * [initialWindow]: a window already open (screenshot tests can't tap).
  */
 @Composable

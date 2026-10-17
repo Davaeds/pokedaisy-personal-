@@ -165,7 +165,7 @@ a game backdrop (`GameBackdrop` on the companion, `AppBackdrop` — FireRed's pa
 stripes — on the top screen); ITEMS (`ItemsScreen.kt`) is the per-game bag screen in the
 same idiom. PARTY uses the game's own slot (`GbaPartySlot`, generated `PartySlotStyle`s) where one exists; every other game gets a FireRed-like slot drawn from a `PartyPalette` (`PartyScreen.kt`, `partyPaletteFor`) — restyle a game by adding a palette there, like ITEMS' `BagPalette`. Rogue, Gaia, Lazarus, Seaglass and R.O.W.E. have palettes sampled from their party menus (headless: the save's first mon copied into slots 2-3, slot 3 at 0 HP, so normal / selected / fainted all show; `PartySlotColors.band` / per-state `text`, `PartyPalette.empty` cover flat and white-box slots); their bags have `BagPalette`s (TMT2's is `EmeraldBag`; Celia and Gaia match FireRed's). Their backdrop is FireRed's party backdrop recoloured (`backdropColors` in `theme/Theme.kt`: its 3 colours mapped to the game's), or plain stripes until a FireRed ROM has supplied the art. Multi-choice settings open an `OptionSelector` pick-list — never make a row
 cycle through more than two values (exceptions, the user's call: SHADERS > FILTER, GRID and SMOOTHING, and HUD > LAYOUT, LOOK and SIZE
-cycle on tap, so each look shows on the game at once). **The PokéDaisy theme** (the default, `DAISY_THEME_ID` 8 in `theme/Theme.kt`; Settings > THEME, `Prefs.appTheme` by
+cycle on tap, so each look shows on the game at once; and every TOUCH CONTROLS row, so each shows in its preview). **The PokéDaisy theme** (the default, `DAISY_THEME_ID` 8 in `theme/Theme.kt`; Settings > THEME, `Prefs.appTheme` by
 id - FireRed is 0, the old default) only changes the top screen's backdrop (Library, Settings, setup): `AppBackdrop`
 -> `DaisyBackdrop`, the website's (blobs, dot grid and, on the Library, its floating logos). The windows and text
 stay the OPTION look; only text drawn straight on the backdrop (`OptionColors.onBackdrop`) turns the windows' grey
@@ -1084,6 +1084,21 @@ again on rotation (`onConfigurationChanged`); the manifest no longer locks lands
 locks it with a second screen (or the debug mirror) and follows the user's rotation (`SCREEN_ORIENTATION_USER`)
 without one. Paparazzi: `PortraitScreenshotTest` (Pixel 6, 1080x2400); ui-preview's `*-phone` shots are the
 Library at that size.
+**TOUCH CONTROLS** (was TOUCH PAD; SETTINGS > CONTROLS on both screens, a page with a preview; `TouchControlsStyle` in
+`companion/TouchControlsSettings.kt`, `Prefs.touchControlsStyle`, NEW tag): one geometry for the game, the preview and the
+editor (`companion/ui/TouchGeometry.kt`: sizes in dp, presets SIDES default / CLASSIC / COMPACT, SIDES falling back to
+CLASSIC where the bars beside a 3:2 game are too narrow - 16:9, upright; the player's CUSTOM layout per orientation as
+edge-anchored `TouchPlace`s), drawn in Compose in the HUD's GLASS pixel look (`companion/ui/TouchControls.kt`; the game's
+`TouchControlsView` only hosts it). EDIT LAYOUT runs over the game (`PokeDaisyActivity.openTouchEditor`, the real stage:
+`measuredTouchStage`) or, in the top-screen Settings, over a stand-in built by `simulateTouchStage`. Extras (FF tap / hold,
+QUICK MENU, TURBO A / B through `GbaInput.setTouchBits(gba, turbo)`, SAVE / LOAD STATE) go through the hotkeys' handler.
+`TouchGeometryTest` checks every preset x size x screen for overlaps and off-area buttons: rerun it after touching the
+presets. AUTO counts only a gamepad source with an A button as a controller (`isGamepad`): some phones list a built-in
+joystick-source device, which hid the controls. Upright, POSITION (TOP / MIDDLE / BOTTOM, presets only) moves the
+whole block within its room (`shiftTo`), and the page repeats DISPLAY OPTIONS' COMPANION (AT BOTTOM / UNDER GAME); the
+upright preview shows only the screen's part around the controls. EXPAND upright fills everything above the companion, so
+there UNDER GAME = the controls' own strip along the bottom (`PortraitLayout.arrange(padStrip)`, `TouchGeometry.naturalHeight`,
+set by `syncTouchControls`), and COMPANION / POSITION grey out with a reason where they'd do nothing (`uprightCompanionRow`). ui-preview `touch-*` / `settings-touch*` shots.
 **External controllers** (8BitDo, GameSir, ...): `configChanges` includes `keyboard` (many controller modes
 register as a keyboard, and connecting one recreated the activity mid-game); diagonal D-pad keycodes press
 both bits; joystick motion is taken in `dispatchGenericMotionEvent` before a focused ComposeView in the same

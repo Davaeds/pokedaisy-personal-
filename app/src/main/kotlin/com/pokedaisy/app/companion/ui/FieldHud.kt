@@ -277,7 +277,7 @@ private fun hudItemSize(m: GbaTextMetrics): Dp = with(LocalDensity.current) { (2
 /**
  * The FIELD HUD over the game screen (this composable's whole box; the GBA's 3:2 is its middle, which RAILS keep
  * beside). [shown] false fades it out and closes what's open (a battle or a menu took the screen). [clearTop] /
- * [clearBottom] (px): room kept clear at the top and bottom - the touch pad's L / R and its D-pad / A / B. [itemUse]
+ * [clearBottom] (px): room kept clear at the top and bottom - the touch controls' L / R and its D-pad / A / B. [itemUse]
  * / [fly]: the bag's USE and the map's FLY, as on the companion's tabs. [onOpenCompanion]: a single screen's closed
  * side panel - its open button joins BAG and WILD (null = none). [wild] / [initialPanel]: for screenshot tests
  * (the wild Pokémon are read from the ROM otherwise; tests can't tap).
@@ -382,7 +382,7 @@ fun FieldHud(
                                 RailsLayout(parts, (inL / scale).toDp(), (inR / scale).toDp())
                             }
                         } else {
-                            // The others stay on the picture; the touch pad's rows only where they reach into it.
+                            // The others stay on the picture; the touch controls' rows only where they reach into it.
                             Box(
                                 Modifier.fillMaxSize()
                                     .padding(start = inL.toDp(), top = inT.toDp(), end = inR.toDp(), bottom = inB.toDp())

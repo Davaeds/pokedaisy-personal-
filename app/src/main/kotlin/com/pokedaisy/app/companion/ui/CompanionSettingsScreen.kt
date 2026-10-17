@@ -45,14 +45,13 @@ import com.pokedaisy.app.companion.FfMusicMode
 import com.pokedaisy.app.companion.MAX_BAR_TABS
 
 private val FF_RATES = floatArrayOf(0f, 1.5f, 2f, 3f, 4f, 5f, 6f, 8f, 10f)
-private val TOUCH_NAMES = listOf(tk("AUTO"), tk("ALWAYS"), tk("NEVER"))
 
 /** SETTINGS > STATUS BAR's choices: off, over the game, over the companion's tabs. */
 internal val STATUS_BAR_PLACES = listOf(tk("OFF"), tk("GAME"), tk("COMPANION"))
 
 internal fun statusBarLabel(on: Boolean, onCompanion: Boolean) = STATUS_BAR_PLACES[if (!on) 0 else if (onCompanion) 2 else 1]
 
-internal enum class Page(val title: String) { HOME(tk("SETTINGS")), TABS(tk("TAB BAR")), BUTTONS(tk("GAME BUTTONS")), HOTKEYS(tk("HOTKEYS")), SHADERS(tk("SHADERS")), FIELD_HUD(tk("HUD")), QUICK_MENU(tk("QUICK MENU")), SPEED(tk("SPEED OPTIONS")), DISPLAY(tk("DISPLAY OPTIONS")), CHEATS(tk("CHEATS")), TWEAKS(tk("TWEAKS")), HELP(tk("HELP")) }
+internal enum class Page(val title: String) { HOME(tk("SETTINGS")), TABS(tk("TAB BAR")), BUTTONS(tk("GAME BUTTONS")), HOTKEYS(tk("HOTKEYS")), SHADERS(tk("SHADERS")), FIELD_HUD(tk("HUD")), QUICK_MENU(tk("QUICK MENU")), TOUCH(tk("TOUCH CONTROLS")), SPEED(tk("SPEED OPTIONS")), DISPLAY(tk("DISPLAY OPTIONS")), CHEATS(tk("CHEATS")), TWEAKS(tk("TWEAKS")), HELP(tk("HELP")) }
 
 /** Where BACK from a page goes: SHADERS opens from DISPLAY OPTIONS, the rest from HOME. */
 internal val Page.parent: Page get() = if (this == Page.SHADERS) Page.DISPLAY else Page.HOME
@@ -61,7 +60,7 @@ internal val Page.parent: Page get() = if (this == Page.SHADERS) Page.DISPLAY el
  * The bottom-screen SETTINGS tab, laid out like FireRed's OPTION screen over
  * the game's own party-menu backdrop: every setting is a `LABEL  VALUE` row.
  * Tapping an on/off row flips it; rows with more choices (FF SPEED, FF MODE,
- * TOUCH PAD) open a pick-one list ([OptionSelector]) instead of stepping
+ * SHOW) open a pick-one list ([OptionSelector]) instead of stepping
  * through every value. Key bindings are two sub-pages ending in CANCEL, like
  * the game's own list; a tap on a binding waits for the keys themselves
  * ([CompanionSettings.keyCapture]: Screen-2 gets no key events, so the game's
@@ -135,7 +134,9 @@ fun CompanionSettingsScreen(
                 }
                 Spacer(Modifier.height(m.u * 4))
             }
-            val rows = remember(settings, page, tick, availableTabs, playsAs, capturing, capturedKeys) {
+            // EDIT LAYOUT saves over the game, outside this page: its revision redraws TOUCH CONTROLS.
+            val touchRevision = settings?.touchRevision ?: 0
+            val rows = remember(settings, page, tick, availableTabs, playsAs, capturing, capturedKeys, touchRevision) {
                 if (settings == null) return@remember listOf(SettingRow(tk("NO GAME RUNNING"), null) {})
                 when (page) {
                     Page.HOME -> playsAs?.let { game ->
@@ -213,6 +214,12 @@ fun CompanionSettingsScreen(
                         setLabels = { settings.setQuickMenuLabels(it); tick++ },
                         onHotkey = { page = Page.HOTKEYS },
                     ) + SettingRow(tk("CANCEL"), null) { page = Page.HOME }
+                    Page.TOUCH -> touchControlsRows(
+                        settings.touchStyle, set = { settings.setTouchStyle(it); tick++ },
+                        onEdit = settings::editTouchLayout,
+                        underGame = settings.uprightUnderGame, setUnderGame = { settings.setPortraitUnderGame(it); tick++ },
+                        expand = settings.gameAspect == GameAspect.WIDE && settings.wideSupported, touchShown = settings.touchControlsShown,
+                    ) + SettingRow(tk("CANCEL"), null) { page = Page.HOME }
                     Page.SPEED -> speedRows(settings, { tick++ }, { selector = it }) + SettingRow(tk("CANCEL"), null) { page = Page.HOME }
                     Page.DISPLAY -> displayRows(settings, { tick++ }, { page = it }, { selector = it }) + SettingRow(tk("CANCEL"), null) { page = Page.HOME }
                     Page.CHEATS -> cheatRows(settings) { tick++ } + SettingRow(tk("CANCEL"), null) { page = Page.HOME }
@@ -232,6 +239,22 @@ fun CompanionSettingsScreen(
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val source = remember { DocsSources.of(context) }
                 DocsReader(ui.docs, m, source, Modifier.fillMaxWidth().weight(1f), searchable = false)
+            } else if (page == Page.TOUCH && settings != null) {
+                // The preview beside / above the rows; it follows each change (tick).
+                @Suppress("UNUSED_EXPRESSION") tick
+                @Suppress("UNUSED_EXPRESSION") touchRevision
+                val style = settings.touchStyle
+                val density = androidx.compose.ui.platform.LocalDensity.current.density
+                val stage = settings.touchStage ?: remember(density) { simulateTouchStage(2400f, 1080f, density.coerceAtLeast(2f)) }
+                val shot = remember(settings) { settings.touchPreviewShot() }
+                TouchControlsPage(
+                    stage, style, shot, m, Modifier.fillMaxWidth().weight(1f), underGame = settings.uprightUnderGame == true,
+                    expand = settings.gameAspect == GameAspect.WIDE && settings.wideSupported, touchShown = settings.touchControlsShown,
+                ) { mod ->
+                    OptionListWindow(m, mod) {
+                        GroupedRows(rows, m, cursor, onClick = { i -> moveCursor(i); rows[i].onClick() }, onFocused = ::moveCursor)
+                    }
+                }
             } else OptionListWindow(m, Modifier.fillMaxWidth().weight(1f)) {
                 // Rows share out the window's height (big touch targets) down
                 // to a floor, past which the list scrolls instead.
@@ -462,10 +485,8 @@ private fun homeRows(
         SettingRow(tk("HOTKEYS"), onOff(s.hotkeysEnabled), opensPage = true, subtitle = "Button combos for states, FF and more") { navigate(Page.HOTKEYS) },
         // PC, FLY, a Repel, the bike, a rod, states, FF... on a held button (L3 by default): its own page.
         SettingRow(tk("QUICK MENU"), null, subtitle = "Actions on a held button", labelBadge = quickMenuBadge(), opensPage = true) { navigate(Page.QUICK_MENU) },
-        // Takes effect the next time a game is opened.
-        SettingRow(tk("TOUCH PAD"), TOUCH_NAMES[s.touchControlsMode], subtitle = "The on-screen buttons") {
-            select(Selector(tk("TOUCH PAD"), TOUCH_NAMES, TOUCH_NAMES[s.touchControlsMode]) { s.setTouchControlsMode(TOUCH_NAMES.indexOf(it)) })
-        },
+        // The on-screen buttons: when they show, layouts, size, extras, EDIT LAYOUT - its own page, with a preview.
+        SettingRow(tk("TOUCH CONTROLS"), s.touchStyle.show.label, labelBadge = touchControlsBadge(), opensPage = true, subtitle = "The on-screen buttons: layout, size, extras") { navigate(Page.TOUCH) },
         groupTitle(tk("APP")),
         // AUTO: the ROM's own language. Applies at once, both screens.
         SettingRow("LANGUAGE", L10n.settingLabel(s.appLanguage)) {
@@ -545,9 +566,9 @@ private fun displayRows(s: CompanionSettings, changed: () -> Unit, navigate: (Pa
                 })
             }
         },
-        // A phone upright: the companion along the screen's bottom, or right under the game (the touch pad below it).
+        // A phone upright: the companion along the screen's bottom, or right under the game (the touch controls below it).
         s.portraitUnderGame?.let { under ->
-            SettingRow(tk("COMPANION"), portraitPlaceLabel(under), subtitle = "Where it sits with the phone upright") { s.setPortraitUnderGame(!under); changed() }
+            uprightCompanionRow(under, s.gameAspect == GameAspect.WIDE && s.wideSupported, s.touchControlsShown) { s.setPortraitUnderGame(it); changed() }
         },
     )
 

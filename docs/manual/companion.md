@@ -73,7 +73,7 @@ The options come in groups, the ones you change while playing first:
 - **GAMEPLAY**: `WILD ENCOUNTERS`, `AUTO-RUN`, `RUN INDOORS` and `CHEATS`. See [Controls](controls.md) and [Cheats](cheats.md).
 - **SCREEN**: `ASPECT`, `HUD`, `DISPLAY OPTIONS` (a page with `STATUS BAR`, `SHADERS` and `OVERLAY`), `DARK MODE`, `FPS / CPU` and, depending on your device, `BATTLE BUTTONS`, `COMPANION VIEW`, `SWAP SCREENS` or `SINGLE SCREEN`. See [Screen and display](screen.md).
 - **COMPANION**: `BATTLE HINTS`, `ONE-TAP MOVES`, `FOE IVS`, `TAB BAR`, `CLICK SOUND` and `TWEAKS`.
-- **CONTROLS**: `GAME BUTTONS`, `HOTKEYS`, `QUICK MENU` and `TOUCH PAD`. See [Controls](controls.md).
+- **CONTROLS**: `GAME BUTTONS`, `HOTKEYS`, `QUICK MENU` and `TOUCH CONTROLS`. See [Controls](controls.md).
 - **APP**: `LANGUAGE` and `HELP` (this manual).
 
 Every option is explained in the [Settings reference](settings-reference.md). The top screen has its own Settings too, with more options and a search box.

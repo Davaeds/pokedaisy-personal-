@@ -32,7 +32,7 @@ The game keeps running while the map, bag, wild list or a summary is open. Tap a
 
 Only while you're walking around. The first time you play a game, it shows up once you've taken a few steps (PokeDaisy learns what that game's field looks like, and remembers it). It fades out for a battle, a menu screen like the party or the bag, the game's own town map, and a moment later it comes back. With `EXPAND` on it also steps aside for a conversation or a sign. On a phone held upright it's off for now: the companion sits right under the game there.
 
-Without `EXPAND`, the HUD stays on the game's picture, not in the bars beside it (except `RAILS`, which is made for those bars). If the touch pad is showing, the HUD moves its corners in so it never covers the pad's buttons.
+Without `EXPAND`, the HUD stays on the game's picture, not in the bars beside it (except `RAILS`, which is made for those bars). If the touch controls are showing, the HUD moves its corners in so it never covers their buttons over the game.
 
 When the game's picture is too narrow for your party beside the buttons, for example with the companion's side panel locked beside the game, the HUD gets smaller: the party and the minimap step aside, and your balls and the buttons sit in the bottom left corner, with a `MAP` button after `WILD`. The party is still a tap away in the companion. `LAYOUT` can't be changed meanwhile: it says it's not available because the screen is too small.
 

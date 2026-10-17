@@ -58,21 +58,27 @@ class GbaInput {
         turboBits = 0
         hatBits = 0
         touchBits = 0
+        touchTurboBits = 0
         recompute()
     }
 
-    /** The TURBO A / B buttons held, which the engine presses every other 2 frames; none while a script steers. */
-    val turboMask: Int get() = if (scriptExclusive) 0 else turboBits
+    /** The TURBO A / B buttons held (keys or the touch controls'), which the engine presses every other 2 frames;
+     * none while a script steers. */
+    val turboMask: Int get() = if (scriptExclusive) 0 else turboBits or touchTurboBits
 
-    fun setTouchBits(bits: Int) {
+    @Volatile private var touchTurboBits = 0
+
+    /** The touch controls' GBA buttons held ([bits]) and their TURBO A / B ([turbo], pulsed like [turboMask]). */
+    fun setTouchBits(bits: Int, turbo: Int = 0) {
         touchBits = bits
+        touchTurboBits = turbo
         recompute()
     }
 
     /**
      * Synthetic presses from the companion's battle controls. While
      * [exclusive] (an automated sequence is running) the player's own keys -
-     * buttons, D-pad, touch pad - are ignored, so they can't knock the
+     * buttons, D-pad, touch controls - are ignored, so they can't knock the
      * sequence off course; they count again the moment it ends.
      */
     fun setScript(bits: Int, exclusive: Boolean) {

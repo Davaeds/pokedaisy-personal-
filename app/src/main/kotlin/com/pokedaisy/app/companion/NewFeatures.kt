@@ -37,8 +37,11 @@ object NewFeatures {
     /** The MORE tab right of the gear (companion.ui.MoreScreen): its row is SETTINGS > TAB BAR. */
     const val MORE_TAB = "more_tab"
 
+    /** SETTINGS > TOUCH CONTROLS: layouts, size, opacity, extra buttons and EDIT LAYOUT (companion.ui.TouchControls). */
+    const val TOUCH_CONTROLS = "touch_controls"
+
     /** Every feature that gets the tag. */
-    val ALL = listOf(HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB)
+    val ALL = listOf(HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB, TOUCH_CONTROLS)
 
     private const val DAYS = 7
     private const val DAY_MS = 24 * 60 * 60 * 1000L

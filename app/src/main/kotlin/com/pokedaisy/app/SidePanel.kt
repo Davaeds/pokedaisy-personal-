@@ -45,7 +45,7 @@ import kotlin.math.roundToInt
  * tabs for touch: one on the screen's right edge, bottom, opens a closed panel;
  * one outside the panel's bottom-left corner closes it, locked or not. While
  * locked, both are see-through ([LOCKED_TAB_ALPHA]) - they sit over the letterbox
- * then. The touch pad stays on the game's side whenever the panel is open.
+ * then. The touch controls stay on the game's side whenever the panel is open.
  * Open and unlocked, a tap on the game (or the FIELD HUD over it) closes it and goes on to the HUD, unless the touch
  * pad is up.
  * While the FIELD HUD is on screen it carries the open button itself, beside BAG and WILD ([tabInHud]): the edge
@@ -61,7 +61,7 @@ class SidePanel(
     private val keys: CompanionKeys,
     private val clickSound: () -> Unit,
     private val companion: @Composable () -> Unit,
-    /** The panel and its tabs go right above this view (the FIELD HUD, itself above the touch pad). */
+    /** The panel and its tabs go right above this view (the FIELD HUD, itself above the touch controls). */
     private val under: View = touchControls,
     /** The window opened (true: the game's buttons are the companion's now) or closed. */
     private val onWindow: (Boolean) -> Unit = {},
@@ -215,7 +215,7 @@ class SidePanel(
 
     /**
      * A touch on the game (or its HUD) while the panel is open and unlocked: closes it, and the touch goes on to what's
-     * under it - a HUD item (the map, a party member...) opens right after. Not with the touch pad showing - its
+     * under it - a HUD item (the map, a party member...) opens right after. Not with the touch controls showing - its
      * buttons are how the game is played then.
      */
     private fun catchOutside(e: android.view.MotionEvent): Boolean {
@@ -285,7 +285,7 @@ class SidePanel(
                 ?.withEndAction { if (!open) apply() }?.start()
             return
         }
-        // The game and the touch pad take the whole screen back now; the panel slides out over them.
+        // The game and the touch controls take the whole screen back now; the panel slides out over them.
         outside?.visibility = View.GONE
         setRightMargin(game, 0)
         setRightMargin(touchControls, 0)

@@ -88,12 +88,14 @@ Hold a phone upright and the game sits across the top of the screen, with the co
 
 - **Change its height:** drag the grip on the companion's top edge up or down. It snaps to the default size (the shape of the Thor's bottom screen) and to the largest size (everything under the game).
 - **Step through sizes:** tap the grip to go from small, to the default, to everything under the game, and round again.
-- **Touch controls:** when there's enough room between the game and the companion, the on-screen buttons go in that gap. When there isn't, they lie over the game as usual.
+- **Touch controls:** when there's enough room between the game and the companion, the on-screen buttons go in that gap. When there isn't, they lie over the game as usual. The phone held upright has its own layout, and `POSITION` on the `TOUCH CONTROLS` page puts the buttons at the top, middle or bottom of their space; see [Touch controls](controls.md#touch-controls).
 
 The `COMPANION` setting (on the `DISPLAY OPTIONS` page of the `SCREEN` group, on single-screen devices) picks where the companion sits on a phone held upright:
 
 - `AT BOTTOM` (the default): along the bottom of the screen, with the touch controls in any gap above it.
 - `UNDER GAME`: right under the game, with the touch controls at the bottom of the screen.
+
+With `ASPECT` set to `EXPAND`, the game fills everything above the companion, so both would look the same. There `UNDER GAME` gives the touch controls a strip of their own along the bottom of the screen, under the companion, so they don't lie over the game. When the touch controls aren't showing (you're using a controller), the setting is greyed out.
 
 ![The library on a phone held upright](shots/phone-library.png "The library on a phone")
 

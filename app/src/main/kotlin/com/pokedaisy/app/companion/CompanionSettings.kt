@@ -76,9 +76,24 @@ interface CompanionSettings {
     val rewind: Boolean get() = false
     fun setRewind(on: Boolean) {}
 
-    /** 0 = auto (only if no gamepad), 1 = always, 2 = never. */
-    val touchControlsMode: Int
-    fun setTouchControlsMode(v: Int)
+    /** SETTINGS > TOUCH CONTROLS - see [com.pokedaisy.app.Prefs.touchControlsStyle]. */
+    val touchStyle: TouchControlsStyle
+    fun setTouchStyle(style: TouchControlsStyle)
+
+    /** The game's screen as the touch controls see it, for TOUCH CONTROLS' preview; null = laid out like a phone's. */
+    val touchStage: TouchStage? get() = null
+
+    /** The newest savestate's picture for the preview (null: a drawn stand-in). */
+    fun touchPreviewShot(): androidx.compose.ui.graphics.ImageBitmap? = null
+
+    /** EDIT LAYOUT over the running game (the companion steps aside while it's open). */
+    fun editTouchLayout() {}
+
+    /** The touch controls are on the game's screen now (SHOW, a controller): EXPAND's UNDER GAME needs them. */
+    val touchControlsShown: Boolean get() = true
+
+    /** Bumped when EDIT LAYOUT saves (Compose state): TOUCH CONTROLS' page reads it to show CUSTOM. */
+    val touchRevision: Int get() = 0
 
     /** Waits for the keys to bind (the game's activity gets every key); null where nothing can be pressed (previews). */
     val keyCapture: KeyCapture? get() = null
@@ -246,12 +261,16 @@ interface CompanionSettings {
     val usesSecondScreen: Boolean get() = hasSecondScreen && !singleScreen
 
     /**
-     * A phone held upright: the companion right under the game (true; the touch pad gets the
+     * A phone held upright: the companion right under the game (true; the touch controls get the
      * screen's bottom) or along the screen's bottom - see [Prefs.portraitCompanionUnderGame].
      * Null when the companion isn't under the game (a second screen, or held sideways): no row.
      */
     val portraitUnderGame: Boolean? get() = null
     fun setPortraitUnderGame(on: Boolean) {}
+
+    /** The same place for TOUCH CONTROLS' page, held either way on a one-screen device (the preview shows upright
+     * too); null with a second screen. */
+    val uprightUnderGame: Boolean? get() = null
 
     /**
      * One screen held sideways: the companion as a window in the middle over the game (true) or the side panel -

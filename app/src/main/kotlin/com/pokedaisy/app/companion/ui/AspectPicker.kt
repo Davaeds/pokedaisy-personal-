@@ -159,7 +159,7 @@ internal fun ScreenPreview(aspect: GameAspect, statusBar: Boolean, shot: ImageBi
  * [wide] draws it at [r]'s own shape with square game pixels, as WIDE does: the scene runs on past
  * the GBA's 240 px (a tree, a second house), the text box stays in the middle 240.
  */
-private fun DrawScope.drawStandIn(r: Rect, wide: Boolean = false) {
+internal fun DrawScope.drawStandIn(r: Rect, wide: Boolean = false) {
     val s = r.height / 160f
     val w = if (wide) r.width / s else 240f   // the scene's width in game pixels
     val ox = (w - 240f) / 2                    // where the GBA's own 240 px start

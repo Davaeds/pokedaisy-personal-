@@ -50,7 +50,7 @@ data class OverlayLayer(val image: String, val viewport: Viewport? = null, val n
 /**
  * RetroArch's overlay .cfg: `key = value` lines (values maybe quoted, `#` comments), `overlays = N`, then per
  * overlay `overlayK_overlay` (its image), `overlayK_viewport` and `overlayK_name`. Touch-button entries
- * (`overlayK_descN...`) are left out: these overlays are only drawn, the touch pad has its own buttons.
+ * (`overlayK_descN...`) are left out: these overlays are only drawn, the touch controls has its own buttons.
  */
 object OverlayCfg {
     private const val MAX_LAYERS = 16
