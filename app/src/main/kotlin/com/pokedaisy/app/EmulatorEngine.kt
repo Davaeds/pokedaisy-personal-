@@ -407,11 +407,14 @@ class EmulatorEngine(
         onSpeedChanged?.invoke(label)
     }
 
-    fun start(rom: File, save: File, resume: File?) {
+    fun start(rom: File, save: File, resume: File?): Unit = synchronized(coreLock) {
         if (running) return
         // A loop that outlived stop()'s join (stuck in an audio write, a slow disk)
         // still owns the native core: a second loop's pkInit would free it under it.
-        thread?.let { old ->
+        // There's one core for the whole process, so this goes for another engine's loop
+        // too (a second game activity while the last one's loop still ran: ARMRunLoop /
+        // md5_process SIGSEGVs on Crashlytics, its frames and RA's hash on a freed ROM).
+        coreLoop?.let { old ->
             runCatching { old.join(5000) }
             if (old.isAlive) {
                 Log.e("pokedaisy", "emu thread still running, not starting another")
@@ -425,7 +428,7 @@ class EmulatorEngine(
         loadError = null
         startNotice = null
         val r = resume
-        thread = Thread({ loop(rom, save, r) }, "pokedaisy-emu").apply { start() }
+        thread = Thread({ loop(rom, save, r) }, "pokedaisy-emu").also { coreLoop = it; it.start() }
     }
 
     /** Hard stop, no state written. */
@@ -1201,6 +1204,10 @@ class EmulatorEngine(
     }
 
     private companion object {
+        /** The last loop started on the native core, by any engine (there's one core, `g` in pokedaisy_jni.c). */
+        @Volatile private var coreLoop: Thread? = null
+        private val coreLock = Any()
+
         /** FIELD HUD: frames of plain field before [onField] comes on (~1/3 s at 1x). */
         const val FIELD_SETTLE_FRAMES = 20
 
