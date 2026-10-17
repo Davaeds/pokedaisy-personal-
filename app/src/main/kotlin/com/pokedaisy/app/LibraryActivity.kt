@@ -417,6 +417,10 @@ class LibraryActivity : ComponentActivity() {
                 }) {
                     // The header's first button: where UP from the top of the games lands.
                     HeaderIcon(Icons.AutoMirrored.Filled.Sort, tr("Sort"), m, Modifier.focusRequester(headerFirst)) { pickingSort = true }
+                    androidx.compose.runtime.DisposableEffect(Unit) {
+                        headerFirstAttached = true
+                        onDispose { headerFirstAttached = false }
+                    }
                     HeaderIcon(if (gridView) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView, tr("Toggle view"), m) {
                         gridView = !gridView
                     }
@@ -684,10 +688,14 @@ class LibraryActivity : ComponentActivity() {
 
     /** The header's leftmost button (sort). */
     private val headerFirst = FocusRequester()
+    /** [headerFirst] is on a button: only [LibraryScreen]'s header has it. The launcher's list draws the same cards
+     * under a header of its own, and UP to an unattached requester threw ("FocusRequester is not initialized"). */
+    private var headerFirstAttached = false
+    private val headerUp: FocusRequester? get() = headerFirst.takeIf { headerFirstAttached }
 
     /** For a card in the games' top row (the RECENTLY PLAYED tiles, or the first row without them):
      * D-pad UP goes to the header's leftmost button. A lazy list's top row had nowhere to go - UP did nothing. */
-    private val toHeader: () -> FocusRequester? = { headerFirst }
+    private val toHeader: () -> FocusRequester? = { headerUp }
     private val noUp: () -> FocusRequester? = { null }
 
     @Composable
@@ -732,7 +740,7 @@ class LibraryActivity : ComponentActivity() {
         val grid = rememberLazyGridState()
         // Without RECENTLY PLAYED the games start at item 0; the top row is what the grid laid out as row 0.
         fun topRow(index: Int): () -> FocusRequester? = {
-            headerFirst.takeIf { recentRoms.isEmpty() && grid.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.row == 0 }
+            headerUp?.takeIf { recentRoms.isEmpty() && grid.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.row == 0 }
         }
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = GRID_TILE_MIN),
