@@ -26,7 +26,7 @@ package com.pokedaisy.app.companion.data
 // NativeReader.kt. Heart and Soul and Lazarus now have their own
 // ROM-extracted tables (*Hns.kt / *Lazarus.kt, scripts/gen_expansion_tables.py).
 enum class GameKind { FIRERED, EMERALD, UNBOUND, GAIA, RADICAL_RED, ODYSSEY, HEART_AND_SOUL, LAZARUS, ROWE, EMERALD_ROGUE, AMETHYST, EMERALD_SEAGLASS, CELIA, TMT2, SOULGOLD, YELLOW, GLAZED, IMPERIUM, QUETZAL, ORANGE_ISLANDS, RECHARGED_YELLOW, MARIOMON, SWORD_SHIELD, GS_CHRONICLES, CRYSTAL, CRYSTAL_CLEAR, PRISM,
-    GOLD, SILVER, RED, BLUE, ELITE_REDUX }
+    GOLD, SILVER, RED, BLUE, ELITE_REDUX, POLISHED_CRYSTAL }
 
 @Volatile
 var activeGame: GameKind = GameKind.FIRERED
@@ -81,6 +81,13 @@ private inline val goldSilver get() = activeGame.isGoldSilver
 // Pokémon Prism (a Crystal-engine hack, its own Naljo / Rijon): every table its own, keyed by its own species ids
 // (not Dex numbers), read from the ROM by gen_gen2_tables.py prism. Checked before [crystal], which it also is.
 private inline val prism get() = activeGame == GameKind.PRISM
+// Polished Crystal: every table its own (gen_polished_crystal_tables.py), keyed by its species-and-form ids; the faithful
+// builds lay their own types, moves and item names over it ([Gen2Config.polishedFaithful]). Checked before [crystal].
+private inline val polished get() = activeGame == GameKind.POLISHED_CRYSTAL
+private inline val faithful get() = activeGen2.polishedFaithful
+private val speciesTypeDataPolishedCrystalFaithful by lazy { speciesTypeDataPolishedCrystal + speciesTypeDataPolishedCrystalFaithfulChanges }
+private val moveDataPolishedCrystalFaithful by lazy { moveDataPolishedCrystal + moveDataPolishedCrystalFaithfulChanges }
+private val itemNamesPolishedCrystalFaithful by lazy { itemNamesPolishedCrystal + itemNamesPolishedCrystalFaithfulChanges }
 
 /** SoulGold v1.2 runs on v1.1.4's tables (byte for byte the same) but for one TM: its
  * TM75 teaches Agility, not Swords Dance. Set with [activeGame] by the Poller. */
@@ -219,6 +226,7 @@ private val speciesNamesOdysseyMerged: Map<Int, String> by lazy { speciesNames +
 
 val activeSpeciesNames: Map<Int, String> get() = localText?.species ?: when {
     yellow -> speciesNamesYellow
+    polished -> speciesNamesPolishedCrystal
     prism -> speciesNamesPrism
     crystal -> speciesNamesCrystal
     unbound -> speciesNamesUnbound
@@ -248,6 +256,7 @@ val activeSpeciesNames: Map<Int, String> get() = localText?.species ?: when {
 }
 val activeMoveData: Map<Int, MoveInfo> get() = localText?.moveData ?: when {
     yellow -> moveDataYellow
+    polished -> if (faithful) moveDataPolishedCrystalFaithful else moveDataPolishedCrystal
     prism -> moveDataPrism
     crystal -> moveDataCrystal
     unbound -> moveDataUnbound
@@ -274,6 +283,7 @@ val activeMoveData: Map<Int, MoveInfo> get() = localText?.moveData ?: when {
 }
 val activeItemNames: Map<Int, String> get() = localText?.items ?: when {
     yellow -> itemNamesYellow
+    polished -> if (faithful) itemNamesPolishedCrystalFaithful else itemNamesPolishedCrystal
     prism -> itemNamesPrism
     crystalClear -> itemNamesCrystalClear
     goldSilver -> itemNamesGoldSilver
@@ -302,6 +312,7 @@ val activeItemNames: Map<Int, String> get() = localText?.items ?: when {
 }
 val activeSpeciesTypeData: Map<Int, SpeciesTypes> get() = when {
     yellow -> speciesTypeDataYellow
+    polished -> if (faithful) speciesTypeDataPolishedCrystalFaithful else speciesTypeDataPolishedCrystal
     prism -> speciesTypeDataPrism
     crystal -> speciesTypeDataCrystal
     unbound -> speciesTypeDataUnbound
@@ -332,6 +343,7 @@ private val speciesTypeDataEmeraldLegacy: Map<Int, SpeciesTypes> by lazy {
 private const val SPECIES_DEOXYS = 410
 val activeTypeEffectiveness: Map<Int, Int> get() = when {
     yellow -> typeEffectivenessYellow
+    polished -> typeEffectivenessPolishedCrystal
     prism -> typeEffectivenessPrism
     crystal -> typeEffectivenessCrystal
     unbound || cfruTypes -> typeEffectivenessUnbound
@@ -354,6 +366,7 @@ val activeTypeEffectiveness: Map<Int, Int> get() = when {
 }
 val activeTypeNames: Map<Int, String> get() = when {
     yellow -> typeNamesYellow
+    polished -> typeNamesPolishedCrystal
     prism -> typeNamesPrism
     crystal -> typeNamesCrystal
     unbound || cfruTypes -> typeNamesUnbound
@@ -376,6 +389,7 @@ val activeTypeNames: Map<Int, String> get() = when {
 }
 val activeMapSecData: Map<Int, MapSecInfo> get() = localText?.mapSecData ?: when {
     yellow -> mapSecDataYellow
+    polished -> mapSecDataPolishedCrystal
     prism -> mapSecDataPrism
     crystalClear -> mapSecDataCrystalClear
     goldSilver -> mapSecDataGoldSilver
@@ -487,6 +501,7 @@ private val regionMapImagesRechargedEmerald = arrayOf("recharged_emerald")
 val activeRegionMapImages: Array<String> get() = when {
     redBlue -> arrayOf(Gen1Art.RED_BLUE_TOWN_MAP_NAME)   // Red's / Blue's town map, in their own colours (Gen1Art)
     yellow -> arrayOf("yellow")   // its town map, rebuilt from the ROM (Gen1Art)
+    polished -> Gen2Art.POLISHED_TOWN_MAPS   // Johto, Kanto and the Orange Islands, from the ROM
     prism -> Gen2Art.PRISM_TOWN_MAPS   // Naljo, Rijon, Johto, Kanto, Sevii, Tunod
     crystalClear -> Gen2Art.CRYSTAL_CLEAR_TOWN_MAPS
     goldSilver -> Gen2Art.GOLD_SILVER_TOWN_MAPS
@@ -520,6 +535,7 @@ val activeMonSpriteDir: String get() = when {
     unbound -> "pokemon-unbound"
     redBlue -> Gen1Art.RED_BLUE_ICONS
     yellow -> Gen1Art.YELLOW_ICONS   // its own party icons, rebuilt from the ROM
+    polished -> Gen2Art.POLISHED_ICONS
     prism -> Gen2Art.PRISM_ICONS
     crystalClear -> Gen2Art.CRYSTAL_CLEAR_ICONS
     goldSilver -> Gen2Art.GOLD_SILVER_ICONS
@@ -566,6 +582,7 @@ fun GameKind.displayName(): String = when (this) {
     GameKind.CRYSTAL -> "Pokémon Crystal"
     GameKind.CRYSTAL_CLEAR -> "Pokémon Crystal Clear"
     GameKind.PRISM -> "Pokémon Prism"
+    GameKind.POLISHED_CRYSTAL -> "Polished Crystal"
     GameKind.GOLD -> "Pokémon Gold"
     GameKind.SILVER -> "Pokémon Silver"
 }

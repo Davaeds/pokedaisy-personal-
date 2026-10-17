@@ -304,7 +304,7 @@ class TelemetrySampler {
                 // English Unbound leaves nativeCfg null (see detect()); its French translation sets its own.
                 GameKind.UNBOUND -> readNativeTelemetry(reader, nativeCfg ?: NATIVE_UNBOUND_WITH_DEX)
                 GameKind.YELLOW, GameKind.RED, GameKind.BLUE -> readGen1Telemetry(reader, gen1Cfg ?: GEN1_YELLOW)
-                GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM, GameKind.GOLD, GameKind.SILVER ->
+                GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM, GameKind.GOLD, GameKind.SILVER, GameKind.POLISHED_CRYSTAL ->
                     readGen2Telemetry(reader, gen2Cfg ?: GEN2_CRYSTAL)
                 else -> {
                     unsupportedHackLabel?.let { return SnapshotView(connected = false, error = it, unsupported = true) }
@@ -610,6 +610,10 @@ class TelemetrySampler {
             GAME_BOY_SUPPORT && hash == SILVER_SHA1 -> { kind = GameKind.SILVER; gen2Cfg = GEN2_SILVER }
             GAME_BOY_SUPPORT && crystalClearConfigFor(hash) != null -> { kind = GameKind.CRYSTAL_CLEAR; gen2Cfg = crystalClearConfigFor(hash) }
             GAME_BOY_SUPPORT && hash == PRISM_V0_95_254_SHA1 -> { kind = GameKind.PRISM; gen2Cfg = GEN2_PRISM }
+            GAME_BOY_SUPPORT && hash in POLISHED_CRYSTAL_SHA1S ->
+                { kind = GameKind.POLISHED_CRYSTAL
+                  gen2Cfg = (if (hash in POLISHED_CRYSTAL_FAITHFUL_SHA1S) GEN2_POLISHED_CRYSTAL_FAITHFUL else GEN2_POLISHED_CRYSTAL)
+                      .copy(pokedex = polishedCrystalPokedex(hash!!)) }
             else -> {
                 kind = GameKind.FIRERED
                 unsupportedHackLabel = "this Game Boy game isn't supported yet (sha1 ${hash?.take(12) ?: "unknown"}…)"
@@ -926,9 +930,38 @@ class TelemetrySampler {
         // program that fills the screen with "LOL" and halts - nothing to read.
         const val PRISM_V0_95_254_SHA1 = "752076692ae3387cf426ce5f51a98c6b60e8df6a"
 
+        // Polished Crystal 3.2.0 - 3.2.3 (Rangi42's open-source Crystal hack): every official release build - normal,
+        // faithful (the original games' types / moves / item names) and their debug builds - plain `shasum`s.
+        const val POLISHED_CRYSTAL_V3_2_3_SHA1 = "6930b48af5844d373e3c9130f26d6dd1084cf4ed"
+        const val POLISHED_CRYSTAL_V3_2_2_SHA1 = "beb8b38280af59e9ef84be12684a6ecf09021c9b"
+        const val POLISHED_CRYSTAL_V3_2_1_SHA1 = "79ebf9984eac8081f488d15a35a6c5d11b4f84e2"
+        const val POLISHED_CRYSTAL_V3_2_0_SHA1 = "e55859484c5cda70e05daed59b14662e0a0f8eac"
+        const val POLISHED_CRYSTAL_V3_2_3_Debug_SHA1 = "457d61dfc28a17388b87792595433ba20bd1c1ed"
+        const val POLISHED_CRYSTAL_V3_2_2_Debug_SHA1 = "bea9804dc88a4ee370af62ff3139fdf1380277bf"
+        const val POLISHED_CRYSTAL_V3_2_1_Debug_SHA1 = "9c13585eb34efdcd881c2e68f029b820bddf349d"
+        const val POLISHED_CRYSTAL_V3_2_0_Debug_SHA1 = "11d461629363402fc15b5005ef51b8f44e726140"
+        const val POLISHED_CRYSTAL_V3_2_3_Faithful_SHA1 = "3ff091a8e94a0c031372b6f0275e12620fe3d766"
+        const val POLISHED_CRYSTAL_V3_2_2_Faithful_SHA1 = "e63b1e52a9f71c3948e3e7e515e9939d728fc679"
+        const val POLISHED_CRYSTAL_V3_2_1_Faithful_SHA1 = "666f8edfb9efd8c301adbc14d38ccfaae33a047d"
+        const val POLISHED_CRYSTAL_V3_2_0_Faithful_SHA1 = "b012f6d55c34c972778f5566e1cc910962dd7ab5"
+        const val POLISHED_CRYSTAL_V3_2_3_Faithful_Debug_SHA1 = "b5393eb27fec51970cc9186f36c34e94494bfd39"
+        const val POLISHED_CRYSTAL_V3_2_2_Faithful_Debug_SHA1 = "772858dd5a3e66dea4454d5f83b48c83d732ca69"
+        const val POLISHED_CRYSTAL_V3_2_1_Faithful_Debug_SHA1 = "c4bd263e58325c6c04c34462c1b4a37fba085e9c"
+        const val POLISHED_CRYSTAL_V3_2_0_Faithful_Debug_SHA1 = "c0a2c70d73ce68830a891ddd292300c90766acdd"
+        val POLISHED_CRYSTAL_FAITHFUL_SHA1S = setOf(
+            POLISHED_CRYSTAL_V3_2_3_Faithful_SHA1, POLISHED_CRYSTAL_V3_2_2_Faithful_SHA1, POLISHED_CRYSTAL_V3_2_1_Faithful_SHA1,
+            POLISHED_CRYSTAL_V3_2_0_Faithful_SHA1, POLISHED_CRYSTAL_V3_2_3_Faithful_Debug_SHA1, POLISHED_CRYSTAL_V3_2_2_Faithful_Debug_SHA1,
+            POLISHED_CRYSTAL_V3_2_1_Faithful_Debug_SHA1, POLISHED_CRYSTAL_V3_2_0_Faithful_Debug_SHA1,
+        )
+        val POLISHED_CRYSTAL_SHA1S = POLISHED_CRYSTAL_FAITHFUL_SHA1S + setOf(
+            POLISHED_CRYSTAL_V3_2_3_SHA1, POLISHED_CRYSTAL_V3_2_2_SHA1, POLISHED_CRYSTAL_V3_2_1_SHA1, POLISHED_CRYSTAL_V3_2_0_SHA1,
+            POLISHED_CRYSTAL_V3_2_3_Debug_SHA1, POLISHED_CRYSTAL_V3_2_2_Debug_SHA1, POLISHED_CRYSTAL_V3_2_1_Debug_SHA1,
+            POLISHED_CRYSTAL_V3_2_0_Debug_SHA1,
+        )
+
         /** The Game Boy / Color carts the companion reads ([CompanionSupport] checks imports against it). */
         val SUPPORTED_GB_SHA1S = setOf(YELLOW_SHA1, YELLOW_DE_SHA1, YELLOW_FR_SHA1, YELLOW_IT_SHA1, YELLOW_ES_SHA1, RED_SHA1, BLUE_SHA1) +
-            CRYSTAL_SHA1S + CRYSTAL_CLEAR_SHA1S + PRISM_V0_95_254_SHA1 + GOLD_SHA1 + SILVER_SHA1
+            CRYSTAL_SHA1S + CRYSTAL_CLEAR_SHA1S + PRISM_V0_95_254_SHA1 + GOLD_SHA1 + SILVER_SHA1 + POLISHED_CRYSTAL_SHA1S
 
         /**
          * Game Boy / Color (Pokémon Yellow): the library, folder scan, frontend launch and

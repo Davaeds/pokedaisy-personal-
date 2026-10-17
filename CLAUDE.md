@@ -451,6 +451,19 @@ look (the party menu and PACK are Crystal's colours, sampled headless), one tabl
 per version; the page bank is computed and FixPicBank is a pair table (`Gen2DexTables.dexEntryFirstBank` / `picBankFixes`). The user
 had no save: one was played headless in Gold (the same file under Silver's name). mgba_dump's `gbfar` / `gbinject` assume Crystal's
 hROMBank / FarCall - see `gold_trainer`'s README; `loadstate` broke Gold's PACK, so run captures in one go.
+**Polished Crystal (2026-10-16)**: 3.2.0 - 3.2.3, all 16 official release builds (normal / faithful, each with its debug build;
+`POLISHED_CRYSTAL_SHA1S`, `GameKind.POLISHED_CRYSTAL`, `isCrystalFamily`, `GEN2_POLISHED_CRYSTAL(_FAITHFUL)`). Open source with a
+.sym per release: `scripts/gen_polished_crystal_tables.py <releases dir>` (+ `$DECOMPS/polishedcrystal/src` at 3.2.3) checks every build's
+tables equal 3.2.3's (the faithful builds: 33 species' types, 12 moves, 4 item names, an overlay) and writes each build's ROM addresses
+(`polishedCrystalAddrs`); RAM is the same in all 16. Its own structs (`decodePolishedPartyMon`: 48-byte party_struct, a 9-bit species =
+the byte + the form byte's bit 5, gender a bit, the egg bit 6; variant forms are companion ids past NUM_SPECIES 0x123; egg 255), bag
+(Items / Medicine / Balls / Berries pairs, key items a 0-terminated id list at 0x200 + id, a bit per TM), charmap ('@' 0x53, mixed case,
+▶ 0xF0: `Gen2Config.cursorTile`) and LZ variant (`Gen2Lz.decompress(polished = true)`), metric dex pages in National order
+(`polishedCrystalPokedex(sha1)`, set by the Poller per build), growth rates numbered 0 / 1 / 2 / 3 = medium fast / medium slow / fast /
+slow. Battle menus at Crystal's places; its SWITCH / SUMMARY / CANCEL a column left (11, 12); its party menus read keys every other
+frame, like Prism's. The user had no save (a third-party Discord one exists, not used): a new game was played headless in 3.2.3 and saved
+under every build's name (`polished_crystal` README; hROMBank is FF87, so mgba_dump's `gbfar` / `gbinject` don't work there). Its font
+loads at tile 'A' (0x80) like Crystal's. No item descriptions, abilities or player head on the map yet.
 **Companion options (2026-10-08)**: RESUME GAMES (`Prefs.autoResume`, top-screen Settings > LIBRARY; off =
 a launch boots the save, a return from HOME still resumes - `freshLaunch`), CLOSE COMPANION (SETTINGS, two
 screens: the Presentation goes away until BACK on the game), STATUS BAR OFF / GAME / COMPANION (`Prefs.statusBarOnCompanion`,

@@ -139,7 +139,7 @@ fun itemDescription(id: Int): String = when (activeGame) {
     GameKind.YELLOW, GameKind.RED, GameKind.BLUE -> if (romLanguage != 'E') "" else itemDescriptionsYellow[id] ?: tmDescriptionsYellow[id] ?: ""
     // Crystal's own text, from the cart (a TM's: its move's), like the GBA games'.
     // (Prism's are compressed: none.)
-    GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM, GameKind.GOLD, GameKind.SILVER -> activeGen2.pokedex?.gen2?.let { Gen2Dex.itemDescription(it, id) }.orEmpty()
+    GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM, GameKind.GOLD, GameKind.SILVER, GameKind.POLISHED_CRYSTAL -> activeGen2.pokedex?.gen2?.let { Gen2Dex.itemDescription(it, id) }.orEmpty()
     else -> RomItemText.description(id)
 }
 

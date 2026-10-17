@@ -75,6 +75,7 @@ private const val GEN1_SUBMENU_TOP = 0x0C      // SWITCH / STATS / CANCEL: wTopM
 private const val GEN2_CHOOSE_POKEMON = 0      // PARTYMENUACTION_CHOOSE_POKEMON (BattleMenu_PKMN)
 private const val GEN2_SWITCH = 2              // PARTYMENUACTION_SWITCH (the pick after a faint)
 private const val GEN2_SUBMENU_TOP = 0x0C      // BattleMonMenu: from (12, 12)
+private const val POLISHED_SUBMENU_LEFT = 0x0B  // Polished Crystal's SWITCH / SUMMARY / CANCEL: from (11, 12)
 
 class Gen1PartySwitch(private val cfg: Gen1Config) : GbPartySwitch {
     override val hasCancel = false
@@ -98,7 +99,12 @@ class Gen2PartySwitch(private val cfg: Gen2Config) : GbPartySwitch {
     override fun party(r: MemoryReader): List<GbPartyMon> {
         val n = u8(r.readCoreMemory(cfg.partyCount, 1), 0).coerceAtMost(PARTY_SIZE)
         val raw = r.readCoreMemory(cfg.partyMons, PARTY_SIZE * GEN2_PARTY_MON_SIZE)
-        return (0 until n).map { GbPartyMon(gen2MonKey(raw, it * GEN2_PARTY_MON_SIZE), be16(raw, it * GEN2_PARTY_MON_SIZE + 34)) }
+        return (0 until n).map {
+            val o = it * GEN2_PARTY_MON_SIZE
+            // The key the party read hands the UI as each one's personality (Polished Crystal's: its own struct).
+            val key = if (cfg.polished) decodePolishedPartyMon(raw, o, cfg)?.personality ?: 0L else gen2MonKey(raw, o)
+            GbPartyMon(key, be16(raw, o + 34))
+        }
     }
 
     override fun outSlot(r: MemoryReader): Int = u8(r.readCoreMemory(cfg.curBattleMon, 1), 0)
@@ -140,8 +146,8 @@ fun readGen2PartyMenu(r: MemoryReader, cfg: Gen2Config): GbPartyMenu? {
     val y = u8(r.readCoreMemory(cfg.menuCursor, 1), 0)
     if (cols != 1 || spacing != 0x20 || y !in 1..rows) return null
     val ty = top + 2 * (y - 1)
-    if (ty >= 18 || left >= 20 || u8(r.readCoreMemory(cfg.tileMap + ty * 20 + left, 1), 0) != TILE_CURSOR) return null
-    if (top == GEN2_SUBMENU_TOP && left == GEN2_SUBMENU_TOP && rows == 3) return GbPartyMenu(submenu = true, cursor = y - 1)
+    if (ty >= 18 || left >= 20 || u8(r.readCoreMemory(cfg.tileMap + ty * 20 + left, 1), 0) != cfg.cursorTile) return null
+    if (top == GEN2_SUBMENU_TOP && left == (if (cfg.polished) POLISHED_SUBMENU_LEFT else GEN2_SUBMENU_TOP) && rows == 3) return GbPartyMenu(submenu = true, cursor = y - 1)
     if (top != 1 || left != 0) return null
     val count = u8(r.readCoreMemory(cfg.partyCount, 1), 0)
     val action = u8(r.readCoreMemory(cfg.partyMenuAction, 1), 0)

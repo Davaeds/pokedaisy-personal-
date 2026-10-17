@@ -247,6 +247,7 @@ shows a "not supported" notice).
 | Crystal (GBC)                  | USA, USA/Europe rev 1, AU  |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   —   |
 | Crystal Clear (GBC)            | 2.5.11, 2.6.0 (4 builds)   |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   —   |
 | Prism (GBC)                    | 0.95 build 254             |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   —   |
+| Polished Crystal (GBC)         | 3.2.0-3.2.3 (16 builds)    |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   —   |
 | FireRed                        | USA/Europe, rev 0 and 1    |  ✅   | ✅  |   ✅   | ✅  |   ✅    |  ✅   |
 | FireRed                        | ES / DE / FR / IT / JP     |  ✅   | ✅  |   ✅   | ✅  |   ✅    |  ✅   |
 | LeafGreen                      | USA/Europe, rev 0 and 1    |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |
@@ -294,11 +295,13 @@ shows a "not supported" notice).
 <details>
 <summary><strong>Notes on the table</strong></summary>
 
-Red, Blue, Yellow, Gold, Silver, Crystal and the Crystal hacks Crystal Clear and Prism are the Game Boy games the companion reads,
+Red, Blue, Yellow, Gold, Silver, Crystal and the Crystal hacks Crystal Clear, Prism and Polished Crystal are the Game Boy games the companion reads,
 each in the game's own look (its font, icons and town maps, rebuilt from your ROM; Red and Blue in the colours a
 Super Game Boy gives them). The German,
 French, Italian and Spanish Yellows show their own names, Pokédex pages and battle words. Prism
-shows its own Pokémon, moves, types, six town maps and its own Pokédex (its 253 in the game's order).
+shows its own Pokémon, moves, types, six town maps and its own Pokédex (its 253 in the game's order). Polished
+Crystal shows its own Pokémon (regional forms included), moves, types, items, its Johto, Kanto and Orange Islands maps and
+its 289 in National order; its faithful builds keep the original games' types and moves, as the game does.
 Map ◐ means place names
 only, without the map picture. Guide ◐ means the live pages only (the wild encounters here and the next
 boss), without the area lists. Battle ◐ means the battle panes work but haven't

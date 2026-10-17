@@ -1111,6 +1111,16 @@ open class CompanionScreenshotTest {
     @Test fun prismTrainer() = crystal("prism_trainer", "BATTLE", prism = true)
     @Test fun prismDex() = crystal("prism", "DEX", prism = true)
     @Test fun prismDexEntry() = crystal("prism", "DEX", dexEntry = 1, prism = true)       // LARVITAR, caught
+    @Test fun polishedParty() = crystal("polished_crystal", "PARTY", polished = true)
+    @Test fun polishedItems() = crystal("polished_crystal", "ITEMS", polished = true)
+    @Test fun polishedMap() = crystal("polished_crystal", "MAP", polished = true)
+    @Test fun polishedBattle() = crystal("polished_crystal_battle", "BATTLE", polished = true)
+    @Test fun polishedBattleMoves() = crystal("polished_crystal_battle", "BATTLE", controls = true, polished = true)
+    @Test fun polishedBattleMenu() = crystal("polished_crystal_battle_menu", "BATTLE", controls = true, polished = true)
+    @Test fun polishedTrainer() = crystal("polished_crystal_trainer", "BATTLE", polished = true)
+    @Test fun polishedDex() = crystal("polished_crystal", "DEX", polished = true)
+    @Test fun polishedDexEntry() = crystal("polished_crystal", "DEX", dexEntry = 155, polished = true)
+    @Test fun polishedDexEntryOwn() = crystal("polished_crystal", "DEX", dexEntry = 255, polished = true)   // past the 8th bit
     @Test fun prismDexEntryOwn() = crystal("prism", "DEX", dexEntry = 239, prism = true)  // PHANCERO, one of its own
     @Test fun crystalStatusBar() {
         CompanionStatusBar.shown = true
@@ -1182,10 +1192,12 @@ open class CompanionScreenshotTest {
     /** Pokémon Crystal (Game Boy Color): the Gen 2 reader on a GB fixture (wram.bin + wramx.bin), art from the rev 1 ROM;
      * [clear]: Crystal Clear v2.6.0's instead. */
     private fun crystal(fixture: String, tab: String, controls: Boolean = false, dexEntry: Int? = null, statusBar: Boolean = false,
-                        clear: Boolean = false, prism: Boolean = false, gold: Boolean = false, silver: Boolean = false) {
-        val game = if (prism) GameKind.PRISM else if (clear) GameKind.CRYSTAL_CLEAR else if (gold) GameKind.GOLD
+                        clear: Boolean = false, prism: Boolean = false, gold: Boolean = false, silver: Boolean = false,
+                        polished: Boolean = false) {
+        val game = if (polished) GameKind.POLISHED_CRYSTAL else if (prism) GameKind.PRISM else if (clear) GameKind.CRYSTAL_CLEAR else if (gold) GameKind.GOLD
             else if (silver) GameKind.SILVER else GameKind.CRYSTAL
-        val cfg = if (prism) com.pokedaisy.app.companion.data.GEN2_PRISM
+        var cfg = if (polished) com.pokedaisy.app.companion.data.GEN2_POLISHED_CRYSTAL
+            else if (prism) com.pokedaisy.app.companion.data.GEN2_PRISM
             else if (clear) com.pokedaisy.app.companion.data.GEN2_CRYSTAL_CLEAR_V2_6_0
             else if (gold) com.pokedaisy.app.companion.data.GEN2_GOLD else if (silver) com.pokedaisy.app.companion.data.GEN2_SILVER
             else com.pokedaisy.app.companion.data.GEN2_CRYSTAL
@@ -1194,13 +1206,19 @@ open class CompanionScreenshotTest {
         romLanguage = 'E'
         romGameCode = ""
         val rom = java.io.File(java.io.File(RETAIL_ROM_DIR).parentFile,
-            if (prism) "gbc/Pokemon Prism (v0.95 build 254 Hotfix 5).gbc"
+            if (polished) "gbc/polishedcrystal-3.2.3.gbc"
+            else if (prism) "gbc/Pokemon Prism (v0.95 build 254 Hotfix 5).gbc"
             else if (gold) "gbc/Pokemon - Gold Version (USA, Europe) (SGB Enhanced) (GB Compatible).gbc"
             else if (silver) "gbc/Pokemon - Silver Version (USA, Europe) (SGB Enhanced) (GB Compatible).gbc"
             else if (clear) "gbc/Pokemon Crystal Clear (v2.6.0).gbc" else "gbc/Pokemon - Crystal Version (USA, Europe) (Rev 1).gbc")
         if (rom.isFile) com.pokedaisy.app.companion.data.Gen2Art.extractTo(rom.readBytes(), RomArt.dirOverride!!)
         // The cart's bytes (dex pages, item text), as PokeDaisyActivity sets them for a Game Boy ROM.
         com.pokedaisy.app.companion.data.Gen1Dex.rom = if (rom.isFile) rom.readBytes() else null
+        // Polished Crystal's dex tables come from the ROM by build (the Poller sets them on detection).
+        if (polished && rom.isFile) {
+            cfg = cfg.copy(pokedex = com.pokedaisy.app.companion.data.polishedCrystalPokedex(com.pokedaisy.app.companion.data.TelemetrySampler.POLISHED_CRYSTAL_V3_2_3_SHA1))
+            com.pokedaisy.app.companion.data.activeGen2 = cfg
+        }
         val t = com.pokedaisy.app.companion.data.readGen2Telemetry(FixtureMemoryReader.load(fixture), cfg)
         val v = buildSnapshotView(t).copy(game = game)
         (v.party + v.battlePlayer + v.battleOpponent).forEach { m -> m.iconAsset?.let { GameArt.get(paparazzi.context, it) } }

@@ -45,6 +45,9 @@ class Gen2DexTables(
     /** Gold / Silver's FixPicBank: a table of {stored bank, real bank} pairs, 0xFF-terminated - a bank not listed is
      * the real one (null: Crystal's [picsBanks] index). */
     val picBankFixes: Pair<Int, Int>? = null,
+    /** Polished Crystal: this build's ROM tables ([polishedCrystalAddrs]): its pages, body data, pics, pic sizes, palettes and
+     * base data are by the species' table index ([Gen2Dex]'s polished branch); null = Crystal's formats. */
+    val polished: IntArray? = null,
 ) {
     private val dexNumbers: IntArray? = dexOrder?.let { o ->
         IntArray((o.maxOrNull() ?: 0) + 1).also { m -> o.forEachIndexed { i, s -> if (m[s] == 0) m[s] = i + 1 } }
@@ -209,6 +212,31 @@ val POKEDEX_PRISM = POKEDEX_CRYSTAL.copy(
     categorySuffix = "Pokémon", metric = true, decimalPoint = '.', unitSpace = false,
 )
 
+/**
+ * Polished Crystal's dex for build [sha1]: its National order (289: a species' 9-bit value, less 2 past 0xFF / 0x100), its
+ * own tables where that build keeps them; metric (body data is decimetres / hectograms). One object per build, so a dex
+ * cache never crosses them.
+ */
+private val polishedDexes = HashMap<String, PokedexTables>()
+fun polishedCrystalPokedex(sha1: String): PokedexTables? = synchronized(polishedDexes) {
+    val a = polishedCrystalAddrs[sha1] ?: return null
+    polishedDexes.getOrPut(sha1) {
+        fun at(k: Int) = (a[k] shr 16) to (a[k] and 0xFFFF)
+        // (The Crystal-shaped fields unused by the polished branch point at its own tables too.)
+        val g = Gen2DexTables(
+            baseData = at(15), dexEntryPointers = at(11), dexEntryBanks = at(11), picPointers = at(13), unownPicPointers = at(13),
+            picsBanks = at(13), palettes = at(2), itemDescriptions = at(11), tmHmMoves = at(11), moveDescriptions = at(11),
+            firstTm = 0x101, tmItems = gen2TmItemsPolishedCrystal, dexOrder = gen2DexOrderPolishedCrystal,
+            baseDataSize = POLISHED_BASE_DATA_SIZE, unown = 0, polished = a,
+        )
+        POKEDEX_CRYSTAL.copy(
+            speciesCount = POLISHED_NUM_SPECIES + 1, nationalCount = gen2DexOrderPolishedCrystal.size,
+            regionalCount = gen2DexOrderPolishedCrystal.size, gen2 = g,
+            categorySuffix = "Pokémon", metric = true, decimalPoint = '.', unitSpace = false,
+        )
+    }
+}
+
 /** A Game Boy dex (either generation): read from the cart, its tables by Dex number (Prism's by species, in the
  * order [Gen2DexTables.dexOrder] lists them). */
 val PokedexTables.gameBoy: Boolean get() = gen1 != null || gen2 != null
@@ -217,7 +245,12 @@ val PokedexTables.gameBoy: Boolean get() = gen1 != null || gen2 != null
 object Gen2Lz {
     private val FLIP = IntArray(256) { b -> (0 until 8).fold(0) { acc, i -> acc or (((b shr i) and 1) shl (7 - i)) } }
 
-    fun decompress(rom: ByteArray, start: Int, max: Int = 0x4000): ByteArray? = runCatching {
+    /**
+     * [polished]: Polished Crystal's variant (its home/decompress.asm, its own compressor's counts): a run repeats its
+     * byte n + 2 times and the alternating pair writes n + 3 bytes (the pair, then n + 1 chasing its own tail); a long
+     * command's length has one high bit.
+     */
+    fun decompress(rom: ByteArray, start: Int, max: Int = 0x4000, polished: Boolean = false): ByteArray? = runCatching {
         val bytes = ArrayList<Int>()
         var p = start
         fun u8() = rom[p++].toInt() and 0xFF
@@ -228,14 +261,14 @@ object Gen2Lz {
             val length: Int
             if (cmd == 7) {
                 cmd = (b shr 2) and 7
-                length = (((b and 3) shl 8) or u8()) + 1
+                length = (((b and (if (polished) 1 else 3)) shl 8) or u8()) + 1
             } else {
                 length = (b and 0x1F) + 1
             }
             when (cmd) {
                 0 -> repeat(length) { bytes += u8() }
-                1 -> { val v = u8(); repeat(length) { bytes += v } }
-                2 -> { val a = u8(); val c = u8(); repeat(length) { bytes += if (it % 2 == 0) a else c } }
+                1 -> { val v = u8(); repeat(if (polished) length + 1 else length) { bytes += v } }
+                2 -> { val a = u8(); val c = u8(); repeat(if (polished) length + 2 else length) { bytes += if (it % 2 == 0) a else c } }
                 3 -> repeat(length) { bytes += 0 }
                 else -> {
                     val o = u8()
@@ -476,9 +509,46 @@ object Gen2Dex {
         return s to run.next
     }
 
+    /** Polished Crystal's page: PokedexDataPointerTable's {bank, address} (the category, then the two pages, each to its '@'),
+     * PokemonBodyData's height (dm) and weight (hg), BaseData's stats and types - all by the species' index. */
+    private fun polishedEntry(t: Gen2DexTables, a: IntArray, dex: Int, species: Int): DexEntry? {
+        val rom = Gen1Dex.rom ?: return null
+        fun at(k: Int) = off(a[k] shr 16, a[k] and 0xFFFF)
+        val i = species - 1
+        val e = at(11) + 3 * i
+        var o = off(u8(rom, e), u16(rom, e + 1))
+        fun str(): String {
+            val sb = StringBuilder()
+            while (u8(rom, o) != 0x53) sb.append(polishedTextChars[u8(rom, o++)])
+            o++
+            return sb.toString()
+        }
+        val category = str()
+        val description = flow(str() + BREAK + str())
+        val body = at(12) + 4 * i
+        val s = at(15) + t.baseDataSize * i
+        return DexEntry(
+            national = dex,
+            species = species,
+            category = category,
+            heightDm = u8(rom, body),
+            weightHg = u16(rom, body + 1),
+            description = description,
+            type1 = u8(rom, s + 6),
+            type2 = u8(rom, s + 7),
+            // BaseData: HP, ATTACK, DEFENSE, SPEED, SP. ATK, SP. DEF -> the page's HP, ATK, DEF, SP. ATK, SP. DEF, SPEED.
+            baseStats = listOf(u8(rom, s), u8(rom, s + 1), u8(rom, s + 2), u8(rom, s + 4), u8(rom, s + 5), u8(rom, s + 3)),
+            abilities = emptyList(),
+            catchRate = u8(rom, s + 8),
+            genderRatio = gen2GenderRatiosPolishedCrystal.getOrElse(species) { 255 },
+            eggGroups = emptyList(),
+        )
+    }
+
     fun entry(t: Gen2DexTables, dex: Int): DexEntry? {
         val rom = Gen1Dex.rom ?: return null
         val species = t.speciesOf(dex).takeIf { it > 0 } ?: return null
+        t.polished?.let { return polishedEntry(t, it, dex, species) }
         val (pb, pa) = t.dexEntryPointers
         val bank = if (t.dexEntryFirstBank >= 0) t.dexEntryFirstBank + ((species - 1) shr 6)
             else u8(rom, off(t.dexEntryBanks.first, t.dexEntryBanks.second) + ((species - 1) shr 6))
@@ -544,6 +614,16 @@ object Gen2Dex {
     fun frontPixels(t: Gen2DexTables, species: Int): IntArray? {
         val rom = Gen1Dex.rom ?: return null
         if (t.dexOf(species) == 0) return null
+        t.polished?.let { a ->
+            // Polished Crystal: PokemonPicPointers' {bank, front, back, frames} by index, its size a nybble of PokemonPicSizes
+            // (the first of a byte's two in its high half), its LZ its own, coloured from PokemonPalettes (index + 1).
+            fun at(k: Int) = off(a[k] shr 16, a[k] and 0xFFFF)
+            val i = species - 1
+            val sz = u8(rom, at(14) + i / 2).let { if (i % 2 == 0) it shr 4 else it and 0xF }
+            val e = at(13) + 7 * i
+            val tiles = Gen2Lz.decompress(rom, off(u8(rom, e), u16(rom, e + 1)), polished = true) ?: return null
+            return placePic(rom, tiles, sz, at(2) + 8 * species)
+        }
         val s = off(t.baseData.first, t.baseData.second) + t.baseDataSize * (species - 1)
         val size = u8(rom, s + 17) and 0xF
         if (size !in 1..7) return null
@@ -564,8 +644,12 @@ object Gen2Dex {
             u8(rom, banks + u8(rom, ptrs) - (u8(rom, banks) - PICS_FIX))
         }
         val tiles = Gen2Lz.decompress(rom, off(bank, u16(rom, ptrs + 1))) ?: return null
-        if (tiles.size < size * size * 16) return null
-        val pal = off(t.palettes.first, t.palettes.second) + 8 * species
+        return placePic(rom, tiles, size, off(t.palettes.first, t.palettes.second) + 8 * species)
+    }
+
+    /** A [size] x [size]-tile pic ([tiles], columns first) in its 7x7 box, in the two colours at [pal] (+ clear, black). */
+    private fun placePic(rom: ByteArray, tiles: ByteArray, size: Int, pal: Int): IntArray? {
+        if (size !in 1..7 || tiles.size < size * size * 16) return null
         fun color(i: Int): Int {
             val c = u16(rom, pal + 2 * i)
             fun ch(v: Int) = ((v and 31) shl 3) or ((v and 31) shr 2)
@@ -593,6 +677,7 @@ object Gen2Dex {
     /** Item [id]'s bag description, as the game prints it: its own text, or a TM / HM's move's. "" without a cart. */
     fun itemDescription(t: Gen2DexTables, id: Int): String {
         val rom = Gen1Dex.rom ?: return ""
+        if (t.polished != null) return ""   // Polished Crystal's descriptions: not read yet
         return runCatching {
             val (bank, ptr) = if (id >= t.firstTm) {
                 val i = t.tmItems.indexOf(id).takeIf { it >= 0 } ?: return ""

@@ -38,6 +38,11 @@ object Gen2Art {
     /** The player (the boy: no gender choice before Crystal) on the town map. */
     const val GOLD_SILVER_PLAYER = "player_gold_silver"
 
+    const val POLISHED_FONT = "gen2/polished-crystal-font.ttf"
+    const val POLISHED_ICONS = "gen2/polished_crystal/pokemon"
+    const val POLISHED_HOLD_ICONS = "gen2/polished_crystal/hold_icons.png"
+    val POLISHED_TOWN_MAPS = arrayOf("polished_crystal_johto", "polished_crystal_kanto", "polished_crystal_orange")
+
     const val CRYSTAL_CLEAR_FONT = "gen2/crystal-clear-font.ttf"
     const val CRYSTAL_CLEAR_ICONS = "gen2/crystal_clear/pokemon"
     const val CRYSTAL_CLEAR_HOLD_ICONS = "gen2/crystal_clear/hold_icons.png"
@@ -90,6 +95,15 @@ object Gen2Art {
         // name), its tile palettes 8 BG palettes ([townMapPalCount]).
         val townMapsLz: Boolean = false,
         val townMapPalCount: Int = 6,
+        // Polished Crystal: its own charmap for the font (FontNormal from tile 'A', 0x80, as Crystal's); party minis
+        // ([minis]: MiniIconPointers, 7 bytes each - bank, mini, mask, icon - by cosmetic index, 8 LZ tiles) in each
+        // species' own two colours ([monPalettes]: PokemonPalettes, by index + 1); town map bytes yxTTTTTT (flips:
+        // TownMapFlips), tiles from [townMapPal0From] on in palette 0.
+        val chars: Map<Int, Char>? = null,
+        val minis: Pair<Int, Int>? = null,
+        val monPalettes: Pair<Int, Int>? = null,
+        val townMapFlips: Boolean = false,
+        val townMapPal0From: Int = 0x60,
     )
 
     val CRYSTAL = Gen2ArtTables(
@@ -222,7 +236,53 @@ object Gen2Art {
         townMapsLz = true,
         townMapPalCount = 8,
     )
-    private val GAMES = listOf(CRYSTAL, GOLD, SILVER, CRYSTAL_CLEAR_V2_6_0, CRYSTAL_CLEAR_V2_5_11, PRISM)
+    /** Polished Crystal's charmap (constants/charmap.asm) for the font's tiles - its own codes from 0x9A on. */
+    private val POLISHED_CHARS: Map<Int, Char> = buildMap {
+        for (i in 0 until 26) { put(0x80 + i, 'A' + i); put(0xA0 + i, 'a' + i) }
+        for (i in 0 until 10) put(0xE0 + i, '0' + i)
+        "().,?!".forEachIndexed { i, c -> put(0x9A + i, c) }
+        "“”-:♂♀'".forEachIndexed { i, c -> put(0xBA + i, c) }
+        "éÉáêíó¿¡".forEachIndexed { i, c -> put(0xC8 + i, c) }
+        putAll(mapOf(0xD5 to '№', 0xD8 to '&', 0xD9 to '♪', 0xDA to '♥', 0xDB to '×', 0xDC to '/', 0xDD to '%', 0xDE to '+',
+            0xEA to '¥', 0xEB to '…', 0xEC to '★', 0xED to '▼', 0xEE to '▲', 0xEF to '◀', 0xF0 to '▶'))
+    }
+
+    /**
+     * Polished Crystal 3.2.x, each release build (normal, faithful, debug): its addresses from its .sym
+     * ([polishedCrystalAddrs], gen_polished_crystal_tables.py); one family of paths, rebuilt when another build starts.
+     */
+    private val POLISHED_CRYSTAL: List<Gen2ArtTables> = polishedCrystalAddrs.map { (sha1, a) ->
+        fun at(i: Int) = (a[i] shr 16) to (a[i] and 0xFFFF)
+        Gen2ArtTables(
+            name = "polished_crystal",
+            sha1s = setOf(sha1),
+            font = at(0),
+            fontPath = POLISHED_FONT,
+            icons = at(1),
+            monMenuIcons = null,
+            eggIcon = 0,
+            heldItemIcons = at(3),
+            partyMenuObPals = at(4),
+            iconsDir = POLISHED_ICONS,
+            holdIconsPath = POLISHED_HOLD_ICONS,
+            townMapGfx = at(5),
+            townMaps = listOf(at(6), at(7), at(8)),
+            townMapPalMap = at(9),
+            pokegearPals = at(10),
+            townMapPaths = POLISHED_TOWN_MAPS.map { "regionmap/$it.png" },
+            playerSprites = emptyList(),
+            objectPals = at(10),
+            playerPaths = emptyList(),
+            townMapPalCount = 8,
+            chars = POLISHED_CHARS,
+            minis = at(1),
+            monPalettes = at(2),
+            townMapFlips = true,
+            townMapPal0From = 0x40,
+        )
+    }
+
+    private val GAMES = listOf(CRYSTAL, GOLD, SILVER, CRYSTAL_CLEAR_V2_6_0, CRYSTAL_CLEAR_V2_5_11, PRISM) + POLISHED_CRYSTAL
 
     /** The game's text characters for its font tiles 0x80-0xFF (constants/charmap.asm) the companion prints. */
     private val CHARS: Map<Int, Char> = buildMap {
@@ -263,7 +323,7 @@ object Gen2Art {
     fun font(rom: ByteArray, t: Gen2ArtTables): ByteArray {
         val base = off(t.font.first, t.font.second)
         val glyphs = HashMap<Char, ByteArray>()
-        for ((tile, c) in CHARS) {
+        for ((tile, c) in t.chars ?: CHARS) {
             val o = base + (tile - 0x80) * 8
             glyphs[c] = rom.copyOfRange(o, o + 8)
         }
@@ -282,6 +342,22 @@ object Gen2Art {
                 if (v != 0) img.argb[((tile / 4) * 16 + ((tile % 4) / 2) * 8 + y) * 16 + (tile % 2) * 8 + x] = pal[v]
             }
             return img
+        }
+        val minis = t.minis
+        if (minis != null) {
+            // Polished Crystal: by the companion's species id (POLISHED: its species' 9-bit value, then the variant forms;
+            // 255 the egg), its mini at the cosmetic index (variant forms after the 0x38 cosmetic ones), in the colours of
+            // its PokemonPalettes entry (index + 1): white, its two, black - InitPartyMenuOBPals, without the DV shading.
+            val out = HashMap<Int, RomArt.Image>()
+            val pals = off(t.monPalettes!!.first, t.monPalettes.second)
+            for (id in speciesNamesPolishedCrystal.keys) {
+                val mini = if (id > POLISHED_NUM_SPECIES) POLISHED_NUM_SPECIES + POLISHED_NUM_COSMETIC_FORMS + (id - POLISHED_NUM_SPECIES - 1) else id - 1
+                val e = off(minis.first, minis.second) + 7 * mini
+                val tiles = Gen2Lz.decompress(rom, off(u8(rom, e), u16(rom, e + 1)), polished = true)?.takeIf { it.size >= 128 } ?: continue
+                val p = pals + 8 * id
+                out[id] = draw(tiles, 0, intArrayOf(0, rgb(rom, p), rgb(rom, p + 2), 0xFF000000.toInt()))
+            }
+            return out
         }
         val far = t.iconFarPointers
         if (far != null) {
@@ -335,7 +411,7 @@ object Gen2Art {
 
     /** Town map [i] (160x144): its tilemap over TownMapGFX, each tile in the palette TownMapPals gives it. */
     fun townMap(rom: ByteArray, t: Gen2ArtTables, i: Int): RomArt.Image? {
-        val tiles = Gen2Lz.decompress(rom, off(t.townMapGfx.first, t.townMapGfx.second)) ?: return null
+        val tiles = Gen2Lz.decompress(rom, off(t.townMapGfx.first, t.townMapGfx.second), polished = t.minis != null) ?: return null
         val pals = (0 until t.townMapPalCount).map { palette(rom, t.pokegearPals, it) }
         val palMap = off(t.townMapPalMap.first, t.townMapPalMap.second)
         val img = RomArt.Image(160, 144)
@@ -346,12 +422,18 @@ object Gen2Art {
         if (lz != null) for (p in 0 until 160 * 8) img.argb[p] = pals[0][0]
         val map = off(t.townMaps[i].first, t.townMaps[i].second)
         for (cell in first until 20 * 18) {
-            val tile = if (lz != null) u8(lz, cell - 20) else u8(rom, map + cell)
-            if (tile == 0xFF || tile * 16 + 16 > tiles.size) return null
-            val pal = if (tile >= 0x60) 0 else (u8(rom, palMap + tile / 2) shr (if (tile % 2 == 0) 0 else 4)) and 7
+            val byte = if (lz != null) u8(lz, cell - 20) else u8(rom, map + cell)
+            if (byte == 0xFF) return null
+            // Polished Crystal: yxTTTTTT, the flips TownMapFlips puts in the attributes.
+            val tile = if (t.townMapFlips) byte and 0x3F else byte
+            val xFlip = t.townMapFlips && byte and 0x40 != 0
+            val yFlip = t.townMapFlips && byte and 0x80 != 0
+            if (tile * 16 + 16 > tiles.size) return null
+            val pal = if (tile >= t.townMapPal0From) 0 else (u8(rom, palMap + tile / 2) shr (if (tile % 2 == 0) 0 else 4)) and 7
             val colors = pals.getOrNull(pal) ?: return null
             for (y in 0 until 8) for (x in 0 until 8) {
-                img.argb[((cell / 20) * 8 + y) * 160 + (cell % 20) * 8 + x] = colors[px(tiles, tile * 16, x, y)]
+                val v = px(tiles, tile * 16, if (xFlip) 7 - x else x, if (yFlip) 7 - y else y)
+                img.argb[((cell / 20) * 8 + y) * 160 + (cell % 20) * 8 + x] = colors[v]
             }
         }
         return img

@@ -119,7 +119,7 @@ internal fun bagItemName(id: Int): String = gameItemNames(activeGame)?.get(id) ?
 
 private fun capsBagLabels(game: GameKind): Boolean =
     gameItemNames(game) != null || game == GameKind.HEART_AND_SOUL || game == GameKind.ORANGE_ISLANDS ||
-        (game.isGen2 && game != GameKind.PRISM)   // Prism's bag is mixed case ("Poké Ball")
+        (game.isGen2 && game != GameKind.PRISM && game != GameKind.POLISHED_CRYSTAL)   // Prism's and Polished's bags are mixed case
 
 /** The FAVORITES tab's id among the pocket tabs (pocket ids are 0 and up): the starred items. */
 private const val FAVORITES_TAB = -1
@@ -493,6 +493,15 @@ private val CrystalClearBag = YellowBag.copy(
     backdrop = Color(0xFFFF0000) to Color(0xFFAD0000),
 )
 
+/**
+ * Pokémon Polished Crystal: its bag, sampled headless - Crystal's text boxes and red cursor over the magenta checks of its
+ * side panel (the same on every pocket).
+ */
+private val PolishedCrystalBag = YellowBag.copy(
+    tabUnderline = Color(0xFFFF0000),
+    backdrop = Color(0xFFFF73FF) to Color(0xFFFF39FF),
+)
+
 /** Pokémon Red / Blue: Yellow's ITEM window in the Super Game Boy's white and black (sampled headless). */
 private val RedBlueBag = YellowBag.copy(
     panelLayers = listOf(Color(0xFF181010) to 1, Color(0xFFFFEFFF) to 1, Color(0xFF181010) to 1, Color(0xFFFFEFFF) to 1),
@@ -582,6 +591,7 @@ private fun lightBagFor(game: GameKind): BagPalette = when (game) {
     GameKind.CRYSTAL_CLEAR -> CrystalClearBag
     // Prism's PACK: Crystal's blue checks and text boxes.
     GameKind.PRISM -> CrystalBag
+    GameKind.POLISHED_CRYSTAL -> PolishedCrystalBag
     GameKind.MARIOMON -> MariomonBag
     // Too Many Types 2's, Glazed's, Imperium's and Quetzal's bags are Emerald's; Gaia's and Celia's are FireRed's.
     // Elite Redux's bag screen is Emerald's too.

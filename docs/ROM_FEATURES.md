@@ -15,6 +15,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | Crystal (GBC) | USA, USA/Europe rev 1, AU | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Crystal Clear (GBC) | 2.5.11, 2.6.0 (4 builds) | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Prism (GBC) | 0.95 build 254 | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
+| Polished Crystal (GBC) | 3.2.0 - 3.2.3 (16 builds) | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | FireRed | USA/Europe rev 1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | FireRed | USA/Europe rev 0 | ✅ | ✅ | — | — | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ |
 | FireRed | ES | ✅ | ✅ | ◐ ² | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ |
@@ -64,6 +65,9 @@ change to any of the places listed under "Where it's decided" updates its rows h
    on a config. Crystal's were run headless with the controls' own timing: a move used, RUN taken; Crystal Clear keeps
    Crystal's menus and their variables at Crystal's addresses, run the same way in both of its versions; so does Prism
    (its words mixed case: Fight / PkMn / Pack / Run), run the same way in a wild battle.
+   Polished Crystal has Crystal's battle menus at Crystal's places (Fight / PkMn / Bag / Run, its ▶ is tile 0xF0): reads
+   checked on the `polished_crystal_battle*` / `_trainer` fixtures; its menus read every frame, but drop a press in the 3
+   frames after a cursor move (headless), which the controls' read-then-press loop presses again. Timing not run through the controller.
    Gold / Silver have Crystal's battle menus (their own addresses, `GEN2_GOLD`): reads checked on the `gold_battle*` /
    `silver_battle` fixtures, the controls' timing not run on them.
    Red / Blue have Yellow's battle menus and menu variables (at Yellow's addresses, the cursor columns 9 / 15): their
@@ -92,7 +96,10 @@ change to any of the places listed under "Where it's decided" updates its rows h
    Clear 2.5.11 share that RAM and code; Prism takes a menu press only if it spans two frames, so every switch press
    does. Gold / Silver have Crystal's party menus (CANCEL row, SWITCH menu, none after a faint): their reads are checked
    on the `gold_battle_*` fixtures and the faint's pick by pressing headless (an A on SWITCH took 6 frames after the ▶
-   showed), not through the controller. Red / Blue have Yellow's party menu code: their reads (the list, SWITCH / STATS / CANCEL, the pick after a
+   showed), not through the controller. Polished Crystal's party menu is Crystal's (CANCEL row, A after a faint sends the
+   slot out) with its SWITCH / SUMMARY / CANCEL a column left (from (11, 12)); like Prism's it reads keys every other frame
+   and its SWITCH menu takes A from 3 frames after its ▶ shows: reads checked on the `polished_crystal_battle_*` fixtures,
+   presses headless (an A held over the 2nd and 3rd frames switched), not through the controller. Red / Blue have Yellow's party menu code: their reads (the list, SWITCH / STATS / CANCEL, the pick after a
    faint) are checked on the `red_battle_*` fixtures and by pressing headless (an A on SWITCH takes from 2 frames after
    the menu shows, as Yellow's Delay3 lets it), not through the controller.
 9. Should work, not run on this hack yet: it is FireRed rev 0's code edited in place (Rocket Edition, Ash Gray) or a

@@ -77,7 +77,7 @@ The pages a game gets depend on how much of it has been mapped. The [supported g
 | Unbound, Radical Red, Heart and Soul, Odyssey, Gaia, Amethyst, Celia's hack, Orange Islands, Ultra Violet, FireRed Rocket Edition, Ash Gray, Ghost Grey, Sword and Shield Ultimate Plus, GS Chronicles, Recharged Yellow, Emerald Legacy | NEXT BOSS, HERE with people and items, a WHERE IS built from the maps and, for most of them, a few TIPS |
 | Lazarus, Seaglass, Too Many Types 2, SoulGold, Glazed, Emerald Imperium, Quetzal (both releases, and Moemon Quetzal), Super Mariomon, Recharged Emerald | NEXT BOSS and the wild Pokémon in HERE |
 | Elite Redux | The wild Pokémon in HERE. Its gym leaders pick one of several teams when the battle starts, so there's no NEXT BOSS |
-| Emerald Rogue, R.O.W.E., Red, Blue, Yellow, Gold, Silver, Crystal, Crystal Clear, Prism | No guide yet |
+| Emerald Rogue, R.O.W.E., Red, Blue, Yellow, Gold, Silver, Crystal, Crystal Clear, Prism, Polished Crystal | No guide yet |
 
 The original games' hand-written pages follow the app's language when you play a French, German, Italian, Spanish or Japanese copy. Most hacks' pages are in English.
 

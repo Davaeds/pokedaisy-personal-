@@ -88,7 +88,7 @@ fun main(args: Array<String>) {
 
 private val GAME_BOY = setOf(
     "Pokémon Red", "Pokémon Blue", "Pokémon Yellow", "Pokémon Gold", "Pokémon Silver", "Pokémon Crystal", "Pokémon Crystal Clear",
-    "Pokémon Prism",
+    "Pokémon Prism", "Pokémon Polished Crystal",
 )
 
 /** Hacks without their own entry fall back to their base game's media, like the app (by the ROM's header there). */

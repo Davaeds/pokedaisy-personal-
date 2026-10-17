@@ -66,6 +66,13 @@ test('Game Boy Color: Gold and Silver', () => {
   assert.equal(verdict(data, { platform: 'gb', sha1: '49b163f7e57702bc939d642a18f591de55d92dae' }).title, 'Pokémon Silver');
 });
 
+test('Game Boy Color: Polished Crystal, every 3.2.x release build', () => {
+  // 3.2.3, faithful 3.2.3, 3.2.0's debug build
+  for (const sha1 of ['6930b48af5844d373e3c9130f26d6dd1084cf4ed', '3ff091a8e94a0c031372b6f0275e12620fe3d766', '11d461629363402fc15b5005ef51b8f44e726140']) {
+    assert.equal(verdict(data, { platform: 'gb', sha1 }).title, 'Pokémon Polished Crystal');
+  }
+});
+
 test('Game Boy Color: Crystal, all three English releases', () => {
   for (const sha1 of ['f4cd194bdee0d04ca4eac29e09b8e4e9d818c133', 'f2f52230b536214ef7c9924f483392993e226cfb', 'a0fc810f1d4e124434f7be2c989ab5b5892ddf36']) {
     assert.equal(verdict(data, { platform: 'gb', sha1 }).title, 'Pokémon Crystal');

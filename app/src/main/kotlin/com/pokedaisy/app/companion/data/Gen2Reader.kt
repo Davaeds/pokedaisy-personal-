@@ -62,6 +62,18 @@ data class Gen2Config(
     val mailItems: Set<Int> = GEN2_MAIL_ITEMS,
     /** Growth rates by species when they aren't Crystal's (Gen 3's, by Dex number): [expProgress]. */
     val growthRates: IntArray? = null,
+    /** The filled ▶ tile a waiting menu's cursor is drawn with (Crystal's charmap: 0xED; Polished Crystal's: 0xF0). */
+    val cursorTile: Int = 0xED,
+    /** Polished Crystal ([GEN2_POLISHED_CRYSTAL]): its own party / battle structs (9-bit species with forms: [polishedSpeciesId],
+     * gender a bit), a MEDICINE and a BERRIES pocket ([numMedicine] / [numBerries]) and key items as a 0-terminated list
+     * of their own ids at [numKeyItems]. */
+    val polished: Boolean = false,
+    val numMedicine: Long = -1,
+    val numBerries: Long = -1,
+    val medicineMax: Int = 0,
+    val berriesMax: Int = 0,
+    /** A faithful build: its own species types, moves and item names over the normal ones (ActiveTables). */
+    val polishedFaithful: Boolean = false,
 )
 
 /** Crystal's Mail (FLOWER_MAIL 0x9E, SURF_MAIL 0xB5 .. MIRAGE_MAIL 0xBD): the party menu marks a mon holding one with Mail's icon. */
@@ -188,6 +200,129 @@ val GEN2_PRISM = GEN2_CRYSTAL.copy(
     growthRates = gen2GrowthRatesPrism,
 )
 
+/**
+ * Polished Crystal 3.2.0-3.2.3, the normal and the faithful builds (Rangi42's open-source Crystal hack): every RAM address
+ * here is the same in all eight (their release .sym files agree), taken from them. Crystal's engine with its own data:
+ * a 48-byte party_struct with three DV bytes, a personality and a form byte (gender bit 7, egg bit 6, the species'
+ * 9th bit 5, form 0-4), a 35-byte battle_struct, and a bag of ITEMS / MEDICINE / BALLS / BERRIES ({id, quantity} lists),
+ * key items (their own ids, a 0-terminated list), TMs / HMs (a bit each). Its tables: gen_polished_crystal_tables.py.
+ */
+val GEN2_POLISHED_CRYSTAL = GEN2_CRYSTAL.copy(
+    partyCount = wramx(1, 0xDCCE),
+    partyMons = wramx(1, 0xDCD6),
+    numItems = wramx(1, 0xD827),
+    numKeyItems = wramx(1, 0xD800),
+    numBalls = wramx(1, 0xD90B),
+    tmsHms = wramx(1, 0xD7F5),
+    money = wramx(1, 0xD7E5),
+    mapGroup = wramx(1, 0xDCAC),
+    backupMapGroup = wramx(1, 0xDCA7),
+    battleMode = wramx(1, 0xD233),
+    battleMon = 0xC4A5L,
+    enemyMon = wramx(1, 0xD209),
+    otPartyCount = wramx(1, 0xD283),
+    otPartyMons = wramx(1, 0xD28B),
+    curOTMon = 0xC4DDL,
+    playerGender = wramx(1, 0xD47A),
+    gameTime = wramx(1, 0xD4B7),
+    dexCaught = wramx(1, 0xDE7B),
+    dexSeen = wramx(1, 0xDEAD),
+    menu2D = 0xCE7CL,
+    menuCursor = 0xCE84L,
+    moveMenuType = wramx(1, 0xD239),
+    tileMap = 0xC1A0L,
+    partyMenuAction = wramx(1, 0xD113),
+    curBattleMon = wramx(1, 0xD0DA),
+    landmarks = mapLandmarksPolishedCrystal,
+    genderRatios = gen2GenderRatiosPolishedCrystal,
+    tmItems = gen2TmItemsPolishedCrystal,
+    pokedex = null,
+    speciesCount = POLISHED_NUM_SPECIES,
+    itemsMax = 75,
+    ballsMax = 25,
+    keyItemsMax = 38,
+    tmBits = true,
+    mailItems = emptySet(),
+    growthRates = gen2GrowthRatesPolishedCrystal,
+    cursorTile = 0xF0,
+    polished = true,
+    numMedicine = wramx(1, 0xD8BF),
+    numBerries = wramx(1, 0xD93F),
+    medicineMax = 37,
+    berriesMax = 31,
+)
+
+val GEN2_POLISHED_CRYSTAL_FAITHFUL = GEN2_POLISHED_CRYSTAL.copy(polishedFaithful = true)
+
+/**
+ * Polished Crystal's species id for the companion: a species' own 9-bit value (its byte, the form byte's bit 5 the 9th
+ * bit), or POLISHED_NUM_SPECIES + 1 + k for a variant form, entry k of VariantSpeciesAndFormTable (GetSpeciesAndFormIndex:
+ * ALOLAN RATTATA, GALARIAN MEOWTH, ...) - the index + 1 of every per-species table the game keeps.
+ */
+fun polishedSpeciesId(species: Int, form: Int): Int {
+    val s9 = species or (if (form and 0x20 != 0) 0x100 else 0)
+    val k = polishedVariantForms.indexOf((s9 shl 8) or (form and 0x1F))
+    return if (k >= 0) POLISHED_NUM_SPECIES + 1 + k else s9
+}
+
+/** Polished Crystal's party_struct: species +0, item +1, moves +2, ID +6, exp +8, DVs +17, personality +20, form +21 (gender
+ * bit 7: female, egg bit 6), PP +22, level +31, status +32, HP +34 / +36. Gender follows the bit unless the species is all
+ * one gender (GetGender). */
+fun decodePolishedPartyMon(raw: ByteArray, off: Int, cfg: Gen2Config): Mon? {
+    val species = u8(raw, off)
+    if (species == 0 || species == 0xFF) return null
+    val form = u8(raw, off + 21)
+    val id = polishedSpeciesId(species, form)
+    if (id !in 1 until cfg.genderRatios.size) return null
+    val level = u8(raw, off + 31)
+    if (level !in 1..100) return null
+    val egg = form and 0x40 != 0
+    val gender = when (cfg.genderRatios[id]) {
+        255 -> GENDER_SYMBOL_NONE
+        0 -> GENDER_SYMBOL_MALE
+        254 -> GENDER_SYMBOL_FEMALE
+        else -> if (form and 0x80 != 0) GENDER_SYMBOL_FEMALE else GENDER_SYMBOL_MALE
+    }
+    return Mon(
+        // An egg keeps its species in the struct: shown as the game's own egg (species byte 0xFF, the companion's 255).
+        species = if (egg) 0xFF else id,
+        level = level,
+        hp = be16(raw, off + 34),
+        maxHp = be16(raw, off + 36),
+        status = u8(raw, off + 32).toLong(),
+        moves = IntArray(4) { u8(raw, off + 2 + it) },
+        pp = IntArray(4) { u8(raw, off + 22 + it) and 0x3F },
+        genderSymbol = if (egg) GENDER_SYMBOL_NONE else gender,
+        exp = (u8(raw, off + 8).toLong() shl 16) or (u8(raw, off + 9).toLong() shl 8) or u8(raw, off + 10).toLong(),
+        isEgg = egg,
+        heldItem = u8(raw, off + 1),
+        personality = gbMonKey(id, be16(raw, off + 6), be16(raw, off + 17)),
+    )
+}
+
+/** Polished Crystal's battle_struct (35 bytes): species +0, item +1, moves +2, DVs +6, form +10, PP +11, level +16, status
+ * +17, HP +19 / +21, stats +23, types +33 / +34. */
+fun decodePolishedBattleMon(raw: ByteArray): BattleMon? {
+    val species = u8(raw, 0)
+    if (species == 0 || species == 0xFF) return null
+    val level = u8(raw, 16)
+    if (level !in 1..100) return null
+    return BattleMon(
+        species = polishedSpeciesId(species, u8(raw, 10)),
+        level = level,
+        type1 = u8(raw, 33),
+        type2 = u8(raw, 34),
+        hp = be16(raw, 19),
+        maxHp = be16(raw, 21),
+        status1 = u8(raw, 17).toLong(),
+        moves = IntArray(4) { u8(raw, 2 + it) },
+        pp = IntArray(4) { u8(raw, 11 + it) and 0x3F },
+        item = u8(raw, 1),
+        stats = IntArray(5) { be16(raw, 23 + 2 * it) },
+    )
+}
+const val POLISHED_BATTLE_MON_SIZE = 35
+
 /** The running Game Boy Color game's addresses (set by the Poller with [activeGame]): its dex tables, item text. */
 @Volatile
 var activeGen2: Gen2Config = GEN2_CRYSTAL
@@ -258,7 +393,6 @@ fun decodeGen2BattleMon(raw: ByteArray, speciesCount: Int = 251): BattleMon? {
     )
 }
 
-private const val TILE_CURSOR = 0xED          // ▶, the waiting menu's cursor
 private const val BATTLE_MENU_TOP = 0x0E      // BattleMenu's _2DMenu: 2 x 2 from (9, 14), 6 across / 2 down
 private const val BATTLE_MENU_LEFT = 0x09
 private const val MOVE_MENU_TOP = 0x0D        // MoveSelectionScreen: a column from (5, 13)
@@ -286,7 +420,7 @@ fun readGen2BattleInput(r: MemoryReader, cfg: Gen2Config): Pair<Int, Int> {
     if (y !in 1..rows || x !in 1..cols) return BATTLE_INPUT_BUSY to -1
     val tx = left + (x - 1) * (spacing and 0xF)
     val ty = top + (y - 1) * (spacing shr 4)
-    val shown = tx < 20 && ty < 18 && u8(r.readCoreMemory(cfg.tileMap + ty * 20 + tx, 1), 0) == TILE_CURSOR
+    val shown = tx < 20 && ty < 18 && u8(r.readCoreMemory(cfg.tileMap + ty * 20 + tx, 1), 0) == cfg.cursorTile
     if (!shown) return BATTLE_INPUT_BUSY to -1
     if (top == BATTLE_MENU_TOP && left == BATTLE_MENU_LEFT && rows == 2 && cols == 2) {
         return BATTLE_INPUT_ACTION_SELECT to (x - 1) + 2 * (y - 1)
@@ -319,6 +453,18 @@ fun readGen2Bag(r: MemoryReader, cfg: Gen2Config): List<Item> {
     }
     val items = pairs(cfg.numItems, cfg.itemsMax, POCKET_ITEMS) ?: return emptyList()
     val balls = pairs(cfg.numBalls, cfg.ballsMax, POCKET_POKE_BALLS) ?: return emptyList()
+    if (cfg.polished) {
+        // MEDICINE goes with the items (the companion's pockets); key items: a 0-terminated list of their own ids (0x200 + n).
+        val medicine = pairs(cfg.numMedicine, cfg.medicineMax, POCKET_ITEMS) ?: return emptyList()
+        val berries = pairs(cfg.numBerries, cfg.berriesMax, POCKET_BERRIES) ?: return emptyList()
+        val keyRaw = r.readCoreMemory(cfg.numKeyItems, cfg.keyItemsMax + 1)
+        val n = (0..cfg.keyItemsMax).firstOrNull { u8(keyRaw, it) == 0 } ?: return emptyList()
+        val keys = (0 until n).map { Item(0x200 + u8(keyRaw, it), 1, POCKET_KEY_ITEMS) }
+        val bits = r.readCoreMemory(cfg.tmsHms, (cfg.tmItems.size + 7) / 8)
+        val tms = cfg.tmItems.indices.filter { (u8(bits, it / 8) shr (it % 8)) and 1 != 0 }
+            .map { Item(cfg.tmItems[it], 1, POCKET_TM_HM) }
+        return (items + medicine + balls + berries).filter { it.itemId in 1..0xFE } + keys + tms
+    }
     val keyRaw = r.readCoreMemory(cfg.numKeyItems, 2 + cfg.keyItemsMax)
     val nKeys = u8(keyRaw, 0)
     if (nKeys > cfg.keyItemsMax || u8(keyRaw, 1 + nKeys) != 0xFF) return emptyList()
@@ -342,17 +488,20 @@ fun readGen2PokedexState(r: MemoryReader, cfg: Gen2Config, tables: PokedexTables
     val g = tables.gen2
     fun bits(b: ByteArray) = (1..cfg.speciesCount).filter { n -> (b[(n - 1) / 8].toInt() shr ((n - 1) % 8)) and 1 != 0 }
         .map { g?.dexOf(it) ?: it }.filter { it in 1..tables.nationalCount }.toSet()
-    val caught = bits(r.readCoreMemory(cfg.dexCaught, 32))
-    return PokedexState(tables, bits(r.readCoreMemory(cfg.dexSeen, 32)) + caught, caught, national = true)
+    val bytes = (cfg.speciesCount + 7) / 8   // 32; Polished Crystal's 291 (by the species' index: its 9-bit value - 1)
+    val caught = bits(r.readCoreMemory(cfg.dexCaught, bytes))
+    return PokedexState(tables, bits(r.readCoreMemory(cfg.dexSeen, bytes)) + caught, caught, national = true)
 }
 
 fun readGen2Telemetry(r: MemoryReader, cfg: Gen2Config): Telemetry {
     val countRaw = r.readCoreMemory(cfg.partyCount, 1 + PARTY_SIZE)
     // wPartySpecies ends in 0xFF after the count: anything else is WRAM before a save is loaded.
-    val count = u8(countRaw, 0).takeIf { it <= PARTY_SIZE && (it == PARTY_SIZE || u8(countRaw, 1 + it) == 0xFF) } ?: 0
+    // (Polished Crystal keeps no species list after it: 7 unused bytes.)
+    val count = u8(countRaw, 0).takeIf { it <= PARTY_SIZE && (cfg.polished || it == PARTY_SIZE || u8(countRaw, 1 + it) == 0xFF) } ?: 0
     val partyRaw = r.readCoreMemory(cfg.partyMons, PARTY_SIZE * GEN2_PARTY_MON_SIZE)
     val party = (0 until count).mapNotNull {
-        decodeGen2PartyMon(partyRaw, it * GEN2_PARTY_MON_SIZE, cfg, egg = u8(countRaw, 1 + it) == GEN2_EGG)
+        if (cfg.polished) decodePolishedPartyMon(partyRaw, it * GEN2_PARTY_MON_SIZE, cfg)
+        else decodeGen2PartyMon(partyRaw, it * GEN2_PARTY_MON_SIZE, cfg, egg = u8(countRaw, 1 + it) == GEN2_EGG)
     }
 
     val items = readGen2Bag(r, cfg)
@@ -363,13 +512,17 @@ fun readGen2Telemetry(r: MemoryReader, cfg: Gen2Config): Telemetry {
     var enemyParty = emptyList<Mon>()
     var enemyActive = -1
     if (inBattle) {
-        decodeGen2BattleMon(r.readCoreMemory(cfg.battleMon, GEN2_BATTLE_MON_SIZE), cfg.speciesCount)?.let { battleMons[BATTLE_POS_PLAYER_LEFT] = it }
-        decodeGen2BattleMon(r.readCoreMemory(cfg.enemyMon, GEN2_BATTLE_MON_SIZE), cfg.speciesCount)?.let { battleMons[BATTLE_POS_OPPONENT_LEFT] = it }
+        fun battler(addr: Long) = if (cfg.polished) decodePolishedBattleMon(r.readCoreMemory(addr, POLISHED_BATTLE_MON_SIZE))
+            else decodeGen2BattleMon(r.readCoreMemory(addr, GEN2_BATTLE_MON_SIZE), cfg.speciesCount)
+        battler(cfg.battleMon)?.let { battleMons[BATTLE_POS_PLAYER_LEFT] = it }
+        battler(cfg.enemyMon)?.let { battleMons[BATTLE_POS_OPPONENT_LEFT] = it }
         if (battle == 2) {
             val ot = r.readCoreMemory(cfg.otPartyCount, 1 + PARTY_SIZE)
             val n = u8(ot, 0).coerceAtMost(PARTY_SIZE)
             val raw = r.readCoreMemory(cfg.otPartyMons, PARTY_SIZE * GEN2_PARTY_MON_SIZE)
-            enemyParty = (0 until n).mapNotNull { decodeGen2PartyMon(raw, it * GEN2_PARTY_MON_SIZE, cfg) }
+            enemyParty = (0 until n).mapNotNull {
+                if (cfg.polished) decodePolishedPartyMon(raw, it * GEN2_PARTY_MON_SIZE, cfg) else decodeGen2PartyMon(raw, it * GEN2_PARTY_MON_SIZE, cfg)
+            }
             enemyActive = u8(r.readCoreMemory(cfg.curOTMon, 1), 0).takeIf { it < enemyParty.size } ?: -1
         }
     }
@@ -409,8 +562,9 @@ fun readGen2Telemetry(r: MemoryReader, cfg: Gen2Config): Telemetry {
 /** A Game Boy game (the Gen 1 and Gen 2 games): the black-on-white text-box look, plain white screens, the 2x2 battle menu. */
 val GameKind?.isGameBoyGame: Boolean get() = isGen1 || isGen2
 
-/** Crystal or a hack of it (Crystal Clear, Prism). */
-val GameKind?.isCrystalFamily: Boolean get() = this == GameKind.CRYSTAL || this == GameKind.CRYSTAL_CLEAR || this == GameKind.PRISM
+/** Crystal or a hack of it (Crystal Clear, Prism, Polished Crystal). */
+val GameKind?.isCrystalFamily: Boolean get() = this == GameKind.CRYSTAL || this == GameKind.CRYSTAL_CLEAR || this == GameKind.PRISM ||
+    this == GameKind.POLISHED_CRYSTAL
 
 /** Gold, Silver: retail Gen 2 before Crystal, one RAM layout and one look ([GEN2_GOLD]). */
 val GameKind?.isGoldSilver: Boolean get() = this == GameKind.GOLD || this == GameKind.SILVER

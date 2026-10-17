@@ -256,7 +256,8 @@ internal enum class MapLabelStyle(val width: Int, val height: Int) {
             else if (gender == 1) "player_may" else if (game == GameKind.MARIOMON) "player_mario" else "player_brendan"
         // Red's standing sprite (Gen1Art), Crystal's CHRIS / KRIS or Gold / Silver's boy (Gen2Art), from the ROM.
         // Crystal Clear's player is the player's own (model, skin, colours): none drawn.
-        GEN1 -> if (game == GameKind.CRYSTAL_CLEAR || game == GameKind.PRISM) null   // Prism's too (six models)
+        // Polished Crystal's player is one of its own outfits: none drawn either.
+        GEN1 -> if (game == GameKind.CRYSTAL_CLEAR || game == GameKind.PRISM || game == GameKind.POLISHED_CRYSTAL) null   // Prism's too (six models)
             else if (game == GameKind.GOLD || game == GameKind.SILVER) com.pokedaisy.app.companion.data.Gen2Art.GOLD_SILVER_PLAYER
             else if (game == GameKind.RED || game == GameKind.BLUE) "player_red_blue"
             else if (game != GameKind.CRYSTAL) "player_yellow"
@@ -295,6 +296,9 @@ private fun regionName(images: Array<String>, i: Int): String = when (images[i])
     "prism_kanto" -> "KANTO"
     "prism_sevii" -> "SEVII"
     "prism_tunod" -> "TUNOD"
+    "polished_crystal_johto" -> "JOHTO"
+    "polished_crystal_kanto" -> "KANTO"
+    "polished_crystal_orange" -> "ISLANDS"   // the game's own label on that map
     else -> tr("MAP {0}", i + 1)
 }
 

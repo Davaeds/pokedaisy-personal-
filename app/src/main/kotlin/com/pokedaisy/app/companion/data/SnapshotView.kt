@@ -74,6 +74,14 @@ fun expProgress(species: Int, level: Int, exp: Long?): ExpProgress? {
         val start = table[level].toLong()
         return ExpProgress(exp, start, if (level < 100) table[level + 1].toLong() else start)
     }
+    // Polished Crystal's ids (its 9-bit species, then the variant forms) with its own four rates, numbered 0 medium fast,
+    // 1 medium slow, 2 fast, 3 slow (constants/pokemon_data_constants.asm) - the same curves as Gen 3's 0, 3, 4, 5.
+    if (activeGame == GameKind.POLISHED_CRYSTAL) {
+        val rate = activeGen2.growthRates?.getOrNull(species)?.let { intArrayOf(0, 3, 4, 5).getOrNull(it) } ?: return null
+        val table = gen3ExperienceTables.getOrNull(rate) ?: return null
+        val start = table[level].toLong()
+        return ExpProgress(exp, start, if (level < 100) table[level + 1].toLong() else start)
+    }
     // Recharged Yellow kept FireRed's growth rates and gExperienceTables (both checked byte for byte).
     // Orange Islands kept FireRed's growth rates but for its CRYSTAL ONIX slots.
     if (activeGame == GameKind.ORANGE_ISLANDS && species >= 409) return null

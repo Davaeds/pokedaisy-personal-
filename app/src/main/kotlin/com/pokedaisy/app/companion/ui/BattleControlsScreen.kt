@@ -646,10 +646,13 @@ private fun Gen1ActionButtons(
             GbaText(label, buttonContent, Color.Transparent, m, bold = true)
         }
     }
-    // Prism's menu is mixed case (Fight / PkMn / Pack / Run); Yellow's in each language's own words.
-    val words = if (com.pokedaisy.app.companion.data.activeGame == com.pokedaisy.app.companion.data.GameKind.PRISM)
-        listOf("Fight", "PkMn", "Pack", "Run")
-        else com.pokedaisy.app.companion.data.gen1BattleMenuWords(com.pokedaisy.app.companion.data.romLanguage)
+    // Prism's menu is mixed case (Fight / PkMn / Pack / Run), Polished Crystal's too (its bag a Bag); Yellow's in each
+    // language's own words.
+    val words = when (com.pokedaisy.app.companion.data.activeGame) {
+        com.pokedaisy.app.companion.data.GameKind.PRISM -> listOf("Fight", "PkMn", "Pack", "Run")
+        com.pokedaisy.app.companion.data.GameKind.POLISHED_CRYSTAL -> listOf("Fight", "PkMn", "Bag", "Run")
+        else -> com.pokedaisy.app.companion.data.gen1BattleMenuWords(com.pokedaisy.app.companion.data.romLanguage)
+    }
     Column(modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             cell(words[0], 0, Modifier.weight(1f).fillMaxHeight(), icon = true)
@@ -657,7 +660,8 @@ private fun Gen1ActionButtons(
         }
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             // Gen 2 calls the bag PACK.
-            cell(if (com.pokedaisy.app.companion.data.activeGame.isGen2 && words[2] != "Pack") "PACK" else words[2], 1, Modifier.weight(1f).fillMaxHeight())
+            cell(if (com.pokedaisy.app.companion.data.activeGame.isGen2 && words[2] != "Pack" && words[2] != "Bag") "PACK" else words[2], 1,
+                Modifier.weight(1f).fillMaxHeight())
             cell(words[3], 3, Modifier.weight(1f).fillMaxHeight())
         }
     }

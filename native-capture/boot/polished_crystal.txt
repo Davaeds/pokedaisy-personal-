@@ -1,0 +1,14 @@
+# Pokémon Polished Crystal 3.2.x from a save: the intro, the title, CONTINUE and the save summary, then on the field
+# (capture_fixture_headless.sh polished_crystal --script native-capture/boot/polished_crystal.txt). Same timing as
+# gold.txt: START at frame 600 skips the intro to the title, A on the title opens Continue / New Game / Options / Music
+# Player (Continue first), A on Continue shows the save summary (player, badges, time), and the third A leaves it for
+# the field. Gen 2 can miss a one-frame press outside its menus: START and A are held 3 frames.
+wait 600
+hold START 3
+wait 200
+hold A 3
+wait 120
+hold A 3
+wait 120
+hold A 3
+wait 200

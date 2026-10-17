@@ -424,6 +424,13 @@ private val CrystalPartyPaletteLight = crystalPartyPalette(YellowPartyPaletteLig
 private val CrystalPartyPaletteNight = crystalPartyPalette(YellowPartyPaletteNight, Color(0xFF181818))
 val CrystalPartyPalette: PartyPalette get() = if (OptionColors.dark) CrystalPartyPaletteNight else CrystalPartyPaletteLight
 
+/** Pokémon Polished Crystal: Crystal's party menu with its gold "HP" label (sampled headless; the bars are Crystal's). */
+private fun polishedPartyPalette(base: PartyPalette) = base.copy(hpLabel = Color(0xFFFFCE10), hpLabelShade = Color(0xFFFFCE10))
+private val PolishedCrystalPartyPaletteLight = polishedPartyPalette(CrystalPartyPaletteLight)
+private val PolishedCrystalPartyPaletteNight = polishedPartyPalette(CrystalPartyPaletteNight)
+val PolishedCrystalPartyPalette: PartyPalette
+    get() = if (OptionColors.dark) PolishedCrystalPartyPaletteNight else PolishedCrystalPartyPaletteLight
+
 /**
  * Pokémon Red / Blue (a Super Game Boy, in mGBA): Yellow's slots in the SGB's white and black, the HP bar in
  * pokered's PAL_GREENBAR / YELLOWBAR / REDBAR (sampled headless: the green 0x4AA55A).
@@ -474,6 +481,7 @@ fun partyPaletteFor(game: GameKind): PartyPalette = when (game) {
     GameKind.RED, GameKind.BLUE -> RedBluePartyPalette
     // Gold's and Silver's party menu is Crystal's, pixel for pixel (sampled headless in both).
     GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM, GameKind.GOLD, GameKind.SILVER -> CrystalPartyPalette
+    GameKind.POLISHED_CRYSTAL -> PolishedCrystalPartyPalette
     GameKind.GLAZED, GameKind.QUETZAL -> GlazedPartyPalette
     GameKind.IMPERIUM -> ImperiumPartyPalette
     GameKind.SWORD_SHIELD -> SwordShieldPartyPalette
@@ -780,6 +788,7 @@ internal fun HeldItemMarker(itemId: Int, u: Int, x: Float, y: Float) {
             com.pokedaisy.app.companion.data.GameKind.CRYSTAL -> com.pokedaisy.app.companion.data.Gen2Art.CRYSTAL_HOLD_ICONS
             com.pokedaisy.app.companion.data.GameKind.CRYSTAL_CLEAR -> com.pokedaisy.app.companion.data.Gen2Art.CRYSTAL_CLEAR_HOLD_ICONS
             com.pokedaisy.app.companion.data.GameKind.PRISM -> com.pokedaisy.app.companion.data.Gen2Art.PRISM_HOLD_ICONS
+            com.pokedaisy.app.companion.data.GameKind.POLISHED_CRYSTAL -> com.pokedaisy.app.companion.data.Gen2Art.POLISHED_HOLD_ICONS
             com.pokedaisy.app.companion.data.GameKind.GOLD, com.pokedaisy.app.companion.data.GameKind.SILVER ->
                 com.pokedaisy.app.companion.data.Gen2Art.GOLD_SILVER_HOLD_ICONS
             else -> RomArt.HOLD_ICONS

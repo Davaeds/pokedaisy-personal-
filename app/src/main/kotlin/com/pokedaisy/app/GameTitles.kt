@@ -125,6 +125,23 @@ object GameTitles {
         "534876e4e4d0d79a82fef3bbe5bea11c40451727" to "Pokémon Crystal Clear",
         // Prism v0.95 build 254 (Hotfix 5).
         "752076692ae3387cf426ce5f51a98c6b60e8df6a" to "Pokémon Prism",
+        // Polished Crystal 3.2.0 - 3.2.3: every official release build (normal, faithful, their debug builds).
+        "6930b48af5844d373e3c9130f26d6dd1084cf4ed" to "Pokémon Polished Crystal",
+        "beb8b38280af59e9ef84be12684a6ecf09021c9b" to "Pokémon Polished Crystal",
+        "79ebf9984eac8081f488d15a35a6c5d11b4f84e2" to "Pokémon Polished Crystal",
+        "e55859484c5cda70e05daed59b14662e0a0f8eac" to "Pokémon Polished Crystal",
+        "457d61dfc28a17388b87792595433ba20bd1c1ed" to "Pokémon Polished Crystal",
+        "bea9804dc88a4ee370af62ff3139fdf1380277bf" to "Pokémon Polished Crystal",
+        "9c13585eb34efdcd881c2e68f029b820bddf349d" to "Pokémon Polished Crystal",
+        "11d461629363402fc15b5005ef51b8f44e726140" to "Pokémon Polished Crystal",
+        "3ff091a8e94a0c031372b6f0275e12620fe3d766" to "Pokémon Polished Crystal",
+        "e63b1e52a9f71c3948e3e7e515e9939d728fc679" to "Pokémon Polished Crystal",
+        "666f8edfb9efd8c301adbc14d38ccfaae33a047d" to "Pokémon Polished Crystal",
+        "b012f6d55c34c972778f5566e1cc910962dd7ab5" to "Pokémon Polished Crystal",
+        "b5393eb27fec51970cc9186f36c34e94494bfd39" to "Pokémon Polished Crystal",
+        "772858dd5a3e66dea4454d5f83b48c83d732ca69" to "Pokémon Polished Crystal",
+        "c4bd263e58325c6c04c34462c1b4a37fba085e9c" to "Pokémon Polished Crystal",
+        "c0a2c70d73ce68830a891ddd292300c90766acdd" to "Pokémon Polished Crystal",
     )
 
     /** Only these games' ROMs (and Game Boy carts) are worth hashing: every entry above is one of them. */
