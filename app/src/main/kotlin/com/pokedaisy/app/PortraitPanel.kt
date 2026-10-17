@@ -25,8 +25,8 @@ import com.pokedaisy.app.companion.ui.SidePanelCompanion
  * ([Prefs.portraitCompanionRatio]): drag the grip on its edge, or tap it to step
  * through small / the Thor's shape / everything under the game. The gap left
  * takes the touch pad when it's shown and fits; else the pad lies over the game
- * as usual. The grip never covers the game: with no room for it above the
- * companion it sits inside the companion's top. BACK is the companion's back
+ * as usual. The grip has a strip of its own and never covers the game; only a
+ * screen too short for anything else puts it inside the companion's top. BACK is the companion's back
  * ([back]).
  *
  * Held sideways the same device gets [SidePanel] instead (PokeDaisyActivity
@@ -66,7 +66,8 @@ class PortraitPanel(
     private val screenH get() = root.height.takeIf { it > 0 } ?: context.resources.displayMetrics.heightPixels
     private val gameH get() = root.gameHeightFor(screenW)
     private val gripH get() = gripView?.height ?: 0
-    private val reserve get() = if (underGame && !expand) gripH else 0
+    /** The grip's strip, kept free in either placement ([PortraitLayout.arrange]). */
+    private val reserve get() = gripH
     private fun arrangement() = PortraitLayout.arrange(screenW, screenH, gameH, gripH, ratio, underGame, expand)
 
     // A rotation, the status bar coming or going, a Game Boy game's 10:9: lay out again.

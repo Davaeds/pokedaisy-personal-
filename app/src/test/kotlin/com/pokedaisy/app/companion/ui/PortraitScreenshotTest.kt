@@ -70,7 +70,7 @@ class PortraitScreenshotTest {
     /** The smallest companion: the most room for the touch pad. */
     @Test fun smallest() = paparazzi.snapshot { Scene(PortraitLayout.MIN_RATIO, touchPad = true) }
 
-    /** Dragged all the way up: everything under the game, the grip inside the companion's top (not over the game). */
+    /** Dragged all the way up: everything under the game but the grip's strip, which keeps the companion's room its own. */
     @Test fun tallest() = paparazzi.snapshot { Scene(10f, touchPad = true) }
 
     /** SETTINGS > COMPANION > UNDER GAME: the companion right under the game, the touch pad at the screen's bottom. */

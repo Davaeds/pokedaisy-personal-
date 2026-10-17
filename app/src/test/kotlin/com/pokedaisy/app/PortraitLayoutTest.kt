@@ -44,11 +44,17 @@ class PortraitLayoutTest {
     @Test
     fun gripNeverCoversTheGame() {
         val grip = 63
-        // Along the bottom, full height: no room above the companion, so the grip goes inside its top.
+        // Along the bottom, full height: the grip keeps its strip under the game, the companion everything below it.
         val full = PortraitLayout.arrange(w, h, game, grip, 10f, underGame = false)
-        assertEquals(PortraitLayout.Grip.INSIDE, full.grip)
+        assertEquals(PortraitLayout.Grip.ABOVE, full.grip)
         assertEquals(game, full.gripTop)
-        assertEquals(grip, full.topInset(grip))
+        assertEquals(h - game - grip, full.companionHeight)
+        assertEquals(0, full.topInset(grip))
+        // Only a screen too short for the smallest companion and the grip puts it inside the companion's top.
+        val short = PortraitLayout.arrange(w, 1400, game, grip, 10f, underGame = false)
+        assertEquals(PortraitLayout.Grip.INSIDE, short.grip)
+        assertEquals(game, short.gameBottom)
+        assertEquals(grip, short.topInset(grip))
         // Default size: above the companion, the touch pad in the gap over it.
         val normal = PortraitLayout.arrange(w, h, game, grip, PortraitLayout.DEFAULT_RATIO, underGame = false)
         assertEquals(PortraitLayout.Grip.ABOVE, normal.grip)
@@ -68,6 +74,22 @@ class PortraitLayoutTest {
             assertEquals(0, a.padTop)
             assertEquals(a.gameAreaBottom, a.padBottom)
         }
+    }
+
+    @Test
+    fun wideGivesTheCompanionTheRoomOriginalDoes() {
+        // GitHub #136, a Galaxy Z Fold 8 upright: WIDE is always along the bottom, and the grip went inside the companion
+        // at its largest, 32 px less for its content than ORIGINAL under the game - the battle move cards lost a line.
+        val fw = 1848
+        val fh = 2448
+        val fgame = 1264
+        val grip = 72
+        val r = 1152f / fw
+        val wide = PortraitLayout.arrange(fw, fh, fgame, grip, r, underGame = false, expand = true)
+        val original = PortraitLayout.arrange(fw, fh, fgame, grip, r, underGame = true)
+        assertEquals(PortraitLayout.Grip.ABOVE, wide.grip)
+        assertEquals(original.companionHeight - original.topInset(grip), wide.companionHeight - wide.topInset(grip))
+        assertEquals(fh - fgame - grip, wide.companionHeight)
     }
 
     @Test

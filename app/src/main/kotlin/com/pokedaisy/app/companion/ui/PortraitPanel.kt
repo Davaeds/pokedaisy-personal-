@@ -40,8 +40,7 @@ object PortraitLayout {
 
     /**
      * The companion's height on a [w]x[h] screen whose game (status bar included)
-     * is [gameH] tall, with [reserve] px kept free under it (the grip, when it
-     * hangs below the companion).
+     * is [gameH] tall, with [reserve] px kept free beside it (the grip's strip).
      */
     fun companionHeight(w: Int, h: Int, gameH: Int, ratio: Float, reserve: Int = 0): Int {
         val lo = minOf((w * MIN_RATIO).roundToInt(), h / 2)
@@ -92,20 +91,23 @@ object PortraitLayout {
     }
 
     /**
-     * Lays the screen out. Along the bottom, the grip sits on the companion's top
-     * edge, or inside its top once there's no room above (it never covers the
-     * game); dragging it up makes the companion taller. Right under the game
-     * ([underGame]), the grip hangs below the companion (room kept for it) and
-     * dragging it down makes it taller.
+     * Lays the screen out. The grip always has a strip of its own, so it never
+     * takes the companion's room: along the bottom it sits on the companion's top
+     * edge (dragging it up makes the companion taller), right under the game
+     * ([underGame]) it hangs below the companion (dragging it down does). Only a
+     * screen too short for even the smallest companion and the grip puts it inside
+     * the companion's top; it never covers the game. (Inside, it pushed the
+     * companion's content down at its largest size: with ASPECT > WIDE, which is
+     * always along the bottom, a Galaxy Z Fold's battle move cards lost their
+     * PWR / PP line - GitHub #136.)
      */
     fun arrange(w: Int, h: Int, gameH: Int, gripH: Int, ratio: Float, underGame: Boolean, expand: Boolean = false): Arrangement {
         // WIDE ([expand]): the game takes everything above the companion, which is along the bottom then (right
         // under the game is the same place), and the touch pad lies over the game.
         @Suppress("NAME_SHADOWING") val underGame = underGame && !expand
-        val reserve = if (underGame) gripH else 0
-        val c = companionHeight(w, h, gameH, ratio, reserve)
-        val gameBottom = minOf(gameH, h - c - reserve)
+        val c = companionHeight(w, h, gameH, ratio, gripH)
         if (underGame) {
+            val gameBottom = minOf(gameH, h - c - gripH)
             val gripTop = gameBottom + c
             val below = gripTop + gripH
             val inGap = padInGap(w, h - below)
@@ -115,6 +117,7 @@ object PortraitLayout {
             )
         }
         val companionTop = h - c
+        val gameBottom = minOf(gameH, companionTop)
         val inside = companionTop - gameBottom < gripH
         val gripTop = if (inside) companionTop else companionTop - gripH
         val inGap = !expand && padInGap(w, gripTop - gameBottom)
