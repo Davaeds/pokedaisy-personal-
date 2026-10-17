@@ -1049,6 +1049,9 @@ open class CompanionScreenshotTest {
     @Test fun redSettings() = yellow("red", "SETTINGS", cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
     @Test fun redDexEntry() = yellow("red", "DEX", dexEntry = 151, cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
     @Test fun yellowParty() = yellow("yellow", "PARTY")
+    /** A Normal / Flying summary (all three matchup groups) in Yellow's taller font, under the tab bar: its headings sit on
+     * their chips' lines there, and once were clipped to a chip's height. */
+    @Test fun yellowPartyDetail() = yellow("yellow", "PARTY", monIndex = 4)
     @Test fun yellowItems() = yellow("yellow", "ITEMS")
     @Test fun yellowBattle() = yellow("yellow_battle", "BATTLE")
     @Test fun yellowBattleMenu() = yellow("yellow_battle_menu", "BATTLE", controls = true)
@@ -1154,6 +1157,8 @@ open class CompanionScreenshotTest {
         cfg: com.pokedaisy.app.companion.data.Gen1Config = com.pokedaisy.app.companion.data.GEN1_YELLOW,
         romFile: String = "Pokemon - Yellow Version - Special Pikachu Edition (USA, Europe) (CGB+SGB Enhanced).gb",
         game: GameKind = GameKind.YELLOW,
+        /** PARTY with this slot's summary open. */
+        monIndex: Int? = null,
     ) {
         activeGame = game
         romLanguage = cfg.language   // another test's ROM may have left Japanese names on
@@ -1194,6 +1199,7 @@ open class CompanionScreenshotTest {
         paparazzi.snapshot {
             CompanionScreen(
                 v, SampleCompanion.Slots, SampleCompanion.Settings(), initialTab = tab, battleInput = input, initialSettingsPage = page,
+                initialMonIndex = monIndex,
                 statusBar = if (!statusBar) null else ({ GameStatusBar("Pokémon Yellow", v.location.mapSecName, 3175, "12:34") }),
             )
         }

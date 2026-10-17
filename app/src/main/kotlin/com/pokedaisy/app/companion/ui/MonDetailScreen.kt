@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -452,12 +453,14 @@ internal fun SummaryBar(label: String, text: String, value: Int, max: Int, color
 internal fun MatchupSection(mon: MonView, small: GbaTextMetrics, modifier: Modifier = Modifier) {
     val sections = listOf(tr("WEAK TO") to mon.weaknesses, tr("RESISTS") to mon.resistances, tr("IMMUNE TO") to mon.immunities)
         .filter { it.second.isNotEmpty() }
-    // Measured, not guessed: the full layout first, the inline one only when that runs over.
+    // Measured, not guessed: the full layout first, the inline one only when that runs over. Inline, a game font set larger
+    // (Gen 1's) goes back to the base size: its headings ate the row and pushed the last group off the column.
+    val compact = rememberGbaTextMetrics(1f, gameScaled = false)
     androidx.compose.ui.layout.SubcomposeLayout(modifier) { c ->
         val loose = c.copy(minHeight = 0, maxHeight = androidx.compose.ui.unit.Constraints.Infinity)
         val full = subcompose("full") { MatchupColumn(sections, small, inline = false, scroll = false) }.map { it.measure(loose) }
         val shown = if (c.hasBoundedHeight && full.sumOf { it.height } > c.maxHeight) {
-            subcompose("inline") { MatchupColumn(sections, small, inline = true, scroll = true) }.map { it.measure(c.copy(minHeight = 0)) }
+            subcompose("inline") { MatchupColumn(sections, compact, inline = true, scroll = true) }.map { it.measure(c.copy(minHeight = 0)) }
         } else full
         layout(c.maxWidth, if (c.hasBoundedHeight) c.maxHeight else shown.sumOf { it.height }) { shown.forEach { it.place(0, 0) } }
     }
@@ -485,11 +488,14 @@ private fun MatchupColumn(sections: List<Pair<String, List<TypeMatchup>>>, small
 internal fun MatchupGroup(heading: String, list: List<TypeMatchup>, small: GbaTextMetrics, inline: Boolean = false) {
     if (inline) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            // The chip's own height (a 12 sp line + its 3 dp padding), so the heading sits level with them.
-            Box(Modifier.height(with(LocalDensity.current) { 12.sp.toDp() } + 6.dp).padding(end = 2.dp), contentAlignment = Alignment.CenterStart) {
+            // At least the chip's own height (a 12 sp line + its 3 dp padding), so the heading sits level with them - and
+            // as tall as its own line where that's taller (Gen 1's larger font: a chip-tall box clipped it), the chips
+            // centred on it.
+            Box(Modifier.heightIn(min = with(LocalDensity.current) { 12.sp.toDp() } + 6.dp).padding(end = 2.dp)
+                .align(Alignment.CenterVertically), contentAlignment = Alignment.CenterStart) {
                 GbaText(heading, optionLook.label, optionLook.labelShadow, small)
             }
-            list.forEach { TypeBadgeWithLabel(it) }
+            list.forEach { Box(Modifier.align(Alignment.CenterVertically)) { TypeBadgeWithLabel(it) } }
         }
         return
     }
