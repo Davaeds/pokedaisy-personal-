@@ -462,7 +462,16 @@ What's its own:
   two PokemonPalettes colours / black (the game varies them by DVs), town maps with flip bits (yxTTTTTT) over TownMapGFX.
 - **DEX** (`Gen2Dex`'s polished branch): PokedexDataPointerTable's pages (category, two pages, '@'-ended), PokemonBodyData's
   height / weight (metric), PokemonPicPointers' front pics sized by PokemonPicSizes' nybbles. National number = the species'
-  9-bit value, less 2 past 0xFF / 0x100 (289). No item descriptions yet.
+  9-bit value, less 2 past 0xFF / 0x100 (289). Abilities from BaseData +13 / +14 (the hidden one +15), named by AbilityNames
+  (the faithful builds' own, read from their ROM).
+- **Text**: '@' (0x53) or <DONE> (0x52) ends a string; <CTXT> (0x5D) starts Huffman-coded text, most significant bit first,
+  walked through TextCompressionHuffmanTree (node n's branches at 2n / 2n + 1, a value from 0x7F a character, 0xEC - 0xFB
+  standing for 0x4D - 0x5C: home/text.asm's ReadHuffmanChar) - the `text` macro compresses whenever that's shorter, so most
+  item descriptions are. Line codes become line breaks, so `Gen2Dex.flow` rejoins the words the game hyphenates over two lines.
+- **Bag text** (`Gen2Dex.itemDescription`): ItemDescriptions by item id, KeyItemDescriptions by key item, a TM / HM's move's
+  MoveDescriptions (TMHMMoves) - PrintItemDescription / PrintKeyItemDescription / PrintTMHMDescription.
+- **The player on the town map**: the overworld sprite wPlayerGender picks (ChrisSpriteGFX / KrisSpriteGFX / CrysSpriteGFX, LZ),
+  its first frame in PokegearOBPals' red / blue / green (InitializePokegearPlayerIcon) - `Gen2Art.POLISHED_PLAYERS`.
 - **Menus**: the battle menu and move list sit where Crystal's do (its words Fight / PkMn / Bag / Run), its ▶ is tile 0xF0
   (`Gen2Config.cursorTile`); the party menu is Crystal's, its SWITCH / SUMMARY / CANCEL a column left (from (11, 12)). Its party
   menus read the keys every other frame (`w2DMenuFlags1` bit 6), like Prism's, which the 2-frame Game Boy presses already cover.

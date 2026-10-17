@@ -334,9 +334,11 @@ object Gen2Dex {
         return sb.toString()
     }
 
-    /** Second halves of the hyphenated words Prism's dex pages, item and move descriptions break over two lines. */
+    /** Second halves of the hyphenated words Prism's and Polished Crystal's dex pages, item and move descriptions break
+     * over two lines. */
     private val COMPOUND_ENDS = setOf(
         "type", "like", "colored", "shaped", "bodied", "white", "strike", "covered", "pitched", "hard", "evolved", "smelling",
+        "level", "lowering", "boost", "filled",
     )
 
     /** Gen 2 text from [o] until its end (@ 0x50); a dex entry's second page (a page break, 0x50 too) when [pages] is 2.
@@ -517,16 +519,14 @@ object Gen2Dex {
         val i = species - 1
         val e = at(11) + 3 * i
         var o = off(u8(rom, e), u16(rom, e + 1))
-        fun str(): String {
-            val sb = StringBuilder()
-            while (u8(rom, o) != 0x53) sb.append(polishedTextChars[u8(rom, o++)])
-            o++
-            return sb.toString()
-        }
+        fun str(): String = polishedString(rom, o, a).also { o = it.second }.first
         val category = str()
         val description = flow(str() + BREAK + str())
         val body = at(12) + 4 * i
         val s = at(15) + t.baseDataSize * i
+        // BASE_ABILITY_1 / 2 / 3 (+13): two regular ones (the same one twice for a species with one) and the hidden one.
+        val regular = listOf(u8(rom, s + 13), u8(rom, s + 14)).filter { it != 0 }.distinct()
+        val hidden = u8(rom, s + 15).takeIf { it != 0 && it !in regular }
         return DexEntry(
             national = dex,
             species = species,
@@ -538,11 +538,74 @@ object Gen2Dex {
             type2 = u8(rom, s + 7),
             // BaseData: HP, ATTACK, DEFENSE, SPEED, SP. ATK, SP. DEF -> the page's HP, ATK, DEF, SP. ATK, SP. DEF, SPEED.
             baseStats = listOf(u8(rom, s), u8(rom, s + 1), u8(rom, s + 2), u8(rom, s + 4), u8(rom, s + 5), u8(rom, s + 3)),
-            abilities = emptyList(),
+            abilities = regular.map { polishedAbilityName(rom, a, it) },
+            hiddenAbility = hidden?.let { polishedAbilityName(rom, a, it) },
             catchRate = u8(rom, s + 8),
             genderRatio = gen2GenderRatiosPolishedCrystal.getOrElse(species) { 255 },
             eggGroups = emptyList(),
         )
+    }
+
+    /** Polished Crystal's string at [start] in its charmap, to its '@' or <DONE> (a line break read as a space), and the
+     * address after it. */
+    private fun polishedString(rom: ByteArray, start: Int, a: IntArray? = null): Pair<String, Int> {
+        var o = start
+        val sb = StringBuilder()
+        while (true) {
+            val c = u8(rom, o++)
+            if (c == 0x53 || c == 0x52) break
+            if (c == 0x5D && a != null) {
+                // <CTXT>: the rest is Huffman-coded, most significant bit first, to a terminator (ReadHuffmanChar):
+                // node n's branches at tree[2n], [2n + 1]; a value from 0x7F is a character, 0xEC-0xFB being 0x4D-0x5C.
+                val tree = off(a[25] shr 16, a[25] and 0xFFFF)
+                var bits = 0
+                var byte = 0
+                while (true) {
+                    var node = 0
+                    while (true) {
+                        if (bits == 0) { byte = u8(rom, o++); bits = 8 }
+                        val bit = byte shr 7 and 1
+                        byte = byte shl 1 and 0xFF
+                        bits--
+                        node = u8(rom, tree + 2 * node + bit)
+                        if (node >= 0x7F) break
+                    }
+                    val ch = if (node >= 0xEC) node - 0xEC + 0x4D else node
+                    if (ch == 0x53 || ch == 0x52 || ch == 0x54) return sb.toString().trim() to o
+                    sb.append(if (ch in 0x55..0x59) BREAK else polishedTextChars[ch])
+                }
+            }
+            // <LNBRK> <NEXT> <LINE> <CONT> <PARA>: the next line ([flow] joins a word broken over it).
+            sb.append(if (c in 0x55..0x59) BREAK else polishedTextChars[c])
+        }
+        return sb.toString().trim() to o
+    }
+
+    /** Polished Crystal's text [index] of the word table [k] in [polishedCrystalAddrs] (the strings sit in its bank). */
+    private fun polishedTableText(rom: ByteArray, a: IntArray, k: Int, index: Int): String {
+        val bank = a[k] shr 16
+        val ptr = u16(rom, off(bank, a[k] and 0xFFFF) + 2 * index)
+        return polishedString(rom, off(bank, ptr), a).first
+    }
+
+    /** AbilityNames: a word per ability id, 0 = none. */
+    private fun polishedAbilityName(rom: ByteArray, a: IntArray, id: Int): String = polishedTableText(rom, a, 23, id)
+
+    /** Polished Crystal's bag text: ItemDescriptions by item id, KeyItemDescriptions by key item (the companion's 0x200 + n),
+     * a TM / HM's move's MoveDescriptions (TMHMMoves) - PrintItemDescription / PrintKeyItemDescription / PrintTMHMDescription. */
+    private fun polishedItemDescription(rom: ByteArray, t: Gen2DexTables, a: IntArray, id: Int): String {
+        if (id !in itemNamesPolishedCrystal) return ""
+        val text = when {
+            id > 0x200 -> polishedTableText(rom, a, 21, id - 0x201)
+            id > 0x100 -> {
+                val i = t.tmItems.indexOf(id).takeIf { it >= 0 } ?: return ""
+                val move = u8(rom, off(a[24] shr 16, a[24] and 0xFFFF) + i)
+                polishedTableText(rom, a, 22, move - 1)
+            }
+            id >= 1 -> polishedTableText(rom, a, 20, id - 1)
+            else -> return ""
+        }
+        return flow(text)
     }
 
     fun entry(t: Gen2DexTables, dex: Int): DexEntry? {
@@ -677,7 +740,7 @@ object Gen2Dex {
     /** Item [id]'s bag description, as the game prints it: its own text, or a TM / HM's move's. "" without a cart. */
     fun itemDescription(t: Gen2DexTables, id: Int): String {
         val rom = Gen1Dex.rom ?: return ""
-        if (t.polished != null) return ""   // Polished Crystal's descriptions: not read yet
+        t.polished?.let { a -> return runCatching { polishedItemDescription(rom, t, a, id) }.getOrDefault("") }
         return runCatching {
             val (bank, ptr) = if (id >= t.firstTm) {
                 val i = t.tmItems.indexOf(id).takeIf { it >= 0 } ?: return ""

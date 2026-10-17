@@ -299,7 +299,13 @@ def main():
     # Each build's art (Gen2Art.polishedCrystal): where its font, party minis, palettes and town maps sit, bank << 16 | address.
     art = ["FontNormal", "MiniIconPointers", "PokemonPalettes", "HeldItemIcons", "PartyMenuOBPals", "TownMapGFX", "JohtoMap",
            "KantoMap", "OrangeMap", "GetNextTownMapTilePalette.PalMap", "PokegearPals", "PokedexDataPointerTable",
-           "PokemonBodyData", "PokemonPicPointers", "PokemonPicSizes", "BaseData"]
+           "PokemonBodyData", "PokemonPicPointers", "PokemonPicSizes", "BaseData",
+           # The town map's player (its overworld sprite by wPlayerGender, in PokegearOBPals' red / blue / green), the bag's
+           # descriptions (items, key items, a TM's move) and the dex's ability names.
+           "PokegearOBPals", "ChrisSpriteGFX", "KrisSpriteGFX", "CrysSpriteGFX", "ItemDescriptions", "KeyItemDescriptions",
+           "MoveDescriptions", "AbilityNames", "TMHMMoves",
+           # The Huffman tree of its compressed text (<CTXT>: home/text.asm's ReadHuffmanChar).
+           "TextCompressionHuffmanTree"]
     rows = []
     for b in builds:
         cosmetic = (b.sym["VariantSpeciesAndFormTable"][1] - b.sym["CosmeticSpeciesAndFormTable"][1]) // 2

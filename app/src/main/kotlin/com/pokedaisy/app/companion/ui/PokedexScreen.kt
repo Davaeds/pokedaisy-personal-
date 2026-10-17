@@ -428,7 +428,11 @@ private fun DexInfoSection(e: DexEntry?, small: GbaTextMetrics, m: GbaTextMetric
             BaseStats(e.baseStats, small)
             Separator(m, Modifier.fillMaxWidth())
             // Gen 1 has none of these: no abilities, eggs or genders (genderRatio -1).
-            if (e.abilities.isNotEmpty()) InfoLine(tr("ABILITY"), e.abilities.joinToString(" / "), small)
+            // Two names outrun a line in a wide game font (Polished Crystal's): one a line there.
+            val wide = com.pokedaisy.app.companion.ui.theme.LocalGameFont.current != null
+            if (e.abilities.isNotEmpty()) {
+                InfoLine(tr("ABILITY"), e.abilities.joinToString(if (wide) "\n" else " / "), small, maxLines = if (wide) e.abilities.size else 1)
+            }
             e.hiddenAbility?.let { InfoLine(tr("HIDDEN|ability"), it, small) }
             if (e.eggGroups.isNotEmpty()) InfoLine(tr("EGG GROUP"), e.eggGroups.joinToString(" / ") { dexCase(it) }, small)
             if (e.genderRatio >= 0) InfoLine(tr("GENDER"), genderLabel(e.genderRatio), small)
@@ -494,12 +498,12 @@ private fun StatBar(value: Int, modifier: Modifier, u: Dp) {
 }
 
 @Composable
-private fun InfoLine(label: String, value: String, small: GbaTextMetrics) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun InfoLine(label: String, value: String, small: GbaTextMetrics, maxLines: Int = 1) {
+    Row(verticalAlignment = Alignment.Top) {
         // A fixed-width game font (Gen 1's 8px letters) needs a wider label column.
         val wide = com.pokedaisy.app.companion.ui.theme.LocalGameFont.current != null
         GbaText(label, OptionColors.label, OptionColors.labelShadow, small, Modifier.width(small.u * if (wide) 92 else 80))
-        GbaText(value, OptionColors.value, OptionColors.valueShadow, small, Modifier.weight(1f))
+        GbaText(value, OptionColors.value, OptionColors.valueShadow, small, Modifier.weight(1f), maxLines = maxLines)
     }
 }
 

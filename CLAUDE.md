@@ -463,7 +463,8 @@ the byte + the form byte's bit 5, gender a bit, the egg bit 6; variant forms are
 slow. Battle menus at Crystal's places; its SWITCH / SUMMARY / CANCEL a column left (11, 12); its party menus read keys every other
 frame, like Prism's. The user had no save (a third-party Discord one exists, not used): a new game was played headless in 3.2.3 and saved
 under every build's name (`polished_crystal` README; hROMBank is FF87, so mgba_dump's `gbfar` / `gbinject` don't work there). Its font
-loads at tile 'A' (0x80) like Crystal's. No item descriptions, abilities or player head on the map yet.
+loads at tile 'A' (0x80) like Crystal's. Item / key item / TM descriptions, dex abilities and the map's player (by wPlayerGender:
+CHRIS / KRIS / CRYS) come from each build's ROM; its `text` is often Huffman-compressed (<CTXT> 0x5D, `polishedString`).
 **Companion options (2026-10-08)**: RESUME GAMES (`Prefs.autoResume`, top-screen Settings > LIBRARY; off =
 a launch boots the save, a return from HOME still resumes - `freshLaunch`), CLOSE COMPANION (SETTINGS, two
 screens: the Presentation goes away until BACK on the game), STATUS BAR OFF / GAME / COMPANION (`Prefs.statusBarOnCompanion`,

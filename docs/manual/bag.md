@@ -26,7 +26,7 @@ Tap an item to open its description at the bottom of the screen, with the item's
 
 ![SODA SPRAY selected in the bag, its icon and description in a box along the bottom](shots/companion-bag-item.png "An item's description")
 
-Descriptions are read from your own ROM, in your game's words and language. That means a hack's changed items describe themselves correctly. If an item has no text here, the game's description couldn't be found in that ROM. In Gold, Silver, Crystal, Crystal Clear and Prism a TM shows the description of the move it teaches, as those games' own TM pocket does.
+Descriptions are read from your own ROM, in your game's words and language. That means a hack's changed items describe themselves correctly. If an item has no text here, the game's description couldn't be found in that ROM. In Gold, Silver, Crystal, Crystal Clear, Prism and Polished Crystal a TM shows the description of the move it teaches, as those games' own TM pocket does.
 
 ## Favorites
 

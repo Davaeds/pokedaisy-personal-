@@ -1114,6 +1114,7 @@ open class CompanionScreenshotTest {
     @Test fun polishedParty() = crystal("polished_crystal", "PARTY", polished = true)
     @Test fun polishedItems() = crystal("polished_crystal", "ITEMS", polished = true)
     @Test fun polishedMap() = crystal("polished_crystal", "MAP", polished = true)
+    @Test fun polishedItemDescription() = crystal("polished_crystal", "ITEMS", polished = true, describe = true)
     @Test fun polishedBattle() = crystal("polished_crystal_battle", "BATTLE", polished = true)
     @Test fun polishedBattleMoves() = crystal("polished_crystal_battle", "BATTLE", controls = true, polished = true)
     @Test fun polishedBattleMenu() = crystal("polished_crystal_battle_menu", "BATTLE", controls = true, polished = true)
@@ -1193,7 +1194,7 @@ open class CompanionScreenshotTest {
      * [clear]: Crystal Clear v2.6.0's instead. */
     private fun crystal(fixture: String, tab: String, controls: Boolean = false, dexEntry: Int? = null, statusBar: Boolean = false,
                         clear: Boolean = false, prism: Boolean = false, gold: Boolean = false, silver: Boolean = false,
-                        polished: Boolean = false) {
+                        polished: Boolean = false, describe: Boolean = false) {
         val game = if (polished) GameKind.POLISHED_CRYSTAL else if (prism) GameKind.PRISM else if (clear) GameKind.CRYSTAL_CLEAR else if (gold) GameKind.GOLD
             else if (silver) GameKind.SILVER else GameKind.CRYSTAL
         var cfg = if (polished) com.pokedaisy.app.companion.data.GEN2_POLISHED_CRYSTAL
@@ -1246,6 +1247,19 @@ open class CompanionScreenshotTest {
                         ui.open = dexEntry
                         PokedexEntryScreen(dex, ui, dexEntry)
                     }
+                }
+            }
+            return
+        }
+        if (describe) {
+            // The bag with its first item open: its description read from the ROM.
+            paparazzi.snapshot {
+                AppTheme {
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        com.pokedaisy.app.companion.ui.theme.LocalGameFont provides com.pokedaisy.app.companion.ui.theme.rememberGameFont(game),
+                        com.pokedaisy.app.companion.ui.theme.LocalGameTextScale provides com.pokedaisy.app.companion.ui.theme.gameTextScale(game),
+                        com.pokedaisy.app.companion.ui.theme.LocalGameFontWidth provides com.pokedaisy.app.companion.ui.theme.gameFontWidth(game),
+                    ) { ItemsScreen(v.items, androidx.compose.ui.Modifier.fillMaxSize(), initialItemId = v.items.first().itemId) }
                 }
             }
             return

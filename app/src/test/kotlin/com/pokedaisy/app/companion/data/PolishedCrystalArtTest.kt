@@ -73,6 +73,70 @@ class PolishedCrystalArtTest {
     }
 
     @Test
+    fun `bag descriptions - items, key items, a TM's move`() {
+        activeGame = GameKind.POLISHED_CRYSTAL
+        Gen1Dex.rom = rom()
+        try {
+            val t = polishedCrystalPokedex(TelemetrySampler.POLISHED_CRYSTAL_V3_2_3_SHA1)!!.gen2!!
+            assertEquals("Restores Pokémon HP by 20.", Gen2Dex.itemDescription(t, 25))            // POTION
+            assertEquals("A collapsible bike for fast movement.", Gen2Dex.itemDescription(t, 0x201))   // BICYCLE
+            assertTrue(Gen2Dex.itemDescription(t, 0x101).isNotEmpty())                              // TM01: its move's
+            assertEquals("", Gen2Dex.itemDescription(t, 0xFF))
+            // Every item the bag can list has its text (no stray control codes).
+            val dump = StringBuilder()
+            for (id in itemNamesPolishedCrystal.keys) {
+                val d = Gen2Dex.itemDescription(t, id)
+                dump.append("${itemNamesPolishedCrystal[id]}: $d\n")
+                assertTrue("item $id", d.isNotEmpty() && d.none { it == '@' } && d.length < 80)
+            }
+            File("build/gen2-art-polished-dex").apply { mkdirs() }.resolve("item-descriptions.txt").writeText(dump.toString())
+        } finally {
+            Gen1Dex.rom = null
+        }
+    }
+
+    @Test
+    fun `dex pages - abilities, and the faithful builds' own`() {
+        activeGame = GameKind.POLISHED_CRYSTAL
+        Gen1Dex.rom = rom()
+        try {
+            val t = polishedCrystalPokedex(TelemetrySampler.POLISHED_CRYSTAL_V3_2_3_SHA1)!!.gen2!!
+            val bulbasaur = Gen2Dex.entry(t, 1)!!
+            assertEquals(listOf("Overgrow", "Chlorophyll") to "Effect Spore", bulbasaur.abilities to bulbasaur.hiddenAbility)
+            val cyndaquil = Gen2Dex.entry(t, 155)!!
+            assertEquals(listOf("Blaze", "Flame Body") to "Flash Fire", cyndaquil.abilities to cyndaquil.hiddenAbility)
+            for (n in 1..289) assertTrue("abilities $n", Gen2Dex.entry(t, n)!!.abilities.isNotEmpty())
+        } finally {
+            Gen1Dex.rom = null
+        }
+        val faithful = File(File(RETAIL_ROM_DIR).parentFile.parentFile, "polishedcrystal-faithful-3.2.3.gbc")
+        assumeTrue("faithful 3.2.3 not on this machine", faithful.isFile)
+        Gen1Dex.rom = faithful.readBytes()
+        try {
+            val t = polishedCrystalPokedex(TelemetrySampler.POLISHED_CRYSTAL_V3_2_3_Faithful_SHA1)!!.gen2!!
+            val cyndaquil = Gen2Dex.entry(t, 155)!!
+            assertEquals(listOf("Blaze") to "Flash Fire", cyndaquil.abilities to cyndaquil.hiddenAbility)
+        } finally {
+            Gen1Dex.rom = null
+        }
+    }
+
+    @Test
+    fun `the player on the town map, by the look picked`() {
+        val t = Gen2Art::class.java.getDeclaredField("POLISHED_CRYSTAL").apply { isAccessible = true }.get(Gen2Art)
+            .let { @Suppress("UNCHECKED_CAST") (it as List<Gen2Art.Gen2ArtTables>) }.first { "6930b48af5844d373e3c9130f26d6dd1084cf4ed" in it.sha1s }
+        val out = File("build/gen2-art-polished-dex").apply { mkdirs() }
+        val heads = (0..2).map { Gen2Art.player(rom(), t, it) }
+        heads.forEachIndexed { g, img -> File(out, "${Gen2Art.POLISHED_PLAYERS[g]}.png").writeBytes(img.png()) }
+        // CHRIS red, KRIS blue, CRYS green (PokegearOBPals' third colour): each drawn, each in its own.
+        val third = listOf(0xFFFF3908.toInt(), 0xFF524AFF.toInt(), 0xFF39BD18.toInt())
+        heads.forEachIndexed { g, img ->
+            assertTrue("head $g", img.argb.count { it != 0 } > 60)
+            assertTrue("head $g colour", third[g] in img.argb.toSet())
+        }
+    }
+
+    @Test
     fun `town maps and the font`() {
         val t = Gen2Art::class.java.getDeclaredField("POLISHED_CRYSTAL").apply { isAccessible = true }.get(Gen2Art)
             .let { @Suppress("UNCHECKED_CAST") (it as List<Gen2Art.Gen2ArtTables>) }.first { "6930b48af5844d373e3c9130f26d6dd1084cf4ed" in it.sha1s }

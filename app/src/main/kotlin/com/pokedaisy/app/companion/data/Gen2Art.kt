@@ -42,6 +42,8 @@ object Gen2Art {
     const val POLISHED_ICONS = "gen2/polished_crystal/pokemon"
     const val POLISHED_HOLD_ICONS = "gen2/polished_crystal/hold_icons.png"
     val POLISHED_TOWN_MAPS = arrayOf("polished_crystal_johto", "polished_crystal_kanto", "polished_crystal_orange")
+    /** The player on its town maps, by the look picked at the start (wPlayerGender 0 / 1 / 2: CHRIS, KRIS, CRYS). */
+    val POLISHED_PLAYERS = arrayOf("player_polished_chris", "player_polished_kris", "player_polished_crys")
 
     const val CRYSTAL_CLEAR_FONT = "gen2/crystal-clear-font.ttf"
     const val CRYSTAL_CLEAR_ICONS = "gen2/crystal_clear/pokemon"
@@ -55,7 +57,7 @@ object Gen2Art {
     val PRISM_TOWN_MAPS = arrayOf("prism_naljo", "prism_rijon", "prism_johto", "prism_kanto", "prism_sevii", "prism_tunod")
 
     /** Bump when what [extractTo] writes changes, so a cached ROM's art is rebuilt once. */
-    private const val VERSION = 3
+    private const val VERSION = 4
 
     /** Where a Gen 2 game's own art sits in its ROM (bank, address). */
     class Gen2ArtTables(
@@ -104,6 +106,10 @@ object Gen2Art {
         val monPalettes: Pair<Int, Int>? = null,
         val townMapFlips: Boolean = false,
         val townMapPal0From: Int = 0x60,
+        // The player's sprite is LZ-compressed (Polished's) and its colours are [objectPals]' palette [playerPalFrom] + its
+        // index (Crystal: day's red / blue from 8; Polished's PokegearOBPals: red, blue, green from 0).
+        val playerLz: Boolean = false,
+        val playerPalFrom: Int = 8,
     )
 
     val CRYSTAL = Gen2ArtTables(
@@ -270,15 +276,17 @@ object Gen2Art {
             townMapPalMap = at(9),
             pokegearPals = at(10),
             townMapPaths = POLISHED_TOWN_MAPS.map { "regionmap/$it.png" },
-            playerSprites = emptyList(),
-            objectPals = at(10),
-            playerPaths = emptyList(),
+            playerSprites = listOf(at(17), at(18), at(19)),
+            objectPals = at(16),
+            playerPaths = POLISHED_PLAYERS.map { "regionmap/$it.png" },
             townMapPalCount = 8,
             chars = POLISHED_CHARS,
             minis = at(1),
             monPalettes = at(2),
             townMapFlips = true,
             townMapPal0From = 0x40,
+            playerLz = true,
+            playerPalFrom = 0,
         )
     }
 
@@ -439,13 +447,16 @@ object Gen2Art {
         return img
     }
 
-    /** The player [g] (0 CHRIS, 1 KRIS) on the town map: the walking sprite's first frame in day's red / blue. */
+    /** The player [g] (0 CHRIS, 1 KRIS; Polished's 2 CRYS) on the town map: the walking sprite's first frame in day's red /
+     * blue (Polished: the Pokégear's red / blue / green). */
     fun player(rom: ByteArray, t: Gen2ArtTables, g: Int): RomArt.Image {
-        val base = off(t.playerSprites[g].first, t.playerSprites[g].second)
-        val pal = palette(rom, t.objectPals, 8 + g)
+        val (bank, addr) = t.playerSprites[g]
+        val (tiles, base) = if (t.playerLz) (Gen2Lz.decompress(rom, off(bank, addr), polished = true) ?: ByteArray(64)) to 0
+            else rom to off(bank, addr)
+        val pal = palette(rom, t.objectPals, t.playerPalFrom + g)
         val img = RomArt.Image(16, 16)
         for (y in 0 until 16) for (x in 0 until 16) {
-            val v = px(rom, base + 16 * ((y / 8) * 2 + x / 8), x % 8, y % 8)
+            val v = px(tiles, base + 16 * ((y / 8) * 2 + x / 8), x % 8, y % 8)
             if (v != 0) img.argb[y * 16 + x] = pal[v]
         }
         return img
