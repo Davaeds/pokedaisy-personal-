@@ -453,7 +453,7 @@ fun OptionLine(
             }
             // Under the label and the value both: the whole row's width, so it isn't cut off beside a value.
             subtitle?.let {
-                val small = rememberGbaTextMetrics(0.8f * m.fontPixel / m.px)
+                val small = subtitleMetrics(m)
                 GbaText(tr(it), OptionColors.muted, OptionColors.mutedShadow, small, modifier = Modifier.padding(end = chevronRoom))
             }
         }
@@ -468,14 +468,20 @@ fun OptionLine(
     }
 }
 
+/** [OptionLine]'s subtitle text: 0.8 of the row's - [m] already holds a game font's larger size, so not scaled again (it
+ * came out as large as the label in Yellow, and was cut off). */
+@Composable
+fun subtitleMetrics(m: GbaTextMetrics): GbaTextMetrics = rememberGbaTextMetrics(0.8f * m.fontPixel / m.px, gameScaled = false)
+
 /** A small tag on a row ("BETA" on a feature that isn't finished): white on the value red, pill-shaped. */
 @Composable
 fun OptionBadge(
     text: String, m: GbaTextMetrics, modifier: Modifier = Modifier, fill: Color = OptionColors.value,
     shadow: Color = OptionColors.valueShadow.copy(alpha = 0.6f),
 ) {
-    // ~2/3 of the row's own text: 0.85 next to the main lists' 1.25, smaller beside denser text.
-    val small = rememberGbaTextMetrics(0.68f * m.fontPixel / m.px)
+    // ~2/3 of the row's own text: 0.85 next to the main lists' 1.25, smaller beside denser text. [m] already holds a game
+    // font's larger size: not scaled a second time.
+    val small = rememberGbaTextMetrics(0.68f * m.fontPixel / m.px, gameScaled = false)
     Box(
         modifier
             .background(fill, PixelPillShape)

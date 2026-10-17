@@ -165,6 +165,12 @@ fun GroupedRows(
     footer: @Composable () -> Unit = {},
 ) {
     val firstRow = rows.indexOfFirst { !it.header }
+    // A game font is set larger to match Pixel Operator's letters (Gen 1's 7px capitals): its line is taller for the same
+    // letters, so the rows take the GBA games' height instead - the Game Boy games' SETTINGS were a third rows short.
+    // Subtitles there are their own (smaller) line; the GBA games keep a full line for theirs.
+    val gameScale = com.pokedaisy.app.companion.ui.theme.LocalGameTextScale.current
+    val rowHeight = m.rowHeight * 1.2f / gameScale
+    val subtitleLine = if (gameScale == 1f) m.lineHeight else subtitleMetrics(m).lineHeight + m.u * 2
     Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
         rows.forEachIndexed { i, row ->
             if (row.header) {
@@ -192,7 +198,7 @@ fun GroupedRows(
                         .then(if (i == firstRow && firstRowFocus != null) Modifier.focusRequester(firstRowFocus) else Modifier)
                         // The companion's window: the D-pad starts on the cursor row.
                         .focusStart(i == cursor),
-                    height = if (row.subtitle != null) m.rowHeight * 1.2f + m.lineHeight else m.rowHeight * 1.2f,
+                    height = if (row.subtitle != null) rowHeight + subtitleLine else rowHeight,
                     divider = rows.getOrNull(i + 1)?.header == false, labelBadge = row.labelBadge, labelIcon = row.labelIcon,
                     valueBadge = row.badge, enabled = row.enabled, subtitle = row.subtitle, labelWeight = labelWeight,
                     chevron = row.opensPage,
