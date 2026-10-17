@@ -556,6 +556,8 @@ fun readGen2Telemetry(r: MemoryReader, cfg: Gen2Config): Telemetry {
         money = ((u8(m, 0).toLong() shl 16) or (u8(m, 1).toLong() shl 8) or u8(m, 2).toLong()),
         playerGender = if (cfg.playerGender < 0) 0 else u8(r.readCoreMemory(cfg.playerGender, 1), 0) and 1,
         pokedex = cfg.pokedex?.let { runCatching { readGen2PokedexState(r, cfg, it) }.getOrNull() },
+        // The GUIDE's flags, badges and clock (Polished Crystal's: GuidePolishedCrystal.kt).
+        progress = if (cfg.polished) runCatching { readPolishedProgress(r) }.getOrNull() else null,
     )
 }
 

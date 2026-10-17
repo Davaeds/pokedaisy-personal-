@@ -255,8 +255,11 @@ data class MapEncounters(
     val oldRod: List<EncounterSlot>,
     val goodRod: List<EncounterSlot>,
     val superRod: List<EncounterSlot>,
+    /** HEADBUTT on trees (the Game Boy games): the common table and the one rarer trees use. */
+    val headbutt: List<EncounterSlot> = emptyList(),
+    val headbuttRare: List<EncounterSlot> = emptyList(),
 ) {
-    val isEmpty get() = listOf(grass, water, rockSmash, oldRod, goodRod, superRod).all { it.isEmpty() }
+    val isEmpty get() = listOf(grass, water, rockSmash, oldRod, goodRod, superRod, headbutt, headbuttRare).all { it.isEmpty() }
 }
 
 /** A boss's Pokémon, as its trainer data defines it. [moves] are the custom set or the level-up default. */

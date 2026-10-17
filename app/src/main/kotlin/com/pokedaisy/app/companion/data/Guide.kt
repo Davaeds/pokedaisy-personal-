@@ -51,7 +51,23 @@ data class GameGuide(
     /** [bosses] in the order for the map group the player is on (Quetzal: its three regions are
      * separate campaigns, the one you're in first); null = [bosses]. */
     val bossesFor: ((mapGroup: Int) -> List<Boss>)? = null,
+    /** HERE's wild Pokémon and NEXT BOSS's teams from tables of the game's own instead of the GBA ROM tables
+     * [GuideTables] reads (a Game Boy game); null = those. */
+    val world: GuideWorld? = null,
 )
+
+/**
+ * A game whose wild Pokémon and boss teams the guide has as data of its own (Polished Crystal's, generated from its
+ * release ROMs): what the save would meet, from its [SaveProgress] (the time of day, the badges held).
+ */
+interface GuideWorld {
+    /** Map [group].[num]'s wild Pokémon now (empty lists when it has none). */
+    fun encounters(group: Int, num: Int, progress: SaveProgress?): MapEncounters
+    /** Trainer [trainer]'s team, as [Boss.trainer] names it. */
+    fun party(trainer: Int, progress: SaveProgress?): List<TrainerMon>
+    /** The time of day HERE's lists are for (an English word: MORNING, DAY, EVENING, NIGHT); null = no clock. */
+    fun clockNote(progress: SaveProgress?): String? = null
+}
 
 /** Something the save can show the player already has. */
 sealed interface Have {
@@ -124,12 +140,15 @@ enum class GuideId {
     GS_CHRONICLES,
     RECHARGED_EMERALD,
     EMERALD_LEGACY,
+    POLISHED_CRYSTAL,
 }
 
 /** [live]'s guide; else by [game] (a config whose tables didn't check out has no live tables). */
 fun guideId(game: GameKind?, live: GuideTables?): GuideId? = live?.guide ?: when (game) {
     GameKind.FIRERED -> GuideId.FIRERED
     GameKind.EMERALD -> GuideId.EMERALD
+    // A Game Boy game: no GBA tables; its guide carries its own (GameGuide.world).
+    GameKind.POLISHED_CRYSTAL -> GuideId.POLISHED_CRYSTAL
     else -> null
 }
 
@@ -168,6 +187,7 @@ fun gameGuide(id: GuideId?): GameGuide? = when (id) {
     GuideId.MARIOMON -> GUIDE_MARIOMON
     GuideId.RECHARGED_EMERALD -> GUIDE_RECHARGED_EMERALD
     GuideId.EMERALD_LEGACY -> GUIDE_EMERALD_LEGACY
+    GuideId.POLISHED_CRYSTAL -> GUIDE_POLISHED_CRYSTAL
     null -> null
 }
 

@@ -1122,6 +1122,15 @@ open class CompanionScreenshotTest {
     @Test fun polishedDex() = crystal("polished_crystal", "DEX", polished = true)
     @Test fun polishedDexEntry() = crystal("polished_crystal", "DEX", dexEntry = 155, polished = true)
     @Test fun polishedDexEntryOwn() = crystal("polished_crystal", "DEX", dexEntry = 255, polished = true)   // past the 8th bit
+    // Its GUIDE (the first Game Boy one): HERE on ROUTE 29 by day, FALKNER next, the generated WHERE IS, the TIPS.
+    @Test fun polishedGuide() = crystal("polished_crystal", "GUIDE", polished = true)
+    @Test fun polishedGuideNextBoss() =
+        crystal("polished_crystal", "GUIDE", polished = true, guidePage = "NEXT BOSS", guideOpen = "NEXT BOSS/NEXT: LEADER FALKNER/POKéMON 3/LV 13" to 2)
+    // ELM'S LAB (LYRA's battle there): NEW BARK TOWN's people - the starters, CYNDAQUIL marked taken - and items.
+    @Test fun polishedTrainerHere() = crystal("polished_crystal_trainer", "GUIDE", polished = true, guidePage = "HERE")
+    @Test fun polishedGuideWhereIs() = crystal("polished_crystal", "GUIDE", polished = true, guidePage = "WHERE IS")
+    @Test fun polishedGuideTips() =
+        crystal("polished_crystal", "GUIDE", polished = true, guidePage = "TIPS", guideOpen = "TIPS/WILD POKéMON/Why did the POKéMON on this route change?/null" to 2)
     @Test fun prismDexEntryOwn() = crystal("prism", "DEX", dexEntry = 239, prism = true)  // PHANCERO, one of its own
     @Test fun crystalStatusBar() {
         CompanionStatusBar.shown = true
@@ -1194,7 +1203,8 @@ open class CompanionScreenshotTest {
      * [clear]: Crystal Clear v2.6.0's instead. */
     private fun crystal(fixture: String, tab: String, controls: Boolean = false, dexEntry: Int? = null, statusBar: Boolean = false,
                         clear: Boolean = false, prism: Boolean = false, gold: Boolean = false, silver: Boolean = false,
-                        polished: Boolean = false, describe: Boolean = false) {
+                        polished: Boolean = false, describe: Boolean = false, guidePage: String? = null,
+                        guideOpen: Pair<String, Int>? = null) {
         val game = if (polished) GameKind.POLISHED_CRYSTAL else if (prism) GameKind.PRISM else if (clear) GameKind.CRYSTAL_CLEAR else if (gold) GameKind.GOLD
             else if (silver) GameKind.SILVER else GameKind.CRYSTAL
         var cfg = if (polished) com.pokedaisy.app.companion.data.GEN2_POLISHED_CRYSTAL
@@ -1234,6 +1244,29 @@ open class CompanionScreenshotTest {
         fun warm(n: Int) = dex?.let { PokedexSource.entry(it.tables, n); PokedexSource.frontSprite(it.tables, PokedexSource.speciesFor(it.tables, n)) }
         (1..12).forEach { warm(it) }
         listOf(16, 97, 152, 161).forEach { warm(it) }
+        if (guidePage != null) {
+            // The guide's own icons (HERE's wild Pokémon, the bosses' teams), loaded as the app's tab would have them.
+            val world = com.pokedaisy.app.companion.data.PolishedCrystalWorld
+            val here = world.encounters(v.mapGroup, v.mapNum, v.progress)
+            val teams = gameGuide(guideId(game, null))?.bosses.orEmpty().take(3).flatMap { b -> v.progress?.let { world.party(b.trainer(it), it) }.orEmpty() }
+            ((here.grass + here.headbutt + here.headbuttRare).map { it.species } + teams.map { it.species })
+                .forEach { sp -> com.pokedaisy.app.companion.data.spriteAsset("pokemon", sp)?.let { GameArt.get(paparazzi.context, it) } }
+            paparazzi.snapshot {
+                AppTheme {
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        com.pokedaisy.app.companion.ui.theme.LocalGameFont provides com.pokedaisy.app.companion.ui.theme.rememberGameFont(game),
+                        com.pokedaisy.app.companion.ui.theme.LocalGameTextScale provides com.pokedaisy.app.companion.ui.theme.gameTextScale(game),
+                        com.pokedaisy.app.companion.ui.theme.LocalGameFontWidth provides com.pokedaisy.app.companion.ui.theme.gameFontWidth(game),
+                    ) {
+                        val ui = androidx.compose.runtime.remember {
+                            GuideUiState().apply { page = guidePage; guideOpen?.let { open = it.first; level = it.second } }
+                        }
+                        GuideScreen(rememberGuide(v.game, v.pokedex, v.guideTables)!!, ui, v)
+                    }
+                }
+            }
+            return
+        }
         if (dexEntry != null && dex != null) {
             warm(dexEntry)
             paparazzi.snapshot {

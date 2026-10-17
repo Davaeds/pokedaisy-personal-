@@ -196,7 +196,7 @@
       {"game": "Crystal (GBC)", "version": "USA, USA/Europe rev 1, AU", "cells": ["yes", "yes", "part", "yes", "yes", "no"]},
       {"game": "Crystal Clear (GBC)", "version": "2.5.11, 2.6.0 (4 builds)", "cells": ["yes", "yes", "part", "yes", "yes", "no"]},
       {"game": "Prism (GBC)", "version": "0.95 build 254", "cells": ["yes", "yes", "part", "yes", "yes", "no"]},
-      {"game": "Polished Crystal (GBC)", "version": "3.2.0-3.2.3 (16 builds)", "cells": ["yes", "yes", "part", "yes", "yes", "no"]},
+      {"game": "Polished Crystal (GBC)", "version": "3.2.0-3.2.3 (16 builds)", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "FireRed", "version": "USA/Europe, rev 0 and 1", "cells": ["yes", "yes", "yes", "yes", "yes", "yes"]},
       {"game": "FireRed", "version": "ES / DE / FR / IT / JP", "cells": ["yes", "yes", "yes", "yes", "yes", "yes"]},
       {"game": "LeafGreen", "version": "USA/Europe, rev 0 and 1", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
