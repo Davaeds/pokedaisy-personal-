@@ -1487,7 +1487,11 @@ only keeps a 256x256 ring of tiles in VRAM (`field_camera.c`), so the rest would
 - **Menu screens** (`PK_WIDE_MODE_MENU`, `drawMenuRegion`): instead of the glow, the back BG layer goes on past the
   edges, each row repeating the pattern found along its edge (`menuPeriod`: the smallest 8..32 px that repeats); a row
   whose edge doesn't (a button reaching it) borrows the nearest row that does, so stripes and frames carry on without
-  copying any text or panel. Mode 0 / 1 tiled screens; anything else still glows.
+  copying any text or panel. Mode 0 / 1 tiled screens; anything else still glows. Where the back layer is transparent
+  the backdrop colour shows, as the PPU would - unless it's transparent at that row's edge while the frame shows another
+  layer there: then the frame's edge pixel goes on (a hole). SoulGold's party screen leaves its back layer bare under a
+  panel, and its backdrop is the palette's never-seen magenta: the strips were bright pink (GitHub #116). Retail's
+  party and bag screens come out byte-identical.
 - **Never a crash**: every read goes through bounds-checked helpers and every index is clamped; sizes from memory are
   bounded before they're multiplied; `_Static_assert`s keep the config rows in step with the slots. On top, `pk_wide_view`
   runs under a fault guard (SIGSEGV / SIGBUS / SIGFPE / SIGILL on its thread while drawing jump back out; WIDE switches

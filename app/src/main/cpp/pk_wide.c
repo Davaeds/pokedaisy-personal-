@@ -1684,9 +1684,18 @@ static int menuPeriod(int y, int from, int dir, uint32_t alpha) {
 
 /** The menu's back layer over [x0, x1) x [y0, y1), past the frame continued from its own edges: each row repeats the
  * pattern found along its edge (menuPeriod), rows above / below the frame its top / bottom row's. No sprites (cursors,
- * icons stay put); transparent = the backdrop colour. */
-static void drawMenuRegion(int x0, int y0, int x1, int y1, bool skipFrame, uint32_t* dst, int stride, uint32_t alpha) {
+ * icons stay put); transparent = the backdrop colour - unless the back layer is transparent at that row's edge and
+ * the [frame] shows something else there (a layer in front covers it): then a hole, and the frame's edge pixel goes
+ * on. SoulGold's party screen leaves its back layer bare at the edges, under a panel, and its backdrop is the
+ * palette's never-seen magenta: the strips were bright pink (GitHub #116). */
+static void drawMenuRegion(int x0, int y0, int x1, int y1, bool skipFrame, uint32_t* dst, int stride, uint32_t alpha, const uint32_t* frame) {
     int w = x1 - x0, h = y1 - y0;
+    static bool coveredL[PK_WIDE_H], coveredR[PK_WIDE_H];
+    for (int y = 0; y < PK_WIDE_H; y++) {
+        uint32_t c;
+        coveredL[y] = frame && (frame[y * PK_WIDE_W] & 0xFC000000u) != 0xFC000000u && !menuPixel(0, y, alpha, &c);
+        coveredR[y] = frame && (frame[y * PK_WIDE_W + PK_WIDE_W - 1] & 0xFC000000u) != 0xFC000000u && !menuPixel(PK_WIDE_W - 1, y, alpha, &c);
+    }
     // Per row and side: the pattern's width, and the row it's taken from - a row whose edge doesn't repeat (a button,
     // a panel's corner reaching it) borrows the nearest one that does, so the backdrop goes on behind it; with none
     // anywhere, the edge tile column itself goes on.
@@ -1730,13 +1739,15 @@ static void drawMenuRegion(int x0, int y0, int x1, int y1, bool skipFrame, uint3
                 fx = PK_WIDE_W - 1 - (((PK_WIDE_W - 1 - sx) % pr) + pr) % pr;
             }
             uint32_t c;
+            bool hole = false;
             if (!menuPixel(fx, ry, alpha, &c)) {
+                hole = sx < 0 ? coveredL[fy] : sx >= PK_WIDE_W && coveredR[fy];
                 useLine(ry);
                 c = color(P[0], alpha);
                 if (windowLayers(fx, ry) & 0x20) c = brightness(c, 5);
             }
             dst[j * stride + x] = c;
-            holeBuf[j][x] = 0;
+            holeBuf[j][x] = hole;
         }
     }
     useLive();
@@ -2381,14 +2392,14 @@ static int viewInner(struct mCore* core, const uint32_t* frame, uint32_t* out, s
         } else if (battle) {
             drawBattleRegion(v.x, v.y, v.x + v.w, v.y + v.h, true, &raw[0][0], BUF_W, alpha);
         } else {
-            drawMenuRegion(v.x, v.y, v.x + v.w, v.y + v.h, true, &raw[0][0], BUF_W, alpha);
+            drawMenuRegion(v.x, v.y, v.x + v.w, v.y + v.h, true, &raw[0][0], BUF_W, alpha, frame);
         }
         for (int j = 0; j < v.h; j++) memcpy(rawHole[j], holeBuf[j], (size_t) v.w);
         rawView = v;
         if (centre) {
             if (valid) drawRegion(&snaps[bestSnap], bestCx, bestCy, bestH, bestV, 0, 0, PK_WIDE_W, PK_WIDE_H, false, centre, PK_WIDE_W, alpha);
             else if (battle) drawBattleRegion(0, 0, PK_WIDE_W, PK_WIDE_H, false, centre, PK_WIDE_W, alpha);   // holes show the backdrop, as the PPU does
-            else drawMenuRegion(0, 0, PK_WIDE_W, PK_WIDE_H, false, centre, PK_WIDE_W, alpha);
+            else drawMenuRegion(0, 0, PK_WIDE_W, PK_WIDE_H, false, centre, PK_WIDE_W, alpha, NULL);
         }
         mix = mix + MIX_STEP > 256 ? 256 : mix + MIX_STEP;
     } else {
