@@ -85,6 +85,8 @@ With `RESUME GAMES` on (the default, in Settings > `LIBRARY`), closing a game sa
 
 Turn it off if you'd rather every launch start at the title screen and load your in-game save, like a real cartridge. Coming back to a game you left open (after pressing HOME, say) still carries on where you were.
 
+Putting your device to sleep mid-game is safe too. The game holds still on the exact frame and carries on from it the moment you wake the device, with nothing to reload. If Android closes the app while the device sleeps, that counts as closing the game: with `RESUME GAMES` on, you pick up from the moment it went to sleep.
+
 > [!WARNING]
 > With `RESUME GAMES` off, closing a game loses anything since your last in-game save. `CLOSE GAME` and `RESTART GAME` in the companion's `SETTINGS` remind you.
 

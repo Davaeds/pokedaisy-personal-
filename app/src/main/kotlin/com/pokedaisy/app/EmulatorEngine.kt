@@ -434,6 +434,7 @@ class EmulatorEngine(
     /** Hard stop, no state written. */
     fun stop() {
         running = false
+        nudgeSleep()
         thread?.join(3000)
         if (thread?.isAlive != true) thread = null
     }
@@ -442,10 +443,44 @@ class EmulatorEngine(
     fun stopWithSuspend(target: File) {
         if (!running) return
         pendingSuspend = target
+        nudgeSleep()
         thread?.join(3000)
         if (thread?.isAlive != true) thread = null
         running = false
     }
+
+    // --- Sleep: the screen went off. The loop holds between frames with the core up, so waking goes on from the very
+    // frame it stopped on: no core restart and no state load, which players saw as the game restarting on every wake
+    // (and where a freed frame buffer was read, a crash). The suspend state is still written first, as on a close, in
+    // case Android ends the app while the device sleeps.
+
+    @Volatile private var pendingSleep: File? = null
+    /** The loop is holding for [sleep] until [wake]. */
+    @Volatile var sleeping = false
+        private set
+    private val sleepLock = Object()
+
+    /** UI thread: on the next frame boundary finishes a save in progress, writes [target], then holds. Waits until it
+     * does (bounded); false if the loop isn't running or didn't get there - stop it the usual way then. */
+    fun sleep(target: File): Boolean {
+        if (!running) return false
+        pendingSleep = target
+        val end = System.nanoTime() + SLEEP_WAIT_NANOS
+        synchronized(sleepLock) {
+            while (!sleeping && running && System.nanoTime() < end) sleepLock.wait(50)
+        }
+        if (!sleeping) pendingSleep = null
+        return sleeping
+    }
+
+    /** Lets a sleeping loop go on (from the frame it held on). */
+    fun wake() = synchronized(sleepLock) {
+        sleeping = false
+        sleepLock.notifyAll()
+    }
+
+    /** A stop wakes a sleeping loop, so it ends (or writes its suspend state first) at once. */
+    private fun nudgeSleep() = synchronized(sleepLock) { sleepLock.notifyAll() }
 
     /** The game's cheats as mGBA .cheats text (CheatFiles.coreText: the enabled ones,
      * "" with the master switch off), loaded before the first frame and again on the
@@ -723,6 +758,21 @@ class EmulatorEngine(
                 }
 
                 servicePending()
+                if (sleeping) {
+                    runCatching { track?.pause(); track?.flush() }
+                    synchronized(sleepLock) {
+                        while (sleeping && running && pendingSuspend == null) sleepLock.wait(SLEEP_POLL_MS)
+                        sleeping = false
+                    }
+                    Log.i("pokedaisy", "sleep: woke")
+                    if (!paused) runCatching { track?.play() }
+                    // As after the audio pausing below: flush() put the play head back at 0. And the frames due while
+                    // it slept are not owed.
+                    framesWritten = 0L
+                    vsyncSettledAt = System.nanoTime() + VSYNC_SETTLE_NANOS
+                    vsyncTicks.drainPermits()
+                    next = System.nanoTime()
+                }
                 if (wideApplied != WideScreen.OFF && !wideFaultReported && MgbaCore.pkWideFault() != 0) {
                     wideFaultReported = true
                     Log.e("pokedaisy", "WIDE switched itself off: signal ${MgbaCore.pkWideFault()} while drawing")
@@ -1066,6 +1116,17 @@ class EmulatorEngine(
             running = false
             return
         }
+        pendingSleep?.let { target ->
+            pendingSleep = null
+            finishSave()
+            val ok = saveState(target)
+            Log.i("pokedaisy", "sleep: state save $ok -> ${target.name}, holding")
+            synchronized(sleepLock) {
+                sleeping = true
+                sleepLock.notifyAll()
+            }
+            return
+        }
         val save = pendingSave
         if (save >= 0) {
             pendingSave = -1
@@ -1222,6 +1283,10 @@ class EmulatorEngine(
         const val MAX_CATCH_UP = 2
         /** Underruns this soon after vsync pacing (re)starts or the audio resumes don't count ([AudioTroubleWatch]). */
         const val VSYNC_SETTLE_NANOS = 2_000_000_000L
+        /** [sleep]'s longest wait for the loop to hold (a save it has to finish first runs up to 600 frames). */
+        const val SLEEP_WAIT_NANOS = 3_000_000_000L
+        /** A held loop looks again this often, should a stop's nudge be missed. */
+        const val SLEEP_POLL_MS = 250L
         /** Speed steps, by the index saved per ROM. Index 0 (1×) is the normal, audio-on state; SPEED CYCLE
          * goes through the first [CYCLE_STEPS], GAME SPEED adds the slow ones (muted, like SLOWMO HOLD) -
          * appended, so the indexes saved before keep their meaning. */

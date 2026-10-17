@@ -1462,6 +1462,11 @@ A save the game is writing always finishes before the core stops (`pkFinishSave`
 state and before `pkDeinit`): frames run unheard while mGBA's savedata `dirty` flag is set. Leaving mid-"SAVING..." and
 then swiping the app from recents used to leave the newer slot half written ("The save file is corrupted"; checked
 headless on Emerald: 276 frames to finish).
+**Sleep (screen off) doesn't stop the game**: `onPause` with the device non-interactive calls `EmulatorEngine.sleep`, which
+finishes a save in progress, writes the resume state (in case Android ends the app meanwhile) and holds the loop between
+frames with the core up; `startGame` wakes it (`engine.sleeping`) and drops that state - no core restart or state load on
+wake (players saw every wake as the game restarting). HOME, another app or a close still stop it. A paused activity no longer
+always means a stopped engine: check `engine.running` (onNewIntent, onDestroy do).
 **Where a save is** (`SavesLocation.saveFor`, every save path goes through it): the game's own folder (library
 menu > SAVE FOLDER, `Prefs.romSaveDir`, by file name; setting it copies the current save over if the folder has
 none - never moves it), else the first of the saves folder and Settings > FOLDERS > ALSO LOOK IN (`Prefs.extraSaveDirs`)

@@ -1427,6 +1427,15 @@ class PokeDaisyActivity : Activity() {
         val save = SavesLocation.saveFor(this, Prefs(this), r)
         // Cheats may have changed in the library's Settings since the game was last up.
         syncCheats()
+        // Back from sleep: the game held on its frame (onPause) and goes on from it. The state written as it went to
+        // sleep is used up, as a resume's is once loaded.
+        if (engine.sleeping) {
+            engine.wake()
+            st.resumeFile.delete()
+            com.pokedaisy.app.companion.data.SnapshotCache.fileFor(st.resumeFile).delete()
+            RetroAchievements.progressFile(st.resumeFile).delete()
+            return true
+        }
         // Auto-resume from wherever was written most recently: normally that's
         // the auto-suspend snapshot from the last close, but if that session
         // ended in a crash instead of a clean close (stale/missing resumeFile),
@@ -1470,6 +1479,11 @@ class PokeDaisyActivity : Activity() {
     }
 
     override fun onDestroy() {
+        // Gone while the game slept (onPause held it): stop it now, as a close would have.
+        if (::engine.isInitialized && engine.running) {
+            view.unbindCoreBlocking()
+            states?.let { engine.stopWithSuspend(it.resumeFile) } ?: engine.stop()
+        }
         ffMusicRenderer?.stop()
         ffMusicRenderer = null
         clickSound?.release()
@@ -1492,9 +1506,15 @@ class PokeDaisyActivity : Activity() {
         if (::engine.isInitialized && romKey.isNotEmpty()) {
             Prefs(this).setSpeedIndexFor(romKey, engine.speedIndex)
         }
-        // Before the engine frees the frame buffer the GL thread draws from.
-        view.unbindCoreBlocking()
-        states?.let { engine.stopWithSuspend(it.resumeFile) } ?: engine.stop()
+        // The screen went off: the game holds on its frame with the core up and goes on from there on wake
+        // (EmulatorEngine.sleep; startGame wakes it). HOME, another app or closing the game stop it as before.
+        val asleep = !(getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive
+        val held = asleep && states?.let { engine.sleep(it.resumeFile) } == true
+        if (!held) {
+            // Before the engine frees the frame buffer the GL thread draws from.
+            view.unbindCoreBlocking()
+            states?.let { engine.stopWithSuspend(it.resumeFile) } ?: engine.stop()
+        }
         view.onPause()
     }
 
