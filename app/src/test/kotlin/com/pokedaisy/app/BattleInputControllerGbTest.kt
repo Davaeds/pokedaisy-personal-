@@ -21,10 +21,11 @@ import org.junit.Test
  * the real readers, the menus behaving as they did headless (see the yellow_battle_party / crystal_battle_party
  * fixtures' READMEs) - the party listed in its own order, a ▶ drawn only while a menu waits, presses dropped for a
  * few frames after one is drawn (Yellow's Delay3; Crystal's SWITCH menu for ~30), the SWITCH / STATS / CANCEL menu
- * after a pick except after a faint, Crystal's CANCEL row.
+ * after a pick except after a faint, Crystal's CANCEL row. The battle menus too: the action menu and Crystal's move list,
+ * a cursor step or a menu just drawn taking no press for a few frames (Polished Crystal, headless).
  */
 class BattleInputControllerGbTest {
-    private enum class Mode { ACTION, OPENING, LIST, SUB, BUSY }
+    private enum class Mode { ACTION, OPENING, LIST, SUB, MOVES, BUSY }
 
     /** A Yellow ([gen] 1) or Crystal ([gen] 2) battle: the RAM the readers see, and the menus reacting to presses. */
     private class Game(val gen: Int, val count: Int) : MemoryReader {
@@ -92,7 +93,7 @@ class BattleInputControllerGbTest {
                     Mode.ACTION -> { put(m, 14, if (actionCell and 1 == 1) 15 else 9, actionCell shr 1, 0, 1); arrow(if (actionCell and 1 == 1) 15 else 9, 14 + 2 * (actionCell shr 1)) }
                     Mode.LIST -> { put(m, 1, 0, cursor, 0, count - 1); arrow(0, 1 + 2 * cursor) }
                     Mode.SUB -> { put(m, 12, 12, cursor, 0, 2); arrow(12, 12 + 2 * cursor) }
-                    Mode.OPENING, Mode.BUSY -> Unit
+                    Mode.OPENING, Mode.MOVES, Mode.BUSY -> Unit
                 }
             } else {
                 val m = GEN2_CRYSTAL.menu2D
@@ -102,6 +103,8 @@ class BattleInputControllerGbTest {
                     Mode.ACTION -> { put(m, 14, 9, 2, 2, 0, 0, 0x26); put(GEN2_CRYSTAL.menuCursor, 1 + (actionCell shr 1), 1 + (actionCell and 1)); arrow(9 + 6 * (actionCell and 1), 14 + 2 * (actionCell shr 1)) }
                     Mode.LIST -> { put(m, 1, 0, count + 1, 1, 0, 0, 0x20); put(GEN2_CRYSTAL.menuCursor, cursor + 1, 1); arrow(0, 1 + 2 * cursor) }
                     Mode.SUB -> { put(m, 12, 12, 3, 1, 0, 0, 0x20); put(GEN2_CRYSTAL.menuCursor, cursor + 1, 1); arrow(12, 12 + 2 * cursor) }
+                    // MoveSelectionScreen: a column from (5, 13), a row per move.
+                    Mode.MOVES -> { put(m, 13, 5, moves, 1, 0, 0, 0x10); put(GEN2_CRYSTAL.menuCursor, cursor + 1, 1); arrow(5, 13 + cursor) }
                     Mode.OPENING, Mode.BUSY -> Unit
                 }
             }
@@ -113,21 +116,38 @@ class BattleInputControllerGbTest {
             ignoreUntil = frame + dropFrames
         }
 
+        /** Draws the action menu as a new turn does: its first [dropFrames] frames take no press (Polished Crystal, headless). */
+        fun showActionMenu(dropFrames: Int) = show(Mode.ACTION, dropFrames)
+
+        var moves = 4
+        var moveListDrop = 3         // frames the move list takes no press after it shows
+        var usedMove = -1            // the move A was pressed on
+        private var opensTo = Mode.LIST
+
         /** One frame: [new] = the keys newly pressed this frame. */
         fun step(new: List<String>) {
             frame++
-            if (mode == Mode.OPENING && frame >= openAt) show(Mode.LIST, 3)
+            if (mode == Mode.OPENING && frame >= openAt) { cursor = 0; show(opensTo, if (opensTo == Mode.MOVES) moveListDrop else 3) }
             for (key in new) {
                 presses += key
                 if (frame <= ignoreUntil) continue                 // dropped
                 val rows = if (gen == 2) count + 1 else count       // Crystal's CANCEL row
                 when (mode) {
+                    // A cursor step takes no press for 3 frames (Polished Crystal, headless).
                     Mode.ACTION -> when (key) {
-                        "RIGHT" -> actionCell = actionCell or 1
-                        "LEFT" -> actionCell = actionCell and 2
-                        "DOWN" -> actionCell = actionCell or 2
-                        "UP" -> actionCell = actionCell and 1
-                        "A" -> if (actionCell == 1) { mode = Mode.OPENING; openAt = frame + 28; draw() }
+                        "RIGHT" -> { actionCell = actionCell or 1; show(Mode.ACTION, 3) }
+                        "LEFT" -> { actionCell = actionCell and 2; show(Mode.ACTION, 3) }
+                        "DOWN" -> { actionCell = actionCell or 2; show(Mode.ACTION, 3) }
+                        "UP" -> { actionCell = actionCell and 1; show(Mode.ACTION, 3) }
+                        "A" -> when (actionCell) {
+                            1 -> { mode = Mode.OPENING; opensTo = Mode.LIST; openAt = frame + 28; draw() }
+                            0 -> { mode = Mode.OPENING; opensTo = Mode.MOVES; openAt = frame + 4; draw() }
+                        }
+                    }
+                    Mode.MOVES -> when (key) {
+                        "DOWN" -> { cursor = (cursor + 1) % moves; show(Mode.MOVES, 3) }
+                        "UP" -> { cursor = (cursor + moves - 1) % moves; show(Mode.MOVES, 3) }
+                        "A" -> { usedMove = cursor; show(Mode.BUSY, 0) }
                     }
                     Mode.LIST -> when (key) {
                         "DOWN" -> { cursor = (cursor + 1) % rows; show(Mode.LIST, 3) }
@@ -260,6 +280,37 @@ class BattleInputControllerGbTest {
         assertEquals(emptyList<String>(), afterLastA)
         assertFalse(c.isBusy)
         assertFalse(c.holdFrame)
+    }
+
+    @Test fun crystalMovePickSteersOnTheListTheGameShows() {
+        // Polished Crystal, live: FIGHT, then a DOWN sent from the poll's cursor as the move list opened was dropped (its
+        // first frames take no press), and the A that followed used the first move. The pick reads the list's own
+        // cursor every frame and presses again until it sits on the move: the move tapped is the one used.
+        val game = Game(gen = 2, count = 2)
+        game.moves = 2
+        game.moveListDrop = 4                         // the 4-frame poll always sees the list inside the window
+        val c = controller(game)
+        run(c, game, 8)
+        c.selectMove(1)                               // from the action menu: FIGHT + the move, one tap
+        run(c, game, 200)
+        assertEquals(1, game.usedMove)
+        assertEquals(2, game.presses.count { it == "A" })   // FIGHT's and the move's, none after it took
+        assertTrue(game.presses.toString(), game.presses.count { it == "DOWN" } >= 2)
+        assertFalse(c.isBusy)
+    }
+
+    @Test fun crystalActionPickPressesAgainAnADroppedAsTheMenuOpened() {
+        // Polished Crystal, live: a tap on FIGHT right as a new turn's menu appeared - its A was dropped, the menu stayed
+        // up and the tap did nothing. A menu still waiting on the cell after the A never took it: A again.
+        val game = Game(gen = 2, count = 2)
+        val c = controller(game)
+        run(c, game, 8)
+        game.showActionMenu(dropFrames = 3)
+        c.selectAction(0)
+        run(c, game, 100)
+        assertEquals(Mode.MOVES, game.mode)
+        assertEquals(listOf("A", "A"), game.presses)
+        assertFalse(c.isBusy)
     }
 
     private companion object {

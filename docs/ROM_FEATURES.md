@@ -67,7 +67,14 @@ change to any of the places listed under "Where it's decided" updates its rows h
    (its words mixed case: Fight / PkMn / Pack / Run), run the same way in a wild battle.
    Polished Crystal has Crystal's battle menus at Crystal's places (Fight / PkMn / Bag / Run, its ▶ is tile 0xF0): reads
    checked on the `polished_crystal_battle*` / `_trainer` fixtures; its menus read every frame, but drop a press in the 3
-   frames after a cursor move (headless), which the controls' read-then-press loop presses again. Timing not run through the controller.
+   frames after a cursor move and in the first frames after the action menu or the move list shows (headless). Run
+   through the real controller and readers against the running game, frame by frame (3.2.3, a wild SENTRET from the
+   save and LYRA's trainer battle started headless): every move from either menu (one tap from the action menu too) with
+   the cursor elsewhere, BAG, RUN (out of the wild battle; refused by the trainer, back on the menu), also with the state
+   polled every 16 frames (FF 4x). That run found taps lost to those dropped presses (a FIGHT tap as a turn's menu
+   showed did nothing; a DOWN dropped as the move list opened used the wrong move), on Crystal rev 1 too: the Game Boy
+   picks now steer on the menu read every frame (`GbPartySwitch.battleMenu`) and press again what was dropped, A
+   included. A pick takes 15-31 frames.
    Gold / Silver have Crystal's battle menus (their own addresses, `GEN2_GOLD`): reads checked on the `gold_battle*` /
    `silver_battle` fixtures, the controls' timing not run on them.
    Red / Blue have Yellow's battle menus and menu variables (at Yellow's addresses, the cursor columns 9 / 15): their
@@ -99,7 +106,10 @@ change to any of the places listed under "Where it's decided" updates its rows h
    showed), not through the controller. Polished Crystal's party menu is Crystal's (CANCEL row, A after a faint sends the
    slot out) with its SWITCH / SUMMARY / CANCEL a column left (from (11, 12)); like Prism's it reads keys every other frame
    and its SWITCH menu takes A from 3 frames after its ▶ shows: reads checked on the `polished_crystal_battle_*` fixtures,
-   presses headless (an A held over the 2nd and 3rd frames switched), not through the controller. Red / Blue have Yellow's party menu code: their reads (the list, SWITCH / STATS / CANCEL, the pick after a
+   and the switch run through the real controller against 3.2.3 (wild and trainer battles): from Bag's cell via PkMn
+   (57 frames, the frame held throughout), from the party list already open (35), from its SWITCH / SUMMARY / CANCEL over
+   the target or over the one out (40 / 47), after a faint (16, one A, no submenu), the one out and a fainted one refused
+   before any press; the SWITCH menu's first A is dropped and pressed again every time. Red / Blue have Yellow's party menu code: their reads (the list, SWITCH / STATS / CANCEL, the pick after a
    faint) are checked on the `red_battle_*` fixtures and by pressing headless (an A on SWITCH takes from 2 frames after
    the menu shows, as Yellow's Delay3 lets it), not through the controller.
 9. Should work, not run on this hack yet: it is FireRed rev 0's code edited in place (Rocket Edition, Ash Gray) or a

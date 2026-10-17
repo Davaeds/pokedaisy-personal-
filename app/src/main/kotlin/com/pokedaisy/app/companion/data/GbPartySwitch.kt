@@ -32,6 +32,10 @@ interface GbPartySwitch {
 
     /** The list ends in a CANCEL row ([GB_PARTY_CANCEL]), which UP / DOWN wrap through (Crystal); else the slots alone wrap (Yellow). */
     val hasCancel: Boolean
+
+    /** The battle menu waiting for a press and its cursor, as the battle-input poll reads it ([readGen1BattleInput] /
+     * [readGen2BattleInput]): the controls' FIGHT / BAG / RUN / move picks steer on it, read fresh every frame. */
+    fun battleMenu(r: MemoryReader): Pair<Int, Int>
 }
 
 /**
@@ -82,6 +86,8 @@ class Gen1PartySwitch(private val cfg: Gen1Config) : GbPartySwitch {
 
     override fun menu(r: MemoryReader): GbPartyMenu? = readGen1PartyMenu(r, cfg)
 
+    override fun battleMenu(r: MemoryReader): Pair<Int, Int> = readGen1BattleInput(r, cfg)
+
     override fun party(r: MemoryReader): List<GbPartyMon> {
         val n = u8(r.readCoreMemory(cfg.partyCount, 1), 0).coerceAtMost(PARTY_SIZE)
         val raw = r.readCoreMemory(cfg.partyMons, PARTY_SIZE * GEN1_PARTY_MON_SIZE)
@@ -95,6 +101,8 @@ class Gen2PartySwitch(private val cfg: Gen2Config) : GbPartySwitch {
     override val hasCancel = true
 
     override fun menu(r: MemoryReader): GbPartyMenu? = readGen2PartyMenu(r, cfg)
+
+    override fun battleMenu(r: MemoryReader): Pair<Int, Int> = readGen2BattleInput(r, cfg)
 
     override fun party(r: MemoryReader): List<GbPartyMon> {
         val n = u8(r.readCoreMemory(cfg.partyCount, 1), 0).coerceAtMost(PARTY_SIZE)

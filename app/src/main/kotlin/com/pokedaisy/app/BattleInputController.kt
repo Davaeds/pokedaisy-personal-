@@ -57,8 +57,9 @@ class BattleInputController(
     /**
      * A Gen 1 game (Yellow): its battle menu is FIGHT / PkMn over ITEM / RUN, two one-column
      * menus, and its moves are one list - not Gen 3's 2x2 grids. So presses go from the cursor
-     * the last poll read ([gen1Cursor], see readGen1BattleInput) straight to the target: no
-     * LEFT / UP normalising, which would wrap in a list.
+     * the game shows straight to the target ([driveGbPickLocked], read every frame through
+     * [SwitchAddrs.gb]; the last poll's [gen1Cursor] without one): no LEFT / UP normalising,
+     * which would wrap in a list. Crystal and its hacks share it (the same 2x2 menu and move column).
      */
     @Volatile
     var gen1 = false
@@ -127,6 +128,14 @@ class BattleInputController(
     private var pickCell = -1
     private var pickMove = false
     private var pickPresses = 0
+
+    // A Game Boy pick in flight ([driveGbPickLocked]): the menu it waits on (BATTLE_INPUT_ACTION_SELECT or MOVE_SELECT),
+    // the cell / move, presses so far, frames since it started and the frame of its last A (-1: none yet).
+    private var gbPickMenu = BATTLE_INPUT_NONE
+    private var gbPickCell = -1
+    private var gbPickPresses = 0
+    private var gbPickFrames = 0
+    private var gbPickA = -1
 
     /** The game's battle input state as last polled (BATTLE_INPUT_NONE outside battles), for SMART fast-forward. */
     @Volatile
@@ -211,16 +220,19 @@ class BattleInputController(
      * move?", a trainer's "Will you change Pokémon?") - shutting them out there
      * left the game stuck with no way to press anything.
      */
-    private fun exclusiveLocked() = queue.isNotEmpty() || framesLeft > 0 || switchTarget != null || runPresses > 0 || pickCell >= 0
+    private fun exclusiveLocked() = queue.isNotEmpty() || framesLeft > 0 || switchTarget != null || runPresses > 0 || pickCell >= 0 ||
+        gbPickCell >= 0
 
     /** Call once per real emulated frame, before MgbaCore.pkSetKeys. */
     fun tick() {
         val (bitsToSend, exclusive) = synchronized(lock) {
+            if (gbPickCell >= 0) gbPickFrames++
             // The closed-loop steps (party cursor, RUN's B) queue their next
             // presses only once the last ones have played out.
             if (framesLeft <= 0 && queue.isEmpty()) {
                 drivePickLocked()
-                if (queue.isEmpty()) {
+                driveGbPickLocked()
+                if (queue.isEmpty() && gbPickCell < 0) {
                     driveSwitchLocked()
                     driveRunLocked()
                 }
@@ -230,8 +242,8 @@ class BattleInputController(
                 currentBits = next?.bits ?: 0
                 framesLeft = next?.frames ?: 0
                 if (currentBits != 0) {
-                    finalPress = queue.none { it.bits != 0 } &&
-                        pickCell < 0 && pendingMoveIndex == null && switchTarget == null
+                    finalPress = queue.none { it.bits != 0 } && pickCell < 0 && (gbPickCell < 0 || gbPickA >= 0) &&
+                        pendingMoveIndex == null && switchTarget == null
                 }
             }
             if (framesLeft > 0) framesLeft--
@@ -519,7 +531,7 @@ class BattleInputController(
             lastBattler = activeBattler.coerceIn(0, 3)
             gameState = state
             // A pick still steering is still on its menu: nothing below has happened yet.
-            if (pickCell >= 0) return
+            if (pickCell >= 0 || gbPickCell >= 0) return
 
             if (awaitingTargetConfirm && queue.isEmpty() && framesLeft == 0) {
                 when (state) {
@@ -565,6 +577,7 @@ class BattleInputController(
     private fun cancelLocked() {
         queue.clear()
         pickCell = -1
+        gbPickCell = -1
         pendingMoveIndex = null
         awaitingTargetConfirm = false
         switchTarget = null
@@ -678,6 +691,7 @@ class BattleInputController(
     private fun queueMoveCellLocked(moveIndex: Int) {
         if (gen1) {
             // One list (items 1-4): UP / DOWN from the read cursor, then A. No target screen.
+            if (gbPickLocked(BATTLE_INPUT_MOVE_SELECT, moveIndex)) return
             val from = gen1Cursor.takeIf { it in 0..3 } ?: 0
             repeat(kotlin.math.abs(moveIndex - from)) { pressAndSettleLocked(if (moveIndex > from) MgbaCore.Key.DOWN else MgbaCore.Key.UP) }
             pressLocked(MgbaCore.Key.A)
@@ -757,10 +771,72 @@ class BattleInputController(
      */
     private fun queueGen1ActionLocked(actionIndex: Int) {
         val target = when (actionIndex) { 0 -> 0; 1 -> 2; 2 -> 1; else -> 3 }
+        if (gbPickLocked(BATTLE_INPUT_ACTION_SELECT, target)) return
         val from = gen1Cursor.takeIf { it in 0..3 } ?: 0
         if ((from and 1) != (target and 1)) pressAndSettleLocked(if (target and 1 == 1) MgbaCore.Key.RIGHT else MgbaCore.Key.LEFT)
         if ((from shr 1) != (target shr 1)) pressAndSettleLocked(if (target shr 1 == 1) MgbaCore.Key.DOWN else MgbaCore.Key.UP)
         pressLocked(MgbaCore.Key.A)
+    }
+
+    /**
+     * Starts a Game Boy pick on its battle menu ([menu]: the action menu's [cell], column + 2 x row, or the move list's
+     * index), steered by [driveGbPickLocked] on the menu read straight from RAM ([GbPartySwitch.battleMenu]). False (and
+     * the blind walk from the last poll's cursor instead) when the game has no reader for it.
+     */
+    private fun gbPickLocked(menu: Int, cell: Int): Boolean {
+        if (switchAddrs?.gb == null) return false
+        gbPickMenu = menu
+        gbPickCell = cell
+        gbPickPresses = 0
+        gbPickFrames = 0
+        gbPickA = -1
+        return true
+    }
+
+    /**
+     * One step of a Game Boy pick: a closed loop like [drivePickLocked], on the cursor the game shows. The games drop
+     * presses for a few frames after drawing a menu or moving its cursor (Polished Crystal: the 3 frames after a cursor
+     * move, and the first frames of its action menu and move list, headless; Yellow's Delay3), and a press the poll's
+     * cursor was blind to went to the wrong move once (a DOWN dropped as the move list opened, then A on the first
+     * move). So: a press toward the cell, read again; A once there; and A again while the menu still waits on that cell
+     * [GB_REPRESS_FRAMES] later (a taken pick turns the cursor hollow at once, so a waiting one never took it).
+     */
+    private fun driveGbPickLocked() {
+        if (gbPickCell < 0) return
+        val gb = switchAddrs?.gb ?: return endGbPickLocked("no menu reader")
+        val (state, cur) = runCatching { gb.battleMenu(reader) }.getOrNull() ?: return endGbPickLocked("menu unreadable")
+        val waiting = state == gbPickMenu
+        if (gbPickA >= 0) {
+            if (!waiting || cur != gbPickCell) return endGbPickLocked(null)    // taken: the game moved on
+            if (gbPickFrames - gbPickA < GB_REPRESS_FRAMES) return
+            if (++gbPickPresses > MAX_GB_PICK_PRESSES) return endGbPickLocked("A never took")
+            pressLocked(MgbaCore.Key.A)
+            gbPickA = gbPickFrames
+            return
+        }
+        if (!waiting) {
+            if (gbPickFrames > MENU_TIMEOUT_FRAMES) endGbPickLocked("menu never showed")
+            return
+        }
+        if (cur == gbPickCell) {
+            pressLocked(MgbaCore.Key.A)
+            gbPickA = gbPickFrames
+            return
+        }
+        if (++gbPickPresses > MAX_GB_PICK_PRESSES) return endGbPickLocked("cursor stayed on $cur")
+        pressLocked(
+            when {
+                gbPickMenu == BATTLE_INPUT_MOVE_SELECT -> if (gbPickCell > cur) MgbaCore.Key.DOWN else MgbaCore.Key.UP
+                (cur and 1) != (gbPickCell and 1) -> if (gbPickCell and 1 == 1) MgbaCore.Key.RIGHT else MgbaCore.Key.LEFT
+                else -> if (gbPickCell shr 1 == 1) MgbaCore.Key.DOWN else MgbaCore.Key.UP
+            },
+        )
+        waitFramesLocked(GB_PICK_SETTLE_FRAMES)
+    }
+
+    private fun endGbPickLocked(why: String?) {
+        if (why != null) log("pick of cell $gbPickCell ended: $why")
+        gbPickCell = -1
     }
 
     /** A Game Boy party menu's press: held [GB_PRESS_FRAMES] and released as long. Prism's party menu takes input every
@@ -797,6 +873,8 @@ class BattleInputController(
         const val GB_SETTLE_FRAMES = 2        // after a Game Boy A: a taken pick has turned the cursor hollow by then
         const val GB_REPRESS_FRAMES = 8        // a Game Boy menu still waiting this long after an A dropped it
         const val MAX_GB_A_PRESSES = 12        // Crystal's SWITCH menu drops presses for ~30 frames after it shows (headless)
+        const val GB_PICK_SETTLE_FRAMES = 4    // after a battle menu's cursor step: Polished Crystal drops presses for 3 (headless)
+        const val MAX_GB_PICK_PRESSES = 12     // two steps at most; the rest re-press dropped ones
         const val GB_HOLD_TAIL_FRAMES = 20     // white, then the battle back: ~8 frames on Yellow, ~14 on Crystal (headless)
         const val RUN_B_PRESSES = 6
         const val RUN_FIRST_GAP = 45           // the escape message starts printing
