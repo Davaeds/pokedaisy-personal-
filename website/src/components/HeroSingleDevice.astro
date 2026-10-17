@@ -1,0 +1,68 @@
+---
+// A one-screen handheld in pixels, laid out like the Retroid Pocket 6: one wide 16:9 screen with the
+// left stick over the d-pad on one side, ABXY over the right stick on the other. The screen is
+// HeroScene's overworld, and the companion's side panel (SidePanel.kt: the PARTY tab on the app's teal)
+// slides in over its right half while the device has `.open` (index.astro sets it when it's shown).
+import Pixel from './Pixel.astro';
+import PartyDemo from './PartyDemo.astro';
+import HeroScene from './HeroScene.astro';
+
+interface Props { still?: boolean }
+const { still = false } = Astro.props;
+---
+<div class:list={['device', 'single', still && 'still open']} data-single-device>
+  <div class="slab f-thorShell">
+    <div class="side">
+      <span class="ctl stick"><Pixel name="thorStick" scale={1.5} /></span>
+      <span class="ctl"><Pixel name="thorDpad" scale={1.5} /></span>
+    </div>
+    <div class="bezel f-bezel">
+      <div class="topscreen">
+        <HeroScene lines={['Your party slides in beside the game.', 'So do the map, the bag and your dex.', 'Close it, and the whole screen is the game again.']} />
+        <div class="panel">
+          <span class="handle" aria-hidden="true"></span>
+          <div class="panel-app"><PartyDemo compact /></div>
+        </div>
+      </div>
+    </div>
+    <div class="side">
+      <span class="ctl"><Pixel name="thorAbxy" scale={1.5} /></span>
+      <span class="ctl stick"><Pixel name="thorStick" scale={1.5} /></span>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  .device.single { max-width: 640px; }
+  .device.single .slab { display: grid; grid-template-columns: 1fr minmax(0, 76%) 1fr; gap: calc(var(--px) * 2); align-items: center; padding: calc(var(--px) * 4) calc(var(--px) * 2); }
+  .device.single .side { display: grid; justify-items: center; gap: calc(var(--px) * 4); }
+  .device.single .ctl { display: block; width: 86%; }
+  .device.single .ctl .pixel { width: 100%; height: auto; aspect-ratio: 1; }
+  .device.single .stick { animation: glow 2.4s steps(2) infinite; }
+  /* The game keeps the left half for its text box while the panel is over the right. */
+  .device.single .textbox { right: 53%; }
+
+  .device.single .panel {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 50%; z-index: 2;
+    display: flex; align-items: center;
+    background: repeating-linear-gradient(180deg, #e2f1ee 0 2px, #d6ebe7 2px 4px);
+    box-shadow: calc(var(--px) * -1) 0 0 #0c0c10, calc(var(--px) * -2) 0 0 rgba(12, 12, 16, 0.25);
+    transform: translateX(calc(100% + var(--px) * 3)); transition: transform 0.45s steps(6);
+  }
+  .device.single.open .panel { transform: none; }
+  .device.single .panel-app { width: 100%; }
+  .device.single .panel-app .appwrap { max-width: none; }
+  /* The side panel's lock tab on its edge (SidePanelHandle). */
+  .device.single .handle {
+    position: absolute; left: calc(var(--px) * -5); top: 50%; width: calc(var(--px) * 5); height: calc(var(--px) * 14); margin-top: calc(var(--px) * -7);
+    background: #d6ebe7; box-shadow: 0 0 0 var(--px) #0c0c10;
+    clip-path: polygon(calc(var(--px) * 2) 0, 100% 0, 100% 100%, calc(var(--px) * 2) 100%, 0 calc(100% - var(--px) * 2), 0 calc(var(--px) * 2));
+  }
+  .device.single .handle::after {
+    content: ''; position: absolute; left: calc(var(--px) * 2); top: calc(var(--px) * 4); width: var(--px); bottom: calc(var(--px) * 4);
+    background: repeating-linear-gradient(180deg, #6a8a84 0 var(--px), transparent var(--px) calc(var(--px) * 2));
+  }
+  .device.single.still .panel { transition: none; }
+  /* Too narrow for a text box beside the panel: the hero's own box says it. */
+  @media (max-width: 560px) { .device.single .textbox { display: none; } }
+</style>
