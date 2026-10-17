@@ -288,9 +288,8 @@ Java_com_pokedaisy_app_MgbaCore_pkInit(JNIEnv* env, jobject thiz,
     g.vh = h;
     g.saveVf = saveVf;
     g.audioAvail = 0;
-    if (pk_is_gba(core)) {
-        g.wide = calloc((size_t) PK_WIDE_MAX_VIEW_W * PK_WIDE_MAX_VIEW_H, sizeof(uint32_t));
-    }
+    // EXPAND's window: the GBA's, and a Game Boy game's (pk_wide_gb.c: Yellow so far).
+    g.wide = calloc((size_t) PK_WIDE_MAX_VIEW_W * PK_WIDE_MAX_VIEW_H, sizeof(uint32_t));
     pthread_rwlock_unlock(&pk_coreLock);
 
     LOGI("core up: %ux%u, freq %d Hz, sample rate %d", w, h, core->frequency(core), PK_SAMPLE_RATE);
@@ -370,6 +369,11 @@ Java_com_pokedaisy_app_MgbaCore_pkFinishSave(JNIEnv* env, jobject thiz, jint max
     return n;
 }
 
+// WIDE: the core's frame is the size the configured game's rebuild expects (the GBA's 240 x 160, a Game Boy's 160 x 144).
+static bool pkWideFrameFits(void) {
+    return (int) g.vw == pk_wide_frame_w() && (int) g.vh == pk_wide_frame_h();
+}
+
 JNIEXPORT void JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkRunFrame(JNIEnv* env, jobject thiz) {
     if (!g.core) {
@@ -393,11 +397,11 @@ Java_com_pokedaisy_app_MgbaCore_pkRunFrame(JNIEnv* env, jobject thiz) {
     struct PkWideView v = { g.viewX, g.viewY, g.viewW, g.viewH };
     g.wideSkipped = false;
     if (g.wide && g.wideCrc && v.w > 0 && v.h > 0 && v.w <= PK_WIDE_MAX_VIEW_W && v.h <= PK_WIDE_MAX_VIEW_H &&
-        sizeof(color_t) == 4 && g.vw == PK_WIDE_W && g.vh == PK_WIDE_H && g.wideSkipNext) {
+        sizeof(color_t) == 4 && pkWideFrameFits() && g.wideSkipNext) {
         pk_wide_skip(g.core, (const uint32_t*) g.video);
         g.wideSkipped = true;
     } else if (g.wide && g.wideCrc && v.w > 0 && v.h > 0 && v.w <= PK_WIDE_MAX_VIEW_W && v.h <= PK_WIDE_MAX_VIEW_H &&
-        sizeof(color_t) == 4 && g.vw == PK_WIDE_W && g.vh == PK_WIDE_H) {
+        sizeof(color_t) == 4 && pkWideFrameFits()) {
         pk_wide_view(g.core, (const uint32_t*) g.video, g.wide, v, NULL);
         g.wideW = v.w;
         g.wideH = v.h;
@@ -415,7 +419,7 @@ Java_com_pokedaisy_app_MgbaCore_pkRunFrame(JNIEnv* env, jobject thiz) {
 // WIDE: draw the game whose ROM has this CRC32 (pk_wide_games.h; 0 = off). Emu thread.
 JNIEXPORT void JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkWideConfigure(JNIEnv* env, jobject thiz, jint crc) {
-    uint32_t want = pk_is_gba(g.core) ? (uint32_t) crc : 0;
+    uint32_t want = g.core ? (uint32_t) crc : 0;
     if (want == g.wideCrc) return;
     g.wideCrc = pk_wide_configure(want) ? want : 0;
 }

@@ -71,8 +71,8 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
     /** Called (UI thread) with where the game's picture is in this view (px), whenever it changes - the FIELD HUD
      * stays inside it; null = the whole view (EXPAND, or STRETCH with no overlay). */
     var onGameRect: ((android.graphics.RectF?) -> Unit)? = null
-    /** Where the core's own picture (the GBA's 240x160) is in this view: [onGameRect]'s, but EXPAND's middle at the
-     * view's height (its battles and field stay centred at 1x) and STRETCH's whole view. */
+    /** Where the core's own picture (the GBA's 240x160, a Game Boy's 160x144) is in this view: [onGameRect]'s, but
+     * EXPAND's middle at the view's height (its battles and field stay centred at 1x) and STRETCH's whole view. */
     var onCoreRect: ((android.graphics.RectF) -> Unit)? = null
     private var frameW = 0
     private var frameH = 0
@@ -102,7 +102,7 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
         onGameRect?.invoke(game)
         onCoreRect?.invoke(
             game ?: if (wide) {
-                val w = minOf(width.toFloat(), height * 1.5f)
+                val w = minOf(width.toFloat(), height * frameW.toFloat() / frameH)
                 android.graphics.RectF((width - w) / 2, 0f, (width + w) / 2, height.toFloat())
             } else android.graphics.RectF(0f, 0f, width.toFloat(), height.toFloat()),
         )
@@ -270,6 +270,9 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
         renderer.bind(buffer, wideBuffer, width, height)
         frameW = width
         frameH = height
+        // ZOOM / the look-around work in the game's own pixels: the GBA's 240x160, a Game Boy's 160x144.
+        camera.frameW = width
+        camera.frameH = height
         // A built-in frame is drawn around the game's own size (a Game Boy's is smaller).
         post { refreshOverlay(); reportGamePixel() }
     }

@@ -115,6 +115,7 @@
 #endif
 #if __has_include("../app/src/main/cpp/pk_wide.c")
 #include "../app/src/main/cpp/pk_wide.c"
+#include "../app/src/main/cpp/pk_wide_gb.c"
 #define HAVE_PK_WIDE 1
 #endif
 #endif
@@ -162,12 +163,13 @@ static void wideAfterFrame(void) {
     if (pk_wide_last_mode() == PK_WIDE_MODE_BATTLE) wideStats.battle++;
     // A battle's rebuild draws BG3 and sprites only: compare it only when asked (a capture with `layers 0x18`).
     if (!wideCheck || (pk_wide_last_mode() == PK_WIDE_MODE_BATTLE && !wideCheckBattles)) return;
-    // The rebuild of the middle against the real frame, pixel for pixel (RGB).
-    int miss = 0, x0 = PK_WIDE_W, x1 = -1, y0 = PK_WIDE_H, y1 = -1;
-    for (int i = 0; i < PK_WIDE_W * PK_WIDE_H; i++) {
-        if (!(((wideCentre[i] ^ (uint32_t) video[(i / PK_WIDE_W) * videoW + i % PK_WIDE_W]) & 0xFFFFFF))) continue;
+    // The rebuild of the middle against the real frame, pixel for pixel (RGB). A Game Boy game's is 160 x 144.
+    const int FW = pk_wide_frame_w(), FH = pk_wide_frame_h();
+    int miss = 0, x0 = FW, x1 = -1, y0 = FH, y1 = -1;
+    for (int i = 0; i < FW * FH; i++) {
+        if (!(((wideCentre[i] ^ (uint32_t) video[(i / FW) * videoW + i % FW]) & 0xFFFFFF))) continue;
         miss++;
-        int x = i % PK_WIDE_W, y = i / PK_WIDE_W;
+        int x = i % FW, y = i / FW;
         if (x < x0) x0 = x;
         if (x > x1) x1 = x;
         if (y < y0) y0 = y;
@@ -176,8 +178,8 @@ static void wideAfterFrame(void) {
     // Every difference inside the partly shown tile column (row) at an edge the field is scrolled by: the game hasn't
     // drawn that ring column into VRAM yet (Sword and Shield's "performance" builds wait for a whole tile) - its own
     // stale tiles, not the rebuild's to match.
-    int hs = G->memory.io[0x14 >> 1] & 7, vs = G->memory.io[0x16 >> 1] & 7;   // BG1's scroll within a tile
-    bool staleEdge = miss && ((hs && ((x0 >= PK_WIDE_W - hs) || (x1 < 8 - hs))) || (vs && ((y0 >= PK_WIDE_H - vs) || (y1 < 8 - vs))));
+    int hs = gbGame ? 0 : G->memory.io[0x14 >> 1] & 7, vs = gbGame ? 0 : G->memory.io[0x16 >> 1] & 7;   // BG1's scroll within a tile
+    bool staleEdge = miss && ((hs && ((x0 >= FW - hs) || (x1 < 8 - hs))) || (vs && ((y0 >= FH - vs) || (y1 < 8 - vs))));
     wideStats.checked++;
     if (!miss) wideStats.exact++;
     else if (staleEdge && pk_wide_last_mode() == PK_WIDE_MODE_MAP) {
@@ -190,7 +192,8 @@ static void wideAfterFrame(void) {
         // VRAM written while the frame was drawn: its lines show two sets of tiles - not the rebuild's to match.
         wideStats.checked--;
         wideStats.unverified++;
-        printf("widecheck: frame %u: %d px differ, VRAM written mid-frame (not counted)\n", core->frameCounter(core), miss);
+        printf("widecheck: frame %u: %d px differ, %s written mid-frame (not counted)\n", core->frameCounter(core), miss,
+               gbGame ? "a palette" : "VRAM");
     } else {
         printf("widecheck: frame %u (%s): %d px differ\n", core->frameCounter(core),
                pk_wide_last_mode() == PK_WIDE_MODE_BATTLE ? "battle" : "map", miss);
@@ -202,10 +205,10 @@ static void wideAfterFrame(void) {
             FILE* f = fopen(path, "wb");
             if (f) {
                 wideDumped++;
-                fprintf(f, "P6\n%d %d\n255\n", 2 * PK_WIDE_W, PK_WIDE_H);
-                for (int y = 0; y < PK_WIDE_H; y++)
-                    for (int x = 0; x < 2 * PK_WIDE_W; x++) {
-                        uint32_t c = x < PK_WIDE_W ? (uint32_t) video[y * videoW + x] : wideCentre[y * PK_WIDE_W + x - PK_WIDE_W];
+                fprintf(f, "P6\n%d %d\n255\n", 2 * FW, FH);
+                for (int y = 0; y < FH; y++)
+                    for (int x = 0; x < 2 * FW; x++) {
+                        uint32_t c = x < FW ? (uint32_t) video[y * videoW + x] : wideCentre[y * FW + x - FW];
                         uint8_t rgb[3] = { (uint8_t) c, (uint8_t) (c >> 8), (uint8_t) (c >> 16) };
                         fwrite(rgb, 1, 3, f);
                     }
@@ -1023,7 +1026,7 @@ int main(int argc, char** argv) {
             }
             wideOn = pk_wide_configure(crc);
             pk_field_configure(crc);   // fieldinfo's reads: the same table
-            wideView = (struct PkWideView) { -n, 0, PK_WIDE_W + 2 * n, PK_WIDE_H };
+            wideView = (struct PkWideView) { -n, 0, pk_wide_frame_w() + 2 * n, pk_wide_frame_h() };
             memset(&wideStats, 0, sizeof(wideStats));
             printf("wideon: ROM %08x %s, margin %d\n", crc, wideOn ? "known" : "NOT KNOWN (WIDE off)", n);
         } else if (!strcmp(cmd, "widefuzz")) {
@@ -1087,8 +1090,8 @@ int main(int argc, char** argv) {
             sscanf(line, "%*s %255s", arg1);
             FILE* f = fopen(arg1, "wb");
             if (f) {
-                fprintf(f, "P6\n%d %d\n255\n", PK_WIDE_W, PK_WIDE_H);
-                for (int i = 0; i < PK_WIDE_W * PK_WIDE_H; i++) {
+                fprintf(f, "P6\n%d %d\n255\n", pk_wide_frame_w(), pk_wide_frame_h());
+                for (int i = 0; i < pk_wide_frame_w() * pk_wide_frame_h(); i++) {
                     uint8_t rgb[3] = { (uint8_t) wideCentre[i], (uint8_t) (wideCentre[i] >> 8), (uint8_t) (wideCentre[i] >> 16) };
                     fwrite(rgb, 1, 3, f);
                 }
@@ -1116,7 +1119,7 @@ int main(int argc, char** argv) {
             printf("wideinfo: frame %u mode %d score %d torn %d close %d scene %d\n", core->frameCounter(core), pk_wide_last_mode(),
                    pk_wide_last_score(), pk_wide_last_torn(), pk_wide_wants_close(), pk_wide_scene());
             sscanf(line, "%*s %255s", arg1);
-            if (!strcmp(arg1, "lines")) {   // `wideinfo lines`: BG1's scroll per line as drawn, and as latched
+            if (!strcmp(arg1, "lines") && !gbGame) {   // `wideinfo lines`: BG1's scroll per line as drawn, and as latched
                 printf("wideinfo: latched BG1 %d,%d; per line:", G->memory.io[0x14 >> 1] & 0x1FF, G->memory.io[0x16 >> 1] & 0x1FF);
                 for (int y = 0; y < PK_WIDE_H; y++) printf(" %d,%d", lineRegs(y)[0x14 >> 1] & 0x1FF, lineRegs(y)[0x16 >> 1] & 0x1FF);
                 printf("\n");

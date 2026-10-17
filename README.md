@@ -153,7 +153,7 @@ under LANGUAGE in either Settings screen. Species, move and item names and the G
   Sapphire, every language and revision, plus Unbound, Radical Red, Lazarus, SoulGold, Heart and Soul, Gaia, Odyssey,
   Amethyst 1.3.0, Glazed, Seaglass, Emerald Imperium, Emerald Rogue, Too Many Types 2, Recharged Yellow, Super Mariomon,
   Ultra Violet, FireRed Rocket Edition, Ash Gray, Ghost Grey, Elite Redux, Sword and Shield Ultimate Plus, GS Chronicles and
-  Celia's hack).
+  Celia's hack; on the Game Boy, Pokémon Yellow, English, its field only).
   The extra strips are rebuilt every frame from the game's own map, tiles and sprites. Battles are wide too: their
   scenery runs on past the edges and the battlers, trainers and healthboxes slide in from off screen. Fog, ash and rain
   reach the screen's edges, and dark caves stay dark around Flash's light. On the title

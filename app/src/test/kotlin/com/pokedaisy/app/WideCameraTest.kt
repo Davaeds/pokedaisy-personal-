@@ -25,6 +25,18 @@ class WideCameraTest {
         assertArrayEquals(floatArrayOf(6.75f, 5f, 4f, 3f), WideCamera.levelsFor(1920, 1080), 0.001f)
     }
 
+    @Test fun aGameBoyGameZoomsInItsOwnPixels() {
+        // Yellow's 160x144 at the Thor's 1080 rows: 7.5 at 1x, then 6 / 5 / 4 / 3 (7 shows too little more; 2 is wider
+        // than pk_wide's window).
+        assertArrayEquals(floatArrayOf(7.5f, 6f, 5f, 4f, 3f), WideCamera.levelsFor(1920, 1080, 160, 144), 0.001f)
+        val w = thor().apply { frameW = 160; frameH = 144 }.run(0.1f)
+        assertEquals(7.5f, w.scale, 0.001f)
+        // The frame (0..160) in the middle of a window 1920 / 7.5 = 256 px wide, its full height.
+        assertTrue(w.x <= -48 && w.x + w.w >= 208)
+        assertEquals(0, w.y)
+        assertEquals(144, w.h)
+    }
+
     @Test fun aPhoneUprightGoesOnAboveAndBelow() {
         // 1080 wide, ~1400 for the game above the companion: 1x is the frame's full width (4.5), the map above / below.
         assertArrayEquals(floatArrayOf(4.5f, 3f, 2f), WideCamera.levelsFor(1080, 1400), 0.001f)

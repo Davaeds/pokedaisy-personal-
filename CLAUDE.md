@@ -869,6 +869,13 @@ OVERLAY: a BG0 picture over the field; BATTLE_START: `sTransitionData` set, `PK_
 menu) - one timed ease-in-out per event, started before anything shows (the user's complaint: the old exponential
 ease reacted to the wipe already on screen, while the margins dissolved); the right stick moves the view (stays
 standing, glides back when walking). docs/DEVELOPMENT.md's WIDE section.
+**EXPAND on the Game Boy (2026-10-18, English Yellow)**: `pk_wide_gb.c`, which `pk_wide.c` hands every call to while a Game
+Boy game is configured (same CRC lookup; frame 160x144: `pk_wide_frame_w`, `WideCamera.frameW`). Gen 1's field rebuilt from
+`wOverworldMap` + the ROM blockset + VRAM + the renderer's Color palettes, connected maps from the ROM; the screen found by
+matching the BG map (or the full-screen window a text box uses) against that world, never from RAM alone; off-screen NPCs
+drawn standing from wSpriteStateData. Same rule as the GBA: `widecheck` must find the middle exact (frames the game wrote a
+palette in mid-frame aren't counted: `pk_wide_gb_last_torn`). Battles / menus get plain bars in the screen's background colour
+(the user's call: white in Yellow - the trainer card too - no glow), SAVE's prompt and OPTION keep the map. docs/DEVELOPMENT.md's "WIDE on the Game Boy".
 **Transitions (2026-10-12, FireRed first)**: FireRed's map preview (a BG0 picture over the field on entering a forest /
 cave) dims the map around it, frame and margins (`overlayDim`; mGBA's output pixels carry their layer in the top byte,
 `fromBg`, so BG0's own pixels are left alone). **AUTO ZOOM IN** (SETTINGS on either screen, under ASPECT, shown only on EXPAND; `Prefs.expandZoomOnText`, ON):

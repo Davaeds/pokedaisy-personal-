@@ -11,7 +11,8 @@ import kotlin.math.pow
 
 /**
  * ZOOM and the look-around, over WIDE ([WideScreen]): which window of the scene the game view shows each frame.
- * pk_wide.c draws any window around the game's own 240x160 frame ([MgbaCore.pkWideSetView]); this picks it.
+ * pk_wide.c draws any window around the game's own frame - the GBA's 240x160, a Game Boy's 160x144 ([frameW] /
+ * [frameH], pk_wide_gb.c) - ([MgbaCore.pkWideSetView]); this picks it.
  *
  * - **Zoom steps** ([level]): 1x is the game as large as the view shows all of it - its full height on a wide screen,
  *   its full width on a tall one (a phone upright: the map then goes on above and below); each step out is a whole number of screen
@@ -31,6 +32,10 @@ class WideCamera {
     /** The game view's size, in screen pixels. */
     @Volatile var viewW = 0
     @Volatile var viewH = 0
+
+    /** The game's own frame, in its pixels: the GBA's 240x160, or a Game Boy's 160x144. */
+    @Volatile var frameW = PK_W
+    @Volatile var frameH = PK_H
 
     /** The zoom step the player picked: 0 = 1x, up to [levels]' last. */
     @Volatile var level = 0
@@ -65,7 +70,7 @@ class WideCamera {
     private var tweenNanos = 0L
 
     /** Screen pixels per GBA pixel for each zoom step, 1x first. */
-    fun levels(): FloatArray = levelsFor(viewW, viewH)
+    fun levels(): FloatArray = levelsFor(viewW, viewH, frameW, frameH)
 
     /** How much more of the map step [i] shows than 1x, for the HUD ("1.7x"). */
     fun factor(i: Int): Float {
@@ -94,8 +99,10 @@ class WideCamera {
     fun frame(scene: Int, now: Long = System.nanoTime()): Window? {
         val vw = viewW
         val vh = viewH
-        if (vw <= 0 || vh <= 0) return null.also { current = null }
-        val steps = levelsFor(vw, vh)
+        val gw = frameW
+        val gh = frameH
+        if (vw <= 0 || vh <= 0 || gw <= 0 || gh <= 0) return null.also { current = null }
+        val steps = levelsFor(vw, vh, gw, gh)
         val fit = steps[0]
         val dt = if (lastNanos == 0L) 0f else ((now - lastNanos) / 1e9f).coerceIn(0f, 0.1f)
         lastNanos = now
@@ -150,13 +157,13 @@ class WideCamera {
             }
         }
         // As far as a screen's worth of map past the game's own view each way.
-        val limX = max(fw, PK_W.toFloat())
-        val limY = max(fh, PK_H.toFloat())
+        val limX = max(fw, gw.toFloat())
+        val limY = max(fh, gh.toFloat())
         lookX = lookX.coerceIn(-limX, limX)
         lookY = lookY.coerceIn(-limY, limY)
 
-        val fx = PK_W / 2f + lookX - fw / 2
-        val fy = PK_H / 2f + lookY - fh / 2
+        val fx = gw / 2f + lookX - fw / 2
+        val fy = gh / 2f + lookY - fh / 2
         val x = floor(fx).toInt()
         val y = floor(fy).toInt()
         val w = min(MAX_W, ceil(fx + fw).toInt() - x)
@@ -184,9 +191,11 @@ class WideCamera {
         const val SCENE_FADE = 5
         const val SCENE_MENU = 6
 
-        /** The game frame and pk_wide.h's largest window (PK_WIDE_MAX_VIEW_W / _H). */
+        /** The GBA's frame (a Game Boy game's is [GB_W] x [GB_H]) and pk_wide.h's largest window (PK_WIDE_MAX_VIEW_W / _H). */
         const val PK_W = 240
         const val PK_H = 160
+        const val GB_W = 160
+        const val GB_H = 144
         /** GBA px per side drawn if the camera ever fails: plain strips, as before ZOOM. */
         const val MARGIN_FALLBACK = 22
         const val MAX_W = 800
@@ -206,11 +215,11 @@ class WideCamera {
         private const val DEAD_ZONE = 0.2f
         val RETURN_DELAY_NANOS = 500_000_000L   // the close view is over for this long before the zoom goes back out
 
-        /** Screen pixels per GBA pixel for each step on a [w] x [h] view: 1x (the whole frame as large as it fits),
-         * then the whole numbers below it that show at least [MIN_STEP] more each and fit pk_wide's largest window. */
-        fun levelsFor(w: Int, h: Int): FloatArray {
+        /** Screen pixels per game pixel for each step on a [w] x [h] view: 1x (the whole [gw] x [gh] frame as large as it
+         * fits), then the whole numbers below it that show at least [MIN_STEP] more each and fit pk_wide's largest window. */
+        fun levelsFor(w: Int, h: Int, gw: Int = PK_W, gh: Int = PK_H): FloatArray {
             if (w <= 0 || h <= 0) return floatArrayOf(1f)
-            val fit = min(w / PK_W.toFloat(), h / PK_H.toFloat())
+            val fit = min(w / gw.toFloat(), h / gh.toFloat())
             val out = arrayListOf(fit)
             var k = floor(fit).toInt()
             if (k.toFloat() == fit) k--

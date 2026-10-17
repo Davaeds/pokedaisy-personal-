@@ -1171,7 +1171,8 @@ class PokeDaisyActivity : Activity() {
         // GBA art fingerprints, FireRed's region_map.c); its click is borrowed.
         val gameBoy = RomIdentity.isGameBoy(r)
         romIsGameBoy = gameBoy
-        wideGame = if (gameBoy) WideScreen.OFF else WideScreen.gameFor(crc)
+        // EXPAND: the GBA games pk_wide.c knows, and Game Boy ones pk_wide_gb.c does (Yellow); the field reads are GBA only.
+        wideGame = WideScreen.gameFor(crc)
         fieldGame = if (gameBoy) WideScreen.OFF else WideScreen.fieldGameFor(crc)
         wildFlag = 0L
         if (!gameBoy) Thread({

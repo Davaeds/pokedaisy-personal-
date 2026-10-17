@@ -8,7 +8,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 
 | Game | Version | EXPAND | Battle buttons | One-press picks | POKéMON switch | Field items | FLY | Trainer card | Field reads | Bike / surf | Wild encounters | PC anywhere |
 | ---- | ------- | :----: | :------------: | :-------------: | :------------: | :---------: | :-: | :----------: | :---------: | :---------: | :-------------: | :---------: |
-| Yellow (GB) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
+| Yellow (GB) | USA/Europe | ✅ ¹² | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Yellow (GB) | DE / FR / IT / ES | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Red / Blue (GB) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
 | Gold / Silver (GBC) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a |
@@ -129,10 +129,17 @@ change to any of the places listed under "Where it's decided" updates its rows h
     to Viridian's Pokémon Center, controls free after; `fieldinfo` read the field free / locked with text (START menu) /
     in battle, and the MACH BIKE (registered, SELECT) as bike 1; WILD ENCOUNTERS (0x020386DC) off = no battle in 80 walks
     of its cave, 100 = one within two.
+12. Yellow's EXPAND is `pk_wide_gb.c` (the Game Boy's own rebuild, by ROM CRC like the GBA's; docs/DEVELOPMENT.md's "WIDE on
+    the Game Boy"): the field and its text boxes / START menu / SAVE prompt / OPTION, ZOOM and the look-around; battles
+    and menu screens get plain bars in the screen's background (white), not a wider scene. Checked headless with `widecheck` on a walk through Vermilion City's Pokémon Center, the city and
+    Route 6 and back (zoomed out to 480 x 288): every map frame matched the real one pixel for pixel but the four the game
+    wrote a palette in mid-frame (a door's fade, a connection's new colours). The other languages' Yellows and Red / Blue
+    aren't mapped yet (—).
 
 ## What each column is
 
-- **EXPAND**: ASPECT > EXPAND, the overworld rebuilt past the GBA's edges (`pk_wide.c`).
+- **EXPAND**: ASPECT > EXPAND, the overworld rebuilt past the GBA's edges (`pk_wide.c`; a Game Boy game's past its
+  160 x 144, `pk_wide_gb.c`).
 - **Battle buttons**: the BATTLE tab's FIGHT / BAG / POKéMON / RUN and the move buttons press the game's own menus
   (`BattleInputController`). Without them the battle panes are information only.
 - **One-press picks**: a FIGHT / move tap writes the menu's cursor and presses A once (GitHub #33). Without it a tap

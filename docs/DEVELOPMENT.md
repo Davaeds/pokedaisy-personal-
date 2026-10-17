@@ -1498,6 +1498,59 @@ only keeps a 256x256 ring of tiles in VRAM (`field_camera.c`), so the rest would
   pixel for pixel on both games (2026-10-09). Not covered yet: weather drawn over the field (rain sprites, fog on
   BG0) stops at the GBA's edges; scanline effects aren't extended.
 
+### WIDE on the Game Boy (`pk_wide_gb.c`, Pokémon Yellow)
+
+Since 2026-10-18 English Yellow (CRC32 `7d527d62`) has EXPAND, ZOOM and the look-around too. `pk_wide.c` hands every call
+to `pk_wide_gb.c` while a Game Boy game is configured (`pk_wide_gb_knows` / `_configure`, same CRC lookup); the frame is
+160x144 (`pk_wide_frame_w` / `_h`, the JNI's frame check, `WideCamera.frameW` / `frameH` from `EmulatorView.bindCore`, so
+ZOOM's steps are whole Game Boy pixels: 7.5 -> 6 / 5 / 4 / 3 on 1080 rows). Addresses are pret/pokeyellow's `.sym`
+(`GB_ROMS`).
+
+- **What it draws from**: `wOverworldMap` (the map's blocks inside a 3-block border holding the connection strips and
+  `wMapBackgroundTile`), the blockset at `wTilesetBank:wTilesetBlocksPtr` (4x4 tile ids a block), VRAM's tiles and the
+  Color palettes as mGBA's software renderer holds them (`palette[lookup[...]]`). A tile id's BG attributes (palette,
+  flips, bank) are learned from wherever it shows on screen. Past the border: the four connected maps' own blocks (their
+  header through `MapHeaderBanks` / `MapHeaderPointers`, placed by the strip's source and destination pointers; only one
+  drawn with the same tileset), then the background block.
+- **Where the screen is**: RAM is a frame ahead (mGBA returns at VBlank's start, before the handler copies `hSCX` and the
+  redrawn rows), and mid-step the block pointer and the scroll move at different times. So the screen's 20x18 BG map
+  tiles are matched against the world around RAM's guess (`wCurrentTileBlockMapViewPointer` + `wX/YBlockCoord`, +-4
+  tiles) in both snapshots, fine scroll from SCX / SCY as drawn; 90% of the screen's map tiles (ids under 0x60: text box
+  tiles don't count) must match. A text box or the START menu is a copy of the screen in the window, full screen at
+  (7, 0): then the window's map is matched, unscrolled. Crossing a map connection, RAM holds the new map ~5 frames before
+  its border has the old view in it: the last snapshot that matched is tried next, then the whole loaded world.
+- **Objects**: OAM as drawn (lower index on top, as on a Color; BG priority from the OAM and tile attributes), plus the
+  NPCs Gen 1 hides for being off screen (image index $FF: they freeze there), standing at `32 + 16 * MAPX` /
+  `28 + 16 * MAPY` with the standing frames of `SpriteFacingAndAnimationTable` - unless `IsObjectHidden` would hide them
+  (`wToggleableObjectList` / `Flags`). Checked: those positions equal the on-screen NPCs' own (C1x4 / C1x6), walking too.
+- **Scenes**: FIELD; TEXT while `wFontLoaded` bit 0 (any text box, the START menu); BATTLE_START from `wIsInBattle`
+  while the field still matches (a wild battle sets it before its flashes and wipe); OFF in the battle; MENU for a menu
+  screen (party, Pokédex: too few map tiles); FADE on a white / black frame, and for 30 frames after the field on a
+  screen of map tiles that matches nothing (a door: the new map's VRAM goes up a third a frame - the zoom holds).
+- **Off the field: plain bars** (the user's call): battles and menu screens get the screen's own background, flat - the
+  colour most of the frame has (`gbBackground`, sampled every 4 px: white in Yellow; the edges alone gave the trainer
+  card's red border), crossfaded 16 frames; the GBA's glow looked smeared against Gen 1's plain screens. SAVE's prompt
+  blanks the screen behind its boxes but for a corner of the map: fewer than 120 map tiles, but all where the field last
+  was (`gbExact` on the last matching snapshot) - the field still, so the strips keep the map. OPTION keeps them too (the
+  user's call): `wBattleAndStartSavedMenuItem` = OPTION (5, counted with the POKéDEX row: one less before
+  EVENT_GOT_POKEDEX, flag 37), only after the START menu itself was on screen (`gbFromStart`: its box's corner tiles at
+  (10, 0) / (19, 0) on a TEXT frame; the plain field or a battle clears it). The off-screen NPCs aren't drawn once a battle starts (its flashes hide the
+  sprites) or with the sprite layer off.
+- **OAM past the edges**: an NPC walking off the right edge keeps its objects at x 168-176 for the step, one walking off
+  the left / top wraps; only Gen 1's cleared entries (y $A0) are skipped. An RAM-drawn NPC is left out only where OAM has
+  all four of its objects less than a step from where it stands (any one object that near also matched the next NPC
+  over). Before both, NPCs flickered at the edges: checked by `widerec` and counting one-frame blinks in the strips (none
+  in 600 frames of Vermilion's NPCs walking; walking, only the water's own animation).
+- **Checked** headless (`wideon`, `widecheck`, `wideview -160 -72 480 288`, `widerec`) on the English save: out of
+  Vermilion City's Pokémon Center, around the city, north into Route 6 and back, the START menu, the Pokédex, a wild
+  battle's start. Every map frame matched pixel for pixel but those the game wrote a palette in while drawing (a door's
+  fade, the next map's colours at a connection, opening the START menu): `pk_wide_gb_last_torn`, from a hook on the
+  renderer's `writePalette` while `ly` < 144; `widecheck` doesn't count them. ~0.2-0.4 ms a frame at 480 x 288 with the
+  check; the whole-world search, a few frames at a door, ~2.5 ms.
+- **Not yet**: the other languages' Yellows (their RAM is English's + 5 from 0xD018: a `GB_ROMS` row each, plus
+  `MapHeaderPointers`), Red / Blue (Yellow's + 1 from 0xCF1B, SGB palettes: `palette` takes `sgbAttributes` there), Gold /
+  Silver / Crystal (a different map engine), battles past the edges, walking frames for the off-screen NPCs.
+
 ## Overlays
 
 SCREEN > OVERLAY (both screens' Settings; `Prefs.overlay`, a `OverlayChoice.key`: `""` none - the

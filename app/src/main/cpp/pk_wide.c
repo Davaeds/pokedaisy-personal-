@@ -97,6 +97,7 @@ static const struct PkWideRom* lookupField(uint32_t crc) {
 static int32_t C[PK_WIDE_CONFIG_SIZE];
 static bool mapPreviews;   // the game has FireRed's map preview (map_preview_screen.c): the FireRed engine only
 static bool configured;
+static bool gbGame;      // a Game Boy game: every call goes to pk_wide_gb.c
 static int lastFault;   // the signal that switched WIDE off (0 = none: pk_wide_view's fault guard)
 
 // --- memory -----------------------------------------------------------------------------------
@@ -1705,9 +1706,18 @@ static struct PkWideView rawView;   // the window raw[] was last drawn for (w 0 
 static uint32_t raw[BUF_H][BUF_W];  // the last scene drawn (map or battle) that checked out, frame pixels unused
 static uint8_t rawHole[BUF_H][BUF_W];   // ... and where it had nothing: the frame's nearest edge pixel goes on there
 
+int pk_wide_frame_w(void) { return gbGame ? PK_WIDE_GB_W : PK_WIDE_W; }
+int pk_wide_frame_h(void) { return gbGame ? PK_WIDE_GB_H : PK_WIDE_H; }
+
 int pk_wide_configure(uint32_t crc) {
-    const struct PkWideRom* rom = lookup(crc);
     lastFault = 0;
+    gbGame = crc && pk_wide_gb_configure(crc);
+    if (gbGame) {
+        configured = false;
+        pk_wide_reset();
+        return 1;
+    }
+    const struct PkWideRom* rom = lookup(crc);
     configured = rom != NULL;
     if (configured) {
         memcpy(C, rom->a, sizeof(rom->a));
@@ -1729,7 +1739,7 @@ int pk_wide_configure(uint32_t crc) {
 }
 
 int pk_wide_knows(uint32_t crc) {
-    return lookup(crc) != NULL;
+    return lookup(crc) != NULL || pk_wide_gb_knows(crc);
 }
 
 // SCENE SPEEDS, AUTO-RUN and RUN INDOORS (GitHub #43 / #85): the field read through this game's WIDE table whether or
@@ -1882,6 +1892,7 @@ int pk_field_state(struct mCore* core, int runIndoors, int wildKeep) {
 }
 
 void pk_wide_reset(void) {
+    pk_wide_gb_reset();
     prev = -1;
     memset(seenObjects, 0, sizeof(seenObjects));
     npieces[0] = npieces[1] = 0;
@@ -1896,10 +1907,10 @@ void pk_wide_reset(void) {
     edgeAccOk = false;
 }
 
-int pk_wide_last_score(void) { return lastScore; }
-int pk_wide_last_mode(void) { return lastMode; }
-int pk_wide_last_torn(void) { return lastTorn; }
-int pk_wide_last_vram_torn(void) { return drawingLine >= PK_WIDE_H - 1 ? vramTorn : vramTornLast; }
+int pk_wide_last_score(void) { return gbGame ? pk_wide_gb_last_score() : lastScore; }
+int pk_wide_last_mode(void) { return gbGame ? pk_wide_gb_last_mode() : lastMode; }
+int pk_wide_last_torn(void) { return gbGame ? 0 : lastTorn; }
+int pk_wide_last_vram_torn(void) { return gbGame ? pk_wide_gb_last_torn() : drawingLine >= PK_WIDE_H - 1 ? vramTorn : vramTornLast; }
 
 /** a * (256 - t) + b * t, per channel, keeping a's alpha. */
 static inline uint32_t lerp(uint32_t a, uint32_t b, int t) {
@@ -2034,8 +2045,8 @@ static inline uint32_t dimmed(uint32_t c, int dim) {
     return (c & 0xFF000000) | rb | g;
 }
 
-int pk_wide_wants_close(void) { return lastClose; }
-int pk_wide_scene(void) { return lastScene; }
+int pk_wide_wants_close(void) { return gbGame ? pk_wide_gb_wants_close() : lastClose; }
+int pk_wide_scene(void) { return gbGame ? pk_wide_gb_scene() : lastScene; }
 
 int pk_wide_frame(struct mCore* core, const uint32_t* frame, uint32_t* out, int margin, uint32_t* centre) {
     if (margin < 0) margin = 0;
@@ -2105,7 +2116,9 @@ int pk_wide_view(struct mCore* core, const uint32_t* frame, uint32_t* out, struc
     if (sig) {
         guardJmp = NULL;
         lastFault = sig;
+        int fw = pk_wide_frame_w(), fh = pk_wide_frame_h();
         configured = false;   // off for this game until it's configured again: never the same fault twice
+        gbGame = false;
         lastMode = PK_WIDE_MODE_NONE;
         lastClose = 1;
         if (v.w > PK_WIDE_MAX_VIEW_W) v.w = PK_WIDE_MAX_VIEW_W;
@@ -2113,7 +2126,7 @@ int pk_wide_view(struct mCore* core, const uint32_t* frame, uint32_t* out, struc
         for (int y = 0; out && y < v.h; y++)
             for (int x = 0; x < v.w; x++) {
                 int X = v.x + x, Y = v.y + y;
-                out[y * v.w + x] = X >= 0 && X < PK_WIDE_W && Y >= 0 && Y < PK_WIDE_H ? frame[Y * PK_WIDE_W + X] : 0xFF000000u;
+                out[y * v.w + x] = X >= 0 && X < fw && Y >= 0 && Y < fh ? frame[Y * fw + X] : 0xFF000000u;
             }
         return 0;
     }
@@ -2132,6 +2145,7 @@ void pk_wide_skip(struct mCore* core, const uint32_t* frame) {
 }
 
 static int viewInner(struct mCore* core, const uint32_t* frame, uint32_t* out, struct PkWideView v, uint32_t* centre) {
+    if (gbGame) return pk_wide_gb_view(core, frame, out, v, centre);
     realFrame = frame;
     if (!out) {
         // pk_wide_skip: a frame nobody will see (fast-forward runs several per refresh). Only the RAM after it is

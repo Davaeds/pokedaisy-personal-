@@ -691,7 +691,7 @@ class EmulatorEngine(
                     } catch (t: Throwable) {
                         Log.e("pokedaisy", "WIDE camera failed; zoom off for this run", t)
                         wideCamera = null
-                        MgbaCore.pkWideSetView(-WideCamera.MARGIN_FALLBACK, 0, WideCamera.PK_W + 2 * WideCamera.MARGIN_FALLBACK, WideCamera.PK_H)
+                        MgbaCore.pkWideSetView(-WideCamera.MARGIN_FALLBACK, 0, camera.frameW + 2 * WideCamera.MARGIN_FALLBACK, camera.frameH)
                         runCatching { onWideOff?.invoke("camera") }
                     }
                 }

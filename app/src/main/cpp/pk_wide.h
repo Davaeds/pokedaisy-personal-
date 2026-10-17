@@ -179,6 +179,27 @@ int pk_wide_fault(void);
 enum { PK_WIDE_MODE_NONE, PK_WIDE_MODE_MAP, PK_WIDE_MODE_BATTLE, PK_WIDE_MODE_MENU };
 int pk_wide_last_mode(void);
 
+/** The Game Boy's EXPAND (pk_wide_gb.c: Pokémon Yellow's overworld past its 160 x 144 screen). Every pk_wide_* call
+ * above hands over to these while a Game Boy game is configured; the frame is then 160 x 144 and the views are in its
+ * pixels. */
+#define PK_WIDE_GB_W 160
+#define PK_WIDE_GB_H 144
+int pk_wide_gb_knows(uint32_t crc);
+int pk_wide_gb_configure(uint32_t crc);
+void pk_wide_gb_reset(void);
+/** pk_wide_view's twin; `out` NULL = pk_wide_skip's (only the RAM after the frame is kept). */
+int pk_wide_gb_view(struct mCore* core, const uint32_t* frame, uint32_t* out, struct PkWideView view, uint32_t* centre);
+int pk_wide_gb_scene(void);
+int pk_wide_gb_wants_close(void);
+int pk_wide_gb_last_mode(void);
+int pk_wide_gb_last_score(void);
+/** 1 if a palette was written while the last frame was drawn (its top lines show the old colours). */
+int pk_wide_gb_last_torn(void);
+
+/** The frame pk_wide_view expects for the configured game: 240 x 160, or a Game Boy's 160 x 144. */
+int pk_wide_frame_w(void);
+int pk_wide_frame_h(void);
+
 /** How the last frame went, for logs and mgba_dump: tilemap match 0..1000, -1 if none was tried. */
 int pk_wide_last_score(void);
 /** 1 if the last frame's sprites came from an earlier snapshot (the RAM was mid-update). */
