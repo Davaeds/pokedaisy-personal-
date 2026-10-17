@@ -465,6 +465,11 @@ frame, like Prism's. The user had no save (a third-party Discord one exists, not
 under every build's name (`polished_crystal` README; hROMBank is FF87, so mgba_dump's `gbfar` / `gbinject` don't work there). Its font
 loads at tile 'A' (0x80) like Crystal's. Item / key item / TM descriptions, dex abilities and the map's player (by wPlayerGender:
 CHRIS / KRIS / CRYS) come from each build's ROM; its `text` is often Huffman-compressed (<CTXT> 0x5D, `polishedString`).
+It has the first Game Boy GUIDE (`GameGuide.world`: a `GuideWorld` gives HERE's wild Pokémon and NEXT BOSS's teams from generated
+data, `gen_polished_crystal_guide.py`, every build checked; `readGen2Telemetry` fills `SaveProgress` from wEventFlags, the badges /
+trade flags as banks 0x10000+ / 0x20000+ and the clock as var 0x10000). Its controls were run through the real controller headless:
+the Game Boy battle menus drop presses as they open and after a cursor move, so every Game Boy pick (FIGHT / BAG / RUN / a move) now
+steers on the menu read each frame (`driveGbPickLocked`, `GbPartySwitch.battleMenu`) - docs/DEVELOPMENT.md's Polished section.
 **Companion options (2026-10-08)**: RESUME GAMES (`Prefs.autoResume`, top-screen Settings > LIBRARY; off =
 a launch boots the save, a return from HOME still resumes - `freshLaunch`), CLOSE COMPANION (SETTINGS, two
 screens: the Presentation goes away until BACK on the game), STATUS BAR OFF / GAME / COMPANION (`Prefs.statusBarOnCompanion`,

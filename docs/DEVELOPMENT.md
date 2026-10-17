@@ -476,6 +476,24 @@ What's its own:
   (`Gen2Config.cursorTile`); the party menu is Crystal's, its SWITCH / SUMMARY / CANCEL a column left (from (11, 12)). Its party
   menus read the keys every other frame (`w2DMenuFlags1` bit 6), like Prism's, which the 2-frame Game Boy presses already cover.
 - **Growth rates** are numbered 0 medium fast, 1 medium slow, 2 fast, 3 slow (Gen 3's curves 0, 3, 4, 5: `expProgress`).
+- **GUIDE** (the first Game Boy guide; `GuidePolishedCrystal.kt` + `GuidePolishedCrystalGen.kt` from
+  `scripts/gen_polished_crystal_guide.py <releases dir>`): no GBA tables, so `GameGuide.world` (a `GuideWorld`) gives HERE's
+  wild Pokémon and NEXT BOSS's teams from generated data. The generator reads every build through its .sym and requires each to
+  equal 3.2.3's (faithful builds faithful 3.2.3's: 8 boss teams differ): the wild tables (grass by morning / day / night, surfing,
+  the rods' fish groups, headbutt tree and rock smash sets), the bosses' parties from TrainerGroups (each found by its own
+  script's `loadtrainer` / `setevent`), each map's MapScriptHeader events (item / key item / TM balls, hidden items, `trade`
+  objects) and the source's gifts, their command bytes found in each build's label spans. `readGen2Telemetry` fills
+  `SaveProgress`: wEventFlags (01:DA5A) as the flags, wJohtoBadges / wKantoBadges as flags 0x10000+, wTradeFlags 0x20000+,
+  wTimeOfDay as var 0x10000. Evening uses the night's grass, surfing adds up to 4 levels, a level over 100 is badge-relative
+  (AdjustLevelForBadges). The League's room flags reset each visit, so the first run is done by EVENT_BEAT_ELITE_FOUR, the
+  rematch by EVENT_BEAT_ELITE_FOUR_AGAIN. No EVOLUTIONS, swarms, roamers or static encounters; the HUD's WILD and the DEX's
+  AREA still read GBA tables only.
+- **Battle controls** were run through the real `BattleInputController` against mgba_dump running 3.2.3, frame by frame (a
+  local harness over its stdin, not committed): a wild battle from the save and LYRA's, started headless (`loadtrainer`'s writes,
+  then Script_startbattle 25:6AD6 through a `gbinject` using Polished's `rst $10` FarCall, address then bank inline - not
+  pokecrystal's `rst $08`). Its battle menus drop presses in the 3 frames after a cursor move and in their first frames (Crystal's
+  too), which once lost a FIGHT tap and once picked the wrong move, so every Game Boy pick now steers on the menu read each frame
+  (`GbPartySwitch.battleMenu`, `driveGbPickLocked`) and presses again what didn't take. A pick takes 15-31 frames, a switch 16-57.
 - **No save existed**: a new game was played headless in 3.2.3 (CYNDAQUIL, LYRA's lab battle lost, a PIDGEY caught on ROUTE 29)
   and the same file put under each build's name; it loads in 3.2.0 - 3.2.2 and faithful 3.2.3 as it is (save version 10 in all).
   Its hROMBank is FF87, not pokecrystal's FF9D, so mgba_dump's `gbfar` / `gbinject` don't run there; `loadstate` broke its
@@ -885,6 +903,7 @@ fact comes from the game's own data, in our own words; all but FireRed are
 | Quetzal Spanish Alpha 9           | —                                                                | HERE's wild Pokémon only                                             | as English (its trainers' Spanish names: 265 is PETRA) |
 | Quetzal Alpha 9 v1 (EN / ES)      | —                                                                | HERE's wild Pokémon only                                             | as Alpha 9 v0 (its tables at v1's addresses)                           |
 | Quetzal Alpha 0.8.4 (+ Moemon)    | —                                                                | HERE's wild Pokémon only                                             | Hoenn's 8 gyms, Elite Four and champion, NORMAL + HARD (Alpha 9's ids) |
+| Polished Crystal 3.2.x (16 builds) | seven TIPS; WHERE IS generated                                 | each build's map events + the source's map scripts (`gen_polished_crystal_guide.py`) | Johto's 8 gyms, Elite Four, LANCE, Kanto's 8 gyms, the 16-badge League rematch (party 2), RED |
 
 Generated WHERE IS (`generatedWhereIs`): every HM, key item and gift Pokémon
 someone hands out, with its area as the hint. The hacks without source get their
