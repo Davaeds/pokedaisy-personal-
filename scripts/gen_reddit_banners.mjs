@@ -1,7 +1,8 @@
 // The r/PokeDaisy banners (docs/reddit-banners/): the daisy logo and wordmark on the app's blue over a
-// pixel meadow, built from the website's own sprites (website/src/lib/pixel.js) and its Pixel Operator
-// font. No creatures and no game art: the two handhelds are drawn here with plain screens. Writes both
-// PNGs at 2x (Reddit asks for at least 1072x128 desktop / 1080x128 mobile) with headless Chrome.
+// pixel meadow (and a Ko-fi page banner, 1200x400), built from the website's own sprites (website/src/lib/pixel.js) and its Pixel Operator
+// font. No creatures and no game art: the two handhelds are drawn here with plain screens. Writes the
+// PNGs with headless Chrome: Reddit's at 2x (it asks for at least 1072x128 desktop / 1080x128 mobile),
+// Ko-fi's at exactly 1200x400 (3:1, so nothing is cropped).
 //
 //     node scripts/gen_reddit_banners.mjs
 import { spawn } from 'node:child_process';
@@ -134,27 +135,36 @@ ${sprites}
 
 // Desktop: 1072 x 128, scenery flanking the wordmark.
 const BANNERS = {
-  'banner-desktop': page({
+  'banner-desktop': [2, page({
   w: 1072, h: 128, logoScale: 3, font: 64, scale: 3, kicker: 16, grassRows: 7, flowerX: [340, 672], sky: [[205, 16], [756, 10], [20, 44]],
   flank: [
     ['tree', 28], ['bdual', 86, 2], ['fence', 200], ['fence', 224], ['fence', 248], ['tallgrass', 292],
     ['tree', 1072 - 28 - 48, 3, true], ['bsingle', 852, 2], ['fence', 1072 - 250 - 24], ['fence', 1072 - 274 - 24], ['fence', 1072 - 298 - 24], ['tallgrass', 1072 - 340 - 24],
   ],
-}),
+})],
   // Mobile: 1080 x 128, the wordmark bigger (the app shows it about a third of that width).
-  'banner-mobile': page({
+  'banner-mobile': [2, page({
   w: 1080, h: 128, logoScale: 3, font: 96, scale: 3, kicker: 0, grassRows: 7, flowerX: [270, 730], sky: [[210, 16]],
   flank: [
     ['tree', 40], ['bdual', 102, 2], ['tallgrass', 224],
     ['tree', 1080 - 40 - 48, 3, true], ['bsingle', 842, 2], ['tallgrass', 770],
   ],
-}),
+})],
+  // Ko-fi: 1200 x 400 at 1x, so the pixel art is drawn at whole 3 / 4 / 5 px steps.
+  'kofi-banner': [1, page({
+    w: 1200, h: 400, logoScale: 5, font: 112, scale: 4, kicker: 32, grassRows: 9, flowerX: [300, 880, 560, 20],
+    sky: [[40, 56], [560, 14], [940, 36], [232, 150]],
+    flank: [
+      ['bdual', 30, 4], ['coffee', 222, 4], ['coffee', 906, 4, true],
+      ['bsingle', 968, 3],
+    ],
+  })],
 };
 
 // Each page is rendered at 2x by headless Chrome (a throwaway profile, so an open Chrome doesn't take the job).
 const tmp = mkdtempSync(join(tmpdir(), 'pokedaisy-banners-'));
 try {
-  for (const [name, html] of Object.entries(BANNERS)) {
+  for (const [name, [dsf, html]] of Object.entries(BANNERS)) {
     const [, w, h] = /html, body \{ width: (\d+)px; height: (\d+)px/.exec(html);
     const file = join(tmp, `${name}.html`);
     const png = join(outDir, `${name}.png`);
@@ -162,7 +172,7 @@ try {
     rmSync(png, { force: true });
     const chrome = spawn(CHROME, [
       '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run', `--user-data-dir=${join(tmp, 'profile')}`,
-      '--force-device-scale-factor=2', `--window-size=${w},${h}`, `--screenshot=${png}`, pathToFileURL(file).href,
+      `--force-device-scale-factor=${dsf}`, `--window-size=${w},${h}`, `--screenshot=${png}`, pathToFileURL(file).href,
     ], { stdio: 'ignore' });
     const started = Date.now();
     while (!existsSync(png)) {
