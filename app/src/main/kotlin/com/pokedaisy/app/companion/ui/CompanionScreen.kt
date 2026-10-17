@@ -95,7 +95,7 @@ fun CompanionScreen(
     slots: com.pokedaisy.app.companion.StateSlots? = null,
     settings: com.pokedaisy.app.companion.CompanionSettings? = null,
     battleInput: com.pokedaisy.app.companion.BattleInput? = null,
-    /** Tab shown first ("PARTY", "DEX", "MAP", "ITEMS", "CARD", "STATES", "SETTINGS") - for
+    /** Tab shown first ("PARTY", "DEX", "MAP", "ITEMS", "CARD", "STATES", "SETTINGS", "MORE") - for
      * screenshot tests, which can't tap the tab bar. */
     initialTab: String = "PARTY",
     /** Party index whose summary is open on the PARTY tab - for screenshot tests too. */
@@ -139,7 +139,7 @@ fun CompanionScreen(
     // player who had already opened SETTINGS. Tracked by label, not index: the BATTLE
     // tab appears/disappears and would otherwise shift every other tab's index.
     var selectedLabel by remember { mutableStateOf(initialTab) }
-    // Where BACK from a tab opened from SETTINGS (or the GUIDE notice's GO BACK) returns.
+    // Where BACK from a tab opened from MORE (or the GUIDE notice's GO BACK) returns.
     var backTab by remember { mutableStateOf("PARTY") }
     // SETTINGS' page / row / scroll, kept while other tabs are open.
     val settingsUi = remember { SettingsUiState(initialSettingsPage, initialSettingsRow) }
@@ -235,14 +235,18 @@ fun CompanionScreen(
         val battle = snapshot.showsBattle
         val chosen = available.filter { it in chosenTabs }
         val bar = chosen.take(if (battle) MAX_BAR_TABS - 1 else MAX_BAR_TABS)
+        // The rest open from MORE, left of the gear (still tabs, just without a chip); no MORE chip with none.
+        // Tabs go by id ("ITEMS"); the bar shows each game's own word (companionTabLabel).
+        val hiddenTabs = available.filter { it !in bar }
         val tabs = buildList {
             if (battle) add("BATTLE")
             addAll(bar)
+            if (hiddenTabs.isNotEmpty()) add("MORE")
+            // The gear always ends the bar.
             add("SETTINGS")
         }
-        // The rest open from SETTINGS (still tabs, just without a chip).
-        // Tabs go by id ("ITEMS"); the bar shows each game's own word (companionTabLabel).
-        val hiddenTabs = available.filter { it !in bar }
+        // A tab's place along the bar: a MORE one sits where MORE does (the slide's direction, L / R).
+        val barIndex = { id: String -> tabs.indexOf(if (id in hiddenTabs) "MORE" else id) }
 
         // Jump to the battle helper when a battle starts, back to the tab that
         // was open before it when it ends. Not on first composition when out of
@@ -287,9 +291,9 @@ fun CompanionScreen(
         // FOE DETAILS: the button's last state, for every battle after.
         var foeDetails by remember { mutableStateOf(settings?.foeDetails ?: false) }
         val current = if (selectedLabel in tabs || selectedLabel in hiddenTabs) selectedLabel else tabs[0]
-        // A hidden tab was opened from SETTINGS: the gear stays lit.
-        val selectedIdx = tabs.indexOf(if (current in hiddenTabs) "SETTINGS" else current)
-        // BACK from a tab opened from SETTINGS returns there. Registered before
+        // A tab opened from MORE: MORE stays lit.
+        val selectedIdx = barIndex(current)
+        // BACK from a tab opened from MORE returns there. Registered before
         // the tabs' own handlers, so an open summary / overlay closes first.
         // ACHIEVEMENTS opened by tapping a popup goes back to the tab it was opened over.
         val popupBack = popupReturn?.takeIf { current == "ACHIEVEMENTS" && it != current }
@@ -300,7 +304,7 @@ fun CompanionScreen(
                 return@CompanionBackHandler
             }
             backTab = current
-            selectedLabel = "SETTINGS"; detailIndex = null; showSuggestions = false; showBattleStats = false; dexUi.open = null
+            selectedLabel = "MORE"; detailIndex = null; showSuggestions = false; showBattleStats = false; dexUi.open = null
         }
         // A chip's tap (PARTY's own included) closes an open summary; BATTLE's also returns to the controls.
         val openTab: (String) -> Unit = { title ->
@@ -310,9 +314,9 @@ fun CompanionScreen(
             if (title == "BATTLE") battleShowControls = true
         }
         // The window over the game (one screen): L / R step along the bar (round, like the game's own pages), from the gear
-        // when a tab opened from SETTINGS is up. Under everything a tab registers, so a page of its own can take them.
+        // when a tab opened from MORE is up. Under everything a tab registers, so a page of its own can take them.
         val stepTab: (Int) -> Unit = { step ->
-            val usable = tabs.filter { !snapshot.unsupported || it == "ACHIEVEMENTS" || it == "SETTINGS" }
+            val usable = tabs.filter { !snapshot.unsupported || it == "ACHIEVEMENTS" || it == "SETTINGS" || it == "MORE" }
             val at = usable.indexOf(tabs.getOrNull(selectedIdx)).coerceAtLeast(0)
             openTab(usable[(at + step).mod(usable.size)])
         }
@@ -356,7 +360,9 @@ fun CompanionScreen(
                     tabs.forEachIndexed { i, title ->
                         val open = { openTab(title) }
                         if (title == "SETTINGS") {
-                            SettingsTabChip(selectedIdx == i, open)
+                            IconTabChip(PixelIcons.gear, tr("Settings"), selectedIdx == i, open)
+                        } else if (title == "MORE") {
+                            IconTabChip(PixelIcons.more, tr("MORE"), selectedIdx == i, open, Modifier.testTag("tab-MORE"))
                         } else {
                             val usable = !snapshot.unsupported || title == "ACHIEVEMENTS"
                             TabChip(companionTabLabel(title), selectedIdx == i && usable, Modifier.weight(1f).testTag("tab-$title"), enabled = usable, open)
@@ -394,9 +400,9 @@ fun CompanionScreen(
                 dexUi.open?.let { lastDexEntry.value = it }
                 val pane = when {
                     // A ROM the companion can't read: only SETTINGS stays usable.
-                    snapshot.unsupported && current != "SETTINGS" && current != "ACHIEVEMENTS" -> "UNSUPPORTED"
-                    // STATES / SETTINGS / ACHIEVEMENTS work before the game's data does.
-                    !loaded && current != "STATES" && current != "SETTINGS" && current != "ACHIEVEMENTS" -> "LOADING"
+                    snapshot.unsupported && current != "SETTINGS" && current != "ACHIEVEMENTS" && current != "MORE" -> "UNSUPPORTED"
+                    // STATES / SETTINGS / ACHIEVEMENTS / MORE work before the game's data does.
+                    !loaded && current != "STATES" && current != "SETTINGS" && current != "ACHIEVEMENTS" && current != "MORE" -> "LOADING"
                     current in cachedTabs -> "LOADING"
                     current == "PARTY" && openDetail != null -> "PARTY/DETAIL"
                     current == "DEX" && dexUi.open != null -> "DEX/DETAIL"
@@ -424,7 +430,7 @@ fun CompanionScreen(
                                 (fadeIn(tween(200)) + scaleIn(tween(220), initialScale = 0.94f)) togetherWith
                                     (fadeOut(tween(150)) + scaleOut(tween(150), targetScale = 0.94f))
                             } else {
-                                val forward = tabs.indexOf(targetState.substringBefore('/')) >= tabs.indexOf(initialState.substringBefore('/'))
+                                val forward = barIndex(targetState.substringBefore('/')) >= barIndex(initialState.substringBefore('/'))
                                 (fadeIn(tween(200)) + slideInHorizontally(tween(220)) { w -> if (forward) w / 6 else -w / 6 }) togetherWith
                                     (fadeOut(tween(150)) + slideOutHorizontally(tween(180)) { w -> if (forward) -w / 6 else w / 6 })
                             }
@@ -481,9 +487,7 @@ fun CompanionScreen(
                         } else if (tab == "SETTINGS") {
                             // Draws its own OPTION-screen windows, no cream card behind them.
                             CompanionSettingsScreen(
-                                settings, hiddenTabs, available,
-                                barChips = tabs.count { it != "SETTINGS" },
-                                onOpenTab = { backTab = "SETTINGS"; popupReturn = null; selectedLabel = it },
+                                settings, available,
                                 onTabsChanged = { chosenTabs = it },
                                 initialPage = initialSettingsPage,
                                 ui = settingsUi,
@@ -492,6 +496,14 @@ fun CompanionScreen(
                                     p.options.firstOrNull { it.id == p.current }?.title?.let(::shortGameTitle) ?: tk("NOT SET")
                                 },
                                 onPlaysAs = { pickerOpen = true },
+                            )
+                        } else if (tab == "MORE") {
+                            MoreScreen(
+                                hiddenTabs,
+                                onOpen = { backTab = "MORE"; popupReturn = null; selectedLabel = it },
+                                // The link to SETTINGS > TAB BAR; its BACK returns to SETTINGS' options, like any page.
+                                onConfigure = { settingsUi.page = Page.TABS; openTab("SETTINGS") },
+                                usable = { !snapshot.unsupported || it == "ACHIEVEMENTS" },
                             )
                         } else if (tab == "ACHIEVEMENTS") {
                             AchievementsScreen(achievements, focus = achievementFocus, onFocused = { achievementFocus = null })
@@ -667,7 +679,7 @@ private fun rememberTabMetrics(): GbaTextMetrics {
     return rememberGbaTextMetrics(if (wide) 1f else 1.15f, wholePixels = wide)
 }
 
-/** The gear chip's fixed width; SETTINGS' TOOLS row leaves the same gap so its chips line up with the bar's. */
+/** The gear and MORE chips' fixed width. */
 internal val SETTINGS_CHIP_WIDTH = 52.dp
 
 /** Tab switches closer together than this cut instead of sliding (see the tab AnimatedContent). */
@@ -682,7 +694,7 @@ internal val TAB_GAP = 4.dp
  */
 val LocalCompanionWindow = androidx.compose.runtime.staticCompositionLocalOf { false }
 
-/** A [ShoulderHint]'s width; TOOLS' rows leave it free at both ends too, to keep the bar's columns. */
+/** A [ShoulderHint]'s width. */
 internal val SHOULDER_HINT_WIDTH = 30.dp
 
 /**
@@ -752,15 +764,15 @@ internal fun TabChip(label: String, selected: Boolean, modifier: Modifier = Modi
     }
 }
 
-/** The SETTINGS tab: a fixed-width chip (narrower than the weighted text tabs)
- * showing only a pixel-art gear rather than the word "SETTINGS". Same height
- * as the text tabs (the tab row stretches it). */
+/** The SETTINGS and MORE tabs: a fixed-width chip (narrower than the weighted text tabs)
+ * showing only a pixel-art [icon] (the gear, MORE's nine squares) rather than a word. Same
+ * height as the text tabs (the tab row stretches it). */
 @Composable
-private fun SettingsTabChip(selected: Boolean, onClick: () -> Unit) {
+private fun IconTabChip(icon: List<String>, description: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val m = rememberTabMetrics()
-    TabChipShell(selected, m, Modifier.width(SETTINGS_CHIP_WIDTH).fillMaxHeight().semantics { contentDescription = tr("Settings") }, onClick) {
+    TabChipShell(selected, m, modifier.width(SETTINGS_CHIP_WIDTH).fillMaxHeight().semantics { contentDescription = description }, onClick) {
         PixelIcon(
-            PixelIcons.gear,
+            icon,
             color = if (selected) OptionColors.value else OptionColors.label,
             modifier = Modifier.size(m.u * 20),
         )

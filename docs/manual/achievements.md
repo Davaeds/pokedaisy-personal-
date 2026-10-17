@@ -45,7 +45,7 @@ Your softcore achievements and points are real and show on your profile. They're
 
 ## The ACHIEVEMENTS tab
 
-The companion has a tab with the game's whole set. Its chip says `CHEEVOS` (the full word doesn't fit). It isn't in the tab bar by default: tap `CHEEVOS` in the row of extra tabs at the bottom of the companion's `SETTINGS`, or add it to the bar in `SETTINGS` > `TAB BAR` (see [The companion](companion.md)).
+The companion has a tab with the game's whole set. Its chip says `CHEEVOS` (the full word doesn't fit). It isn't in the tab bar by default: tap `MORE` (left of the gear) and then `CHEEVOS`, or add it to the bar in `SETTINGS` > `TAB BAR` (see [The companion](companion.md)).
 
 ![The ACHIEVEMENTS tab: the game's set grouped into sections, each achievement with its badge, title, description and points](shots/companion-achievements.png "The ACHIEVEMENTS tab")
 

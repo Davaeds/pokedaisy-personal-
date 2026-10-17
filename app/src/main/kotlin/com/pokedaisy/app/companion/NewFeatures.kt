@@ -34,8 +34,11 @@ object NewFeatures {
     /** SETTINGS > SINGLE SCREEN: a two-screen device played on one, the companion over the game. */
     const val SINGLE_SCREEN = "single_screen"
 
+    /** The MORE tab right of the gear (companion.ui.MoreScreen): its row is SETTINGS > TAB BAR. */
+    const val MORE_TAB = "more_tab"
+
     /** Every feature that gets the tag. */
-    val ALL = listOf(HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN)
+    val ALL = listOf(HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB)
 
     private const val DAYS = 7
     private const val DAY_MS = 24 * 60 * 60 * 1000L

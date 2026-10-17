@@ -169,6 +169,14 @@ open class CompanionScreenshotTest {
 
     @Test fun party() = tab("PARTY")
 
+    /** MORE, left of the gear: the tabs off the bar (CARD, STATES; CHEEVOS with RetroAchievements) as app icons. */
+    @Test fun more() = paparazzi.snapshot {
+        CompanionScreen(
+            SampleCompanion.snapshot, SampleCompanion.Slots, SampleCompanion.Settings(), initialTab = "MORE",
+            achievements = SampleCompanion.Achievements(SampleCompanion.achievementsState),
+        )
+    }
+
     /** The held-item marker by the icon (from the ROM's own sprite): LEFTOVERS on CHARMANDER, Mail's on PIDGEY. */
     @Test fun partyHeldItems() = paparazzi.snapshot {
         val party = SampleCompanion.snapshot.party.mapIndexed { i, m -> m.copy(heldItemId = if (i == 0) 200 else 121) }

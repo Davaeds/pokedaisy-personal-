@@ -311,6 +311,8 @@ fun docsShots(all: List<Shot>, bw: Int, bh: Int, bd: Float, tw: Int, th: Int, td
         Shot("companion-settings-tabs", bw, bh, bd, docsCompanion("SETTINGS")) {
             onNodeWithText("TAB BAR").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         },
+        // MORE: the tabs off the bar as app icons (STATES, CHEEVOS and, with a card, CARD).
+        Shot("companion-more", bw, bh, bd, docsCompanion("MORE", achievements = DocsAchievements())),
         Shot("companion-settings-shaders", bw, bh, bd, docsCompanion("SETTINGS")) {
             onNodeWithText("DISPLAY OPTIONS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick); onNodeWithText("SHADERS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         },

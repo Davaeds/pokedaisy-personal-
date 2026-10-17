@@ -59,6 +59,7 @@ class LocalizedScreenshotTest(private val lang: AppLanguage) {
     @Test fun guide() = tab("GUIDE")
     @Test fun map() = tab("MAP")
     @Test fun states() = tab("STATES")
+    @Test fun more() = tab("MORE")
 
     /** Battle INFO against an Onix with the game in this language: its types in the game's words (GitHub #40). */
     @Test fun battleInfoTypes() {

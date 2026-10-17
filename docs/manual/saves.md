@@ -96,7 +96,7 @@ Save states are instant snapshots you can take and load at any moment: before a 
 
 ### The STATES tab
 
-The companion's `STATES` tab shows 10 slots (`SLOT 0` to `SLOT 9`), each with a screenshot of the moment and when it was saved. It isn't in the tab bar at first: find it under the companion's `SETTINGS`, below the list of options, or put it in the tab bar with `TAB BAR`.
+The companion's `STATES` tab shows 10 slots (`SLOT 0` to `SLOT 9`), each with a screenshot of the moment and when it was saved. It isn't in the tab bar at first: find it under `MORE`, left of the gear, or put it in the tab bar with `TAB BAR`.
 
 - `SAVE` under a slot saves the game into it, replacing what was there.
 - `LOAD` puts the game back to that moment.

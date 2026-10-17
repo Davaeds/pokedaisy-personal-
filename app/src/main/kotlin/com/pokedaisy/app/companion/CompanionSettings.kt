@@ -282,7 +282,7 @@ interface CompanionSettings {
     val romFileName: String
 
     /** Which of [COMPANION_TABS] sit in the tab bar (at most [MAX_BAR_TABS]);
-     * the rest open from SETTINGS. See [Prefs.companionTabs]. */
+     * the rest open from the MORE tab. See [Prefs.companionTabs]. */
     val companionTabs: List<String>
     fun setCompanionTabs(tabs: List<String>)
 
@@ -295,7 +295,7 @@ interface CompanionSettings {
 /** Every tab the player can show or hide, in tab-bar order. BATTLE (while a
  * battle runs) and SETTINGS (the way to the hidden ones) are always there.
  * CARD (the TRAINER CARD) and ACHIEVEMENTS (RetroAchievements) start off the
- * bar, under SETTINGS > TOOLS. */
+ * bar, under the MORE tab. */
 val COMPANION_TABS = listOf("PARTY", "DEX", "MAP", "ITEMS", "GUIDE", "CARD", "STATES", "ACHIEVEMENTS")
 val DEFAULT_COMPANION_TABS = listOf("PARTY", "DEX", "MAP", "ITEMS", "GUIDE")
 

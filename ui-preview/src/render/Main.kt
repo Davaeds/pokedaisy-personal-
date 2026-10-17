@@ -11,6 +11,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
@@ -339,6 +340,8 @@ fun companion(
     expand: Boolean = false,
     /** SETTINGS opened on this row, as after SWAP SCREENS. */
     settingsRow: String? = null,
+    /** SETTINGS > TAB BAR's pick (null: the default five). */
+    barTabs: List<String>? = null,
     snap: () -> SnapshotView = ::snapshot,
 ): () -> (@Composable () -> Unit) = {
     previewCapture = com.pokedaisy.app.companion.KeyCapture()
@@ -347,7 +350,7 @@ fun companion(
     val back = com.pokedaisy.app.companion.ui.CompanionBack().also { previewBack = it }
     val content: @Composable () -> Unit = {
         CompanionScreen(
-            sv, FakeSlots(), FakeSettings(hints, oneTap = oneTap, expandOffer = expandOffer, expand = expand), FakeBattleInput(busy), initialTab = tab,
+            sv, FakeSlots(), FakeSettings(hints, initialTabs = barTabs, oneTap = oneTap, expandOffer = expandOffer, expand = expand), FakeBattleInput(busy), initialTab = tab,
             initialMonIndex = mon, initialCardBack = cardBack, back = back, initialSettingsRow = settingsRow, itemUse = if (items) PreviewItemUse(sv.party, bagFull) else null,
         )
     }
@@ -1154,6 +1157,21 @@ fun main(args: Array<String>) {
             SnapshotView(connected = false, error = "game code AMTE isn't a supported Pokémon game", unsupported = true)
         }),
         Shot("$g-settings", bw, bh, bd, companion("SETTINGS")),
+        // MORE (left of the gear): the tabs off the bar as app icons, the TAB BAR link under them.
+        Shot("$g-more", bw, bh, bd, companion("MORE")),
+        Shot("$g-more-full", bw, bh, bd, companion("MORE", barTabs = listOf("PARTY", "MAP"))),
+        // Every app icon at once (a game can't have all of them off the bar with a ROM-less preview).
+        Shot("$g-more-icons", bw, bh, bd, {
+            val content: @Composable () -> Unit = {
+                com.pokedaisy.app.companion.ui.theme.AppTheme {
+                    com.pokedaisy.app.companion.ui.MoreScreen(com.pokedaisy.app.companion.COMPANION_TABS, {}, {})
+                }
+            }
+            content
+        }),
+        // A tile opens its tab with MORE lit; the link opens SETTINGS > TAB BAR.
+        Shot("$g-more-open", bw, bh, bd, companion("MORE")) { onNodeWithTag("more-STATES").performClick(); repeat(30) { mainClock.advanceTimeByFrame() } },
+        Shot("$g-more-tabbar", bw, bh, bd, companion("MORE")) { onNodeWithTag("more-tab-bar").performClick(); repeat(30) { mainClock.advanceTimeByFrame() } },
         // ASPECT on EXPAND: its AUTO ZOOM IN row under it.
         Shot("$g-settings-expand", bw, bh, bd, companion("SETTINGS", expand = true)) {
             onNodeWithText("AUTO ZOOM IN").performScrollTo()

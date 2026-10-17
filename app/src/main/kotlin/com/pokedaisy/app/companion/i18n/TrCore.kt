@@ -30,6 +30,7 @@ internal val trCore: Map<String, Tr> = mapOf(
     "CHEEVOS" to Tr(ja = "じっせき", fr = "SUCCÈS", de = "ERFOLGE", it = "TROFEI", es = "LOGROS", br = "TROFÉUS", pt = "TROFÉUS"),
     "BATTLE" to Tr(ja = "バトル", fr = "COMBAT", de = "KAMPF", it = "LOTTA", es = "COMBATE", br = "BATALHA", pt = "BATALHA"),
     "SETTINGS" to Tr(ja = "せってい", fr = "OPTIONS", de = "OPTIONEN", it = "OPZIONI", es = "AJUSTES", br = "CONFIGURAÇÕES", pt = "DEFINIÇÕES"),
+    "MORE" to Tr(ja = "そのほか", fr = "PLUS", de = "MEHR", it = "ALTRO", es = "MÁS", br = "MAIS", pt = "MAIS"),
     // Used by several areas (one copy each).
     "ALL" to Tr(ja = "すべて", fr = "TOUS", de = "ALLE", it = "TUTTI", es = "TODOS", br = "TODOS", pt = "TODOS"),
     "ATTACK" to Tr(ja = "こうげき", fr = "ATTAQUE", de = "ANGRIFF", it = "ATTACCO", es = "ATAQUE", br = "ATAQUE", pt = "ATAQUE"),

@@ -3,7 +3,7 @@ title: The companion at a glance
 summary: What the bottom screen shows, how the tab bar works, and what the companion's SETTINGS tab holds.
 section: companion
 order: 1
-keywords: [bottom screen, second screen, tabs, tab bar, overview, back button, click, sound, language, translation, close, restart, reset, gear]
+keywords: [bottom screen, second screen, tabs, tab bar, overview, back button, click, sound, language, translation, close, restart, reset, gear, more, apps, hidden tabs, extra tabs, grid]
 ---
 
 The companion is everything on the bottom screen while a game runs. It reads your game as you play, so your party, bag, location and battles are always up to date without opening a single menu on the top screen. It's drawn in the game's own menu style: FireRed's party screen in FireRed, Emerald's in Emerald, and each supported hack's own look where it has one.
@@ -12,7 +12,7 @@ You don't have to do anything to start it. Open a supported game and the compani
 
 ## The tabs
 
-Along the bottom of the companion is a row of tabs, with the SETTINGS gear at the right end. Out of the box you get:
+Along the bottom of the companion is a row of tabs, with `MORE` (a grid of nine squares) and the SETTINGS gear at its right end. Out of the box you get:
 
 | Tab | What it shows |
 | --- | --- |
@@ -22,13 +22,13 @@ Along the bottom of the companion is a row of tabs, with the SETTINGS gear at th
 | `BAG` | Every pocket of your bag. See [Bag](bag.md). |
 | `GUIDE` | Hints, the next boss and what's around you. See [Guide](guide.md). |
 
-A few more are off the bar to begin with: `CARD` (your [trainer card](trainer-card.md)), `STATES` (save states) and `CHEEVOS` ([RetroAchievements](achievements.md)).
+A few more are off the bar to begin with and wait under `MORE`: `CARD` (your [trainer card](trainer-card.md)), `STATES` (save states) and `CHEEVOS` ([RetroAchievements](achievements.md)).
 
 Some tabs only appear when the game has what they need. `DEX` needs the game's Pokédex data and `GUIDE` needs a guide for that game, so a game without them has fewer tabs. The bag tab also takes the game's own word for it: `PACK` in Gold, Silver, Crystal, Crystal Clear and Prism, `CUBE` in Unbound, `INVENTORY` in R.O.W.E., `POCKETS` in Super Mariomon, `BAG` everywhere else.
 
 ### Choosing your tabs
 
-Up to five tabs fit next to the gear. To pick them, open SETTINGS and tap `TAB BAR` in the COMPANION group. Each tab there says `SHOWN` or `HIDDEN`; tap one to flip it. The title counts how many you've placed (for example `5/5`). If the bar is full, hide one first. Tabs always sit in the same order on the bar, whichever you pick.
+Up to five tabs fit next to the gear. To pick them, open SETTINGS and tap `TAB BAR` in the COMPANION group, or tap the `TAB BAR` button at the bottom of `MORE`. Each tab there says `SHOWN` or `HIDDEN`; tap one to flip it. The title counts how many you've placed (for example `5/5`). If the bar is full, hide one first. Tabs always sit in the same order on the bar, whichever you pick.
 
 Your choice is shared by every game. A tab the running game doesn't have shows `N/A` and keeps its setting for the games that do.
 
@@ -36,7 +36,11 @@ Your choice is shared by every game. A tab the running game doesn't have shows `
 
 ### Tabs that aren't on the bar
 
-Hidden tabs are still one tap away. At the bottom of SETTINGS, under the list of options, there's a second row of tab chips: every tab you left off the bar. Tap one to open it. While it's open the gear stays lit, and BACK takes you back to SETTINGS.
+Hidden tabs are still one tap away. Tap `MORE`, left of the gear: every tab you left off the bar is there as an app, with a coloured icon and its name. Tap one to open it. While it's open `MORE` stays lit, and BACK takes you back to it.
+
+Under the icons, a line reminds you that you pick the bar's tabs yourself, and the `TAB BAR` button takes you straight to that page in SETTINGS. When every tab the game has is on the bar, `MORE` isn't shown.
+
+![The MORE tab, with STATES and CHEEVOS as app icons and the TAB BAR button under them](shots/companion-more.png "MORE")
 
 ### The BATTLE tab
 
@@ -48,7 +52,7 @@ If you'd rather stay where you are when a battle starts, turn off `JUMP TO BATTL
 
 The device's BACK button works for the companion, from either screen:
 
-- **Tap BACK** to go back one step in the companion: close a summary, a pick-list, a pop-up window or a sub-page of SETTINGS, or return from a tab you opened from SETTINGS.
+- **Tap BACK** to go back one step in the companion: close a summary, a pick-list, a pop-up window or a sub-page of SETTINGS, or return from a tab you opened from `MORE`.
 - **Hold BACK** to leave the game.
 
 On a controller, the HOME or guide button does the same as a BACK tap unless you've bound it to something else.

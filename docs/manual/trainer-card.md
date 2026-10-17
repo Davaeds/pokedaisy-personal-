@@ -14,7 +14,7 @@ It isn't a lookalike. The card is rebuilt from your own ROM's graphics, with the
 
 CARD isn't in the tab bar by default. You can open it two ways:
 
-- **From SETTINGS**: at the bottom of the companion's `SETTINGS`, the tabs that aren't in the tab bar sit as a second row of tab chips. Tap `CARD`.
+- **From MORE**: tap `MORE`, left of the gear. The tabs that aren't in the tab bar are there as app icons. Tap `CARD`.
 - **Put it in the tab bar**: open `SETTINGS` > `TAB BAR` and set `CARD` to `SHOWN`. The bar holds up to five tabs next to the gear, so you may need to hide another one first.
 
 See [The companion](companion.md) for more on the tab bar.

@@ -67,22 +67,15 @@ internal val Page.parent: Page get() = if (this == Page.SHADERS) Page.DISPLAY el
  * ([CompanionSettings.keyCapture]: Screen-2 gets no key events, so the game's
  * activity takes them and asks for them over the game).
  *
- * The tabs left out of the tab bar ([hiddenTabs], tab ids) are the TOOLS:
- * extra tab chips under the options, in the tab bar's own columns, so they
- * read as a second row of tabs that only SETTINGS has ([onOpenTab]); TAB BAR
- * picks which ones those are and reports each change through [onTabsChanged].
- * CLOSE GAME / RESTART GAME end the scrolling list. Only the tabs this
+ * TAB BAR picks which tabs sit on the tab bar (the rest open from the MORE
+ * tab) and reports each change through [onTabsChanged]. CLOSE GAME / RESTART GAME end the scrolling list. Only the tabs this
  * game has ([availableTabs], ids) count towards the bar's [MAX_BAR_TABS].
  * The options come in titled groups (fast-forward, controls, companion, screen).
  */
 @Composable
 fun CompanionSettingsScreen(
     settings: CompanionSettings?,
-    hiddenTabs: List<String> = emptyList(),
     availableTabs: List<String> = COMPANION_TABS,
-    /** How many text chips the tab bar under this shows, so TOOLS' chips match their width. */
-    barChips: Int = MAX_BAR_TABS,
-    onOpenTab: (String) -> Unit = {},
     onTabsChanged: (List<String>) -> Unit = {},
     /** A sub-page to open on (a [Page] name, "CHEATS") - for screenshot tests. */
     initialPage: String? = null,
@@ -142,7 +135,7 @@ fun CompanionSettingsScreen(
                 }
                 Spacer(Modifier.height(m.u * 4))
             }
-            val rows = remember(settings, page, tick, hiddenTabs, availableTabs, playsAs, capturing, capturedKeys) {
+            val rows = remember(settings, page, tick, availableTabs, playsAs, capturing, capturedKeys) {
                 if (settings == null) return@remember listOf(SettingRow(tk("NO GAME RUNNING"), null) {})
                 when (page) {
                     Page.HOME -> playsAs?.let { game ->
@@ -158,7 +151,7 @@ fun CompanionSettingsScreen(
                                 shown -> setTabs(settings, now - id, onTabsChanged)
                                 barCount(settings, availableTabs) >= MAX_BAR_TABS -> confirm = Confirm(
                                     tk("TAB BAR IS FULL"),
-                                    tr("Up to {0} tabs fit next to SETTINGS. Hide one first - hidden tabs open from SETTINGS.", MAX_BAR_TABS),
+                                    tr("Up to {0} tabs fit next to SETTINGS. Hide one first - hidden tabs open from MORE.", MAX_BAR_TABS),
                                     tk("OK"), {},
                                 )
                                 else -> setTabs(settings, now + id, onTabsChanged)
@@ -298,26 +291,6 @@ fun CompanionSettingsScreen(
                         labelBadge = { rows[it].labelBadge },
                         onFocused = ::moveCursor,
                     )
-                }
-            }
-            // TOOLS: every tab that isn't in the tab bar, as more tab chips right
-            // above it - in its columns ([barChips] a row, the gear's gap at
-            // the end), so they line up as a second row of tabs.
-            if (page == Page.HOME && settings != null && hiddenTabs.isNotEmpty()) {
-                val columns = barChips.coerceIn(1, MAX_BAR_TABS)
-                hiddenTabs.chunked(columns).forEach { line ->
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(TAB_GAP),
-                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(top = TAB_GAP * 2),
-                    ) {
-                        // The window's L / R hints at the bar's ends ([ShoulderHint]): the same room here.
-                        val hints = LocalCompanionWindow.current
-                        if (hints) Spacer(Modifier.width(SHOULDER_HINT_WIDTH))
-                        line.forEach { id -> TabChip(companionTabLabel(id), selected = false, Modifier.weight(1f)) { onOpenTab(id) } }
-                        repeat(columns - line.size) { Spacer(Modifier.weight(1f)) }
-                        Spacer(Modifier.width(SETTINGS_CHIP_WIDTH))
-                        if (hints) Spacer(Modifier.width(SHOULDER_HINT_WIDTH))
-                    }
                 }
             }
         }
@@ -479,7 +452,7 @@ private fun homeRows(
         SettingRow(tk("ONE-TAP MOVES"), onOff(s.oneTapMoves), subtitle = "Your moves right on the battle menu") { s.setOneTapMoves(!s.oneTapMoves); changed() },
         // A STATS page in battle INFO with the foe's IVs / EVs / nature.
         SettingRow(tk("FOE IVS"), onOff(s.showFoeIvs), subtitle = "The foe's hidden stats in battle") { s.setShowFoeIvs(!s.showFoeIvs); changed() },
-        SettingRow(tk("TAB BAR"), tr("{0} TABS", barTabs), opensPage = true, subtitle = "Which tabs sit next to the gear") { navigate(Page.TABS) },
+        SettingRow(tk("TAB BAR"), tr("{0} TABS", barTabs), labelBadge = NewFeatures.badge(NewFeatures.MORE_TAB), opensPage = true, subtitle = "Which tabs sit next to the gear") { navigate(Page.TABS) },
         // The game's menu click on every companion button.
         SettingRow(tk("CLICK SOUND"), onOff(s.clickSound)) { s.setClickSound(!s.clickSound); changed() },
         // Small on / off preferences: the icons' bounce, the map cursor's blink, tab slides, the battle jump.

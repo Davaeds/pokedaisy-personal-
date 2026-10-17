@@ -75,7 +75,8 @@ fun main() {
             setContent(content)
             mainClock.advanceTimeBy(500)
             // The chips this game actually shows (a tab needs its data, e.g. DEX its tables).
-            val targets = bar.filter { onAllNodesWithTag("tab-$it").fetchSemanticsNodes().isNotEmpty() } + "SETTINGS"
+            // MORE (the tabs off the bar) when there are any, then the gear that ends the bar.
+            val targets = (bar + "MORE").filter { onAllNodesWithTag("tab-$it").fetchSemanticsNodes().isNotEmpty() } + "SETTINGS"
             println("stress [$name]: switching ${targets.joinToString(", ")}")
             if (targets.size < 3) failures += "[$name] only ${targets.size} tabs on the bar - nothing to switch between"
             fun SkikoComposeUiTest.round() {

@@ -207,9 +207,13 @@ which Compose can't observe, so `CompanionScreen` is keyed on `SnapshotView.game
 
 **Tab bar + GUIDE**: at most 5 tabs sit next to the SETTINGS gear (`MAX_BAR_TABS`); the
 player picks them in SETTINGS > TAB BAR (`Prefs.companionTabs`, shared by every game — only
-tabs the running game has count). The rest open from OPEN rows at the top of SETTINGS; in a
+tabs the running game has count). The rest open from **MORE** (`MoreScreen.kt`, the user's design, 2026-10-18): an
+icon-only chip left of the gear, which always ends the bar (`PixelIcons.more`, `IconTabChip` like the gear; the other chips stay text - the user's
+call), gone when nothing is off the bar, opening a grid of app tiles - a coloured `TabIcons` bitmap per tab (our own
+drawings, colours kept in dark mode) over its name - with a line and a TAB BAR button to SETTINGS' page under them. A tab
+opened from it keeps MORE lit and BACK returns to it (`barIndex`). In a
 battle BATTLE takes the last chosen tab's place, and when it ends the tab that was open before
-it comes back. Tabs go by id (`"ITEMS"`); only the chip / OPEN row shows the game's own word
+it comes back. Tabs go by id (`"ITEMS"`); only the chip / MORE tile shows the game's own word
 (`companionTabLabel`: BAG, Unbound's CUBE, R.O.W.E.'s INVENTORY - read off each ROM's START menu
 in `native-capture/menu-shots/*/start.png`). The GUIDE tab (`GuideScreen.kt`) shows
 hand-written pages per game (`companion/data/Guide*.kt`: TIPS / WHERE IS / STUCK?, with
@@ -296,7 +300,7 @@ once a scan lands; with no art the party tab falls back to the `PartyPalette` sl
 text. `gen_party_assets.py` / `gen_cfru_party_assets.py` only generate the `PartySlotStyle`s now (no
 PNGs). `RomArtTest` pins the pixels (the hacks' matched the PNGs once bundled, pixel for pixel);
 ui-preview rebuilds the art from the decomp builds (or `-PartRoms` / `-Prom`), Paparazzi from the ROMs.
-**TRAINER CARD (the CARD tab, off the bar by default, so under SETTINGS > TOOLS)**: retail FireRed /
+**TRAINER CARD (the CARD tab, off the bar by default, so under MORE)**: retail FireRed /
 LeafGreen / Emerald only (`NativeConfig.trainerCard`; the hacks copy the retail
 configs, so it is set on the retail ones alone). `TrainerCard.kt` reads what `SetPlayerCardData` gathers (name, ID, play time, money, caught
 count regional until the National Dex, badge flags, stars, game stats XOR the encryption key, FireRed's
@@ -714,8 +718,8 @@ where its frequency puts it, in the same place on both screens. Set-once rows of
 in that group: FF / SPEED > SPEED OPTIONS (SCENE SPEEDS - companion only - FF MODE, FF MUSIC; `Page.SPEED` / `Screen.SPEED`) and
 SCREEN > DISPLAY OPTIONS (STATUS BAR, SHADERS, OVERLAY, an upright phone's COMPANION; `Page.DISPLAY` / `Screen.DISPLAY`). SHADERS
 opens from DISPLAY OPTIONS, so BACK returns there (`Page.parent`, SettingsActivity's `goBack`). A row that opens a page of its own (not a pick-list) sets
-`SettingRow.opensPage`: a pixel chevron (`PixelIcons.chevronRight`) at its right end. Sub-pages and pick-lists get the title window's back arrow (`onBack`). TOOLS (every tab not in the tab bar) sit under the list as `TabChip`s in
-the bar's own columns (`barChips`wide, the gear's gap at the end), a second row of tabs only SETTINGS has.
+`SettingRow.opensPage`: a pixel chevron (`PixelIcons.chevronRight`) at its right end. Sub-pages and pick-lists get the title window's back arrow (`onBack`). The tabs not in the tab bar used to sit under the
+list as a second row of chips (TOOLS); they're the MORE tab now.
 **OVERLAY** (SCREEN group on both screens, `Prefs.overlay`; `overlay/Overlays.kt` + `OverlayBitmaps.kt`, drawn by
 `EmulatorView`): a frame around the game. Two built-in frames of our own (DAISY / BEZEL, drawn at the game's pixel size,
 shown at a whole scale) plus the player's imported RetroArch overlays (.cfg + PNG, .zip, bare PNG; window = the .cfg's
@@ -945,7 +949,7 @@ UI: sign-in is top-screen Settings > RETROACHIEVEMENTS (the Presentation can't h
 token login that can't reach the server keeps the account and retries with backoff (15 s doubling to
 5 min). The companion reads it through `CompanionAchievements` (`companion/Achievements.kt`, faked in
 Paparazzi / ui-preview): the ACHIEVEMENTS tab (`AchievementsScreen.kt`, chip label CHEEVOS - the full
-word truncates; off the bar by default, under SETTINGS > TOOLS; works on unsupported ROMs too) lists
+word truncates; off the bar by default, under MORE; works on unsupported ROMs too) lists
 rc_client's PROGRESS grouping, parsed from `raAchievementList` (0x1E records / 0x1F fields, strings
 built from real UTF-8 - `NewStringUTF` takes modified UTF-8 and an emoji title would abort under
 CheckJNI); `AchievementPopupHost` shows unlocks / mastery / "N OF M UNLOCKED" on load / progress /
@@ -1003,7 +1007,7 @@ the side panel. The window (`SidePanelHost(window = true)`): the companion frame
 at least the Thor bottom screen's shape and wider on a wider screen (`companionWindowSize`: 0.78 of the screen's aspect,
 up to 1.4:1 - the user asked for a wider one on the RP6), over a dim of the game, which keeps running (the user's call:
 no pause); an X at its top right (beside it, else on its corner), small L / R keys at the tab bar's ends
-(`LocalShoulderHints` -> `ShoulderHint`; TOOLS' rows leave their width free to keep the columns; the user's call over
+(`LocalShoulderHints` -> `ShoulderHint`; the user's call over
 a button legend), no lock tab. While it's open the game's buttons are the companion's: `PokeDaisyActivity.menuKeyTakes` maps each
 key through the player's bindings (`GbaInput.buttonFor`) to a `MenuKey`; B = `onBack`, START closes, the rest go to
 `CompanionKeys` (newest handler first, like `CompanionBack`; `CompanionScreen` steps tabs on L / R). Keys pressed in

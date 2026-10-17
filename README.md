@@ -115,7 +115,7 @@ it. You can also check from **Settings > VERSION**.
 - **CARD** - your trainer card, drawn exactly like the game's, front and back.
 - **STATES** - 10 save-state slots with screenshots.
 
-Pick which tabs sit in the tab bar in the companion's Settings.
+Pick which tabs sit in the tab bar in the companion's Settings; the rest wait as app icons in the MORE tab, left of the gear.
 
 <details>
 <summary><strong>Languages</strong></summary>
