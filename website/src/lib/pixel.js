@@ -315,6 +315,55 @@ export const SPRITES = {
 };
 
 SPRITES.spark = { pal: { W: '#f8d030' }, rows: SPRITES.sparkle.rows };
+// Ko-fi (a mug with a heart), Patreon (its bar and circle) and Reddit (the alien), drawn like the GitHub mark.
+SPRITES.kofi = {
+  pal: { K: INK, W: '#ffffff', R: '#ff5e5b' },
+  rows: [
+    '.KKKKKKKKKKK..',
+    '.KWWWWWWWWWKKK',
+    '.KWWRRWRRWWK.K',
+    '.KWRRRRRRRWK.K',
+    '.KWRRRRRRRWK.K',
+    '.KWWRRRRRWWKKK',
+    '.KWWWRRRWWWK..',
+    '.KWWWWRWWWWK..',
+    '..KWWWWWWWK...',
+    '...KKKKKKK....',
+  ],
+};
+SPRITES.patreon = {
+  pal: { K: INK, D: '#052d49', P: '#ff424d', H: '#ffa0a4' },
+  rows: [
+    'KKK...KKKK..',
+    'KDK..KPPPPK.',
+    'KDK.KPPHPPPK',
+    'KDK.KPPPPPPK',
+    'KDK.KPPPPPPK',
+    'KDK.KPPPPPPK',
+    'KDK..KPPPPK.',
+    'KDK...KKKK..',
+    'KDK.........',
+    'KKK.........',
+  ],
+};
+SPRITES.reddit = {
+  pal: { K: INK, W: '#ffffff', O: '#ff4500' },
+  rows: [
+    '.........KKK.',
+    '........KOOOK',
+    '......K.KOOOK',
+    '......K..KKK.',
+    '...KKKKKKK...',
+    'KKKWWWWWWWKKK',
+    'KWKWWWWWWWKWK',
+    'KKWOOWWWOOWKK',
+    '.KWOOWWWOOWK.',
+    '.KWWWWWWWWWK.',
+    '.KWKWWWWWKWK.',
+    '..KWWKKKWWK..',
+    '...KKKKKKK...',
+  ],
+};
 SPRITES.dual = {
   pal: { K: INK, U: '#58a0f0', W: '#d8f0ff', S: '#909098', L: '#c8c8d0', G: '#58c058' },
   rows: [
@@ -774,6 +823,12 @@ export const FRAMES = {
   primaryHot: frameSvg([[INKF, 1], ['#ffb4a8', 1]], 2, '#f5402f'),
   coffee: frameSvg([[INKF, 1], ['#fff6b8', 1]], 2, '#ffdd00'),
   coffeeHot: frameSvg([[INKF, 1], ['#ffffff', 1]], 2, '#ffe94d'),
+  kofi: frameSvg([[INKF, 1], ['#e2eeff', 1]], 2, '#a8ccff'),
+  kofiHot: frameSvg([[INKF, 1], ['#ffffff', 1]], 2, '#c4ddff'),
+  patreon: frameSvg([[INKF, 1], ['#ffe0dc', 1]], 2, '#ffaaa2'),
+  patreonHot: frameSvg([[INKF, 1], ['#ffffff', 1]], 2, '#ffc4be'),
+  reddit: frameSvg([[INKF, 1], ['#ffe2d2', 1]], 2, '#ffb48e'),
+  redditHot: frameSvg([[INKF, 1], ['#ffffff', 1]], 2, '#ffcbb0'),
   chip: frameSvg([[INKF, 1]], 1, '#ffffff'),
   chipOn: frameSvg([[INKF, 1]], 1, INKF),
   pillGreen: frameSvg([['#2c7a3a', 1]], 1, '#dff6e2'),

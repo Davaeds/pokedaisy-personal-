@@ -4,6 +4,7 @@
 import Pixel from '../components/Pixel.astro';
 import { frameCss, spriteSvg } from '../lib/pixel.js';
 import { REPO_URL } from '../lib/releases.js';
+import { REDDIT_URL, KOFI_URL, PATREON_URL, COFFEE_URL } from '../lib/links.js';
 
 interface Props { title: string; description: string; noindex?: boolean }
 const { title, description, noindex = false } = Astro.props;
@@ -100,11 +101,12 @@ const petals = [[4, 22, 1, 0, 22], [91, 10, 2, 4, 26], [70, 62, 1, 9, 24], [10, 
           {nav.map(([label, href]) => (
             <a href={href} aria-current={path === href || (href === '/docs/' && path.startsWith('/docs/')) ? 'page' : undefined}>{label}</a>
           ))}
+          <a href={REDDIT_URL} class="icon-link" aria-label="r/PokeDaisy on Reddit"><Pixel name="reddit" scale={0.5} /></a>
           <a href={REPO_URL} class="icon-link" aria-label="GitHub"><Pixel name="github" scale={0.5} /></a>
         </nav>
-        <!-- Phones: GitHub beside COFFEE, bigger, instead of squeezed onto the end of the scrolling links. -->
+        <!-- Phones: GitHub beside COFFEE, bigger, instead of squeezed onto the end of the scrolling links (Reddit stays there: no room). -->
         <a href={REPO_URL} class="icon-link gh-top" aria-label="GitHub"><Pixel name="github" scale={0.75} /></a>
-        <a class="btn f-coffee h-coffeeHot small coffee-nav" href="https://buymeacoffee.com/lidor30g">
+        <a class="btn f-coffee h-coffeeHot small coffee-nav" href={COFFEE_URL}>
           <Pixel name="cup" scale={0.5} /> <span>COFFEE</span>
         </a>
       </div>
@@ -128,7 +130,10 @@ const petals = [[4, 22, 1, 0, 22], [91, 10, 2, 4, 26], [70, 62, 1, 9, 24], [10, 
           <a href="/releases/">RELEASES</a>
           <a href="/feedback/#bug">REPORT A BUG</a>
           <a href={REPO_URL}>GITHUB</a>
-          <a href="https://buymeacoffee.com/lidor30g">BUY ME A COFFEE</a>
+          <a href={REDDIT_URL}>REDDIT</a>
+          <a href={KOFI_URL}>KO-FI</a>
+          <a href={PATREON_URL}>PATREON</a>
+          <a href={COFFEE_URL}>BUY ME A COFFEE</a>
         </div>
         <p class="legal tiny muted">
           PokeDaisy is a fan project, not affiliated with or endorsed by Nintendo, Game Freak, Creatures or
@@ -263,7 +268,7 @@ const petals = [[4, 22, 1, 0, 22], [91, 10, 2, 4, 26], [70, 62, 1, 9, 24], [10, 
     .bar { flex-wrap: wrap; gap: 4px 12px; padding: 8px 0; }
     .links { order: 3; width: 100%; margin: 0; overflow-x: auto; scrollbar-width: none; justify-content: space-between; }
     .links a { white-space: nowrap; }
-    .links .icon-link { display: none; }
+    .links .icon-link[aria-label='GitHub'] { display: none; }
     .gh-top { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin-left: auto; text-decoration: none; }
     .gh-top:hover .pixel { transform: translateY(calc(var(--px) * -1)); }
   }

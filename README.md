@@ -15,6 +15,9 @@
   · <strong><a href="#supported-games">Supported games</a></strong>
   · <strong><a href="https://pokedaisy.com/docs/">Manual</a></strong>
   · <strong><a href="https://github.com/lidor30/pokedaisy/issues">Report a problem</a></strong>
+  · <strong><a href="https://www.reddit.com/r/PokeDaisy/">r/PokeDaisy</a></strong>
+  · <strong><a href="https://ko-fi.com/pokedaisy">Ko-fi</a></strong>
+  · <strong><a href="https://www.patreon.com/cw/pokedaisy">Patreon</a></strong>
   · <strong><a href="https://buymeacoffee.com/lidor30g">Buy me a coffee</a></strong>
 </p>
 
@@ -349,13 +352,16 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 ## Support PokeDaisy
 
 PokeDaisy is free, with no ads and nothing locked. If it made a playthrough better and
-you'd like to say thanks, you can buy me a coffee. It's completely optional and doesn't
+you'd like to say thanks, you can support it on Ko-fi, Patreon or Buy Me a Coffee. It's completely optional and doesn't
 unlock anything; it just helps cover the time that goes into mapping new games and ROM hacks.
 It pays for PokeDaisy's own code only: no games, ROMs or game content are sold or handed out.
 
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/pokedaisy)
+[![Patreon](https://img.shields.io/badge/Patreon-F96854?logo=patreon&logoColor=white)](https://www.patreon.com/cw/pokedaisy)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/lidor30g)
 
-Bug reports, game requests and a star on the repo help just as much.
+Bug reports, game requests and a star on the repo help just as much. Come say hi, share your
+runs and ask questions on [r/PokeDaisy](https://www.reddit.com/r/PokeDaisy/).
 
 ## Credits
 

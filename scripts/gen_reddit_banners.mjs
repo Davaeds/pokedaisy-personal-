@@ -237,6 +237,15 @@ const BANNERS = {
       ['coffee', 1858, 6, true], ['bsingle', 1976, 6], ['tree', 2360, 8, true],
     ],
   })],
+  // Buy Me a Coffee: 1600 x 400 at 1x (4:1), whole 3 / 4 / 5 / 6 px steps.
+  'bmac-banner': [1, page({
+    w: 1600, h: 400, logoScale: 6, font: 128, scale: 4, kicker: 32, grassRows: 9, flowerX: [410, 760, 960, 1170],
+    sky: [[200, 56], [640, 14], [980, 30], [1400, 56]],
+    flank: [
+      ['tree', 16, 4], ['bdual', 96, 4], ['coffee', 296, 5],
+      ['coffee', 1224, 5, true], ['bsingle', 1330, 3], ['tree', 1536, 4, true],
+    ],
+  })],
   // Square profile picture, 1024 x 1024 at 1x.
   'avatar': [1, avatarPage({ size: 1024, logoScale: 20, unit: 8 })],
   // The light cover, 1280 x 640 (the website's og.png size) drawn at 2x.
