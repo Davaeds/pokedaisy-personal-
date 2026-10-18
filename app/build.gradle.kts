@@ -72,6 +72,8 @@ android {
         // ScreenScraper (game media, its setup step and the update's popup): off until the app has its developer login
         // (FeatureFlags.screenScraper).
         buildConfigField("boolean", "FEATURE_SCREENSCRAPER", featureFlag("screenScraper").toString())
+        // Nintendo DS games (melonDS, Platinum first): off until they're ready for players (FeatureFlags.nds).
+        buildConfigField("boolean", "FEATURE_NDS", featureFlag("nds").toString())
 
         ndk {
             // Thor is arm64; add armeabi-v7a later only if a target device needs it.
@@ -83,6 +85,8 @@ android {
                 // transitive piece needs it; it's cheap.
                 arguments += "-DANDROID_STL=c++_shared"
                 cFlags += "-O2"
+                // melonDS (the DS core) is C++: unoptimised, a DS game runs far below full speed even in debug builds.
+                cppFlags += "-O2"
             }
         }
     }
@@ -159,6 +163,13 @@ val licensesAsset by tasks.registering {
         "blip_buf (in mGBA) - GNU LGPL 2.1" to "third_party/mgba/src/third-party/blip_buf/license.txt",
         "inih (in mGBA) - BSD" to "third_party/mgba/src/third-party/inih/LICENSE.txt",
         "rcheevos - MIT" to "third_party/rcheevos/LICENSE",
+        "melonDS - GNU GPL 3.0" to "third_party/melonds/LICENSE",
+        "FatFs (in melonDS)" to "third_party/melonds/src/fatfs/LICENSE.txt",
+        "Teakra (in melonDS) - MIT" to "third_party/melonds/src/teakra/LICENSE",
+        "xxHash (in melonDS) - BSD 2-Clause" to "third_party/licenses/xxHash-BSD-2-Clause.txt",
+        "tiny-AES-c (in melonDS) - The Unlicense" to "third_party/melonds/src/tiny-AES-c/unlicense.txt",
+        "blip_buf (in melonDS) - GNU LGPL 2.1" to "third_party/melonds/src/blip-buf/license.txt",
+        "Dolphin's ARM64 emitter (in melonDS) - GNU GPL 2.0 or later" to "third_party/melonds/src/dolphin/license_dolphin.txt",
         "LCD and Scanlines shaders - MIT" to "third_party/licenses/mGBA-shaders-MIT.txt",
         "xBR, xBRZ and ScaleFX shaders (libretro glsl-shaders) - MIT, xBRZ also GNU GPL 3.0" to "third_party/licenses/libretro-shaders.txt",
         "PixelMplus - M+ FONT LICENSE" to "app/src/main/assets/fonts/LICENSE-PixelMplus.txt",

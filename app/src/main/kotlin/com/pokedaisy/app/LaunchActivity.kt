@@ -34,7 +34,7 @@ import java.io.RandomAccessFile
  *
  * It's exported (frontends start it by component), so any app can send it a
  * path: it never reads this app's own files or provider, copies at most
- * [RomIntake.MAX_COPY_BYTES], and plays only what has a cart header ([RomIdentity.looksLikeRom]).
+ * [RomIntake.maxCopyBytes], and plays only what has a cart header ([RomIdentity.looksLikeRom]).
  */
 class LaunchActivity : Activity() {
 

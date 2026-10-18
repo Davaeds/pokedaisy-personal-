@@ -347,6 +347,21 @@ val SoulGoldPartyPalette = FireRedPartyPalette.copy(
 )
 
 /**
+ * HeartGold / SoulSilver (headless, their party screen on the player's saves, a slot fainted by zeroing its HP): green
+ * rounded slots in a dark green line with a light green edge, the cursor's brighter green in a red line; fainted slots
+ * orange-red, brighter orange under the cursor; white names on a dark grey shadow, the HP bar's two greens.
+ */
+val HeartGoldPartyPalette = FireRedPartyPalette.copy(
+    normal = PartySlotColors(Color(0xFF004900), Color(0xFF69DB71), Color(0xFF009238), Color(0xFF006920)),
+    selected = PartySlotColors(Color(0xFFFB2020), Color(0xFF79F382), Color(0xFF30DB51), Color(0xFF10AA41)),
+    fainted = PartySlotColors(Color(0xFF490000), Color(0xFFF37900), Color(0xFFD33810), Color(0xFF821000)),
+    selectedFainted = PartySlotColors(Color(0xFFFB2020), Color(0xFFFBAA41), Color(0xFFFB7900), Color(0xFFFB4100)),
+    text = Color(0xFFFBFBFB), textShadow = Color(0xFF282828),
+    hpFrame = Color(0xFF414141), hpInner = Color(0xFFFBFBFB),
+    hpGreen = HpBarColors(Color(0xFF61FB61), Color(0xFF18C320)),
+)
+
+/**
  * Sword and Shield Ultimate Plus (headless, its CFRU party grid with a selected, a fainted and
  * empty slots): charcoal boxes in a black line with a cyan edge, the cursor's a little bluer in a
  * white edge; fainted slots dark red with a deeper diagonal band in a pink edge, bright pink under
@@ -486,6 +501,7 @@ fun partyPaletteFor(game: GameKind): PartyPalette = when (game) {
     GameKind.IMPERIUM -> ImperiumPartyPalette
     GameKind.SWORD_SHIELD -> SwordShieldPartyPalette
     GameKind.MARIOMON -> MariomonPartyPalette
+    GameKind.HEARTGOLD, GameKind.SOULSILVER -> HeartGoldPartyPalette
     // Celia's and Too Many Types 2's slots are FireRed's own colors (only TMT2's backdrop differs).
     else -> FireRedPartyPalette
 }
@@ -607,7 +623,10 @@ internal val HpLetters = listOf(
  * [GbaPartySlot] stretches the real one.
  */
 private class SlotGeometry(w: Float, h: Float) {
-    val u = max(2, floor(min(w / 86f, h / 57f)).toInt())
+    /** Screen pixels per slot pixel before rounding down: the text goes by it ([u] alone shrank it a whole step when a
+     * slot came out just short of the next pixel - a DS game's companion over its button bar). */
+    val scale = min(w / 86f, h / 57f)
+    val u = max(2, floor(scale).toInt())
     val fx = 8f * u
     val fy = 6f * u
     val fw = floor((w - fx - 2 * u) / u) * u
@@ -654,7 +673,7 @@ private fun PartySlot(palette: PartyPalette, mon: MonView?, selected: Boolean, o
         if (mon == null) return@BoxWithConstraints
 
         // Pixel Operator's caps are 9 font pixels to the game font's 7: 3/4 of a slot pixel keeps them in proportion.
-        val m = slotTextMetrics(density, max(1, (u * 0.75f).roundToInt()))
+        val m = slotTextMetrics(density, max(1, (max(u.toFloat(), g.scale) * 0.75f).roundToInt()))
         // A game font (Yellow's, drawn condensed) sets the name and level larger: a slot pixel per font pixel.
         val nameM = if (com.pokedaisy.app.companion.ui.theme.LocalGameFont.current != null) slotTextMetrics(density, max(1, u)) else m
         val chipText = slotTextMetrics(density, max(1, (u * 0.6f).roundToInt()))

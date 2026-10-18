@@ -84,7 +84,8 @@ class SiteDataExportTest {
             .sortedWith(compareBy({ it.second }, { it.third }))
             .partition { it.second in inProgressGames }
         val gameBoy = if (TelemetrySampler.GAME_BOY_SUPPORT) TelemetrySampler.SUPPORTED_GB_SHA1S.sorted() else emptyList()
-        val titles = GameTitles.BY_SHA1.filterKeys { it !in hackSha1s && it !in gameBoy }.toSortedMap()
+        // DS carts stay off the site while DS is behind its feature flag (the site lists only what the APK plays).
+        val titles = GameTitles.BY_SHA1.filterKeys { it !in hackSha1s && it !in gameBoy && it !in GameTitles.NDS_SHA1S }.toSortedMap()
 
         return buildString {
             append("{\n")

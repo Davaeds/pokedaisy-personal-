@@ -24,11 +24,29 @@ object RomIdentity {
     fun isGameBoy(rom: File): Boolean =
         RomArchive.readAt(rom, 0x104L, 4)?.contentEquals(GB_LOGO_START) == true
 
-    /** A GBA cart header (the fixed 0x96 at 0xB2, which the BIOS checks) or, with Game Boy on,
-     * a GB one - for an archive, the ROM inside. What the frontend entry point insists on. */
+    /** A Game Boy Color-only cart (header byte 0x143 = 0xC0: Crystal). A cart that also runs on the original Game Boy
+     * (0x80: Yellow, Gold, Silver) isn't: the library calls those GB. */
+    fun isGameBoyColor(rom: File): Boolean =
+        RomArchive.readAt(rom, 0x143L, 1)?.firstOrNull()?.let { it.toInt() and 0xFF == 0xC0 } == true
+
+    /** A Nintendo DS cart: the header's CRC16 of its Nintendo logo at 0x15C is CF56 on every one (pk_nds_is_rom). */
+    fun isNds(rom: File): Boolean =
+        RomArchive.readAt(rom, 0x15CL, 2)?.let { it.size == 2 && it[0] == 0x56.toByte() && it[1] == 0xCF.toByte() } == true
+
+    /** A DS cart's 4-char game code at 0x0C (`CPUE`: Platinum) - [gameCode]'s place on a DS header. */
+    fun ndsGameCode(rom: File): String? =
+        RomArchive.readAt(rom, 0x0CL, 4)?.takeIf { it.size == 4 }?.let { String(it, Charsets.US_ASCII) }
+
+    /** A DS cart's revision byte (0x1E: Platinum USA is 1). */
+    fun ndsRevision(rom: File): Int? =
+        RomArchive.readAt(rom, 0x1EL, 1)?.firstOrNull()?.let { it.toInt() and 0xFF }
+
+    /** A GBA cart header (the fixed 0x96 at 0xB2, which the BIOS checks) or, with Game Boy / DS on, a GB / DS
+     * one - for an archive, the ROM inside. What the frontend entry point insists on. */
     fun looksLikeRom(rom: File): Boolean =
         RomArchive.readAt(rom, 0xB2L, 1)?.firstOrNull() == 0x96.toByte() ||
-            (com.pokedaisy.app.companion.data.TelemetrySampler.GAME_BOY_SUPPORT && isGameBoy(rom))
+            (com.pokedaisy.app.companion.data.TelemetrySampler.GAME_BOY_SUPPORT && isGameBoy(rom)) ||
+            (com.pokedaisy.app.companion.data.TelemetrySampler.NDS_SUPPORT && isNds(rom))
 
     private val GB_LOGO_START = byteArrayOf(0xCE.toByte(), 0xED.toByte(), 0x66, 0x66)
 

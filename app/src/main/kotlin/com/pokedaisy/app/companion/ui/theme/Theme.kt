@@ -414,6 +414,8 @@ private fun backdropColors(game: GameKind): IntArray? = when (game) {
     // Sword and Shield Ultimate Plus' party grid until its own cell (RomArt.SWSH_BACKDROP) is there:
     // red, its darker red accents (its grid lines left out).
     GameKind.SWORD_SHIELD -> intArrayOf(0xFFCE3131.toInt(), 0xFFCE3131.toInt(), 0xFF9C2121.toInt())
+    // HeartGold / SoulSilver's party screen: teal behind its Poké Ball, a deeper teal below.
+    GameKind.HEARTGOLD, GameKind.SOULSILVER -> intArrayOf(0xFF8ADBDB.toInt(), 0xFF69CBCB.toInt(), 0xFF38B2BA.toInt())
     else -> null
 }
 

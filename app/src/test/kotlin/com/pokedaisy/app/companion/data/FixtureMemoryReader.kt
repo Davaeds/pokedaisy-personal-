@@ -52,6 +52,10 @@ class FixtureMemoryReader private constructor(
             fun stream(name: String) = FixtureMemoryReader::class.java.classLoader.getResourceAsStream("fixtures/$key/$name")
             fun read(name: String): ByteArray = stream(name)?.use { it.readBytes() }
                 ?: error("missing test fixture fixtures/$key/$name - run scripts/capture_fixture.sh $key first")
+            if (stream("mainram.bin") != null) {
+                // A DS game's main RAM (nds_dump's dump: 4 MB at 0x02000000, where Gen4Reader reads it).
+                return FixtureMemoryReader(read("mainram.bin"), ByteArray(0))
+            }
             if (stream("wram.bin") != null) {
                 // A Color cart's whole WRAM (mgba_dump's wramx.bin, 8 banks): bank B's D000-DFFF at
                 // (B << 16) | 0xD000, the way the app's native reader takes them (Gen2Reader's wramx).

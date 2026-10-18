@@ -26,7 +26,7 @@ package com.pokedaisy.app.companion.data
 // NativeReader.kt. Heart and Soul and Lazarus now have their own
 // ROM-extracted tables (*Hns.kt / *Lazarus.kt, scripts/gen_expansion_tables.py).
 enum class GameKind { FIRERED, EMERALD, UNBOUND, GAIA, RADICAL_RED, ODYSSEY, HEART_AND_SOUL, LAZARUS, ROWE, EMERALD_ROGUE, AMETHYST, EMERALD_SEAGLASS, CELIA, TMT2, SOULGOLD, YELLOW, GLAZED, IMPERIUM, QUETZAL, ORANGE_ISLANDS, RECHARGED_YELLOW, MARIOMON, SWORD_SHIELD, GS_CHRONICLES, CRYSTAL, CRYSTAL_CLEAR, PRISM,
-    GOLD, SILVER, RED, BLUE, ELITE_REDUX, POLISHED_CRYSTAL }
+    GOLD, SILVER, RED, BLUE, ELITE_REDUX, POLISHED_CRYSTAL, PLATINUM, HEARTGOLD, SOULSILVER }
 
 @Volatile
 var activeGame: GameKind = GameKind.FIRERED
@@ -88,6 +88,13 @@ private inline val faithful get() = activeGen2.polishedFaithful
 private val speciesTypeDataPolishedCrystalFaithful by lazy { speciesTypeDataPolishedCrystal + speciesTypeDataPolishedCrystalFaithfulChanges }
 private val moveDataPolishedCrystalFaithful by lazy { moveDataPolishedCrystal + moveDataPolishedCrystalFaithfulChanges }
 private val itemNamesPolishedCrystalFaithful by lazy { itemNamesPolishedCrystal + itemNamesPolishedCrystalFaithfulChanges }
+// Pokémon Platinum (Nintendo DS, melonDS): Gen 4's own tables from pret/pokeplatinum (gen_gen4_tables.py), by National
+// Dex number; Gen 3's type ids and chart (Gen 4 kept them: the generator checks).
+private inline val platinum get() = activeGame == GameKind.PLATINUM
+// HeartGold / SoulSilver: Platinum's species and moves (the generator checks they're the same), their own items, places
+// and icons (gen_gen4_tables.py heartgold, from pret/pokeheartgold).
+private inline val heartGold get() = activeGame.isHgss
+private inline val gen4 get() = activeGame.isDsGame
 
 /** SoulGold v1.2 runs on v1.1.4's tables (byte for byte the same) but for one TM: its
  * TM75 teaches Agility, not Swords Dance. Set with [activeGame] by the Poller. */
@@ -182,7 +189,7 @@ fun emeraldHackFor(cfg: NativeConfig?): HackText? = when {
  * FireRed-engine hack but the ones that kept FireRed's (FireRed itself carries its title-cased names). */
 val readsRomRegionMap: Boolean get() = when (activeGame) {
     // Recharged Yellow is a rebuild: FireRed 1.0's literal pools RomRegionMap follows aren't its code.
-    GameKind.YELLOW, GameKind.RED, GameKind.BLUE, GameKind.RECHARGED_YELLOW -> false
+    GameKind.YELLOW, GameKind.RED, GameKind.BLUE, GameKind.RECHARGED_YELLOW, GameKind.PLATINUM, GameKind.HEARTGOLD, GameKind.SOULSILVER -> false
     GameKind.FIRERED -> runningFireRedHack?.ownRegionMap == true
     else -> true
 }
@@ -225,6 +232,7 @@ private val typeNamesOdyssey: Map<Int, String> by lazy { typeNames + (9 to "Fair
 private val speciesNamesOdysseyMerged: Map<Int, String> by lazy { speciesNames + speciesNamesOdyssey }
 
 val activeSpeciesNames: Map<Int, String> get() = localText?.species ?: when {
+    gen4 -> speciesNamesPlatinum
     yellow -> speciesNamesYellow
     polished -> speciesNamesPolishedCrystal
     prism -> speciesNamesPrism
@@ -255,6 +263,7 @@ val activeSpeciesNames: Map<Int, String> get() = localText?.species ?: when {
     else -> frHack?.speciesMerged ?: speciesNames
 }
 val activeMoveData: Map<Int, MoveInfo> get() = localText?.moveData ?: when {
+    gen4 -> moveDataPlatinum
     yellow -> moveDataYellow
     polished -> if (faithful) moveDataPolishedCrystalFaithful else moveDataPolishedCrystal
     prism -> moveDataPrism
@@ -282,6 +291,8 @@ val activeMoveData: Map<Int, MoveInfo> get() = localText?.moveData ?: when {
     else -> frHack?.movesMerged ?: moveData
 }
 val activeItemNames: Map<Int, String> get() = localText?.items ?: when {
+    heartGold -> itemNamesHeartGold
+    platinum -> itemNamesPlatinum
     yellow -> itemNamesYellow
     polished -> if (faithful) itemNamesPolishedCrystalFaithful else itemNamesPolishedCrystal
     prism -> itemNamesPrism
@@ -311,6 +322,7 @@ val activeItemNames: Map<Int, String> get() = localText?.items ?: when {
     else -> frHack?.itemsMerged ?: itemNames
 }
 val activeSpeciesTypeData: Map<Int, SpeciesTypes> get() = when {
+    gen4 -> speciesTypesPlatinum
     yellow -> speciesTypeDataYellow
     polished -> if (faithful) speciesTypeDataPolishedCrystalFaithful else speciesTypeDataPolishedCrystal
     prism -> speciesTypeDataPrism
@@ -388,6 +400,7 @@ val activeTypeNames: Map<Int, String> get() = when {
     else -> frHack?.typeNamesMerged ?: typeNames
 }
 val activeMapSecData: Map<Int, MapSecInfo> get() = localText?.mapSecData ?: when {
+    gen4 -> emptyMap()   // no region map yet: the place comes from the map header (Telemetry.mapSecName)
     yellow -> mapSecDataYellow
     polished -> mapSecDataPolishedCrystal
     prism -> mapSecDataPrism
@@ -500,6 +513,7 @@ private val regionMapImagesRechargedEmerald = arrayOf("recharged_emerald")
 
 val activeRegionMapImages: Array<String> get() = when {
     redBlue -> arrayOf(Gen1Art.RED_BLUE_TOWN_MAP_NAME)   // Red's / Blue's town map, in their own colours (Gen1Art)
+    gen4 -> emptyArray()   // Sinnoh's map comes from RegionMapModel's own; Johto / Kanto's aren't read yet
     yellow -> arrayOf("yellow")   // its town map, rebuilt from the ROM (Gen1Art)
     polished -> Gen2Art.POLISHED_TOWN_MAPS   // Johto, Kanto and the Orange Islands, from the ROM
     prism -> Gen2Art.PRISM_TOWN_MAPS   // Naljo, Rijon, Johto, Kanto, Sevii, Tunod
@@ -536,6 +550,8 @@ val activeMonSpriteDir: String get() = when {
     redBlue -> Gen1Art.RED_BLUE_ICONS
     yellow -> Gen1Art.YELLOW_ICONS   // its own party icons, rebuilt from the ROM
     polished -> Gen2Art.POLISHED_ICONS
+    platinum -> NdsArt.PLATINUM_ICONS   // the cart's icon archive, rebuilt from it (NdsArt)
+    heartGold -> NdsArt.HEARTGOLD_ICONS
     prism -> Gen2Art.PRISM_ICONS
     crystalClear -> Gen2Art.CRYSTAL_CLEAR_ICONS
     goldSilver -> Gen2Art.GOLD_SILVER_ICONS
@@ -545,6 +561,8 @@ val activeMonSpriteDir: String get() = when {
 val activeItemSpriteDir: String? get() = when {
     unbound -> "items-unbound"
     yellow -> null   // Gen 1 has no item icons
+    heartGold -> NdsArt.HEARTGOLD_ITEMS   // the cart's item_icon.narc, rebuilt from it (NdsArt)
+    platinum -> NdsArt.PLATINUM_ITEMS
     crystal -> null   // nor has Gen 2
     else -> "items"
 }
@@ -585,4 +603,7 @@ fun GameKind.displayName(): String = when (this) {
     GameKind.POLISHED_CRYSTAL -> "Polished Crystal"
     GameKind.GOLD -> "Pokémon Gold"
     GameKind.SILVER -> "Pokémon Silver"
+    GameKind.PLATINUM -> "Pokémon Platinum"
+    GameKind.HEARTGOLD -> "Pokémon HeartGold"
+    GameKind.SOULSILVER -> "Pokémon SoulSilver"
 }

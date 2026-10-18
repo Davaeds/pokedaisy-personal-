@@ -39,15 +39,25 @@ data class MapTiles(val x: Int, val y: Int, val w: Int, val h: Int) {
 /** What's under a tile: its map section and, on FireRed, a dungeon there. */
 data class MapPick(val mapsec: Int, val dungeon: Int)
 
+/** A sprite the game draws over its map ([RegionMapModel.marks]): [asset] (regionmap/<name>.png, 16x16) centred on map
+ * pixel ([x], [y]), or [visitedAsset] once first-arrival flag [visitedFlag] is set; [hiddenUntilVisited] = none before. */
+data class RegionMapMark(val x: Int, val y: Int, val asset: String, val visitedAsset: String, val visitedFlag: Int, val hiddenUntilVisited: Boolean)
+
 /**
  * A game's region maps for the Map tab: the screens ([images], regionmap/<name>.png),
  * the map sections on them ([sections], [MapSecInfo.region] indexes [images])
- * and, where known, each screen's cursor grid ([layouts], by image).
+ * and, where known, each screen's cursor grid ([layouts], by image). Tile (tx, ty) covers map pixels from
+ * ([originX] + tx * [tile], [originY] + ty * [tile]): the GBA maps' 8px tiles from the corner, Platinum's 7px Town Map
+ * blocks from where its grid starts. [marks]: sprites over the map (Platinum's towns, coloured once visited).
  */
 class RegionMapModel(
     val images: Array<String>,
     val sections: Map<Int, MapSecInfo>,
     val layouts: List<RegionLayout?>,
+    val tile: Int = 8,
+    val originX: Int = 0,
+    val originY: Int = 0,
+    val marks: List<RegionMapMark> = emptyList(),
 ) {
     /**
      * The section and dungeon at tile ([tx], [ty]) of image [region]: the grid
@@ -126,6 +136,8 @@ class RegionMapModel(
 
 /** The Map tab's maps for the running game - the same source [lookupLocation] names places from. */
 fun activeRegionMap(): RegionMapModel? {
+    if (activeGame == GameKind.PLATINUM) return platinumTownMap
+    if (activeGame.isHgss) return PokegearMap.model()
     val rom = if (readsRomRegionMap) RomRegionMap.current else null
     if (rom != null) return RegionMapModel(rom.images, rom.sections, rom.layouts)
     if (activeGame == GameKind.ODYSSEY) return null // see lookupLocation
@@ -147,6 +159,28 @@ fun activeRegionMap(): RegionMapModel? {
         else -> emptyList()
     }
     return RegionMapModel(images, activeMapSecData, layouts)
+}
+
+/**
+ * Platinum's Town Map (NdsArt rebuilds its pictures from the cart): its 30 x 30 blocks, 7 pixels each, start at screen
+ * (22, -37) - the game centres a block's sprites on 7 * x + 25, 7 * z - 34 - which is (2, -37) in the picture, cropped
+ * 20 pixels in from the left ([NdsArt.PLATINUM_MAP_CROP]). Its sections are the places (location names), named by the
+ * blocks through the main map matrix; its towns are the fly locations' blocks, grey until first arrived at.
+ */
+private val platinumTownMap: RegionMapModel by lazy {
+    val crop = NdsArt.PLATINUM_MAP_CROP
+    RegionMapModel(
+        images = arrayOf(NdsArt.PLATINUM_MAP),
+        sections = placeNamesPlatinum.mapValues { (_, name) -> MapSecInfo(name, 0, 0, 0, 0, 0) },
+        layouts = listOf(RegionLayout(0, 0, 30, 30, 0xFFFF, listOf(hexBytes(TOWN_MAP_GRID_PLATINUM)), cellBytes = 2)),
+        tile = 7,
+        originX = 22 - crop[0],
+        originY = -37 - crop[1],
+        marks = townMapMarksPlatinum.map {
+            RegionMapMark(it.x - crop[0], it.y - crop[1], NdsArt.platinumBlock(it.shape, 0), NdsArt.platinumBlock(it.shape, 1 + it.palette),
+                it.firstArrival, it.hiddenUntilVisited)
+        },
+    )
 }
 
 /** gMapHeader.mapType values (both decomps' MAP_TYPE_*) whose own position places the player on the map. */

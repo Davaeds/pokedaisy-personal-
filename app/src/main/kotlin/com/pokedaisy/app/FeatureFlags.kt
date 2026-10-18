@@ -24,6 +24,13 @@ object FeatureFlags {
      */
     fun screenScraper(context: Context): Boolean = BuildConfig.FEATURE_SCREENSCRAPER || marker(context, "screenscraper")
 
+    /**
+     * Nintendo DS games (nds/pk_nds.cpp, melonDS): `.nds` files in the library and the frontend entry, played on the
+     * DS core. Off until DS support is ready for players; marker `nds`. Read into [TelemetrySampler.NDS_SUPPORT] when
+     * the process and the library start.
+     */
+    fun nds(context: Context): Boolean = BuildConfig.FEATURE_NDS || marker(context, "nds")
+
     private fun marker(context: Context, name: String): Boolean =
         runCatching { File(File(context.getExternalFilesDir(null) ?: context.filesDir, "features"), name).isFile }.getOrDefault(false)
 }

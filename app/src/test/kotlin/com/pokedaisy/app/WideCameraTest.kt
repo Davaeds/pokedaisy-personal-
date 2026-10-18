@@ -147,4 +147,30 @@ class WideCameraTest {
         assertTrue(w.x + w.w - 120 >= 28)
         assertTrue(w.x > 0)
     }
+
+    @Test fun aDsGameZoomsOutAsFarAsItsMarginsGo() {
+        // 256 x 192 at 5.625: 5 shows too little more, 2 (960 x 540) more than the 752 x 384 the slices cover.
+        val cam = thor().apply { ndsMode(true) }
+        assertArrayEquals(floatArrayOf(5.625f, 4f, 3f), cam.levels(), 0.001f)
+        cam.level = 2
+        val out = cam.run(1.5f)
+        assertEquals(3f, out.scale, 0.001f)
+        assertTrue(out.x >= -248 && out.x + out.w <= 504 && out.y >= -96 && out.y + out.h <= 288)
+    }
+
+    @Test fun aDsGamesLookAroundStopsAtItsMargins() {
+        val cam = thor().apply { ndsMode(true) }
+        cam.level = 1
+        cam.run(1f)
+        cam.stickX = 1f
+        cam.stickY = -1f
+        val w = cam.run(3f, start = 1_100_000_000L)
+        // 4x: 480 x 270, so 136 px of room right and 57 above.
+        assertEquals(504, w.x + w.w)
+        assertEquals(-96, w.y)
+        // A 20:9 phone gets 3x too (740 x 360).
+        assertArrayEquals(floatArrayOf(5.625f, 4f, 3f), WideCamera().apply { viewW = 2220; viewH = 1080; ndsMode(true) }.levels(), 0.001f)
+        cam.ndsMode(false)
+        assertArrayEquals(floatArrayOf(6.75f, 5f, 4f, 3f), cam.levels(), 0.001f)
+    }
 }

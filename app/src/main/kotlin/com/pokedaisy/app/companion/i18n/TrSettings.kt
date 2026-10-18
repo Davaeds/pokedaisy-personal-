@@ -57,6 +57,7 @@ internal val trSettings: Map<String, Tr> = mapOf(
     // In-game switches you flip while playing: encounters, running, cheats.
     "GAMEPLAY" to Tr(ja = "プレイ", fr = "GAMEPLAY", de = "GAMEPLAY", it = "GAMEPLAY", es = "JUGABILIDAD", br = "JOGABILIDADE", pt = "JOGABILIDADE"),
     "CONTROLS" to Tr(ja = "そうさ", fr = "COMMANDES", de = "STEUERUNG", it = "COMANDI", es = "CONTROLES", br = "CONTROLES", pt = "CONTROLOS"),
+    "GAME SCREEN" to Tr(ja = "ゲームがめん", fr = "ÉCRAN DU JEU", de = "SPIELBILD", it = "SCHERMO GIOCO", es = "PANTALLA JUEGO", br = "TELA DO JOGO", pt = "ECRÃ DO JOGO"),
     "COMPANION" to Tr(ja = "コンパニオン", fr = "COMPAGNON", de = "BEGLEITER", it = "COMPAGNO", es = "COMPAÑERO", br = "COMPANHEIRO", pt = "COMPANHEIRO"),
     // SETTINGS > COMPANION with a phone upright (portraitPlaceLabel).
     "AT BOTTOM" to Tr(ja = "したはし", fr = "EN BAS", de = "UNTEN", it = "IN BASSO", es = "ABAJO", br = "EMBAIXO", pt = "EM BAIXO"),

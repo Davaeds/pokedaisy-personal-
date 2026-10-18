@@ -39,7 +39,7 @@ Fast-forward is great for walking around and terrible for scrolling through a me
 
 A few things stay fast in `SMART` on purpose:
 
-- **Battles.** The battle itself stays fast. Only the bag and party screens inside a battle slow down.
+- **Battles.** Attacks, messages and the screens between turns stay fast. While the battle waits for you (picking an action, a move or a target, or in its bag and party screens), it drops to normal speed, so the Pokémon and their boxes move at the game's own pace while you decide.
 - **Shops.** The shop's buy and sell screens stay fast, since the clerk's lines are part of them and would crawl at normal speed.
 - **The START menu and talking to people** stay fast too; they aren't menu screens.
 

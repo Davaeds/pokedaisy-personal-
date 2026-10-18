@@ -27,6 +27,9 @@ object MgbaCore {
         const val DOWN = 1 shl 7
         const val R = 1 shl 8
         const val L = 1 shl 9
+        /** The DS's X / Y (melonDS's key mask bits 10 and 11); a GBA core ignores them. */
+        const val X = 1 shl 10
+        const val Y = 1 shl 11
     }
 
     /** Loads [romPath], attaches [savePath] as persistent SRAM, resets. */
@@ -78,6 +81,13 @@ object MgbaCore {
     const val FIELD_SURF = 64
     /** [FIELD_BIKE] / [FIELD_SURF] come from the game's own player state (FIELD SPEED's BIKE / SURF rows work). */
     const val FIELD_AVATAR = 128
+    /** A DS game's own: the overworld is on screen (its field map runs, nothing over it) - what FfMenuWatch.onField
+     * tells for a GBA game. */
+    const val FIELD_SCREEN = 256
+    /** A DS game's own: a menu screen (party, bag, Pokédex, ...) runs over the field. */
+    const val FIELD_MENU = 512
+    /** A DS game's own: a battle waits for the player's command (FIGHT / BAG / POKéMON / RUN, a move, a target). */
+    const val FIELD_BATTLE_INPUT = 1024
     /** WIDE: the window to draw around the frame from the next frame on ([WideCamera]), in the frame's pixels
      * (its top-left 0, 0); [w] 0 = none. Any thread. */
     external fun pkWideSetView(x: Int, y: Int, w: Int, h: Int)
@@ -131,10 +141,57 @@ object MgbaCore {
     /** 4-char game code from the ROM header (`BPRE`, `BPEE`, …). */
     external fun pkRomCode(): String?
     external fun pkRomSize(): Long
-    /** 0 = GBA, 1 = Game Boy / Color, -1 = no core. */
+    /** [PLATFORM_GBA], [PLATFORM_GB], [PLATFORM_NDS] or -1 (no core). */
     external fun pkPlatform(): Int
+
+    const val PLATFORM_GBA = 0
+    const val PLATFORM_GB = 1
+    const val PLATFORM_NDS = 2
     /** A Game Boy / Color cart's ROM bytes (it's bank-switched, so not on the bus whole); null on GBA. */
     external fun pkRomRead(off: Long, len: Int): ByteArray?
+
+    // --- Nintendo DS (nds/pk_nds.cpp: melonDS) ---
+    // A DS cart goes through the calls above too: [pkVideoBuffer] is its top screen, [pkReadBytes] reads main RAM
+    // (0x02000000) and the cart's ROM file from 0x08000000, [pkSetKeys] takes [Key] plus [Key.X] / [Key.Y].
+
+    /** The DS's bottom (touch) screen, 256 x 192 RGBA like [pkVideoBuffer]; null without a DS. Emu thread, between frames. */
+    external fun pkNdsBottomBuffer(): ByteBuffer?
+
+    /** The stylus on the DS's bottom screen at ([x], [y]) in its pixels, or lifted ([down] false). Any thread. */
+    external fun pkNdsTouch(down: Boolean, x: Int, y: Int)
+
+    /** Whether a DS game's coming frame / the one after are shown (fast-forward shows one of each group): unseen ones
+     * skip their drawing. Emu thread, before [pkRunFrame]. */
+    external fun pkNdsSetDraw(draw: Boolean, drawNext: Boolean)
+
+    /** STEADY FF music for a DS game (nds/pk_nds_music.h): the song the game plays (its BGM id; 0 = none or fading to the
+     * next, -1 = this cart's sound system isn't mapped), a copy of the game that plays on from now at 1x by itself, one
+     * frame (1/60 s) of its audio into [out] (interleaved stereo; returns the shorts written), its fade-out over [frames]
+     * frames, and stopping it. Emu thread, between frames. */
+    external fun pkNdsBgm(): Int
+    /** A song's volume is being faded right now (a copy taken now would stay at that volume). */
+    external fun pkNdsBgmFading(): Boolean
+    external fun pkNdsMusicStart(): Boolean
+    external fun pkNdsMusicRead(out: ShortArray): Int
+    external fun pkNdsMusicFade(frames: Int)
+    external fun pkNdsMusicStop()
+
+    /** A DS game's own functions (nds/pk_nds_call.h): posts [action] (NDS_ACTION_*) for the next frame - 0 when the
+     * field isn't free, else the job's number. Emu thread, between frames. */
+    external fun pkNdsAction(action: Int, a0: Int, a1: Int, a2: Int, a3: Int): Int
+
+    /** Job [seq]'s results once it ran (op i's into [i]; NDS_ACTION_* say which mean what), else null. Emu thread. */
+    external fun pkNdsActionResults(seq: Int): IntArray?
+
+    /** How job [seq] did: 1 ran, 0 still waiting, -1 never will (the field changed under it). Emu thread. */
+    external fun pkNdsActionStatus(seq: Int): Int
+
+    /** PC anywhere: the Pokémon Storage System's menu, as a Pokémon Center PC opens it. */
+    const val NDS_ACTION_PC = 1
+    /** FLY's checks: [1] = the game's FLY error (0 = may fly from here), [1 + n] = fly spot n unlocked. */
+    const val NDS_ACTION_FLY_CHECK = 2
+    /** FLY (slot, map header, x, z): the game's own cut-in, flight and landing. */
+    const val NDS_ACTION_FLY = 3
 
     // --- cheats (pk_cheats.c, see cheats/Cheats.kt) ---
 

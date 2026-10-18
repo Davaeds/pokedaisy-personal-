@@ -16,21 +16,31 @@ import java.io.File
  * detects them with. Anything else (hacks it doesn't know, other games) keeps
  * its file name, tidied by [tidy].
  *
- * Hashing is up to 32 MB per ROM, so [identify] runs off the UI thread and caches
+ * Hashing is up to 32 MB per ROM (128 MB a DS cart), so [identify] runs off the UI thread and caches
  * each file's answer by path + size + modified time (`rom-titles.tsv`); [label]
  * only reads that cache. Order: the player's own RENAME, then this, then the file.
  */
 object GameTitles {
 
-    val BY_SHA1: Map<String, String> by lazy { HAND + RETAIL_PORT_TITLES }
+    val BY_SHA1: Map<String, String> by lazy { RETAIL + HACKS + RETAIL_PORT_TITLES }
 
-    private val HAND: Map<String, String> = mapOf(
+    /** Retail carts (the library's GBA / GB / GBC tag when a game has no cover: [RomCategory]). */
+    /** The DS carts [BY_SHA1] names (behind FeatureFlags.nds: the website leaves them out until DS ships). */
+    internal val NDS_SHA1S = setOf(
+        "0862ec35b24de5c7e2dcb88c9eea0873110d755c", "4fcded0e2713dc03929845de631d0932ea2b5a37", "f8dc38ea20c17541a43b58c5e6d18c1732c7e582",
+    )
+
+    private val RETAIL: Map<String, String> = mapOf(
         // Retail (USA, Europe), every revision: pret's pokefirered / pokeemerald / pokeruby.
         "41cb23d8dccc8ebd7c649cd8fbb58eeace6e2fdc" to "Pokémon FireRed",
         "dd5945db9b930750cb39d00c84da8571feebf417" to "Pokémon FireRed",
         "574fa542ffebb14be69902d1d36f1ec0a4afd71e" to "Pokémon LeafGreen",
         "7862c67bdecbe21d1d69ce082ce34327e1c6ed5e" to "Pokémon LeafGreen",
         "f3ae088181bf583e55daf962a92bb46f4f1d07b7" to "Pokémon Emerald",
+        // Nintendo DS (USA): pret's pokeplatinum (rev 1) / pokeheartgold (both games).
+        "0862ec35b24de5c7e2dcb88c9eea0873110d755c" to "Pokémon Platinum",
+        "4fcded0e2713dc03929845de631d0932ea2b5a37" to "Pokémon HeartGold",
+        "f8dc38ea20c17541a43b58c5e6d18c1732c7e582" to "Pokémon SoulSilver",
         // The other Emeralds, by their own titles (No-Intro's dumps; no decomp builds them).
         "fe1558a3dcb0360ab558969e09b690888b846dd9" to "Pokémon Edición Esmeralda",
         "61c2eb2b380b1a75f0c94b767a2d4c26cd7ce4e3" to "Pokémon Smaragd-Edition",
@@ -43,6 +53,26 @@ object GameTitles {
         "3ccbbd45f8553c36463f13b938e833f652b793e4" to "Pokémon Sapphire",
         "4722efb8cd45772ca32555b98fd3b9719f8e60a9" to "Pokémon Sapphire",
         "89b45fb172e6b55d51fc0e61989775187f6fe63c" to "Pokémon Sapphire",
+        // Game Boy (pret/pokeyellow's roms.sha1).
+        "cc7d03262ebfaf2f06772c1a480c7d9d5f4a38e1" to "Pokémon Yellow",
+        "42f3714eec6eca25200d42461ff08d57c98f6d1d" to "Pokémon Gelbe Edition",
+        "0aceec0ef7aa2ca5aa831554598d91f61a925591" to "Pokémon Version Jaune",
+        "05bb8e99f24d498613930949730afa8024e77d08" to "Pokémon Versione Gialla",
+        "1dc242039218fba50928d1afb66b70565b6b9daf" to "Pokémon Edición Amarilla",
+        // pret/pokered's roms.sha1 (Blue: the build stands in for the cart).
+        "ea9bcae617fdf159b045185467ae58b2e4a48b9a" to "Pokémon Red",
+        "d7037c83e1ae5b39bde3c30787637ba1d4c48ce2" to "Pokémon Blue",
+        // Game Boy Color (pret/pokecrystal's roms.sha1): rev 0, rev 1, Australia.
+        "f4cd194bdee0d04ca4eac29e09b8e4e9d818c133" to "Pokémon Crystal",
+        "f2f52230b536214ef7c9924f483392993e226cfb" to "Pokémon Crystal",
+        "a0fc810f1d4e124434f7be2c989ab5b5892ddf36" to "Pokémon Crystal",
+        // pret/pokegold's roms.sha1.
+        "d8b8a3600a465308c9953dfa04f0081c05bdcb94" to "Pokémon Gold",
+        "49b163f7e57702bc939d642a18f591de55d92dae" to "Pokémon Silver",
+    )
+
+    /** Hacks (and the Game Boy ones): the library's HACK tag. */
+    private val HACKS: Map<String, String> = mapOf(
         // Hacks - the versions Poller.kt's *_SHA1 constants pin.
         "b4776b82a4c7915d0fadeaa27e013523f99dfd94" to "Pokémon Unbound",
         "d5b1e77975fcda831e0e9a7b527906bf3f40ecd0" to "Pokémon Gaia",
@@ -102,22 +132,6 @@ object GameTitles {
         "831fe0f97301f17b24a9cd4a64ef0520835c4dde" to "Super Mariomon",
         "06e79d12afa578db97c23c1f7ba771fe2f8fe905" to "Super Mariomon",
         "25f8840ecb58e584edf18ffde35f845e94f3f17c" to "Pokémon GS Chronicles",
-        // Game Boy (pret/pokeyellow's roms.sha1).
-        "cc7d03262ebfaf2f06772c1a480c7d9d5f4a38e1" to "Pokémon Yellow",
-        "42f3714eec6eca25200d42461ff08d57c98f6d1d" to "Pokémon Gelbe Edition",
-        "0aceec0ef7aa2ca5aa831554598d91f61a925591" to "Pokémon Version Jaune",
-        "05bb8e99f24d498613930949730afa8024e77d08" to "Pokémon Versione Gialla",
-        "1dc242039218fba50928d1afb66b70565b6b9daf" to "Pokémon Edición Amarilla",
-        // pret/pokered's roms.sha1 (Blue: the build stands in for the cart).
-        "ea9bcae617fdf159b045185467ae58b2e4a48b9a" to "Pokémon Red",
-        "d7037c83e1ae5b39bde3c30787637ba1d4c48ce2" to "Pokémon Blue",
-        // Game Boy Color (pret/pokecrystal's roms.sha1): rev 0, rev 1, Australia.
-        "f4cd194bdee0d04ca4eac29e09b8e4e9d818c133" to "Pokémon Crystal",
-        "f2f52230b536214ef7c9924f483392993e226cfb" to "Pokémon Crystal",
-        "a0fc810f1d4e124434f7be2c989ab5b5892ddf36" to "Pokémon Crystal",
-        // pret/pokegold's roms.sha1.
-        "d8b8a3600a465308c9953dfa04f0081c05bdcb94" to "Pokémon Gold",
-        "49b163f7e57702bc939d642a18f591de55d92dae" to "Pokémon Silver",
         // Crystal Clear: v2.5.11 and v2.6.0, each in Standard Colors and Color Filter.
         "a1c4da6b0057c98fe4ebea45d6812a484fc69abd" to "Pokémon Crystal Clear",
         "6fc677bf7a9db103cb9ee11ac08d26782e69ae41" to "Pokémon Crystal Clear",
@@ -144,6 +158,9 @@ object GameTitles {
         "c0a2c70d73ce68830a891ddd292300c90766acdd" to "Pokémon Polished Crystal",
     )
 
+    /** DS carts worth hashing (128 MB each, once per file): the DS games above. */
+    private val NDS_CODES = setOf("CPUE", "IPKE", "IPGE")
+
     /** Only these games' ROMs (and Game Boy carts) are worth hashing: every entry above is one of them. */
     private val CODES = setOf("BPRE", "BPGE", "BPEE", "AXVE", "AXPE") + EMERALD_LOCALIZED_CODES +
         RETAIL_PORT_CODE_TITLES.keys + TelemetrySampler.HACK_GAME_CODES
@@ -160,6 +177,20 @@ object GameTitles {
     fun title(context: Context, rom: File): String? =
         cache(context)[rom.absolutePath]?.takeIf { it.matches(rom) }?.title
 
+    /** What kind of game [rom] is, if [identify] has looked at this exact file. Cheap. */
+    fun category(context: Context, rom: File): RomCategory? =
+        cache(context)[rom.absolutePath]?.takeIf { it.matches(rom) }?.category
+
+    /** [rom]'s [RomCategory] (reads its header; [sha1] when [identify] hashed it). A Pokémon cart hashed but known as
+     * neither retail nor a hack is a hack too (an unsupported one); a cart nobody hashes is its platform's. */
+    private fun categoryOf(rom: File, sha1: String?, hashed: Boolean): RomCategory = when {
+        RomIdentity.isNds(rom) -> RomCategory.NDS
+        sha1 != null && sha1 in HACKS -> RomCategory.HACK
+        hashed && sha1 != null && sha1 !in RETAIL && sha1 !in RETAIL_PORT_TITLES -> RomCategory.HACK
+        RomIdentity.isGameBoy(rom) -> if (RomIdentity.isGameBoyColor(rom)) RomCategory.GBC else RomCategory.GB
+        else -> RomCategory.GBA
+    }
+
     /**
      * Recognises every ROM in [roms] not already cached (or changed since). Blocking
      * (hashes) - never on the UI thread. True when a new answer was cached, i.e. a
@@ -170,10 +201,13 @@ object GameTitles {
         val cache = cache(context)
         var changed = false
         for (rom in roms) {
-            if (cache[rom.absolutePath]?.matches(rom) == true || !rom.isFile) continue
-            val worthHashing = RomIdentity.gameCode(rom) in CODES || RomIdentity.isGameBoy(rom)
-            val title = if (worthHashing) RomIdentity.sha1(rom)?.let { BY_SHA1[it] } else null
-            cache[rom.absolutePath] = Entry(rom.length(), rom.lastModified(), title)
+            if (cache[rom.absolutePath]?.let { it.matches(rom) && it.category != null } == true || !rom.isFile) continue
+            val nds = RomIdentity.isNds(rom)
+            val worthHashing = if (nds) RomIdentity.ndsGameCode(rom) in NDS_CODES
+                else RomIdentity.gameCode(rom) in CODES || RomIdentity.isGameBoy(rom)
+            val sha1 = if (worthHashing) RomIdentity.sha1(rom) else null
+            val title = sha1?.let { BY_SHA1[it] }
+            cache[rom.absolutePath] = Entry(rom.length(), rom.lastModified(), title, categoryOf(rom, sha1, worthHashing))
             changed = true
         }
         // Forget files that are gone, so the cache doesn't grow forever.
@@ -198,7 +232,7 @@ object GameTitles {
             .trim().trimEnd('-', ' ')
             .ifEmpty { name }
 
-    private class Entry(val size: Long, val modified: Long, val title: String?) {
+    private class Entry(val size: Long, val modified: Long, val title: String?, val category: RomCategory?) {
         fun matches(rom: File) = size == rom.length() && modified == rom.lastModified()
     }
 
@@ -212,22 +246,31 @@ object GameTitles {
     /** Which games [BY_SHA1] knew when the cache was written: a file found nameless then may have a name now. */
     private val KNOWN = "#known\t" + Integer.toHexString(BY_SHA1.keys.sorted().hashCode())
 
+    /** How [RomCategory] was decided when the cache was written: a cache from before asks every file again. */
+    private const val CATEGORIES = "#categories\t2"
+
     private fun load(context: Context): MutableMap<String, Entry> {
         val map = java.util.concurrent.ConcurrentHashMap<String, Entry>()
         val f = cacheFile(context)
         if (!f.isFile) return map
         runCatching {
             var stale = true
+            var categoriesStale = true
             f.forEachLine { line ->
                 if (line == KNOWN) stale = false
+                if (line == CATEGORIES) categoriesStale = false
                 val p = line.split('\t')
-                if (p.size != 4) return@forEachLine
+                // A 4-column line is from before categories: no category, so identify() reads it again.
+                if (p.size != 4 && p.size != 5) return@forEachLine
                 val size = p[1].toLongOrNull() ?: return@forEachLine
                 val modified = p[2].toLongOrNull() ?: return@forEachLine
-                map[p[0]] = Entry(size, modified, p[3].ifEmpty { null })
+                val category = p.getOrNull(4)?.let { c -> RomCategory.entries.firstOrNull { it.name == c } }
+                map[p[0]] = Entry(size, modified, p[3].ifEmpty { null }, category)
             }
             // Written before a game was added (an app update): ask the nameless files again.
             if (stale) map.values.removeAll { it.title == null }
+            // Categories decided another way (Yellow was GBC once): every file's is asked again.
+            if (categoriesStale) map.replaceAll { _, e -> Entry(e.size, e.modified, e.title, null) }
         }
         return map
     }
@@ -236,10 +279,13 @@ object GameTitles {
         val f = cacheFile(context)
         val tmp = File(f.parentFile, "${f.name}.tmp")
         runCatching {
-            tmp.writeText(KNOWN + "\n" + entries.entries.joinToString("") { (path, e) ->
-                "$path\t${e.size}\t${e.modified}\t${e.title.orEmpty()}\n"
+            tmp.writeText(KNOWN + "\n" + CATEGORIES + "\n" + entries.entries.joinToString("") { (path, e) ->
+                "$path\t${e.size}\t${e.modified}\t${e.title.orEmpty()}\t${e.category?.name.orEmpty()}\n"
             })
             tmp.renameTo(f)
         }
     }
 }
+
+/** What kind of game a ROM is, for the library's tag when it has no cover art: its platform, or a hack. */
+enum class RomCategory(val label: String) { GB("GB"), GBC("GBC"), GBA("GBA"), NDS("NDS"), HACK("HACK") }

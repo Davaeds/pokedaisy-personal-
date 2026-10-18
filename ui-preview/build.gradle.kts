@@ -73,6 +73,10 @@ tasks.register<JavaExec>("render") {
     systemProperty("rom", (project.findProperty("rom") as String?) ?: "")
     // FireRed / Emerald art is rebuilt from ROMs (see Main.kt's romArt()).
     systemProperty("artRoms", (project.findProperty("artRoms") as String?) ?: "")
+    // -PndsRom=<.nds> -PndsFixture=heartgold: a DS game's real-data shots ($game-real-*): its art rebuilt from the cart
+    // (NdsArt), the snapshot read from that save fixture (app/src/test/resources/fixtures/<name>/mainram.bin).
+    systemProperty("ndsRom", (project.findProperty("ndsRom") as String?) ?: "")
+    systemProperty("ndsFixture", (project.findProperty("ndsFixture") as String?) ?: "")
     systemProperty("decomps", System.getenv("DECOMPS").orEmpty())
     // Asset paths are opened relative to workingDir, so pass the icon dir relative to it.
     val monIcons = (project.findProperty("monIcons") as String?) ?: System.getenv("MON_ICONS").orEmpty()

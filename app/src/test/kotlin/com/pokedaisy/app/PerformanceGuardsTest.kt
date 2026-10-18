@@ -46,7 +46,7 @@ class PerformanceGuardsTest {
             "onPause must unbind the view before stopping the engine",
             onPause.indexOf("view.unbindCoreBlocking()") in 0 until onPause.indexOf("engine.stop"),
         )
-        assertTrue("the activity must wire onCoreStopping to the view's unbind", "onCoreStopping = { view.unbindCoreBlocking() }" in activity)
+        assertTrue("the activity must wire onCoreStopping to the view's unbind", "view.unbindCoreBlocking()" in lambda(activity, "onCoreStopping = {"))
     }
 
     @Test
@@ -61,7 +61,7 @@ class PerformanceGuardsTest {
             "EmulatorEngine must publish right after each pkRunFrame",
             "MgbaCore.pkRunFrame()\n                onFrame?.invoke()" in engine,
         )
-        assertTrue("the activity must wire onFrame to the view's publish", "onFrame = { view.publishFrame() }" in read("PokeDaisyActivity.kt"))
+        assertTrue("the activity must wire onFrame to the view's publish", "view.publishFrame()" in lambda(read("PokeDaisyActivity.kt"), "onFrame = {"))
     }
 
     @Test
@@ -82,5 +82,19 @@ class PerformanceGuardsTest {
         }
         val teardown = jni.substring(jni.indexOf("static void pkTeardown(void) {")).substringBefore("\n}\n")
         assertTrue("pkTeardown must take pk_coreLock for writing", "pthread_rwlock_wrlock(&pk_coreLock)" in teardown)
+    }
+
+    /** The body of the lambda [start] opens in [src] (a DS game also hands its bottom screen over in these). */
+    private fun lambda(src: String, start: String): String {
+        val from = src.indexOf(start)
+        if (from < 0) return ""
+        var depth = 0
+        for (i in from until src.length) {
+            when (src[i]) {
+                '{' -> depth++
+                '}' -> if (--depth == 0) return src.substring(from, i + 1)
+            }
+        }
+        return ""
     }
 }

@@ -75,6 +75,8 @@ interface CompanionSettings {
     /** REWIND on / off ([Prefs.rewind]); hosts without a game leave it off. */
     val rewind: Boolean get() = false
     fun setRewind(on: Boolean) {}
+    /** Whether the running game's core can rewind (not a DS game: its states are megabytes each). */
+    val rewindSupported: Boolean get() = true
 
     /** SETTINGS > TOUCH CONTROLS - see [com.pokedaisy.app.Prefs.touchControlsStyle]. */
     val touchStyle: TouchControlsStyle
@@ -326,8 +328,8 @@ const val MAX_BAR_TABS = 5
  * selectors match by it); the rows translate it where they draw it. */
 enum class FfMode(val label: String) {
     /** Menu screens (party, bag, summary, PC, Pokédex, trainer card...) and the
-     * region map run at 1x; the field, dialogue and battles stay fast - in a
-     * battle only its own bag and party screens slow down ([smartSlows]). */
+     * region map run at 1x; the field, dialogue and battles stay fast - but a
+     * battle waiting for the player's command (its menus, bag, party) runs at 1x ([smartSlows]). */
     SMART(tk("SMART")),
 
     /** Fast everywhere. */

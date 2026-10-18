@@ -226,7 +226,11 @@ class LibraryActivity : ComponentActivity() {
      * (a look in every saves folder), NEW, a cover - worked out once per game per [revision]. A lazy list or grid
      * composes a card again each time it scrolls back into view, and doing this there on the UI thread made the grid
      * stutter (a quarter of its frames late on the Thor, the ROMs on its SD card). Main thread only. */
-    private class CardFacts(val label: String, val hasSave: Boolean, val isNew: Boolean, val hasCover: Boolean)
+    private class CardFacts(
+        val label: String, val hasSave: Boolean, val isNew: Boolean, val hasCover: Boolean,
+        /** What kind of game it is (GameTitles.category), for the cover when there is no art; null until identified. */
+        val category: RomCategory?,
+    )
     private val cardFacts = HashMap<String, CardFacts>()
     private var cardFactsRevision = -1
 
@@ -241,6 +245,7 @@ class LibraryActivity : ComponentActivity() {
                 hasSave = SavesLocation.saveFor(this, prefs, rom).exists(),
                 isNew = RomAdded.isNew(this, rom),
                 hasCover = coverFile(rom).let { it.isFile && it.length() > 0 },
+                category = GameTitles.category(this, rom),
             )
         }
     }
@@ -295,6 +300,7 @@ class LibraryActivity : ComponentActivity() {
 
         // The device's marker can change between visits (FeatureFlags): read before setup builds its steps.
         ScreenScraperClient.enabled = FeatureFlags.screenScraper(this)
+        com.pokedaisy.app.companion.data.TelemetrySampler.NDS_SUPPORT = FeatureFlags.nds(this)
         sort = LibrarySort.of(prefs.librarySort)
         // The second screen (and so SWAP) is the game's media page: ScreenScraper's, off until its flag is on.
         launcher.swapped = prefs.launcherSwapped && ScreenScraperClient.enabled
@@ -849,10 +855,17 @@ class LibraryActivity : ComponentActivity() {
                     filterQuality = FilterQuality.None,
                 )
             } else {
-                Icon(
-                    Icons.Filled.VideogameAsset, contentDescription = null,
-                    tint = OptionColors.muted, modifier = Modifier.size(28.dp),
-                )
+                // No art: the game's kind (GB / GBC / GBA / NDS / HACK) as a little pixel picture, once the background
+                // title pass has looked at the file (GameTitles.identify); the plain icon until then.
+                val category = factsFor(rom).category
+                if (category != null) {
+                    com.pokedaisy.app.companion.ui.CategoryArt(category, Modifier.fillMaxSize())
+                } else {
+                    Icon(
+                        Icons.Filled.VideogameAsset, contentDescription = null,
+                        tint = OptionColors.muted, modifier = Modifier.size(28.dp),
+                    )
+                }
             }
         }
     }

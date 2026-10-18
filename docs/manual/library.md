@@ -112,6 +112,8 @@ Covers come from two free services, and you need your own free key for each one 
 
 Tap `GET KEY` next to either one to open the page where your key is, copy it, paste it in the box and tap `SAVE`. PokeDaisy fetches a cover for each game once and keeps it on the device. `REPLACE ALL` fetches fresh covers for every game, replacing the ones you have (including ones you picked yourself). `CLEAR` removes the keys.
 
+A game with no cover shows what kind of game it is instead, in pixel letters on its own colour: `GB` (grey) for a Game Boy game, `GBC` (yellow) for a Game Boy Color only one, `GBA` (purple) for a Game Boy Advance game, or `HACK` (red) for a ROM hack.
+
 ### Pick another cover
 
 Don't like the cover a game got? Open its menu and tap `REPLACE COVER`. The picker shows every icon it found for the game; tap one to use it. If the game isn't found under its name, type another name in the search box and tap `SEARCH`. You need a key saved for the picker to find anything.

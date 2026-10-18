@@ -146,13 +146,13 @@ enum class WildMethod { GRASS, SURF, ROCK_SMASH, OLD_ROD, GOOD_ROD, SUPER_ROD }
 data class CatchSpot(val mapsec: Int, val method: WildMethod, val minLevel: Int, val maxLevel: Int, val percent: Int, val times: Int)
 
 /** What the game's tables give the DEX page, per section (without reading the ROM). */
-fun hasEvolutions(t: PokedexTables): Boolean = !t.gameBoy && when (val l = t.evoLayout) {
+fun hasEvolutions(t: PokedexTables): Boolean = t.gen4 != null || !t.cartDex && when (val l = t.evoLayout) {
     null -> t.evolutions != 0L
     else -> l.table != 0L || (t.expansion?.evolutionsOff ?: -1) >= 0
 }
 
 fun hasLearnsets(t: PokedexTables, g: GuideTables?): Boolean =
-    !t.gameBoy && ((t.expansion?.levelUpOff ?: -1) >= 0 || t.levelUpLearnsets != 0L || (g?.learnsets ?: 0L) != 0L)
+    t.gen4 != null || !t.cartDex && ((t.expansion?.levelUpOff ?: -1) >= 0 || t.levelUpLearnsets != 0L || (g?.learnsets ?: 0L) != 0L)
 
 fun hasCatchSpots(g: GuideTables?): Boolean = g != null && g.wildHeaders != 0L
 
@@ -200,13 +200,14 @@ object DexDetails {
         if (evoFor == t) return evoTable
         synchronized(this) {
             if (evoFor == t) return evoTable
-            val table = runCatching { readEvolutions(t) }
+            val table = runCatching { t.gen4?.let { Gen4Dex.evolutions(it) } ?: readEvolutions(t) }
                 .onFailure { android.util.Log.w("pokedaisy", "evolutions failed", it) }
                 .getOrNull()
                 ?.takeIf { it.size >= 10 && it.values.flatten().all { l -> l.to in 1 until t.speciesCount } }
             parents = table?.values?.flatten()?.groupBy { it.to }
             evoTable = table
-            evoFor = t
+            // A DS cart's pages may still be on their way (the first run reads them in the background): asked again.
+            if (table != null || t.gen4 == null) evoFor = t
             return table
         }
     }
@@ -507,6 +508,7 @@ object DexDetails {
     }
 
     private fun readLevelUp(t: PokedexTables, g: GuideTables?, species: Int): List<LevelMove>? {
+        t.gen4?.let { return Gen4Dex.levelUp(it, species) }
         val x = t.expansion
         fun words(ptr: Long): List<LevelMove> {
             if (!Gfx.inRom(ptr)) return emptyList()
@@ -538,9 +540,10 @@ object DexDetails {
     /** TMs / HMs (vanilla: "TM06" labels) or expansion's teachable list (TMs, HMs and tutors,
      * unlabelled, by name); null = this game's aren't read. */
     fun teachable(t: PokedexTables, g: GuideTables?, species: Int): List<TeachMove>? {
-        if (species <= 0 || t.gameBoy) return null
+        if (species <= 0 || t.cartDex && t.gen4 == null) return null
         syncMoves(t, g)
         teach[species]?.let { return it }
+        t.gen4?.let { return Gen4Dex.machines(it, species)?.also { m -> teach[species] = m } }
         return runCatching { readTeachable(t, species) }
             .onFailure { android.util.Log.w("pokedaisy", "teachable $species failed", it) }
             .getOrNull()?.also { teach[species] = it }
@@ -548,7 +551,7 @@ object DexDetails {
 
     /** Whether [t] reads TMs at all (no ROM read): the page says so when it doesn't. */
     fun hasTeachable(t: PokedexTables): Boolean =
-        !t.gameBoy && ((t.expansion?.teachableOff ?: -1) >= 0 || (t.tmhmLearnsets != 0L && t.tmhmMoves != 0L))
+        t.gen4 != null || !t.cartDex && ((t.expansion?.teachableOff ?: -1) >= 0 || (t.tmhmLearnsets != 0L && t.tmhmMoves != 0L))
 
     private fun readTeachable(t: PokedexTables, species: Int): List<TeachMove>? {
         val x = t.expansion
@@ -570,7 +573,7 @@ object DexDetails {
 
     /** gTMHMMoves: TM01..TM50 then HM01..HM08's moves; null = not read (or not checked) for [t]. */
     fun tmhmMoves(t: PokedexTables): List<Int>? {
-        if (t.gameBoy || t.tmhmMoves == 0L || t.tmhmLearnsets == 0L) return null
+        if (t.cartDex || t.tmhmMoves == 0L || t.tmhmLearnsets == 0L) return null
         // The caches below are [t]'s (keeping the guide tables they were synced with, if [t]'s).
         syncMoves(t, movesFor?.takeIf { it.first == t }?.second)
         tmhm?.let { return it }

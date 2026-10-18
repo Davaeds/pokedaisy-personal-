@@ -25,8 +25,9 @@ import androidx.compose.ui.unit.dp
 import com.pokedaisy.app.companion.ui.theme.AppColors
 import kotlinx.coroutines.launch
 
-/** The game's buttons as the companion's window reads them (through the player's own GAME BUTTONS bindings). */
-enum class MenuKey { UP, DOWN, LEFT, RIGHT, A, B, L, R, START, SELECT }
+/** The game's buttons as the companion's window reads them (through the player's own GAME BUTTONS bindings); X / Y
+ * only for a DS game. */
+enum class MenuKey { UP, DOWN, LEFT, RIGHT, A, B, L, R, START, SELECT, X, Y }
 
 /**
  * The game's buttons for the companion while it's open as a window over the game (one screen, SidePanel):
@@ -40,6 +41,23 @@ class CompanionKeys {
     private class Entry(var enabled: Boolean, var onKey: (MenuKey, Boolean) -> Boolean)
 
     private val entries = mutableListOf<Entry>()
+    private class StickEntry(var enabled: Boolean, var onStick: (Float, Float) -> Boolean)
+    private val sticks = mutableListOf<StickEntry>()
+
+    /** The left stick's position (-1..1 each way, as the pad reports it) to the newest enabled stick handler; false = none
+     * wants it, and it steers as the D-pad does. */
+    fun stick(x: Float, y: Float): Boolean = sticks.asReversed().any { it.enabled && it.onStick(x, y) }
+
+    @Composable
+    internal fun StickHandler(enabled: Boolean, onStick: (Float, Float) -> Boolean) {
+        val current by rememberUpdatedState(onStick)
+        val entry = remember { StickEntry(enabled) { x, y -> current(x, y) } }
+        SideEffect { entry.enabled = enabled }
+        DisposableEffect(entry) {
+            sticks += entry
+            onDispose { sticks -= entry }
+        }
+    }
 
     /** Hands [key] to the newest enabled handler that takes it; false = none did. */
     fun key(key: MenuKey, repeat: Boolean = false): Boolean =
@@ -58,6 +76,13 @@ class CompanionKeys {
 }
 
 val LocalCompanionKeys = staticCompositionLocalOf<CompanionKeys?> { null }
+
+/** [onStick] gets the left stick's position while [enabled] (a smooth cursor: HeartGold / SoulSilver's map) instead of
+ * D-pad steps; true = taken. No-op outside the companion's window. */
+@Composable
+fun CompanionStickHandler(enabled: Boolean = true, onStick: (x: Float, y: Float) -> Boolean) {
+    LocalCompanionKeys.current?.StickHandler(enabled, onStick)
+}
 
 /** [onKey] gets the window's keys while [enabled] and no newer handler took them; true = taken. No-op outside it. */
 @Composable

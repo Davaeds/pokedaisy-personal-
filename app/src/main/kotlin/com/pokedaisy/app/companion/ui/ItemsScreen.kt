@@ -1,5 +1,6 @@
 package com.pokedaisy.app.companion.ui
 
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.lerp
 import com.pokedaisy.app.companion.ui.theme.nightSurface
@@ -10,6 +11,9 @@ import com.pokedaisy.app.companion.i18n.tk
 import com.pokedaisy.app.companion.i18n.tr
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.Image
+import kotlin.math.roundToInt
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Box
@@ -34,6 +38,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +50,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -56,6 +64,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -74,7 +83,16 @@ import com.pokedaisy.app.companion.data.POCKET_ITEMS
 import com.pokedaisy.app.companion.data.POCKET_KEY_ITEMS
 import com.pokedaisy.app.companion.data.POCKET_POKE_BALLS
 import com.pokedaisy.app.companion.data.POCKET_TM_HM
+import com.pokedaisy.app.companion.data.POCKET_MEDICINE
+import com.pokedaisy.app.companion.data.POCKET_MAIL
+import com.pokedaisy.app.companion.data.POCKET_BATTLE_ITEMS
+import com.pokedaisy.app.companion.data.NdsArt
+import com.pokedaisy.app.companion.data.lookupMove
+import com.pokedaisy.app.companion.data.tmMovesHeartGold
+import com.pokedaisy.app.companion.data.HEARTGOLD_TM01
 import com.pokedaisy.app.companion.data.activeGame
+import com.pokedaisy.app.companion.data.isHgss
+import com.pokedaisy.app.companion.data.spriteAsset
 import com.pokedaisy.app.companion.data.itemNamesEmeraldGame
 import com.pokedaisy.app.companion.data.itemNamesFireRedGame
 import com.pokedaisy.app.companion.data.runningEmeraldHack
@@ -460,6 +478,48 @@ private val SoulGoldBag = BagPalette(
 )
 
 /**
+ * HeartGold / SoulSilver's bag (headless, the player's saves): white item cells in a grey band and a dark grey line on
+ * pink, dark grey names on a light shadow, the red cursor; the description in a grey box, white on a dark shadow.
+ */
+private val HeartGoldBag = BagPalette(
+    panelLayers = listOf(Color(0xFF515151) to 2, Color(0xFFBABABA) to 2, Color(0xFFDBDBDB) to 1),
+    tabLayerCount = 2,
+    fill = Color(0xFFFBFBFB), divider = Color(0xFFDBDBDB),
+    text = Color(0xFF515151), textShadow = Color(0xFFDBDBDB),
+    tabText = Color(0xFF515151), tabTextShadow = Color(0xFFDBDBDB), tabUnderline = Color(0xFFE30000),
+    descLayers = listOf(Color(0xFF000000) to 1, Color(0xFF717179) to 1), descFill = Color(0xFF92929A),
+    descText = Color(0xFFFBFBFB), descTextShadow = Color(0xFF515959),
+    iconBox = Color(0xFFFBFBFB), iconBoxEdge = Color(0xFF515151),
+    backdrop = Color(0xFFDB82AA) to Color(0xFFCB6992),
+)
+
+/**
+ * HeartGold / SoulSilver's bag takes the open pocket's colours (its touch screen's BG palette per pocket, bag graphics
+ * member 41's colours 4-6): the backdrop, its stripe, and the darkest under the pocket buttons' band.
+ */
+private val HGSS_POCKET_COLORS = listOf(
+    Triple(0xFFDB82AA, 0xFFCB6992, 0xFFBA5179), Triple(0xFFEB8251, 0xFFE37138, 0xFFDB6128),
+    Triple(0xFFE3A238, 0xFFCB8A20, 0xFFBA7108), Triple(0xFF92C330, 0xFF82AA20, 0xFF719218),
+    Triple(0xFF30BA59, 0xFF20A249, 0xFF188230), Triple(0xFF18AAD3, 0xFF1892B2, 0xFF208292),
+    Triple(0xFF4982F3, 0xFF3071E3, 0xFF2059CB), Triple(0xFFA259EB, 0xFF9249DB, 0xFF7938C3),
+).map { (a, b, c) -> Triple(Color(a), Color(b), Color(c)) }
+
+// Flat, as the game's bag is (the stripes were the other games' look).
+private val hgssBags = HGSS_POCKET_COLORS.map { (main, _, _) -> HeartGoldBag.copy(backdrop = main to main) }
+
+/** What HeartGold / SoulSilver's backdrop follows: the open pocket (0-7, the game's order) and the pocket buttons' row -
+ * its top in root pixels and screen pixels per game pixel - for the silver band behind it. [HgssBagBody] sets both. One
+ * per companion ([LocalHgssBag]): the bottom screen's and the window's are up at once, and a shared one flickered between
+ * their pockets. */
+internal class HgssBagState {
+    var pocket by mutableStateOf(0)
+    var band by mutableStateOf<Pair<Float, Float>?>(null)
+}
+
+/** This companion's [HgssBagState] (CompanionScreen provides it). */
+internal val LocalHgssBag = androidx.compose.runtime.staticCompositionLocalOf<HgssBagState?> { null }
+
+/**
  * Pokémon Yellow (Game Boy): Gen 1's ITEM window - black text on white inside the
  * text box's double line (black, white, black), no shadows, no row lines.
  */
@@ -532,7 +592,8 @@ fun hasItemsBackdrop(game: GameKind): Boolean = bagPaletteFor(game).backdrop != 
  */
 @Composable
 fun ItemsBackdrop(game: GameKind, modifier: Modifier = Modifier) {
-    val pal = bagPaletteFor(game)
+    val hgss = LocalHgssBag.current
+    val pal = bagPaletteFor(game, hgss?.pocket ?: 0)
     val (a, b) = pal.backdrop ?: return
     val m = rememberGbaTextMetrics()
     val context = LocalContext.current
@@ -540,7 +601,16 @@ fun ItemsBackdrop(game: GameKind, modifier: Modifier = Modifier) {
     val art = remember(pal.backdropArt, gen) { pal.backdropArt?.let { GameArt.get(context, it)?.asImageBitmap() } }
     // Dark mode: an image backdrop (SoulGold's night sky) under the game backdrops' scrim; stripes come pre-dimmed.
     val scrim = OptionColors.backdropScrim
-    Canvas(modifier.then(if (scrim > 0f && art != null) Modifier.drawWithContent { drawContent(); drawRect(NIGHT.copy(alpha = scrim)) } else Modifier)) {
+    // HeartGold / SoulSilver: the band behind the pocket buttons, laid out in root pixels by HgssBagBody.
+    var origin by remember { mutableStateOf(0f) }
+    val band = hgss?.band?.takeIf { game.isHgss }
+    val shades = HGSS_POCKET_COLORS.getOrNull(hgss?.pocket ?: 0)
+    Canvas(
+        modifier
+            .onGloballyPositioned { origin = it.positionInRoot().y }
+            .then(if (scrim > 0f && art != null) Modifier.drawWithContent { drawContent(); drawRect(NIGHT.copy(alpha = scrim)) } else Modifier)
+            .then(if (band != null && shades != null) Modifier.drawWithContent { drawContent(); drawHgssBand(band.first - origin, band.second, pal, shades) } else Modifier),
+    ) {
         if (art != null) {
             // Whole GBA pixels, tiled like the game's wrapping BG layer.
             val w = art.width * m.px
@@ -566,12 +636,30 @@ fun ItemsBackdrop(game: GameKind, modifier: Modifier = Modifier) {
     }
 }
 
-/** Same grouping as the companion backdrop (rememberGameBackground). */
-private fun bagPaletteFor(game: GameKind): BagPalette =
-    // Gen 1's white goes nearly black, like its party backdrop (GameBackdrop).
-    lightBagFor(game).let { if (OptionColors.dark) nightBags.getOrPut(it) { it.night(if (game.isGameBoyGame) 0.9f else OptionColors.backdropScrim) } else it }
+/**
+ * HeartGold / SoulSilver's band behind the bag's pocket buttons (its touch screen, headless): white from the top to the
+ * buttons' middle, then silver (2 light, 12 mid) to 2 under them, a grey line and a dark one, then the
+ * pocket's own two darker lines into its backdrop. [top] = the buttons' top, [k] screen pixels per game pixel.
+ */
+private fun DrawScope.drawHgssBand(top: Float, k: Float, pal: BagPalette, shades: Triple<Color, Color, Color>) {
+    // White from the screen's top, as the game's header.
+    drawRect(pal.fill, Offset.Zero, Size(size.width, top + 12 * k))
+    var y = top + 12 * k
+    fun line(c: Color, px: Int) { drawRect(c, Offset(0f, y), Size(size.width, px * k)); y += px * k }
+    line(pal.panelLayers[2].first, 2)
+    line(pal.panelLayers[1].first, 12)
+    line(Color(0xFF8A8A8A).let { if (OptionColors.dark) it.copy(alpha = 0.6f) else it }, 2)
+    line(pal.panelLayers[0].first, 2)
+    line(shades.third, 2)
+    line(shades.second, 2)
+}
 
-private fun lightBagFor(game: GameKind): BagPalette = when (game) {
+/** Same grouping as the companion backdrop (rememberGameBackground). */
+private fun bagPaletteFor(game: GameKind, hgssPocket: Int = 0): BagPalette =
+    // Gen 1's white goes nearly black, like its party backdrop (GameBackdrop).
+    lightBagFor(game, hgssPocket).let { if (OptionColors.dark) nightBags.getOrPut(it) { it.night(if (game.isGameBoyGame) 0.9f else OptionColors.backdropScrim) } else it }
+
+private fun lightBagFor(game: GameKind, hgssPocket: Int = 0): BagPalette = when (game) {
     GameKind.EMERALD -> EmeraldBag
     GameKind.HEART_AND_SOUL -> HeartAndSoulBag
     GameKind.UNBOUND -> UnboundBag
@@ -593,6 +681,7 @@ private fun lightBagFor(game: GameKind): BagPalette = when (game) {
     GameKind.PRISM -> CrystalBag
     GameKind.POLISHED_CRYSTAL -> PolishedCrystalBag
     GameKind.MARIOMON -> MariomonBag
+    GameKind.HEARTGOLD, GameKind.SOULSILVER -> hgssBags.getOrElse(hgssPocket) { HeartGoldBag }
     // Too Many Types 2's, Glazed's, Imperium's and Quetzal's bags are Emerald's; Gaia's and Celia's are FireRed's.
     // Elite Redux's bag screen is Emerald's too.
     GameKind.TMT2, GameKind.GLAZED, GameKind.IMPERIUM, GameKind.QUETZAL, GameKind.ELITE_REDUX -> EmeraldBag
@@ -625,7 +714,8 @@ fun ItemsScreen(
     // A D-pad's A and a tap mean different things on the selected item (USE / GIVE vs closing it).
     val inputModes = androidx.compose.ui.platform.LocalInputModeManager.current
     val actionFocus = remember { FocusRequester() }
-    val pal = bagPaletteFor(activeGame)
+    val hgssState = LocalHgssBag.current ?: remember { HgssBagState() }
+    val pal = bagPaletteFor(activeGame, hgssState.pocket)
     val caps = gameItemNames(activeGame)
     val shown = items.map { item ->
         val name = caps?.get(item.itemId) ?: item.name
@@ -666,9 +756,13 @@ fun ItemsScreen(
     val hasFavorites = items.any { it.itemId in favorites }
     // Unstarring the last one closes the tab: back to ALL.
     LaunchedEffect(hasFavorites) { if (!hasFavorites && selectedCategory == FAVORITES_TAB) selectedCategory = null }
-    val category = selectedCategory.takeUnless { it == FAVORITES_TAB && !hasFavorites }
+    // HeartGold / SoulSilver: the game's eight pockets, always, opening on ITEMS - no ALL (HgssBagBody).
+    val hgss = activeGame.isHgss
+    val category = (selectedCategory ?: POCKET_ITEMS.takeIf { hgss }).takeUnless { it == FAVORITES_TAB && !hasFavorites }
+        ?: POCKET_ITEMS.takeIf { hgss }
     // A bag of one pocket (Gen 1's single list) needs no tab besides ALL (and FAVORITES).
-    val tabs = listOf<Int?>(null) + listOfNotNull(FAVORITES_TAB.takeIf { hasFavorites }) +
+    val tabs = if (hgss) HGSS_POCKETS + listOfNotNull(FAVORITES_TAB.takeIf { hasFavorites })
+    else listOf<Int?>(null) + listOfNotNull(FAVORITES_TAB.takeIf { hasFavorites }) +
         categoriesPresent.takeIf { it.size > 1 }.orEmpty()
     val capsLabels = capsBagLabels(activeGame)
     val tabLabels = tabs.map { if (capsLabels) capsPocketLabel(it) else titlePocketLabel(it) }
@@ -677,7 +771,7 @@ fun ItemsScreen(
     val filtered = when (category) {
         null -> shown
         FAVORITES_TAB -> shown.filter { it.itemId in favorites }
-        else -> shown.filter { it.pocket == selectedCategory }
+        else -> shown.filter { it.pocket == category }
     }
     val sorted: List<ItemView> = when (sort) {
         // A stable sort: starred items keep the bag's order among themselves, as do the rest.
@@ -763,6 +857,28 @@ fun ItemsScreen(
     }
 
     Box(modifier = modifier) {
+        // HeartGold / SoulSilver: the game's own bag layout - the pockets as icon tabs along the top, the items as cards in
+        // two columns (HgssBagBody).
+        if (hgss) HgssBagBody(
+            tabs = tabs, category = category, onTab = { selectedCategory = it; selectedItem = null },
+            items = sorted, keys = keys, empty = if (items.isEmpty()) tr("No items") else tr("No items in this pocket"),
+            selectedKey = selectedKey.takeIf { selectedItem != null }, favorites = favorites,
+            marked = { itemUse?.marked(it) == true }, pal = pal, m = m,
+            sortLabel = sortLabel(sort), onSort = { sort = ItemSort.entries[(sort.ordinal + 1) % ItemSort.entries.size] },
+            onPc = itemUse?.takeIf { it.canPc() }?.let { use ->
+                { use.openPc { o -> if (o.result != ItemUseResult.USED) notice = ItemNotice(0, itemUseMessage(o), ok = false) } }
+            },
+            bottomSpace = if (selectedItem != null) descHeight + u * 2 else 0.dp,
+            state = hgssState,
+        ) { item, key ->
+            if (selectedItem != null && key == selectedKey) {
+                if (inputModes.inputMode == androidx.compose.ui.input.InputMode.Keyboard) runCatching { actionFocus.requestFocus() }
+                else selectedItem = null
+            } else {
+                selectedItem = item
+                selectedKey = key
+            }
+        } else {
         // List window, starting where the folder tabs end.
         Column(Modifier.fillMaxSize().padding(start = tabWidth)) {
             Box(
@@ -852,6 +968,7 @@ fun ItemsScreen(
                 }
             }
         }
+        }
 
         // Full width of the tab, over the bottom of the folder tabs / sort
         // button when it has to be.
@@ -881,6 +998,265 @@ fun ItemsScreen(
         }
     }
 }
+
+/** HeartGold / SoulSilver's eight pockets in their bag's order (its pocket buttons, left to right: [NdsArt.heartGoldPocket]'s
+ * 0-7). */
+private val HGSS_POCKETS = listOf(
+    POCKET_ITEMS, POCKET_MEDICINE, POCKET_POKE_BALLS, POCKET_TM_HM, POCKET_BERRIES, POCKET_MAIL, POCKET_BATTLE_ITEMS, POCKET_KEY_ITEMS,
+)
+
+/** Before a cart has given its art: each pocket's own kind of item, from the item icons. */
+private fun hgssPocketItem(pocket: Int?): Int? = when (pocket) {
+    POCKET_ITEMS -> 92          // NUGGET
+    POCKET_MEDICINE -> 17       // POTION
+    POCKET_POKE_BALLS -> 4      // POKé BALL
+    POCKET_TM_HM -> 328         // TM01
+    POCKET_BERRIES -> 155       // ORAN BERRY
+    POCKET_MAIL -> 137          // GRASS MAIL
+    POCKET_BATTLE_ITEMS -> 57   // X ATTACK
+    POCKET_KEY_ITEMS -> 450     // BICYCLE
+    else -> null
+}
+
+/** One of the bag's pocket buttons from the cart ([NdsArt.heartGoldPocket]), [open] or not; null before the art is in. */
+@Composable
+private fun hgssPocketArt(pocket: Int, open: Boolean): android.graphics.Bitmap? {
+    val context = LocalContext.current
+    val gen = rememberArtGeneration()
+    return remember(pocket, open, gen) { GameArt.get(context, "${NdsArt.heartGoldPocket(pocket, open)}.png") }
+}
+
+/** The FAVORITES button in the pocket buttons' own look: a pocket button ([open] or not) with its icon painted out by
+ * the fill each row has at its left edge, cached per button. */
+private val hgssBlankButtons = java.util.concurrent.ConcurrentHashMap<android.graphics.Bitmap, android.graphics.Bitmap>()
+
+private fun hgssBlankButton(button: android.graphics.Bitmap): android.graphics.Bitmap = hgssBlankButtons.getOrPut(button) {
+    val w = button.width
+    val px = IntArray(w * button.height)
+    button.getPixels(px, 0, w, 0, 0, w, button.height)
+    val inset = 3
+    for (y in inset until button.height - inset) {
+        val fill = px[y * w + inset]
+        for (x in inset until w - inset) px[y * w + x] = fill
+    }
+    android.graphics.Bitmap.createBitmap(px, w, button.height, android.graphics.Bitmap.Config.ARGB_8888)
+}
+
+/**
+ * HeartGold / SoulSilver's bag (its touch screen, headless): the eight pocket buttons in a row along the top - the
+ * cart's own, the open one lit - then the pocket's items as cards in two columns (the item's icon, its name and "×count"
+ * under it, the open one in a red line), SORT and PC along the bottom where the game has its page number and CANCEL.
+ * FAVORITES (a star in the buttons' look) closes the row while the bag holds a starred item; there's no ALL.
+ */
+@Composable
+private fun HgssBagBody(
+    tabs: List<Int?>, category: Int?, onTab: (Int?) -> Unit,
+    items: List<ItemView>, keys: List<String>, empty: String,
+    selectedKey: String?, favorites: Set<Int>, marked: (Int) -> Boolean,
+    pal: BagPalette, m: GbaTextMetrics,
+    sortLabel: String, onSort: () -> Unit, onPc: (() -> Unit)?,
+    bottomSpace: Dp,
+    state: HgssBagState,
+    onClick: (ItemView, String) -> Unit,
+) {
+    val u = m.u
+    val small = rememberGbaTextMetrics(0.8f)
+    val density = LocalDensity.current
+    // The backdrop follows the open pocket and draws the band behind the buttons; both go when the bag does.
+    val gamePocket = HGSS_POCKETS.indexOf(category)
+    SideEffect { if (gamePocket >= 0) state.pocket = gamePocket }
+    DisposableEffect(state) { onDispose { state.band = null } }
+    Column(Modifier.fillMaxSize()) {
+        // The game's 24-pixel buttons at as many whole screen pixels per game pixel as leave 2 pixels between them,
+        // spread across the band with a small margin at its ends.
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val slotPx = with(density) { maxWidth.toPx() } / maxOf(tabs.size, 8)
+        val buttonPx = maxOf(1, (slotPx / 26).toInt()) * 24
+        val button = with(density) { buttonPx.toDp() }
+        val k = buttonPx / 24f
+        Column {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = with(density) { (4 * k).toDp() }, start = with(density) { (3 * k).toDp() }, end = with(density) { (3 * k).toDp() })
+                .onGloballyPositioned { state.band = it.positionInRoot().y to k },
+        ) {
+            for (t in tabs) {
+                val selected = category == t
+                val noRipple = remember { MutableInteractionSource() }
+                val focused by noRipple.collectIsFocusedAsState()
+                val gamePocket = HGSS_POCKETS.indexOf(t)
+                val art = hgssPocketArt(if (gamePocket >= 0) gamePocket else 0, selected)
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(button)
+                        .gbaFocusRing(focused, PixelRoundedShape(button / 6))
+                        .soundClickable(interactionSource = noRipple, indication = null) { onTab(t) }
+                        // Pictures only: the pocket's name for TalkBack (and the previews' taps).
+                        .semantics { contentDescription = titlePocketLabel(t) },
+                ) {
+                    when {
+                        art != null -> Image(
+                            bitmap = (if (gamePocket >= 0) art else hgssBlankButton(art)).asImageBitmap(), contentDescription = null,
+                            filterQuality = FilterQuality.None, modifier = Modifier.fillMaxSize(),
+                        )
+                        // No cart art yet: a drawn button, the item standing in for the pocket's icon.
+                        else -> Box(
+                            Modifier.fillMaxSize().drawBehind {
+                                val px = u.toPx()
+                                drawPixelRoundRect(if (selected) pal.tabUnderline else pal.panelLayers[0].first, radius = 4 * px)
+                                drawPixelRoundRect(
+                                    if (selected) pal.fill else pal.panelLayers.last().first,
+                                    Offset(2 * px, 2 * px), Size(size.width - 4 * px, size.height - 4 * px), radius = 3 * px,
+                                )
+                            },
+                        )
+                    }
+                    if (t == FAVORITES_TAB) {
+                        // The star about as big as the pockets' icons (~15 of the button's 24 pixels), whole screen pixels.
+                        val cell = with(density) { maxOf(1, buttonPx * 15 / 24 / 10).toDp() }
+                        ShadowedPixelIcon(PixelIcons.star, OptionColors.favorite, pal.textShadow, m, cell = cell)
+                    } else if (art == null) {
+                        hgssPocketItem(t)?.let { ItemIcon(spriteAsset("items", it), size = button * 5 / 6) }
+                    }
+                }
+            }
+        }
+        // Past the band (2 pixels of silver, its two lines and the pocket's two) and a gap.
+        Spacer(Modifier.height(with(density) { (14 * k).toDp() }))
+        }
+        }
+        if (items.isEmpty()) {
+            GbaText(empty, pal.text, pal.textShadow, m, modifier = Modifier.weight(1f).padding(start = u * 8, top = u * 4))
+        } else androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+            horizontalArrangement = Arrangement.spacedBy(u * 4),
+            verticalArrangement = Arrangement.spacedBy(u * 4),
+            modifier = Modifier.fillMaxWidth().weight(1f),
+        ) {
+            items(items.size, key = { keys[it] }) { i ->
+                val item = items[i]
+                val key = keys[i]
+                HgssItemCard(item, pal, m, small, selected = key == selectedKey, favorite = item.itemId in favorites,
+                    marked = marked(item.itemId), start = selectedKey == null && i == 0) { onClick(item, key) }
+            }
+        }
+        // The game's bottom row (page number, CANCEL): the bag's order and the PC.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(top = u * 4),
+        ) {
+            SortButton(sortLabel, pal, small, width = u * 64, onClick = onSort)
+            Spacer(Modifier.weight(1f))
+            if (onPc != null) PcButton(pal, small, width = u * 34, onClick = onPc)
+        }
+        Spacer(Modifier.height(bottomSpace))
+    }
+}
+
+/** A machine in HeartGold / SoulSilver's bag: its move and number (1-92 a TM, 1-8 an HM), or null. */
+private fun hgssMachine(itemId: Int): Triple<String, Boolean, Int>? {
+    val i = itemId - HEARTGOLD_TM01
+    if (i !in tmMovesHeartGold.indices) return null
+    val hm = i >= 92
+    return Triple(lookupMove(tmMovesHeartGold[i]).name, hm, if (hm) i - 91 else i + 1)
+}
+
+/**
+ * One of HeartGold / SoulSilver's item cards (their bag's touch screen, headless): a dark line (red, with a white one
+ * inside, while open) round two tones - white, then silver under a light line, the pocket buttons' band's - the item's
+ * icon large on the left, its name on the white and "×count" on the silver. A machine is its move's name over "No.45",
+ * an HM "HM" in its blue tag with the number.
+ */
+@Composable
+private fun HgssItemCard(
+    item: ItemView, pal: BagPalette, m: GbaTextMetrics, small: GbaTextMetrics,
+    selected: Boolean, favorite: Boolean, marked: Boolean, start: Boolean, onClick: () -> Unit,
+) {
+    val u = m.u
+    // The companion's text size, drawn bold: a step up read too big, plain too thin.
+    val big = rememberGbaTextMetrics()
+    val density = LocalDensity.current
+    val cell = with(density) { big.fontPixel.toDp() }
+    val smallCell = with(density) { small.fontPixel.toDp() }
+    val noRipple = remember { MutableInteractionSource() }
+    // Each half a line of the bigger text and some room: the name on the white, the count on the silver.
+    val half = big.lineHeight + u * 6
+    val height = half * 2
+    // The 32-pixel icon at a whole scale, about as tall as the card (its pictures sit well inside their 32).
+    val icon = with(density) { (maxOf(1, minOf((height.toPx() * 0.85f / 32).roundToInt(), (height.toPx() / 32).toInt())) * 32).toDp() }
+    val machine = remember(item.itemId) { hgssMachine(item.itemId) }
+    Box(
+        modifier = Modifier
+            .focusStart(selected || start)
+            .fillMaxWidth()
+            .height(height)
+            .drawBehind {
+                val px = u.toPx()
+                val r = 8 * px
+                drawPixelRoundRect(if (selected) pal.tabUnderline else pal.panelLayers[0].first, radius = r)
+                val inset = if (selected) 4 * px else 3 * px
+                if (selected) drawPixelRoundRect(pal.fill, Offset(3 * px, 3 * px), Size(size.width - 6 * px, size.height - 6 * px), radius = r - 2 * px)
+                val inner = Size(size.width - 2 * inset, size.height - 2 * inset)
+                // Silver below, the white over its top half, the light line between.
+                drawPixelRoundRect(pal.panelLayers[1].first, Offset(inset, inset), inner, radius = r - inset / 2)
+                val mid = half.toPx()
+                drawPixelRoundRect(pal.fill, Offset(inset, inset), Size(inner.width, mid - inset), radius = r - inset / 2)
+                drawRect(pal.fill, Offset(inset, mid - r), Size(inner.width, r))
+                drawRect(pal.panelLayers[2].first, Offset(inset, mid), Size(inner.width, 2 * px))
+            }
+            .soundClickable(interactionSource = noRipple, indication = null, onClick = onClick),
+    ) {
+        // The same gap from the frame's inner edge to the picture as from the picture to the text: the picture centred
+        // (by its own pixels) in a slot of the 24 of its 32 pixels the pictures fill.
+        val gap = u * 6
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize().padding(start = u * 3 + gap)) {
+            Box(Modifier.size(icon * 0.75f, icon), contentAlignment = Alignment.Center) {
+                ItemIcon(item.iconAsset, size = icon, modifier = Modifier.wrapContentSize(unbounded = true), centerArt = true)
+            }
+            Column(Modifier.weight(1f).fillMaxHeight().padding(start = gap, end = u * 8)) {
+                // The name, centred on the white; a long one narrows its letters before it shrinks.
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(half)) {
+                    FittedGbaText(machine?.first ?: item.name, pal.text, pal.textShadow, big, modifier = Modifier.weight(1f, fill = false), bold = true)
+                    if (favorite) {
+                        ShadowedPixelIcon(PixelIcons.star, OptionColors.favorite, pal.textShadow, big, cell = cell, modifier = Modifier.padding(start = u * 3))
+                    }
+                }
+                // The number or the count, centred on the silver.
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().height(half)) {
+                    when {
+                        machine == null -> {
+                            Spacer(Modifier.weight(1f))
+                            if (marked) ShadowedPixelIcon(PixelIcons.itemAction, pal.text, pal.textShadow, small, cell = smallCell, modifier = Modifier.padding(end = u * 3))
+                            GbaText("×${item.quantity}", pal.text, pal.textShadow, big, bold = true)
+                        }
+                        machine.second -> {
+                            Box(
+                                Modifier
+                                    .drawBehind { drawPixelRoundRect(HM_TAG, radius = 2 * u.toPx()) }
+                                    .padding(horizontal = u * 3),
+                            ) { GbaText("HM", Color(0xFFFBFBFB), HM_TAG_SHADOW, m, bold = true) }
+                            Spacer(Modifier.width(u * 2))
+                            GbaText("${machine.third}", pal.text, pal.textShadow, big, bold = true)
+                        }
+                        else -> {
+                            GbaText("No.${machine.third.toString().padStart(2, '0')}", pal.text, pal.textShadow, big, bold = true)
+                            Spacer(Modifier.weight(1f))
+                            GbaText("×${item.quantity}", pal.text, pal.textShadow, big, bold = true)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The HM tag on HeartGold / SoulSilver's machine cards, and its letters' shadow. */
+private val HM_TAG = Color(0xFF7089AE)
+private val HM_TAG_SHADOW = Color(0xFFA5B1C9)
 
 @Composable
 private fun FolderTab(

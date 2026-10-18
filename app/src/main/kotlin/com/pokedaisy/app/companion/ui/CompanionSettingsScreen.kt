@@ -401,7 +401,9 @@ private fun homeRows(
             select(Selector(tk("GAME SPEED"), labels, speedLabel(s.gameSpeed)) { l -> s.setGameSpeed(speeds[labels.indexOf(l)]) })
         },
         // Keeps the last ~20 s; the REWIND HOLD hotkey plays them backwards.
-        SettingRow(tk("REWIND"), onOff(s.rewind), subtitle = "Keeps the last 20 s to play backwards") { s.setRewind(!s.rewind); changed() },
+        if (s.rewindSupported) {
+            SettingRow(tk("REWIND"), onOff(s.rewind), subtitle = "Keeps the last 20 s to play backwards") { s.setRewind(!s.rewind); changed() }
+        } else null,
         // SCENE SPEEDS, FF MODE and FF MUSIC: set once and rarely touched, on their own page.
         SettingRow(tk("SPEED OPTIONS"), null, subtitle = "Scene speeds, FF mode and FF music", opensPage = true) { navigate(Page.SPEED) },
         groupTitle(tk("GAMEPLAY")),

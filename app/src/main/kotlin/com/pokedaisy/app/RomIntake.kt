@@ -11,11 +11,17 @@ import java.io.OutputStream
  * The checks every way a ROM comes in from outside goes through - the exported [LaunchActivity]
  * (frontends) and the library's VIEW / + import - since any app can hand either one a URI: never
  * this app's own files or provider (prefs hold the RetroAchievements token and API keys), at most
- * [MAX_COPY_BYTES] copied, and only a cart image kept ([RomIdentity.looksLikeRom]).
+ * [maxCopyBytes] copied, and only a cart image kept ([RomIdentity.looksLikeRom]).
  */
 object RomIntake {
     /** The largest GBA cart is 32 MB; an archive of one is smaller. */
     const val MAX_COPY_BYTES = 40L shl 20
+    /** With DS games on ([TelemetrySampler.NDS_SUPPORT]): a DS cart is up to 512 MB. */
+    const val MAX_DS_COPY_BYTES = 512L shl 20
+
+    /** What [copyCapped] takes: a DS cart's size only while DS games are on. */
+    val maxCopyBytes: Long
+        get() = if (com.pokedaisy.app.companion.data.TelemetrySampler.NDS_SUPPORT) MAX_DS_COPY_BYTES else MAX_COPY_BYTES
 
     /** [uri] points into this app: its own provider, or a file in its private data directory. */
     fun isOwn(context: Context, uri: Uri): Boolean = when (uri.scheme) {
@@ -32,15 +38,16 @@ object RomIntake {
             .any { path == it || path.startsWith("$it/") }
     }.getOrDefault(true)
 
-    /** [input] into [out], throwing past [MAX_COPY_BYTES]: nothing handed in fills the disk. */
+    /** [input] into [out], throwing past [maxCopyBytes]: nothing handed in fills the disk. */
     fun copyCapped(input: InputStream, out: OutputStream) {
         val buf = ByteArray(1 shl 16)
+        val max = maxCopyBytes
         var total = 0L
         while (true) {
             val n = input.read(buf)
             if (n < 0) return
             total += n
-            if (total > MAX_COPY_BYTES) throw IOException("more than $MAX_COPY_BYTES bytes - not a ROM")
+            if (total > max) throw IOException("more than $max bytes - not a ROM")
             out.write(buf, 0, n)
         }
     }

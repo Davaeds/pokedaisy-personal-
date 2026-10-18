@@ -26,6 +26,8 @@ class TelemetrySampler {
     private var gen1Cfg: Gen1Config? = null
     // A Game Boy Color game's (Gen 2) addresses instead.
     private var gen2Cfg: Gen2Config? = null
+    // A DS game's (Gen 4) addresses instead.
+    private var gen4Cfg: Gen4Config? = null
     private var lastError: String? = null
     // Set instead of nativeCfg for a large BPRE ROM that isn't recognized as
     // Unbound (see detect()) - a different hack we have no addresses for.
@@ -306,6 +308,7 @@ class TelemetrySampler {
                 GameKind.YELLOW, GameKind.RED, GameKind.BLUE -> readGen1Telemetry(reader, gen1Cfg ?: GEN1_YELLOW)
                 GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM, GameKind.GOLD, GameKind.SILVER, GameKind.POLISHED_CRYSTAL ->
                     readGen2Telemetry(reader, gen2Cfg ?: GEN2_CRYSTAL)
+                GameKind.PLATINUM, GameKind.HEARTGOLD, GameKind.SOULSILVER -> readGen4Telemetry(reader, gen4Cfg ?: GEN4_PLATINUM_US)
                 else -> {
                     unsupportedHackLabel?.let { return SnapshotView(connected = false, error = it, unsupported = true) }
                     val cfg = nativeCfg ?: return SnapshotView(connected = false, error = "no telemetry source")
@@ -327,7 +330,7 @@ class TelemetrySampler {
     /** Where the detected game's item descriptions are ([RomItemText]): its config's
      * table when the ROM has it there, else the vanilla table found by its shape. */
     private fun itemTable(reader: MemoryReader): ItemDescTable? {
-        if (kind.isGen1 || kind.isGen2 || unsupportedHackLabel != null) return null
+        if (kind.isGen1 || kind.isGen2 || kind.isDsGame || unsupportedHackLabel != null) return null
         val cfg = if (kind == GameKind.UNBOUND) nativeCfg ?: NATIVE_UNBOUND_WITH_DEX else nativeCfg
         val t = cfg?.itemDescs
         if (t != null && RomItemText.matchesRom(reader, t)) return t
@@ -337,7 +340,10 @@ class TelemetrySampler {
     }
 
     private fun detect(reader: MemoryReader) {
-        if (runCatching { MgbaCore.pkPlatform() }.getOrDefault(0) == 1) return detectGameBoy()
+        when (runCatching { MgbaCore.pkPlatform() }.getOrDefault(0)) {
+            MgbaCore.PLATFORM_GB -> return detectGameBoy()
+            MgbaCore.PLATFORM_NDS -> return detectDs()
+        }
         val code = runCatching { MgbaCore.pkRomCode() }.getOrNull().orEmpty()
         val size = runCatching { MgbaCore.pkRomSize() }.getOrDefault(0L)
 
@@ -591,6 +597,30 @@ class TelemetrySampler {
         get() = (if (kind == GameKind.UNBOUND) NATIVE_UNBOUND else nativeCfg)?.let { it.gMain to it.inBattleOff }
 
     /** A Game Boy / Color cart, by the whole ROM's SHA1 (read from the cart: it's bank-switched). */
+    /**
+     * A DS cart: by its header's game code and revision (a 128 MB+ ROM isn't hashed live). Platinum USA rev 1 and
+     * HeartGold / SoulSilver USA are mapped (pret/pokeplatinum and pret/pokeheartgold build them); anything else gets the
+     * "not supported" notice.
+     */
+    private fun detectDs() {
+        val code = runCatching { MgbaCore.pkRomCode() }.getOrNull().orEmpty()
+        val rev = runCatching { reader0x1E() }.getOrDefault(-1)
+        when {
+            ndsSupported(code, rev) -> when (code) {
+                "IPKE" -> { kind = GameKind.HEARTGOLD; gen4Cfg = GEN4_HEARTGOLD_US }
+                "IPGE" -> { kind = GameKind.SOULSILVER; gen4Cfg = GEN4_SOULSILVER_US }
+                else -> { kind = GameKind.PLATINUM; gen4Cfg = GEN4_PLATINUM_US }
+            }
+            else -> {
+                kind = GameKind.FIRERED
+                unsupportedHackLabel = "DS game $code (rev $rev) isn't supported yet"
+            }
+        }
+    }
+
+    /** The DS header's revision byte (0x1E), from the cart's ROM window (pk_nds_read: 0x08000000 + offset). */
+    private fun reader0x1E(): Int = MgbaCore.pkReadBytes(0x0800001EL, 1)?.get(0)?.toInt()?.and(0xFF) ?: -1
+
     private fun detectGameBoy() {
         val size = runCatching { MgbaCore.pkRomSize() }.getOrDefault(0L)
         val digest = java.security.MessageDigest.getInstance("SHA-1")
@@ -656,6 +686,7 @@ class TelemetrySampler {
         private set
 
     fun sampleBattleInputFast(reader: MemoryReader): Pair<Int, Int>? {
+        if (kind.isDsGame) return null   // no battle reads on DS yet
         if (kind.isGen1) {
             val (state, cursor) = runCatching { readGen1BattleInput(reader, gen1Cfg ?: GEN1_YELLOW) }.getOrNull() ?: return null
             battleMenuCursor = cursor
@@ -970,6 +1001,19 @@ class TelemetrySampler {
          * VIEW patterns too): a cart that arrives anyway gets the "not supported" notice.
          */
         const val GAME_BOY_SUPPORT = true
+
+        /**
+         * Nintendo DS (Platinum first, on melonDS): the library, folder scan, frontend launch and archives take .nds
+         * and a known cart is read by the Gen 4 reader. Set from [com.pokedaisy.app.FeatureFlags.nds] at process and
+         * library start; off, a DS cart is never listed.
+         */
+        @Volatile var NDS_SUPPORT = false
+
+        /** A DS cart the companion reads, by its header's game code and revision (0x0C / 0x1E): Platinum USA rev 1,
+         * HeartGold / SoulSilver USA (rev 0, their only one). [detectDs] and the library's
+         * [com.pokedaisy.app.CompanionSupport] both ask this. */
+        fun ndsSupported(code: String?, revision: Int?): Boolean = NDS_SUPPORT &&
+            (code == "CPUE" && revision == 1 || (code == "IPKE" || code == "IPGE") && revision == 0)
 
         /** Every hack detect() has RAM addresses for - the >16 MB ones it
          * hashes, plus Seaglass, Emerald Kaizo, Emerald Legacy, Orange Islands, Recharged Yellow / Emerald and Ultra Violet (16 MB). [CompanionSupport] checks imports against it. */

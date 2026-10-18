@@ -27,7 +27,7 @@ The `SPEED OPTIONS` page:
 
 | Setting | Choices | What it does | More |
 | --- | --- | --- | --- |
-| `FF MODE` | **`SMART`**, `NORMAL` | `SMART` drops to normal speed in menus and on the region map, and keeps battles fast. `NORMAL` is fast everywhere. | [Fast-forward](fast-forward.md) |
+| `FF MODE` | **`SMART`**, `NORMAL` | `SMART` drops to normal speed in menus, on the region map and while a battle waits for your command, and keeps the rest of a battle fast. `NORMAL` is fast everywhere. | [Fast-forward](fast-forward.md) |
 | `FF MUSIC` | **`STEADY`**, `SPED-UP`, `OFF` | What you hear while fast-forwarding: the song at its normal tempo, the game's audio sped up, or silence. | [Fast-forward](fast-forward.md) |
 
 ### Screen
@@ -170,7 +170,7 @@ The `DISPLAY OPTIONS` page:
 | `BATTLE HINTS` | **`ON`**, `OFF` | Move ratings, the foe's weaknesses and suggestions during battles. | [Battle](battle.md) |
 | `ONE-TAP MOVES` | `ON`, **`OFF`** | Puts your moves on the battle's first menu, so one tap picks FIGHT and the move. | [Battle](battle.md) |
 | `FOE IVS` | `ON`, **`OFF`** | A STATS page in battle with the foe's IVs, EVs and nature. | [Battle](battle.md) |
-| `TAB BAR` | **5 tabs** (a page) | Which tabs sit next to the gear: up to 5, `SHOWN` or `HIDDEN`. By default `PARTY`, `DEX`, `MAP`, `BAG` and `GUIDE`. The rest open from `MORE`, left of the gear. | [The companion](companion.md) |
+| `TAB BAR` | **5 tabs** (a page) | Which tabs sit next to the gear: up to 5, `SHOWN` or `HIDDEN`. By default `PARTY`, `DEX`, `MAP`, `BAG` and `GUIDE`. A tab the game doesn't have gives its place to another of the game's tabs. The rest open from `MORE`, left of the gear. | [The companion](companion.md) |
 | `CLICK SOUND` | **`ON`**, `OFF` | The game's own menu click on every companion button. | [The companion](companion.md) |
 | `TWEAKS` | a page, each **`ON`** | `PARTY ICONS MOVE`, `MAP CURSOR BLINK`, `TAB ANIMATIONS` and `JUMP TO BATTLE` (a battle opens the battle tab by itself). | [The companion](companion.md) |
 

@@ -201,6 +201,9 @@ class SidePanel(
         }
     }
 
+    /** The left stick while the window is open, for a screen that steers with it ([CompanionKeys.stick]). */
+    fun menuStick(x: Float, y: Float): Boolean = windowOpen && keys.stick(x, y)
+
     /** Closes the window (a battle pick, FLY: the game's to see); the side panel stays. */
     fun closeWindow() {
         if (windowOpen) hide()

@@ -14,8 +14,9 @@ import java.util.Locale
  */
 object GameSaves {
 
-    /** Bigger than any GBA save (128 KB flash, plus mGBA's RTC footer). */
-    const val MAX_BYTES = 256 * 1024
+    /** Bigger than any GBA save (128 KB flash, plus mGBA's RTC footer) or a Pokémon DS game's (512 KB flash): at 256 KB,
+     * SaveBackups skipped every DS save. */
+    const val MAX_BYTES = 1024 * 1024
 
     /** What a save of [size] bytes is, by the GBA's save chips. */
     fun kind(size: Long): String? = when (size) {

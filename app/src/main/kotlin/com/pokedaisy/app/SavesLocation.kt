@@ -25,10 +25,20 @@ object SavesLocation {
      * [Prefs.romSaveDir]); else the first of the saves folder and the ALSO LOOK IN folders
      * ([Prefs.extraSaveDirs], Settings > FOLDERS) that holds a save for it - so a save another
      * emulator keeps (RetroArch's per-core folders) is played and written where it is; else a
-     * new save in the saves folder. Only the folders themselves are looked in, never below.
+     * new save in the saves folder. Only the folders themselves are looked in, never below. A DS game looks beside its
+     * ROM first, and starts a new save there ([dirsFor]).
      */
     fun saveFor(context: Context, prefs: Prefs, rom: File): File =
-        saveIn(prefs.romSaveDir(rom)?.let { File(it).apply { mkdirs() } }, searchDirs(context, prefs), rom)
+        saveIn(prefs.romSaveDir(rom)?.let { File(it).apply { mkdirs() } }, dirsFor(rom, RomIdentity.isNds(rom), searchDirs(context, prefs)), rom)
+
+    /** [dirs] for [rom]: a DS game's own folder first - melonDS keeps a game's save beside it (`<rom name>.sav`), so
+     * that's the save the player has, and where a new one goes - while it can be written there (or already holds the
+     * save); then the rest, so a save made elsewhere before still loads. */
+    fun dirsFor(rom: File, nds: Boolean, dirs: List<File>): List<File> {
+        val beside = rom.absoluteFile.parentFile ?: return dirs
+        if (!nds || !(beside.canWrite() || resolve(beside, rom).exists())) return dirs
+        return (listOf(beside) + dirs).distinctBy { it.absolutePath }
+    }
 
     /** [saveFor]'s rule: [own] if set, else the first of [dirs] with a save for [rom], else a new one in [dirs]' first. */
     fun saveIn(own: File?, dirs: List<File>, rom: File): File {

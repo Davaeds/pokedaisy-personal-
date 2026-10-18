@@ -33,12 +33,28 @@ class WideCamera {
     @Volatile var viewW = 0
     @Volatile var viewH = 0
 
-    /** The game's own frame, in its pixels: the GBA's 240x160, or a Game Boy's 160x144. */
-    @Volatile var frameW = PK_W
-    @Volatile var frameH = PK_H
-
     /** The zoom step the player picked: 0 = 1x, up to [levels]' last. */
     @Volatile var level = 0
+
+    /** The game frame's size ([PK_W] x [PK_H] on a GBA, a Game Boy's 160 x 144, 256 x 192 on a DS) and how far past it the window may go
+     * ([marginX] / [marginY] a side, -1 = as far as [MAX_W] x [MAX_H] allow): a DS game's EXPAND draws at most
+     * pk_nds_wide.h's margins ([ndsMode]). */
+    @Volatile var frameW = PK_W
+    @Volatile var frameH = PK_H
+    @Volatile var marginX = -1
+    @Volatile var marginY = -1
+
+    /** A DS game's frame and limits ([frameW], [frameH], [marginX], [marginY]); [on] false is a GBA / Game Boy game's. */
+    fun ndsMode(on: Boolean) {
+        frameW = if (on) NDS_W else PK_W
+        frameH = if (on) NDS_H else PK_H
+        marginX = if (on) NDS_MARGIN_X else -1
+        marginY = if (on) NDS_MARGIN_Y else -1
+        reset()
+    }
+
+    private fun maxW() = if (marginX < 0) MAX_W else frameW + 2 * marginX
+    private fun maxH() = if (marginY < 0) MAX_H else frameH + 2 * marginY
 
     /** The right stick, -1..1 per axis (right / down positive). */
     @Volatile var stickX = 0f
@@ -70,7 +86,7 @@ class WideCamera {
     private var tweenNanos = 0L
 
     /** Screen pixels per GBA pixel for each zoom step, 1x first. */
-    fun levels(): FloatArray = levelsFor(viewW, viewH, frameW, frameH)
+    fun levels(): FloatArray = levelsFor(viewW, viewH, frameW, frameH, maxW(), maxH())
 
     /** How much more of the map step [i] shows than 1x, for the HUD ("1.7x"). */
     fun factor(i: Int): Float {
@@ -99,10 +115,8 @@ class WideCamera {
     fun frame(scene: Int, now: Long = System.nanoTime()): Window? {
         val vw = viewW
         val vh = viewH
-        val gw = frameW
-        val gh = frameH
-        if (vw <= 0 || vh <= 0 || gw <= 0 || gh <= 0) return null.also { current = null }
-        val steps = levelsFor(vw, vh, gw, gh)
+        if (vw <= 0 || vh <= 0 || frameW <= 0 || frameH <= 0) return null.also { current = null }
+        val steps = levels()
         val fit = steps[0]
         val dt = if (lastNanos == 0L) 0f else ((now - lastNanos) / 1e9f).coerceIn(0f, 0.1f)
         lastNanos = now
@@ -156,18 +170,19 @@ class WideCamera {
                 lookY += sy * speed * dt
             }
         }
-        // As far as a screen's worth of map past the game's own view each way.
-        val limX = max(fw, gw.toFloat())
-        val limY = max(fh, gh.toFloat())
+        // As far as a screen's worth of map past the game's own view each way - a DS game's, only as far as its
+        // margins go.
+        val limX = if (marginX < 0) max(fw, frameW.toFloat()) else max(0f, frameW / 2f + marginX - fw / 2)
+        val limY = if (marginY < 0) max(fh, frameH.toFloat()) else max(0f, frameH / 2f + marginY - fh / 2)
         lookX = lookX.coerceIn(-limX, limX)
         lookY = lookY.coerceIn(-limY, limY)
 
-        val fx = gw / 2f + lookX - fw / 2
-        val fy = gh / 2f + lookY - fh / 2
+        val fx = frameW / 2f + lookX - fw / 2
+        val fy = frameH / 2f + lookY - fh / 2
         val x = floor(fx).toInt()
         val y = floor(fy).toInt()
-        val w = min(MAX_W, ceil(fx + fw).toInt() - x)
-        val h = min(MAX_H, ceil(fy + fh).toInt() - y)
+        val w = min(maxW(), ceil(fx + fw).toInt() - x)
+        val h = min(maxH(), ceil(fy + fh).toInt() - y)
         return Window(x, y, w, h, (x - fx) * scale, (y - fy) * scale, scale).also { current = it }
     }
 
@@ -200,6 +215,11 @@ class WideCamera {
         const val MARGIN_FALLBACK = 22
         const val MAX_W = 800
         const val MAX_H = 800
+        /** A DS game's top screen and pk_nds_wide.h's margins (PK_NDS_WIDE_MAX_MARGIN_X / _Y). */
+        const val NDS_W = 256
+        const val NDS_H = 192
+        const val NDS_MARGIN_X = 248
+        const val NDS_MARGIN_Y = 96
 
         /** A step out must show at least this much more of the map than the one before it. */
         private const val MIN_STEP = 1.2f
@@ -215,16 +235,17 @@ class WideCamera {
         private const val DEAD_ZONE = 0.2f
         val RETURN_DELAY_NANOS = 500_000_000L   // the close view is over for this long before the zoom goes back out
 
-        /** Screen pixels per game pixel for each step on a [w] x [h] view: 1x (the whole [gw] x [gh] frame as large as it
-         * fits), then the whole numbers below it that show at least [MIN_STEP] more each and fit pk_wide's largest window. */
-        fun levelsFor(w: Int, h: Int, gw: Int = PK_W, gh: Int = PK_H): FloatArray {
+        /** Screen pixels per game pixel for each step on a [w] x [h] view: 1x (the whole [frameW] x [frameH] frame as
+         * large as it fits), then the whole numbers below it that show at least [MIN_STEP] more each and fit the largest
+         * window ([maxW] x [maxH]: pk_wide's, or a DS game's frame and margins). */
+        fun levelsFor(w: Int, h: Int, frameW: Int = PK_W, frameH: Int = PK_H, maxW: Int = MAX_W, maxH: Int = MAX_H): FloatArray {
             if (w <= 0 || h <= 0) return floatArrayOf(1f)
-            val fit = min(w / gw.toFloat(), h / gh.toFloat())
+            val fit = min(w / frameW.toFloat(), h / frameH.toFloat())
             val out = arrayListOf(fit)
             var k = floor(fit).toInt()
             if (k.toFloat() == fit) k--
             while (k >= 1) {
-                if (w / k.toFloat() > MAX_W || h / k.toFloat() > MAX_H) break
+                if (w / k.toFloat() > maxW || h / k.toFloat() > maxH) break
                 if (out.last() / k >= MIN_STEP) out += k.toFloat()
                 k--
             }

@@ -118,6 +118,8 @@ fun CompanionScreen(
     initialPopup: com.pokedaisy.app.companion.AchievementPopup? = null,
     /** The game's status bar ([GameStatusBar]), drawn over the tabs while [CompanionStatusBar.shown]. */
     statusBar: (@Composable () -> Unit)? = null,
+    /** Always over the tabs, above [statusBar]. */
+    topStrip: (@Composable () -> Unit)? = null,
     /** USE on the ITEMS tab (a Repel on the field); null = no such button. */
     itemUse: com.pokedaisy.app.companion.ItemUse? = null,
     /** FLY on the MAP tab (Fly.kt); null = no button. */
@@ -150,6 +152,7 @@ fun CompanionScreen(
     var pickerOpen by remember { mutableStateOf(false) }
     val gameSilent = remember(battleInput) { { battleInput?.gameSilent == true } }
     CompositionLocalProvider(
+        LocalHgssBag provides remember { HgssBagState() },
         LocalCompanionBack provides back, LocalCompanionKeys provides keys, LocalClickSound provides clickSound, LocalGameSilent provides gameSilent,
         LocalGameFont provides gameFont,
         LocalGameTextScale provides if (gameFont != null) gameTextScale(snapshot.game) else 1f,
@@ -233,8 +236,11 @@ fun CompanionScreen(
         // every game, so one with more of the chosen tabs can overflow too.)
         // No BATTLE tab for a battle that read nothing (a game whose battle memory isn't mapped).
         val battle = snapshot.showsBattle
-        val chosen = available.filter { it in chosenTabs }
-        val bar = chosen.take(if (battle) MAX_BAR_TABS - 1 else MAX_BAR_TABS)
+        val room = if (battle) MAX_BAR_TABS - 1 else MAX_BAR_TABS
+        // The chosen tabs this game has, then - while there's room - its others: a game without a DEX or GUIDE still
+        // fills the bar. In the tabs' own order.
+        val picked = available.filter { it in chosenTabs }.take(room).let { c -> c + available.filter { it !in c }.take(room - c.size) }
+        val bar = available.filter { it in picked }
         // The rest open from MORE, left of the gear (still tabs, just without a chip); no MORE chip with none.
         // Tabs go by id ("ITEMS"); the bar shows each game's own word (companionTabLabel).
         val hiddenTabs = available.filter { it !in bar }
@@ -374,6 +380,10 @@ fun CompanionScreen(
             // A phone upright with no room above the companion: its grip sits in here, over the backdrop.
             val topInset = with(LocalDensity.current) { LocalCompanionTopInset.current.toDp() }
             Column(modifier = Modifier.fillMaxSize().padding(top = topInset).padding(12.dp)) {
+                if (topStrip != null) {
+                    topStrip()
+                    Spacer(Modifier.height(8.dp))
+                }
                 // SETTINGS > STATUS BAR on the companion: the game's strip over the tabs.
                 if (statusBar != null && CompanionStatusBar.shown) {
                     statusBar()

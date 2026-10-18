@@ -33,6 +33,13 @@ The app shows every license below in full under Settings > LICENSES.
   stays under the MPL 2.0 (its header says so).
 - rcheevos (third_party/rcheevos), Copyright (c) 2018 RetroAchievements.org,
   MIT License - https://github.com/RetroAchievements/rcheevos
+- melonDS (third_party/melonds), Copyright (c) melonDS team, GNU GPL 3.0 -
+  https://github.com/melonDS-emu/melonDS (source: the submodule's pinned commit,
+  with PokeDaisy's changes in third_party/patches/melonds-pokedaisy.patch). Built
+  with its bundled FatFs (ChaN, FatFs license), Teakra (MIT), xxHash (Yann
+  Collet, BSD 2-Clause; third_party/licenses/xxHash-BSD-2-Clause.txt),
+  tiny-AES-c (The Unlicense), SHA-1 by Steve Reid (public domain), blip_buf
+  (GNU LGPL 2.1) and Dolphin's ARM64 emitter (GNU GPL 2.0 or later).
 - Shaders (app/src/main/kotlin/com/pokedaisy/app/ScreenShaders.kt): LCD and
   scanlines adapted from mGBA's, Copyright (C) 2017 Dominus Iniquitatis, MIT
   License (the full notice is in third_party/mgba/res/shaders/lcd.shader/lcd.fs);

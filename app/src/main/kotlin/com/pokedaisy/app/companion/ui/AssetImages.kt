@@ -7,6 +7,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import kotlin.math.roundToInt
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -135,7 +138,11 @@ fun SpeciesIcon(asset: String?, size: Dp, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ItemIcon(asset: String?, size: Dp, modifier: Modifier = Modifier) {
+fun ItemIcon(
+    asset: String?, size: Dp, modifier: Modifier = Modifier,
+    /** The picture's own pixels centred in [size], not its canvas (a DS item icon sits off its 32 x 32's middle). */
+    centerArt: Boolean = false,
+) {
     val context = LocalContext.current
     // Starts from an already-decoded icon, like SpeciesIcon.
     var bitmap by remember(asset) {
@@ -162,9 +169,34 @@ fun ItemIcon(asset: String?, size: Dp, modifier: Modifier = Modifier) {
     }
     Box(modifier = modifier.size(size)) {
         bitmap?.let {
-            Image(bitmap = it.asImageBitmap(), contentDescription = null, modifier = Modifier.size(size))
+            val shift = if (centerArt) artCentreShift(it) else null
+            Image(
+                bitmap = it.asImageBitmap(), contentDescription = null,
+                filterQuality = if (centerArt) FilterQuality.None else androidx.compose.ui.graphics.drawscope.DrawScope.DefaultFilterQuality,
+                modifier = Modifier.size(size).then(
+                    if (shift == null) Modifier
+                    else Modifier.offset { IntOffset((shift.first * size.toPx() / it.width).roundToInt(), (shift.second * size.toPx() / it.height).roundToInt()) },
+                ),
+            )
         }
     }
+}
+
+/** How far [bitmap]'s opaque pixels' middle is from its own, in its pixels (x, y), to move it back by; cached. */
+private val artShifts = java.util.Collections.synchronizedMap(java.util.WeakHashMap<Bitmap, Pair<Float, Float>>())
+
+private fun artCentreShift(bitmap: Bitmap): Pair<Float, Float> = artShifts.getOrPut(bitmap) {
+    val w = bitmap.width
+    val h = bitmap.height
+    val px = IntArray(w * h).also { bitmap.getPixels(it, 0, w, 0, 0, w, h) }
+    var l = w; var t = h; var r = -1; var b = -1
+    for (y in 0 until h) for (x in 0 until w) if (px[y * w + x] ushr 24 != 0) {
+        if (x < l) l = x
+        if (x > r) r = x
+        if (y < t) t = y
+        if (y > b) b = y
+    }
+    if (r < 0) 0f to 0f else (w / 2f - (l + r + 1) / 2f) to (h / 2f - (t + b + 1) / 2f)
 }
 
 @Composable

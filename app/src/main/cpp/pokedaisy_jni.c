@@ -27,6 +27,7 @@
 #include "pk_rewind.h"
 #include "pk_wide.h"
 #include "pk_gb_field.h"
+#include "nds/pk_nds.h"
 
 #define LOG_TAG "pokedaisy/jni"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
@@ -154,6 +155,7 @@ static void pkRewindOff(void) {
 
 static void pkTeardown(void) {
     pthread_rwlock_wrlock(&pk_coreLock);
+    pk_nds_deinit();
     pkRewindOff();
     if (g.core) {
         // The Game Boy core closes the save VFile itself (GBUnloadROM: sramRealVf->close); the
@@ -219,11 +221,23 @@ static void pkRenderTeardown(void) {
 JNIEXPORT jboolean JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkInit(JNIEnv* env, jobject thiz,
                                                   jstring jRomPath, jstring jSavePath) {
-    if (g.core) {
+    if (g.core || pk_nds_active()) {
         pkTeardown();
     }
 
     const char* romPath = (*env)->GetStringUTFChars(env, jRomPath, NULL);
+    if (pk_nds_is_rom(romPath)) {
+        // A DS cart: melonDS (nds/pk_nds.cpp) instead of mGBA; g.core stays NULL, so every GBA-only call is a no-op.
+        const char* savePath = jSavePath ? (*env)->GetStringUTFChars(env, jSavePath, NULL) : NULL;
+        pthread_rwlock_wrlock(&pk_coreLock);
+        bool ok = pk_nds_init(romPath, savePath, PK_SAMPLE_RATE);
+        // EXPAND's window, as a GBA game's (pk_nds_wide_draw fills it)
+        if (ok) g.wide = calloc((size_t) PK_WIDE_MAX_VIEW_W * PK_WIDE_MAX_VIEW_H, sizeof(uint32_t));
+        pthread_rwlock_unlock(&pk_coreLock);
+        if (savePath) (*env)->ReleaseStringUTFChars(env, jSavePath, savePath);
+        (*env)->ReleaseStringUTFChars(env, jRomPath, romPath);
+        return ok ? JNI_TRUE : JNI_FALSE;
+    }
     struct VFile* rom = VFileOpen(romPath, O_RDONLY);
     (*env)->ReleaseStringUTFChars(env, jRomPath, romPath);
     if (!rom) {
@@ -311,6 +325,9 @@ Java_com_pokedaisy_app_MgbaCore_pkDeinit(JNIEnv* env, jobject thiz) {
 
 JNIEXPORT jobject JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkVideoBuffer(JNIEnv* env, jobject thiz) {
+    if (pk_nds_active()) {
+        return (*env)->NewDirectByteBuffer(env, pk_nds_top(), (jlong) PK_NDS_W * PK_NDS_H * 4);
+    }
     if (!g.video) {
         return NULL;
     }
@@ -319,11 +336,13 @@ Java_com_pokedaisy_app_MgbaCore_pkVideoBuffer(JNIEnv* env, jobject thiz) {
 
 JNIEXPORT jint JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkVideoWidth(JNIEnv* env, jobject thiz) {
+    if (pk_nds_active()) return PK_NDS_W;
     return (jint) g.vw;
 }
 
 JNIEXPORT jint JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkVideoHeight(JNIEnv* env, jobject thiz) {
+    if (pk_nds_active()) return PK_NDS_H;
     return (jint) g.vh;
 }
 
@@ -337,6 +356,10 @@ Java_com_pokedaisy_app_MgbaCore_pkSampleRate(JNIEnv* env, jobject thiz) {
 // pacing), so the audio device still gets PK_SAMPLE_RATE per real second.
 JNIEXPORT void JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkSetAudioRate(JNIEnv* env, jobject thiz, jdouble rate) {
+    if (pk_nds_active()) {
+        pk_nds_set_audio_rate(rate);
+        return;
+    }
     if (g.core && rate > 0) {
         blip_set_rates(g.core->getAudioChannel(g.core, 0), g.core->frequency(g.core), rate);
         blip_set_rates(g.core->getAudioChannel(g.core, 1), g.core->frequency(g.core), rate);
@@ -345,6 +368,10 @@ Java_com_pokedaisy_app_MgbaCore_pkSetAudioRate(JNIEnv* env, jobject thiz, jdoubl
 
 JNIEXPORT void JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkSetKeys(JNIEnv* env, jobject thiz, jint mask) {
+    if (pk_nds_active()) {
+        pk_nds_set_keys((uint32_t) mask);
+        return;
+    }
     if (g.core) {
         g.core->setKeys(g.core, (uint32_t) mask);
     }
@@ -365,6 +392,7 @@ static bool pkSaveDirty(struct mCore* core) {
  * Emu thread, like pkRunFrame. Returns the frames run. */
 JNIEXPORT jint JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkFinishSave(JNIEnv* env, jobject thiz, jint maxFrames) {
+    if (pk_nds_active()) return pk_nds_finish_save(maxFrames);
     if (!g.core) return 0;
     int n = 0;
     if (pkSaveDirty(g.core)) g.core->setKeys(g.core, 0);
@@ -384,6 +412,22 @@ static bool pkWideFrameFits(void) {
 
 JNIEXPORT void JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkRunFrame(JNIEnv* env, jobject thiz) {
+    if (pk_nds_active()) {
+        pk_nds_run_frame();
+        g.audioAvail = 2 * pk_nds_read_audio(g.audio, PK_AUDIO_SCRATCH_SAMPLES);
+        // EXPAND: the camera's window around the frame (the margins drawn on the overworld only)
+        g.wideSkipped = false;
+        if (g.wide && g.wideCrc && g.viewW > 0 && g.viewH > 0 && g.wideSkipNext) {
+            g.wideSkipped = true;
+        } else if (g.wide && g.wideCrc && g.viewW > 0 && g.viewH > 0 &&
+                   pk_nds_wide_draw(g.wide, g.viewX, g.viewY, g.viewW, g.viewH)) {
+            g.wideW = g.viewW;
+            g.wideH = g.viewH;
+        } else {
+            g.wideW = g.wideH = 0;
+        }
+        return;
+    }
     if (!g.core) {
         return;
     }
@@ -431,6 +475,13 @@ Java_com_pokedaisy_app_MgbaCore_pkRunFrame(JNIEnv* env, jobject thiz) {
 // WIDE: draw the game whose ROM has this CRC32 (pk_wide_games.h; 0 = off). Emu thread.
 JNIEXPORT void JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkWideConfigure(JNIEnv* env, jobject thiz, jint crc) {
+    if (pk_nds_active()) {
+        // A DS game: any id but 0 turns its EXPAND on (WideScreen.NDS)
+        g.wideCrc = (uint32_t) crc;
+        pk_nds_wide_enable(crc != 0);
+        if (!crc) g.wideW = g.wideH = 0;
+        return;
+    }
     uint32_t want = g.core ? (uint32_t) crc : 0;
     if (want == g.wideCrc) return;
     g.wideCrc = pk_wide_configure(want) ? want : 0;
@@ -449,6 +500,11 @@ Java_com_pokedaisy_app_MgbaCore_pkFieldConfigure(JNIEnv* env, jobject thiz, jint
 // wildKeep (percent) thins out wild encounters. Emu thread, between frames.
 JNIEXPORT jint JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkFieldState(JNIEnv* env, jobject thiz, jboolean runIndoors, jint wildKeep) {
+    if (pk_nds_active()) {
+        // a DS game's own read (nds/pk_nds_field.cpp); WILD ENCOUNTERS is on / off there (any percent < 100 = off)
+        pk_nds_set_wild_off(wildKeep < 100);
+        return pk_nds_field_bits();
+    }
     return g.core && pk_is_gba(g.core) ? pk_field_state(g.core, runIndoors, wildKeep) : 0;
 }
 
@@ -472,6 +528,7 @@ Java_com_pokedaisy_app_MgbaCore_pkWideSetView(JNIEnv* env, jobject thiz, jint x,
     g.viewY = y;
     g.viewH = h < 0 ? 0 : h > PK_WIDE_MAX_VIEW_H ? PK_WIDE_MAX_VIEW_H : h;
     g.viewW = w < 0 ? 0 : w > PK_WIDE_MAX_VIEW_W ? PK_WIDE_MAX_VIEW_W : w;
+    if (pk_nds_active()) pk_nds_wide_window(x, y, w, h);
 }
 
 // The wide frame buffer (room for the largest window; the last frame is pkWideWidth() x pkWideHeight()).
@@ -521,6 +578,7 @@ Java_com_pokedaisy_app_MgbaCore_pkWideWantsClose(JNIEnv* env, jobject thiz) {
 // ZOOM: what the last frame is (PK_WIDE_SCENE_*: the field, a text box, an overlay, a battle starting, off). Emu thread.
 JNIEXPORT jint JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkWideScene(JNIEnv* env, jobject thiz) {
+    if (pk_nds_active()) return pk_nds_wide_scene();
     return g.wideW ? pk_wide_scene() : PK_WIDE_SCENE_OFF;
 }
 
@@ -854,6 +912,12 @@ Java_com_pokedaisy_app_MgbaCore_pkReadAudio(JNIEnv* env, jobject thiz, jshortArr
 
 JNIEXPORT jboolean JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkSaveState(JNIEnv* env, jobject thiz, jstring jPath) {
+    if (pk_nds_active()) {
+        const char* path = (*env)->GetStringUTFChars(env, jPath, NULL);
+        bool ok = pk_nds_save_state(path);
+        (*env)->ReleaseStringUTFChars(env, jPath, path);
+        return ok ? JNI_TRUE : JNI_FALSE;
+    }
     if (!g.core) {
         return JNI_FALSE;
     }
@@ -907,6 +971,12 @@ static bool pk_save_file_equals(const uint8_t* data, size_t size) {
 // -1 = the state holds no save (loading it leaves the file alone) or can't be read.
 JNIEXPORT jint JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkStateMatchesSave(JNIEnv* env, jobject thiz, jstring jPath) {
+    if (pk_nds_active()) {
+        const char* path = (*env)->GetStringUTFChars(env, jPath, NULL);
+        int r = pk_nds_state_matches_save(path);
+        (*env)->ReleaseStringUTFChars(env, jPath, path);
+        return r;
+    }
     if (!g.core) {
         return -1;
     }
@@ -932,6 +1002,14 @@ Java_com_pokedaisy_app_MgbaCore_pkStateMatchesSave(JNIEnv* env, jobject thiz, js
 
 JNIEXPORT jboolean JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkLoadState(JNIEnv* env, jobject thiz, jstring jPath) {
+    if (pk_nds_active()) {
+        const char* path = (*env)->GetStringUTFChars(env, jPath, NULL);
+        pthread_rwlock_wrlock(&pk_coreLock);
+        bool ok = pk_nds_load_state(path);
+        pthread_rwlock_unlock(&pk_coreLock);
+        (*env)->ReleaseStringUTFChars(env, jPath, path);
+        return ok ? JNI_TRUE : JNI_FALSE;
+    }
     if (!g.core) {
         return JNI_FALSE;
     }
@@ -1001,8 +1079,10 @@ Java_com_pokedaisy_app_MgbaCore_pkReadBytes(JNIEnv* env, jobject thiz, jlong add
         return NULL;
     }
     pthread_rwlock_rdlock(&pk_coreLock);
-    bool ok = g.core != NULL;
-    if (ok && pk_gb_read_banked(g.core, (uint32_t) addr, tmp, len)) {
+    bool ok = g.core != NULL || pk_nds_active();
+    if (pk_nds_active()) {
+        pk_nds_read((uint32_t) addr, tmp, len);
+    } else if (ok && pk_gb_read_banked(g.core, (uint32_t) addr, tmp, len)) {
         // a Color cart's WRAM bank, read by bank
     } else if (ok) {
         pk_read_range(g.core, (uint32_t) addr, tmp, len);
@@ -1027,6 +1107,12 @@ JNIEXPORT jboolean JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkWriteBytes(JNIEnv* env, jobject thiz, jlong addr, jbyteArray bytes) {
     jsize len = (*env)->GetArrayLength(env, bytes);
     uint32_t a = (uint32_t) addr;
+    if (pk_nds_active()) {
+        jbyte* b = (*env)->GetByteArrayElements(env, bytes, NULL);
+        bool ok = b && pk_nds_write(a, (const uint8_t*) b, len);
+        if (b) (*env)->ReleaseByteArrayElements(env, bytes, b, JNI_ABORT);
+        return ok ? JNI_TRUE : JNI_FALSE;
+    }
     if (g.core && !pk_is_gba(g.core)) {
         jbyte* gbBytes = len > 0 ? (*env)->GetByteArrayElements(env, bytes, NULL) : NULL;
         if (!gbBytes) {
@@ -1081,6 +1167,10 @@ Java_com_pokedaisy_app_MgbaCore_pkRenderReadBytes(JNIEnv* env, jobject thiz, jlo
 
 JNIEXPORT jstring JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkRomCode(JNIEnv* env, jobject thiz) {
+    char ndsCode[5];
+    if (pk_nds_rom_code(ndsCode)) {
+        return (*env)->NewStringUTF(env, ndsCode);   // the DS header's game code (CPUE: Platinum)
+    }
     if (!g.core) {
         return NULL;
     }
@@ -1116,9 +1206,12 @@ Java_com_pokedaisy_app_MgbaCore_pkRomRead(JNIEnv* env, jobject thiz, jlong off, 
     return out;
 }
 
-// 0 = GBA, 1 = Game Boy / Color, -1 = no core.
+// 0 = GBA, 1 = Game Boy / Color, 2 = Nintendo DS, -1 = no core.
 JNIEXPORT jint JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkPlatform(JNIEnv* env, jobject thiz) {
+    if (pk_nds_active()) {
+        return 2;
+    }
     if (!g.core) {
         return -1;
     }
@@ -1127,6 +1220,7 @@ Java_com_pokedaisy_app_MgbaCore_pkPlatform(JNIEnv* env, jobject thiz) {
 
 JNIEXPORT jlong JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkRomSize(JNIEnv* env, jobject thiz) {
+    if (pk_nds_active()) return (jlong) pk_nds_rom_size();
     return g.core ? (jlong) g.core->romSize(g.core) : 0;
 }
 
@@ -1170,4 +1264,86 @@ void pkRomSwapCheats(void) {
         pk_cheats_swap_rom(g.core);
     }
     pthread_rwlock_unlock(&pk_coreLock);
+}
+
+// --- Nintendo DS (nds/pk_nds.cpp) --------------------------------------------
+
+// The DS's bottom screen (the touch screen), as pkVideoBuffer is its top one; null without a DS. Emu thread.
+JNIEXPORT jobject JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsBottomBuffer(JNIEnv* env, jobject thiz) {
+    if (!pk_nds_active()) return NULL;
+    return (*env)->NewDirectByteBuffer(env, pk_nds_bottom(), (jlong) PK_NDS_W * PK_NDS_H * 4);
+}
+
+// A DS game's frames no one will see (fast-forward's): this one / the next skip their drawing (pk_nds_set_draw).
+JNIEXPORT void JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsSetDraw(JNIEnv* env, jobject thiz, jboolean draw, jboolean drawNext) {
+    if (pk_nds_active()) pk_nds_set_draw(draw == JNI_TRUE, drawNext == JNI_TRUE);
+}
+
+// STEADY FF music for a DS game (nds/pk_nds_music.h): the song id the game plays (-1 = not mapped), a copy of the game
+// that plays on from now at 1x, a frame of its audio, its fade-out, and stopping it. Emu thread, between frames.
+JNIEXPORT jint JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsBgm(JNIEnv* env, jobject thiz) {
+    return pk_nds_active() ? pk_nds_bgm() : -1;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsBgmFading(JNIEnv* env, jobject thiz) {
+    return pk_nds_active() && pk_nds_bgm_fading() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsMusicStart(JNIEnv* env, jobject thiz) {
+    return pk_nds_active() && pk_nds_music_start() ? JNI_TRUE : JNI_FALSE;
+}
+
+// Fills out (interleaved stereo shorts) with one frame of the copy's audio; returns the shorts written.
+JNIEXPORT jint JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsMusicRead(JNIEnv* env, jobject thiz, jshortArray out) {
+    if (!pk_nds_active()) return 0;
+    jsize len = (*env)->GetArrayLength(env, out);
+    jshort* buf = (*env)->GetShortArrayElements(env, out, NULL);
+    int n = pk_nds_music_read(buf, len / 2);
+    (*env)->ReleaseShortArrayElements(env, out, buf, 0);
+    return 2 * n;
+}
+
+JNIEXPORT void JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsMusicFade(JNIEnv* env, jobject thiz, jint frames) {
+    if (pk_nds_active()) pk_nds_music_fade_out(frames);
+}
+
+JNIEXPORT void JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsMusicStop(JNIEnv* env, jobject thiz) {
+    if (pk_nds_active()) pk_nds_music_stop();
+}
+
+// A DS game's own functions (pk_nds_call.h): posts an action for the next frame (0 = not now), and how it did.
+// Emu thread, between frames.
+JNIEXPORT jint JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsAction(JNIEnv* env, jobject thiz, jint action, jint a0, jint a1, jint a2, jint a3) {
+    uint32_t args[4] = {(uint32_t) a0, (uint32_t) a1, (uint32_t) a2, (uint32_t) a3};
+    return pk_nds_active() ? pk_nds_action((int) action, args) : 0;
+}
+
+// The job's results once it ran (op i's into [i]), or null.
+JNIEXPORT jintArray JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsActionResults(JNIEnv* env, jobject thiz, jint seq) {
+    uint32_t res[32];
+    if (!pk_nds_active() || !pk_nds_action_results((int) seq, res)) return NULL;
+    jintArray out = (*env)->NewIntArray(env, 32);
+    if (out) (*env)->SetIntArrayRegion(env, out, 0, 32, (const jint*) res);
+    return out;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsActionStatus(JNIEnv* env, jobject thiz, jint seq) {
+    return pk_nds_active() ? pk_nds_action_status((int) seq) : -1;
+}
+
+// The stylus on the DS's bottom screen at (x, y) in its pixels, or lifted. Any thread: applied on the next frame.
+JNIEXPORT void JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsTouch(JNIEnv* env, jobject thiz, jboolean down, jint x, jint y) {
+    pk_nds_touch(down == JNI_TRUE, (int) x, (int) y);
 }

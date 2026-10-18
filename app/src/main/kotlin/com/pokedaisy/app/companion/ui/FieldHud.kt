@@ -1,5 +1,6 @@
 package com.pokedaisy.app.companion.ui
 
+import com.pokedaisy.app.companion.data.isDsGame
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -79,6 +80,7 @@ import com.pokedaisy.app.companion.data.MapEncounters
 import com.pokedaisy.app.companion.data.MonView
 import com.pokedaisy.app.companion.data.POCKET_BERRIES
 import com.pokedaisy.app.companion.data.POCKET_ITEMS
+import com.pokedaisy.app.companion.data.basePocket
 import com.pokedaisy.app.companion.data.POCKET_KEY_ITEMS
 import com.pokedaisy.app.companion.data.POCKET_POKE_BALLS
 import com.pokedaisy.app.companion.data.POCKET_TM_HM
@@ -272,6 +274,22 @@ internal fun HudSpecies(asset: String?, slot: Dp, modifier: Modifier = Modifier)
 @Composable
 private fun hudItemSize(m: GbaTextMetrics): Dp = with(LocalDensity.current) { (24 * max(1, (m.px * 2 / 3f).roundToInt())).toDp() }
 
+/**
+ * An item's icon over [size], a GBA icon's 24 pixels. A DS game's icons are 32 x 32 with the picture well inside, so
+ * there they're drawn at their own 32 pixels on the same scale (a third bigger, still whole pixels), centred on the
+ * picture, over the same room.
+ */
+@Composable
+private fun HudItemIcon(asset: String?, size: Dp, modifier: Modifier = Modifier) {
+    if (!activeGame.isDsGame) {
+        ItemIcon(asset, size, modifier)
+        return
+    }
+    Box(modifier.size(size), contentAlignment = Alignment.Center) {
+        ItemIcon(asset, size * 32 / 24, Modifier.wrapContentSize(unbounded = true), centerArt = true)
+    }
+}
+
 // ---- The HUD ------------------------------------------------------------------------------------
 
 /**
@@ -352,7 +370,8 @@ fun FieldHud(
                     }
                 }
                 // REPEL's steps left (the game's VAR_REPEL_STEP_COUNT), where the game's var is known.
-                val repel = if (style.shows(FieldHudPart.REPEL)) itemUse?.repelVar?.let { snapshot.progress?.variable(it) } ?: 0 else 0
+                val repel = if (style.shows(FieldHudPart.REPEL)) snapshot.repelSteps
+                    ?: itemUse?.repelVar?.let { snapshot.progress?.variable(it) } ?: 0 else 0
                 // What a full one lasted, for the bar: the kind whose steps cover what's left, kept while it counts down.
                 var repelFull by remember { mutableStateOf(0) }
                 if (repel <= 0) repelFull = 0
@@ -817,7 +836,7 @@ private fun RepelSteps(p: HudParts, framed: Boolean = true, narrow: Boolean = fa
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(u * if (narrow) 2 else 3),
     ) {
-        ItemIcon(spriteAsset("items", REPEL_ICON_ITEM), hudItemSize(p.m) * if (narrow) 1f else 1.25f)
+        HudItemIcon(spriteAsset("items", REPEL_ICON_ITEM), hudItemSize(p.m) * if (narrow) 1f else 1.25f)
         Column(verticalArrangement = Arrangement.spacedBy(u)) {
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(u * 2)) {
                 GbaText("${p.repel}", if (low) ink.accent else ink.text, if (low) ink.accentShadow else ink.shadow, count)
@@ -836,7 +855,7 @@ private const val REPEL_ICON_ITEM = 86
 private fun BallCount(item: ItemView, m: GbaTextMetrics, text: GbaTextMetrics) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         // The Game Boy games have no item icons: a drawn ball in the icon's place.
-        if (item.iconAsset != null) ItemIcon(item.iconAsset, hudItemSize(m))
+        if (item.iconAsset != null) HudItemIcon(item.iconAsset, hudItemSize(m))
         else PixelArt(PixelIcons.pokeBall, CAUGHT_BALL, Modifier.size(hudItemSize(m)).padding(hudItemSize(m) / 8))
         // Elite Redux keeps no counts: the ball alone.
         if (com.pokedaisy.app.companion.data.bagHasCounts) GbaText("x${item.quantity}", ink.text, ink.shadow, text)
@@ -1160,9 +1179,9 @@ private fun HudBagPanel(
     val u = m.u
     val small = rememberGbaTextMetrics(0.75f)
     val pockets = listOf(POCKET_ITEMS, POCKET_POKE_BALLS, POCKET_BERRIES, POCKET_TM_HM, POCKET_KEY_ITEMS)
-        .filter { pk -> snapshot.items.any { it.pocket == pk } }
+        .filter { pk -> snapshot.items.any { basePocket(it.pocket) == pk } }
     var pocket by remember { mutableStateOf(startPocket.takeIf { it in pockets } ?: pockets.firstOrNull() ?: POCKET_ITEMS) }
-    val items = snapshot.items.filter { it.pocket == pocket }
+    val items = snapshot.items.filter { basePocket(it.pocket) == pocket }
     // The bag as a whole, so every pocket looks the same: no item has a picture.
     val noItemPictures = snapshot.items.all { it.iconAsset == null }
     var pickedId by remember(pocket) { mutableStateOf(items.firstOrNull()?.itemId) }
@@ -1217,7 +1236,7 @@ private fun HudBagPanel(
                                     .background(if (item.itemId == pickedId) c.cellOn else c.cell, PixelRoundedShape(u * 3))
                                     .soundClickable { pickedId = item.itemId },
                             ) {
-                                ItemIcon(item.iconAsset, icon, Modifier.align(Alignment.Center).offset(y = -u * 2))
+                                HudItemIcon(item.iconAsset, icon, Modifier.align(Alignment.Center).offset(y = -u * 2))
                                 if (item.pocket != POCKET_KEY_ITEMS && com.pokedaisy.app.companion.data.bagHasCounts) {
                                     GbaText("x${item.quantity}", c.text, c.shadow, small, Modifier.align(Alignment.BottomEnd).padding(end = u * 2, bottom = u))
                                 }

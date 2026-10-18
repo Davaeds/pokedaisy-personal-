@@ -1,5 +1,7 @@
 package com.pokedaisy.app.companion
 
+import com.pokedaisy.app.companion.data.isDsGame
+
 import com.pokedaisy.app.companion.i18n.tk
 
 /**
@@ -33,5 +35,9 @@ enum class QuickMenuStyle(val label: String) {
     GRID(tk("GRID")),
 }
 
-/** REPEL's kinds, weakest first: item id and the steps one lasts (the games' holdEffectParam, the same in every Gen 3 game). */
-val REPEL_KINDS = listOf(86 to 100, 83 to 200, 84 to 250)
+/** REPEL's kinds, weakest first: item id and the steps one lasts (the games' holdEffectParam, the same in every Gen 3 game;
+ * a DS game's own ids, [com.pokedaisy.app.companion.data.GEN4_REPEL_KINDS]). */
+val REPEL_KINDS: List<Pair<Int, Int>>
+    get() = if (com.pokedaisy.app.companion.data.activeGame.isDsGame) com.pokedaisy.app.companion.data.GEN4_REPEL_KINDS else GBA_REPEL_KINDS
+
+private val GBA_REPEL_KINDS = listOf(86 to 100, 83 to 200, 84 to 250)

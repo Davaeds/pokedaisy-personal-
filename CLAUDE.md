@@ -15,7 +15,7 @@ anything committed (fixture READMEs: `capture_fixture_headless.sh` does). **Comm
 Anthropic attribution** (no `Co-Authored-By`, no "Generated with" lines, never authored as Claude) - the
 user's firm rule; a local `commit-msg` hook rejects them, never bypass it.
 **Exposed surfaces**: `LaunchActivity` is exported - it refuses the app's own files / provider, copies at
-most 40 MB and plays only what has a cart header (`RomIdentity.looksLikeRom`); the updater installs only
+most 40 MB (512 MB while DS games are on: `RomIntake.maxCopyBytes`) and plays only what has a cart header (`RomIdentity.looksLikeRom`); the updater installs only
 this package, same signer, newer version (`AppUpdateFlow.isOurUpdate`); the website's release notes are
 escaped (`website/src/lib/releases.js`, `website/test/releases.test.js`); workflow actions are pinned to
 commit SHAs. New bundled code / fonts / data go into NOTICE and the LICENSES page (`licensesAsset`).
@@ -688,11 +688,13 @@ save data, and a save dumped off a real cartridge with a dead battery (power-fai
 say "The internal battery has run dry" - such a clock goes back to a fresh 24-hour one (checked headless: sErrorStatus
 0x20 / 0x10 -> 0).
 **FF MODE** (SETTINGS,`FfMode`: SMART default / NORMAL). NORMAL = fast everywhere. SMART = 1x while a
-menu screen or the region map is up, FF (still on) resuming when it closes. **A battle stays fast** (the user's
-rule): in battle the game's own battle input state decides (`smartSlows`, `SmartFf.kt`, fed by
-`BattleInputController.gameState`) - only PARTY_OPEN / BAG_OPEN slow down, never the battle itself, whatever the
-menu watch below thinks (it once slowed whole battles); it and the map watch only decide outside battles, or
-in a game that doesn't report a battle state. Menus are found by `FfMenuWatch`with no per-game table: the field and battles each run one fixed`gMain.callback2`, every standalone screen
+menu screen or the region map is up, FF (still on) resuming when it closes. **A battle stays fast but where it waits
+for the player** (the user's rule, 2026-10-19: the bobbing Pokémon and boxes at 1x while choosing): in battle the game's
+own battle input state decides (`smartSlows`, `SmartFf.kt`, fed by `BattleInputController.gameState`) - ACTION / MOVE /
+TARGET_SELECT and PARTY_OPEN / BAG_OPEN slow down, animations and text never, whatever the menu watch below thinks
+(it once slowed whole battles); a DS game reports the wait itself (`MgbaCore.FIELD_BATTLE_INPUT`: HG/SS's
+BattleContext.command = SELECTION_SCREEN_INPUT, `pk_nds_battle_command`); the menu and map watches only decide outside
+battles, or in a game that doesn't report a battle state. Menus are found by `FfMenuWatch`with no per-game table: the field and battles each run one fixed`gMain.callback2`, every standalone screen
 (party, bag, summary, PC, Pokédex..., in battle too) its own - the START menu and dialogue are overlays that keep
 the field's (checked headless on Emerald, Rogue). gMain is found by scanning IWRAM twice 16 frames
 apart (vblankCounter1 at +0x20 moving exactly that much; FireRed's is a pointer, so counter2 at +0x24 then); the

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22.1)
-project(pokedaisy C)
+project(pokedaisy C CXX)
 
 # ---------------------------------------------------------------------------
 # Vendored mGBA (git submodule, pinned to 0.10.5) — core only.
@@ -70,9 +70,37 @@ target_compile_definitions(rcheevos PUBLIC
     RC_CLIENT_SUPPORTS_HASH RC_HASH_NO_DISC RC_HASH_NO_ENCRYPTED RC_HASH_NO_ZIP)
 
 # ---------------------------------------------------------------------------
+# Vendored melonDS (git submodule, pinned to 1.1) — its core library only, for
+# Nintendo DS carts (nds/pk_nds.cpp). The software 3D renderer (no OpenGL), the
+# ARM64 JIT, no GDB stub, no Qt frontend, no LTO (it would leak into our link).
+# ---------------------------------------------------------------------------
+get_filename_component(MELONDS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../third_party/melonds" ABSOLUTE)
+
+if(NOT EXISTS "${MELONDS_DIR}/src/NDS.h")
+    message(FATAL_ERROR "melonDS submodule missing at ${MELONDS_DIR} — run: git submodule update --init third_party/melonds")
+endif()
+
+set(BUILD_QT_SDL        OFF CACHE BOOL "" FORCE)
+set(ENABLE_OGLRENDERER  OFF CACHE BOOL "" FORCE)
+set(ENABLE_GDBSTUB      OFF CACHE BOOL "" FORCE)
+set(ENABLE_LTO_RELEASE  OFF CACHE BOOL "" FORCE)
+set(ENABLE_LTO          OFF CACHE BOOL "" FORCE)
+set(ENABLE_JIT          ON  CACHE BOOL "" FORCE)
+
+include("${MELONDS_DIR}/../patches/apply_melonds_patch.cmake")
+add_subdirectory("${MELONDS_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/melonds" EXCLUDE_FROM_ALL)
+
+# ---------------------------------------------------------------------------
 # Our JNI bridge.
 # ---------------------------------------------------------------------------
-add_library(pokedaisy SHARED pokedaisy_jni.c pokedaisy_ra.c pk_cheats.c pk_rewind.c pk_wide.c pk_wide_gb.c pk_gb_field.c)
+add_library(pokedaisy SHARED pokedaisy_jni.c pokedaisy_ra.c pk_cheats.c pk_rewind.c pk_wide.c pk_wide_gb.c pk_gb_field.c
+    nds/pk_nds.cpp nds/pk_nds_platform.cpp nds/pk_nds_field.cpp nds/pk_nds_call.cpp nds/pk_nds_wide.cpp
+    nds/pk_nds_music.cpp)
+set_target_properties(pokedaisy PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+# melonDS's headers test these (its own sources get them from its directory's add_definitions).
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+    target_compile_definitions(pokedaisy PRIVATE ARCHITECTURE_ARM64=1)
+endif()
 
 # mGBA's own sources get these (add_definitions in its directory only). Some of its
 # structs change shape with them - mCoreRewindContext is ~100 bytes longer with
@@ -87,5 +115,7 @@ target_include_directories(pokedaisy PRIVATE
 target_link_libraries(pokedaisy
     mgba
     rcheevos
+    core
+    z
     android
     log)

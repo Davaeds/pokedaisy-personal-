@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import com.pokedaisy.app.companion.data.isHgss
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -593,6 +594,12 @@ fun OptionButton(
                 )
             }
             .soundClickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = { stack?.lastClicked = self; onClick() })
+            // A pixel icon alone says what it is (TalkBack; the previews find it by it).
+            .then(
+                if (label == null && pixelIcon != null && contentDescription != null) {
+                    Modifier.semantics { this.contentDescription = contentDescription }
+                } else Modifier,
+            )
             .padding(horizontal = u * sidePadding, vertical = u * 4),
     ) {
         if (icon != null) {
@@ -802,11 +809,16 @@ fun OptionConfirm(
 /** A game's party-menu background, pixel-scaled to fill (see [rememberGameBackground]). */
 @Composable
 fun GameBackdrop(game: GameKind, modifier: Modifier = Modifier.fillMaxSize()) {
-    val bg = rememberGameBackground(game) ?: return
     // Dark mode: the game's art at night, under a blue-black scrim (Gen 1's white nearly all the way).
     val scrim = OptionColors.backdropScrim.let { if (it > 0f && game.isGameBoyGame) 0.9f else it }
     @Suppress("NAME_SHADOWING")
     val modifier = if (scrim > 0f) modifier.drawWithContent { drawContent(); drawRect(NIGHT.copy(alpha = scrim)) } else modifier
+    // HeartGold / SoulSilver: their party screen's flat teal, no stripes.
+    if (game.isHgss) {
+        Canvas(modifier) { drawRect(HGSS_BACKDROP) }
+        return
+    }
+    val bg = rememberGameBackground(game) ?: return
     if (bg.tiled) {
         // Whole-number scale of a 240px-wide GBA screen - on the
         // Thor the same scale the party slots land on, so the grid
@@ -833,6 +845,9 @@ fun GameBackdrop(game: GameKind, modifier: Modifier = Modifier.fillMaxSize()) {
         )
     }
 }
+
+/** HeartGold / SoulSilver's party screen background (headless capture). */
+private val HGSS_BACKDROP = Color(0xFF8ADBDB)
 
 /**
  * The top-screen (Library / Settings) backdrop: the 1-GBA-pixel horizontal

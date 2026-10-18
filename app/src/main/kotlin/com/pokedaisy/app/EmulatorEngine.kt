@@ -153,6 +153,13 @@ class EmulatorEngine(
     /** False for a Game Boy / Color ROM: the GBA-only watchers (region map, menus, m4a songs) stay off. */
     @Volatile var gba = true
 
+    /** A DS game (melonDS): its field read is its own (nds/pk_nds_field.cpp: pkFieldState's bits plus
+     * [MgbaCore.FIELD_SCREEN] / [MgbaCore.FIELD_MENU]), standing in for FfMenuWatch and WIDE's tables. */
+    @Volatile var nds = false
+
+    /** The field screen is up, positively: FfMenuWatch's learned callback on a GBA game, the field map process on a DS. */
+    private val fieldScreen get() = if (nds) fieldState and MgbaCore.FIELD_SCREEN != 0 else gba && FfMenuWatch.onField
+
     /** A Game Boy game's music tables: its STEADY FF-music key comes from Gen1Music instead of the m4a engine. */
     @Volatile var gen1Music: com.pokedaisy.app.companion.data.Gen1MusicTables? = null
     var onStateResult: ((action: Hotkeys.Action, slot: Int, ok: Boolean) -> Unit)? = null
@@ -315,6 +322,7 @@ class EmulatorEngine(
     /** Emu thread: the game's region map / a menu screen is up ([RegionMapWatch], [FfMenuWatch]). */
     private var mapOpen = false
     private var menuOpen = false
+    private var battleWaiting = false   // a DS battle waits for the player's command (SMART's 1x)
 
     /**
      * FIELD HUD: the player is on the plain overworld - a GBA game on its field screen (FfMenuWatch: learned from the
@@ -331,7 +339,8 @@ class EmulatorEngine(
 
     /** Emu thread: what's on screen for SCENE SPEEDS, and the field reads' last bits ([MgbaCore.pkFieldState]). */
     private var scene = Scene.FIELD
-    private var fieldState = 0
+    @Volatile var fieldState = 0
+        private set
     private var fieldApplied = -1
     private var wildApplied = -1L
 
@@ -401,8 +410,8 @@ class EmulatorEngine(
         val s = requestedSpeed()
         // SMART: menus and the region map's cursor can't be steered sped up -
         // 1x while one is up, and FF (still on) picks up again when it closes.
-        // A battle stays fast; only its bag and party screens slow down.
-        return if (ffMode == FfMode.SMART && s > 1f && smartSlows(battleInput.gameState, menuOpen, mapOpen)) 1f else s
+        // A battle runs fast but where it waits for the player (its menus, bag and party).
+        return if (ffMode == FfMode.SMART && s > 1f && smartSlows(battleInput.gameState, menuOpen, mapOpen, battleWaiting)) 1f else s
     }
 
     private fun speedTag(s: Float): String = if (s.isInfinite()) "ff" else "${s}x"
@@ -677,6 +686,19 @@ class EmulatorEngine(
         // SPED-UP: the core's audio averaged down to real time (a box
         // filter, so it's the game's own sound pitched and tempo'd up).
         val spedUpOut = ShortArray(scratch.size)
+        // A DS game's STEADY (nds/pk_nds_music.h): a copy of the game, its ARM9 stopped, playing on at 1x by itself -
+        // started when FF comes on and again for each new song (a few frames on, once the sound driver has it); its
+        // audio goes out instead of the game's. Off for the run if a copy ever fails to start (SPED-UP stands in).
+        var dsMusicOn = false
+        var dsMusicOk = true
+        var dsMusicBgm = -1
+        var dsMusicWait = -1   // game frames since a copy became due (-1: none due)
+        val dsMusicOut = ShortArray(4096)
+        var dsMusicFrames = 0   // audio frames the copy wrote since the last fps log line
+        var dsMusicPos = 0      // the copy's last frame of audio not written yet: dsMusicOut[pos, pos + left)
+        var dsMusicLeft = 0
+        var dsMusicPeak = 0     // the loudest sample the copy wrote since the last fps line (the log's peak=)
+        var gamePeak = 0        // the loudest of the game's own since then (gamePeak=)
         var decimPhase = 0f
         var decimL = 0
         var decimR = 0
@@ -760,10 +782,17 @@ class EmulatorEngine(
                 var keys = input.mask or reset or (if ((frame++ / 2) % 2 == 0L) input.turboMask else 0)
                 // AUTO-RUN: B flipped while walking on the player's own field (holding it walks) - never in a script, a
                 // battle, a menu screen (B leaves it) or on a bike (the Acro Bike's wheelie is B).
-                if (autoRun && gba && keys and DIRECTIONS != 0 && fieldState and AUTO_RUN_BLOCKERS == MgbaCore.FIELD_KNOWN &&
-                    FfMenuWatch.onField
+                if (autoRun && (gba || nds) && keys and DIRECTIONS != 0 && fieldState and AUTO_RUN_BLOCKERS == MgbaCore.FIELD_KNOWN &&
+                    fieldScreen
                 ) keys = keys xor MgbaCore.Key.B
                 MgbaCore.pkSetKeys(keys)
+                if (nds) {
+                    // Fast-forward on the refresh shows the last frame of each group: the others skip their drawing, and
+                    // EXPAND's slices (drawn after a frame, for the next) only come before a shown one - drawing them for
+                    // every frame was two thirds of a DS frame's cost, and at 3x the group outran the refresh (stutter).
+                    val ff = ffPerTick > 0
+                    MgbaCore.pkNdsSetDraw(!ff || ffGroup <= 1, !ff || (if (ffGroup > 1) ffGroup <= 2 else ffPerTick <= 1))
+                }
                 MgbaCore.pkRunFrame()
                 onFrame?.invoke()
                 framesRun++
@@ -817,14 +846,16 @@ class EmulatorEngine(
                 // GBA memory watchers; a Game Boy game has none of these screens / engines to read.
                 mapOpen = gba && RegionMapWatch.isOpen(InProcessReader)
                 // A shop's screens count as the field: its clerk talks inside them (GitHub #41).
-                menuOpen = gba && FfMenuWatch.tick(InProcessReader) && !ShopWatch.isOpen(InProcessReader)
+                menuOpen = gba && FfMenuWatch.tick(InProcessReader) && !ShopWatch.isOpen(InProcessReader) ||
+                    nds && fieldState and MgbaCore.FIELD_MENU != 0   // a DS menu screen: the field's child process
+                battleWaiting = nds && fieldState and MgbaCore.FIELD_BATTLE_INPUT != 0
                 if (wideApplied == WideScreen.OFF || (wideCamera == null && !probeOnly)) wideScene = -1
                 // A fade between two maps keeps whatever the HUD was doing.
                 if (wideScene != WideCamera.SCENE_FADE) {
                     // The field's own screen, positively (FfMenuWatch): "no menu found" isn't enough - a game whose field
                     // screen isn't learned yet (a new game) never reports a menu, so its naming screen passed as field.
                     // A Game Boy game: its scene (pk_wide_gb.c's screen match, with EXPAND or without) must say FIELD.
-                    val screen = if (gba) FfMenuWatch.onField && !mapOpen else wideScene == WideCamera.SCENE_FIELD
+                    val screen = if (gba || nds) fieldScreen && !mapOpen else wideScene == WideCamera.SCENE_FIELD
                     val field = screen && !battleInput.holdFrame &&
                         battleInput.gameState == com.pokedaisy.app.companion.data.BATTLE_INPUT_NONE &&
                         (wideScene == -1 || wideScene == WideCamera.SCENE_FIELD)
@@ -849,8 +880,13 @@ class EmulatorEngine(
                         else if (gbWildHeld != false && gbOnField && gf.releaseWild(gameCalls)) gbWildHeld = false
                     }.onFailure { Log.e("pokedaisy", "Game Boy wild encounters failed", it) }
                 } ?: run { gbWildHeld = null }
-                val wildKeep = if (wildFlag != 0L) wildEncounters else 100
-                fieldState = if (gba && fieldGame != WideScreen.OFF) MgbaCore.pkFieldState(runIndoors, wildKeep) else 0
+                // A DS game holds its own switch in its field read (pk_nds_field.cpp: the map's rates at 0).
+                val wildKeep = if (wildFlag != 0L || nds) wildEncounters else 100
+                fieldState = when {
+                    nds -> MgbaCore.pkFieldState(false, wildKeep)
+                    gba && fieldGame != WideScreen.OFF -> MgbaCore.pkFieldState(runIndoors, wildKeep)
+                    else -> 0
+                }
                 if (fieldState and MgbaCore.FIELD_AVATAR != 0) fieldMovesKnown = true
                 val bike = MgbaCore.FIELD_AVATAR or MgbaCore.FIELD_BIKE
                 riding = (fieldState and bike) == bike
@@ -858,7 +894,8 @@ class EmulatorEngine(
                 scene = when {
                     // A battle's own bag and party screens count as menus, as SMART has them.
                     battleState == com.pokedaisy.app.companion.data.BATTLE_INPUT_PARTY_OPEN ||
-                        battleState == com.pokedaisy.app.companion.data.BATTLE_INPUT_BAG_OPEN || menuOpen || mapOpen -> Scene.MENU
+                        battleState == com.pokedaisy.app.companion.data.BATTLE_INPUT_BAG_OPEN || menuOpen || mapOpen ||
+                        fieldState and MgbaCore.FIELD_MENU != 0 -> Scene.MENU
                     battleState != com.pokedaisy.app.companion.data.BATTLE_INPUT_NONE || FfMenuWatch.battling ||
                         fieldState and MgbaCore.FIELD_BATTLE != 0 -> Scene.BATTLE
                     fieldState and MgbaCore.FIELD_TEXT != 0 -> Scene.TEXT
@@ -905,11 +942,45 @@ class EmulatorEngine(
                 // play the song SPED-UP meanwhile, then switch) - unless no clip will ever come.
                 val awaitingClip = mode == FfMusicMode.STEADY && clip == null && ffMusicKey != null &&
                     ffMusicWillRender?.invoke(ffMusicKey) == true
+                // A DS game: no clips, the copy (above). Like a clip it follows the FF the player asked for, so it
+                // plays straight through SMART's 1x menus.
+                val dsBgm = if (nds && dsMusicOk && mode == FfMusicMode.STEADY && ffWanted) MgbaCore.pkNdsBgm() else -1
+                if (dsBgm >= 0) {
+                    // A copy is due when FF comes on and for each new song: taken once the sound driver has the song
+                    // (a few frames on) and no volume fade runs (a song coming back after a battle fades in - a copy
+                    // taken then stayed nearly silent), or after DS_MUSIC_MAX_WAIT_FRAMES whatever.
+                    if (!dsMusicOn && dsMusicWait < 0) dsMusicWait = DS_MUSIC_SETTLE_FRAMES
+                    else if (dsMusicOn && dsBgm != dsMusicBgm) {
+                        // 0: the game fading its song out before the next (its fades run on the ARM9, stopped in the
+                        // copy).
+                        if (dsBgm == 0) MgbaCore.pkNdsMusicFade(DS_MUSIC_FADE_FRAMES) else dsMusicWait = 0
+                    }
+                    dsMusicBgm = dsBgm
+                    if (dsMusicWait >= 0 && ++dsMusicWait > DS_MUSIC_SETTLE_FRAMES &&
+                        (!MgbaCore.pkNdsBgmFading() || dsMusicWait > DS_MUSIC_MAX_WAIT_FRAMES)
+                    ) {
+                        dsMusicWait = -1
+                        dsMusicLeft = 0
+                        dsMusicOn = MgbaCore.pkNdsMusicStart()
+                        if (dsMusicOn) Log.i("pokedaisy", "FF music: DS copy playing song %d".format(dsBgm))
+                        else {
+                            dsMusicOk = false
+                            Log.w("pokedaisy", "FF music: the DS music copy didn't start; SPED-UP for this run")
+                        }
+                    }
+                } else {
+                    if (dsMusicOn) MgbaCore.pkNdsMusicStop()
+                    dsMusicOn = false
+                    dsMusicLeft = 0
+                    dsMusicBgm = -1
+                    dsMusicWait = -1
+                }
                 // Heard at 1x (unless a clip is playing through SMART's 1x); during FF
                 // only as SPED-UP (which STEADY falls back to only for a song or ROM it can't
                 // render). Slow-mo stays muted.
-                val spedUp = speed > 1f && clip == null && mode != FfMusicMode.OFF && !awaitingClip
-                val wantPaused = rewinding || battleInput.holdFrame || !((speed == 1f && clip == null) || spedUp)
+                val spedUp = speed > 1f && clip == null && mode != FfMusicMode.OFF && !awaitingClip && !dsMusicOn
+                val wantPaused = rewinding || battleInput.holdFrame ||
+                    !((speed == 1f && clip == null) || spedUp || dsMusicOn)
                 // Refreshes per frame when the display paces 1x; 0 = the timer and blocking audio.
                 val perFrame = if (speed == 1f && track != null && bufferFrames > 0 && !vsyncFallback) vsyncsPerFrame() else 0
                 pacedPerFrame = perFrame
@@ -943,9 +1014,38 @@ class EmulatorEngine(
 
                 queuedAfter = null
                 val n = MgbaCore.pkReadAudio(scratch)
+                if (BuildConfig.DEBUG && nds) for (i in 0 until n) gamePeak = maxOf(gamePeak, kotlin.math.abs(scratch[i].toInt()))
                 // In FF, the game's sounds for the companion's automated battle presses stay silent but the last.
                 if (n > 0 && speed > 1f && battleInput.muteGame) java.util.Arrays.fill(scratch, 0, n, 0.toShort())
-                if (n > 0 && !paused && track != null) {
+                if (dsMusicOn && !paused && track != null) {
+                    // The copy's audio instead of the game's: as many of its frames as keep the buffer full, so it
+                    // plays at 1x whatever the game's speed (it makes 1/60 s a frame). Full, not half: a track that
+                    // hasn't started playing yet starts only once its buffer is (its start threshold) - kept half full,
+                    // one never made a sound.
+                    val played = track.playbackHeadPosition
+                    var queued = framesWritten.toInt() - played
+                    if (queued < 0) queued = 0
+                    framesWritten = played.toLong() + queued
+                    // A copy frame runs only once the last one's audio is all written (what didn't fit waits in
+                    // dsMusicOut): run per game frame instead, the copy ran at the game's speed and its music skipped.
+                    var runs = 0
+                    while (queued < bufferFrames) {
+                        if (dsMusicLeft == 0) {
+                            if (runs++ >= DS_MUSIC_MAX_FRAMES) break
+                            dsMusicLeft = MgbaCore.pkNdsMusicRead(dsMusicOut).coerceAtLeast(0)
+                            dsMusicPos = 0
+                            if (dsMusicLeft == 0) break
+                        }
+                        val w = track.write(dsMusicOut, dsMusicPos, dsMusicLeft, AudioTrack.WRITE_NON_BLOCKING)
+                        if (w <= 0) break
+                        if (BuildConfig.DEBUG) for (i in dsMusicPos until dsMusicPos + w) dsMusicPeak = maxOf(dsMusicPeak, kotlin.math.abs(dsMusicOut[i].toInt()))
+                        dsMusicPos += w
+                        dsMusicLeft -= w
+                        framesWritten += w / 2
+                        queued += w / 2
+                        dsMusicFrames += w / 2
+                    }
+                } else if (n > 0 && !paused && track != null) {
                     if (vsyncMode) {
                         // The play head wraps as an unsigned int; the difference doesn't care.
                         val played = track.playbackHeadPosition
@@ -1014,7 +1114,11 @@ class EmulatorEngine(
                         "catchup=%d hold=%d dropped=%d queued=%d/%d%s").format(
                         fps, speedTag(speed), refreshHz, pacedPerFrame, ffPerTick, if (late < 0 || fpsLate < 0) -1 else late - fpsLate,
                         fpsWork / fpsFrames / 1e6, fpsMaxWork / 1e6, audioUnderruns,
-                        fpsCatchUps, fpsHolds, fpsDropped, lastQueued, bufferFrames, if (vsyncFallback) " fallback" else ""))
+                        fpsCatchUps, fpsHolds, fpsDropped, lastQueued, bufferFrames, if (vsyncFallback) " fallback" else "") +
+                        if (nds) " dsMusic=%s/%d written=%d peak=%d gamePeak=%d track=%d".format(dsMusicOn, dsMusicBgm, dsMusicFrames, dsMusicPeak, gamePeak, track?.playState ?: -1) else "")
+                    dsMusicPeak = 0
+                    gamePeak = 0
+                    dsMusicFrames = 0
                     fpsCatchUps = 0
                     fpsHolds = 0
                     fpsDropped = 0
@@ -1096,6 +1200,7 @@ class EmulatorEngine(
             // The STEADY clip is only told when it changes, and the next loop starts with none: silence it here, or a
             // RESTART GAME (or another ROM) kept the old song playing over the new one.
             runCatching { onFfMusicChanged?.invoke(null) }
+            if (nds) runCatching { MgbaCore.pkNdsMusicStop() }
             runCatching { RetroAchievements.onCoreStopping() }
             // The GL thread lets go of the frame buffer before pkDeinit frees it.
             runCatching { onCoreStopping?.invoke() }.onFailure { Log.e("pokedaisy", "core stopping hook failed", it) }
@@ -1326,6 +1431,14 @@ class EmulatorEngine(
         const val CYCLE_STEPS = 5
         /** At fast-forward, a WIDE window is drawn at most this often (~80 a second: every refresh of a 60 Hz screen). */
         const val WIDE_DRAW_NANOS = 12_000_000L
+        /** A DS game's STEADY copy: game frames after a new song id before copying the game again (the ARM9 hands the
+         * sound driver its start command at the end of its frame), and at most this long while a volume fade runs (5 s
+         * of game time); copy frames for a song fading out (~0.5 s); and at most this many copy frames run per game
+         * frame (it only catches up after a hitch). */
+        const val DS_MUSIC_SETTLE_FRAMES = 4
+        const val DS_MUSIC_MAX_WAIT_FRAMES = 300
+        const val DS_MUSIC_FADE_FRAMES = 30
+        const val DS_MUSIC_MAX_FRAMES = 4
         /** pkFieldState's bits that keep AUTO-RUN off: a script holding the field, a battle, a bike (known must be set). */
         const val AUTO_RUN_BLOCKERS = MgbaCore.FIELD_KNOWN or MgbaCore.FIELD_LOCKED or MgbaCore.FIELD_BATTLE or MgbaCore.FIELD_BIKE
         /** The D-pad's bits: one held = the player walking (the look-around glides back). */

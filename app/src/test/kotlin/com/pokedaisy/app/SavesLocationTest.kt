@@ -43,4 +43,20 @@ class SavesLocationTest {
         File(saves, ".stversions/FireRed~20261001.sav").writeText("old")
         assertEquals(File(saves, "FireRed.sav"), SavesLocation.saveIn(null, listOf(saves), rom))
     }
+
+    @Test fun aDsGamesSaveIsBesideItsRomLikeMelonDs() {
+        val roms = dir("nds")
+        val ds = File(roms, "Platinum.nds")
+        val saves = dir("ds-saves")
+        // A new save goes beside the ROM; one there wins over the saves folder's.
+        assertEquals(File(roms, "Platinum.sav"), SavesLocation.saveIn(null, SavesLocation.dirsFor(ds, true, listOf(saves)), ds))
+        File(saves, "Platinum.sav").writeText("app")
+        File(roms, "Platinum.sav").writeText("melonDS")
+        assertEquals(File(roms, "Platinum.sav"), SavesLocation.saveIn(null, SavesLocation.dirsFor(ds, true, listOf(saves)), ds))
+        // A save the app made elsewhere before still loads while there's none beside the ROM.
+        File(roms, "Platinum.sav").delete()
+        assertEquals(File(saves, "Platinum.sav"), SavesLocation.saveIn(null, SavesLocation.dirsFor(ds, true, listOf(saves)), ds))
+        // A GBA game is unchanged.
+        assertEquals(listOf(saves), SavesLocation.dirsFor(rom, false, listOf(saves)))
+    }
 }

@@ -40,6 +40,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,11 +71,16 @@ import androidx.compose.ui.unit.sp
 import com.pokedaisy.app.companion.data.GameKind
 import com.pokedaisy.app.companion.data.isGameBoyGame
 import com.pokedaisy.app.companion.data.MapTiles
+import com.pokedaisy.app.companion.data.NdsArt
 import com.pokedaisy.app.companion.data.PlayerMapTile
 import com.pokedaisy.app.companion.data.RegionMapModel
 import com.pokedaisy.app.companion.data.SnapshotView
+import com.pokedaisy.app.companion.data.activeGame
 import com.pokedaisy.app.companion.data.activeRegionMap
+import com.pokedaisy.app.companion.data.flySpotName
 import com.pokedaisy.app.companion.data.gameCase
+import com.pokedaisy.app.companion.data.isDsGame
+import com.pokedaisy.app.companion.data.isHgss
 import kotlin.math.floor
 
 /**
@@ -134,8 +142,19 @@ fun MapScreen(
         } else {
             val style = MapLabelStyle.of(snapshot.game)
             val playerTile = if (playerRegion == shown) {
-                PlayerMapTile.of(model, snapshot.regionMapSectionId, snapshot.x, snapshot.y, snapshot.mapWidth, snapshot.mapHeight, snapshot.mapType)
+                // A DS game's reader works out the block itself (the Town Map's own rule: indoors, the door went in by).
+                snapshot.regionMapTile
+                    ?: PlayerMapTile.of(model, snapshot.regionMapSectionId, snapshot.x, snapshot.y, snapshot.mapWidth, snapshot.mapHeight, snapshot.mapType)
             } else null
+            // Sprites the game draws over its map (Platinum's towns): grey until first arrived at, then the town's colour.
+            // Every mark's two pictures are loaded each time (a fixed number of loads), then the one that applies kept.
+            val visited = snapshot.townsVisited ?: 0L
+            val marks = model.marks.mapNotNull { mk ->
+                val plain = regionMapBitmap(mk.asset)
+                val coloured = regionMapBitmap(mk.visitedAsset)
+                val on = (visited shr mk.visitedFlag) and 1L != 0L
+                if (mk.hiddenUntilVisited && !on) null else (if (on) coloured else plain)?.let { it to IntOffset(mk.x - HEAD / 2, mk.y - HEAD / 2) }
+            }
             val sel = selection
             val (name, dungeon) = when {
                 sel != null -> sel.name to sel.dungeon
@@ -150,7 +169,36 @@ fun MapScreen(
             val mapFocus = remember { FocusRequester() }
             val buttonsFocus = remember { FocusRequester() }
             val bottomRow = snapshot.game in BOTTOM_ROW_MAPS
-            BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            if (snapshot.game.isHgss) PokegearMapView(
+                bitmap = bitmap,
+                style = style,
+                head = regionMapBitmap(if (snapshot.playerGender == 1) com.pokedaisy.app.companion.data.PokegearMap.HEAD_F else com.pokedaisy.app.companion.data.PokegearMap.HEAD_M),
+                playerTile = playerTile,
+                cursorSprite = run {
+                    val small = regionMapBitmap(com.pokedaisy.app.companion.data.PokegearMap.cursor(0))
+                    val big = regionMapBitmap(com.pokedaisy.app.companion.data.PokegearMap.cursor(1))
+                    if (small != null && big != null) small to big else null
+                },
+                tile = model.tile,
+                cell = cursorTile ?: sel?.tiles?.firstOrNull()?.let { it.x to it.y },
+                label = gameCase(name),
+                onCell = { tx, ty ->
+                    cursorTile = tx to ty
+                    selection = if (playerTile != null && tx to ty == playerTile) null else model.select(shown, tx, ty)
+                },
+                self = mapFocus,
+            ) { zoomed, toggleZoom ->
+                val m = rememberGbaTextMetrics(1f)
+                OptionButton(tr("PLACES"), m, onClick = { placesOpen = true })
+                if (openFly != null) FlyButton(openFly)
+                if (selection != null) OptionButton(tr("ME"), m, onClick = { selection = null; cursorTile = null; shownOverride = null }, emphasis = true)
+                Spacer(Modifier.weight(1f))
+                // The game's X: in, and back out.
+                OptionButton(
+                    null, rememberGbaTextMetrics(), onClick = toggleZoom, contentDescription = tr("ZOOM"),
+                    pixelIcon = if (zoomed) PixelIcons.zoomOut else PixelIcons.zoomIn,
+                )
+            } else BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 val mapAspect = crop.width.toFloat() / crop.height
                 val boxAspect = maxWidth / maxHeight
                 val fitted = when {
@@ -162,7 +210,11 @@ fun MapScreen(
                     RegionMap(
                         bitmap = bitmap,
                         style = style,
-                        head = regionMapBitmap(style.headAsset(snapshot.playerGender, snapshot.game)),
+                        head = regionMapBitmap(
+                            if (snapshot.game.isHgss) (if (snapshot.playerGender == 1) com.pokedaisy.app.companion.data.PokegearMap.HEAD_F else com.pokedaisy.app.companion.data.PokegearMap.HEAD_M)
+                            else if (snapshot.game.isDsGame) (if (snapshot.playerGender == 1) NdsArt.PLATINUM_HEAD_F else NdsArt.PLATINUM_HEAD_M)
+                            else style.headAsset(snapshot.playerGender, snapshot.game),
+                        ),
                         headTile = playerTile,
                         cursor = sel?.tiles ?: if (playerRegion == shown) model.tilesOf(snapshot.regionMapSectionId) else emptyList(),
                         label = gameCase(name),
@@ -173,6 +225,12 @@ fun MapScreen(
                         },
                         cursorFrom = cursorTile ?: sel?.tiles?.firstOrNull()?.let { it.x to it.y } ?: playerTile,
                         self = mapFocus, buttons = buttonsFocus, buttonsBottom = bottomRow,
+                        tile = model.tile, originX = model.originX, originY = model.originY, marks = marks,
+                        cursorSprite = if (snapshot.game.isHgss) {
+                            val small = regionMapBitmap(com.pokedaisy.app.companion.data.PokegearMap.cursor(0))
+                            val big = regionMapBitmap(com.pokedaisy.app.companion.data.PokegearMap.cursor(1))
+                            if (small != null && big != null) small to big else null
+                        } else null,
                     )
                     MapButtons(
                         bottomRow = bottomRow,
@@ -324,6 +382,15 @@ private fun RegionMap(
     self: FocusRequester = remember { FocusRequester() },
     buttons: FocusRequester? = null,
     buttonsBottom: Boolean = false,
+    /** The grid: tile (tx, ty) covers map pixels from ([originX] + tx * [tile], [originY] + ty * [tile]). */
+    tile: Int = TILE,
+    originX: Int = 0,
+    originY: Int = 0,
+    /** Sprites over the map, each at its top-left map pixel (Platinum's towns). */
+    marks: List<Pair<Bitmap, IntOffset>> = emptyList(),
+    /** The game's own cursor sprite (HeartGold / SoulSilver's: small, big), centred on [cursorFrom]'s tile instead of
+     * FireRed's corners around [cursor]; it pulses on the same beat. */
+    cursorSprite: Pair<Bitmap, Bitmap>? = null,
 ) {
     // FireRed's region-map cursor (graphics/region_map/cursor.png) swaps
     // between its two frames every 20 game frames. Read only while drawing,
@@ -332,6 +399,8 @@ private fun RegionMap(
 
     val image = remember(bitmap) { bitmap.asImageBitmap() }
     val headImage = remember(head) { head?.asImageBitmap() }
+    val markImages = remember(marks) { marks.map { (b, at) -> b.asImageBitmap() to at } }
+    val cursorImages = remember(cursorSprite) { cursorSprite?.let { (a, b) -> a.asImageBitmap() to b.asImageBitmap() } }
     // FireRed's region-map screens carry the game's own black border (and
     // a white inner strip) around the map; draw only the map itself.
     val crop = remember(bitmap) { regionMapContentBounds(bitmap) }
@@ -355,7 +424,8 @@ private fun RegionMap(
                     else -> return@onPreviewKeyEvent false
                 }
                 // The map's tiles (its border cropped off); off them, the key moves the focus out instead.
-                val (cols, rows) = crop.left / TILE..(crop.right - 1) / TILE to crop.top / TILE..(crop.bottom - 1) / TILE
+                val (cols, rows) = Math.floorDiv(crop.left - originX, tile)..Math.floorDiv(crop.right - 1 - originX, tile) to
+                    Math.floorDiv(crop.top - originY, tile)..Math.floorDiv(crop.bottom - 1 - originY, tile)
                 val (x, y) = from ?: ((cols.first + cols.last) / 2 to (rows.first + rows.last) / 2)
                 val tx = x + dx
                 val ty = y + dy
@@ -392,7 +462,7 @@ private fun RegionMap(
                 .pointerInput(crop, sx, sy) {
                     detectTapGestures { p ->
                         sound()
-                        tap(floor((crop.left + p.x / sx) / TILE).toInt(), floor((crop.top + p.y / sy) / TILE).toInt())
+                        tap(floor((crop.left + p.x / sx - originX) / tile).toInt(), floor((crop.top + p.y / sy - originY) / tile).toInt())
                     }
                 },
         ) {
@@ -403,10 +473,18 @@ private fun RegionMap(
                 dstSize = IntSize(size.width.toInt(), size.height.toInt()),
                 filterQuality = FilterQuality.None,
             )
+            for ((mark, at) in markImages) {
+                drawImage(
+                    mark,
+                    dstOffset = IntOffset(((at.x - crop.left) * sx).toInt(), ((at.y - crop.top) * sy).toInt()),
+                    dstSize = IntSize((mark.width * sx).toInt(), (mark.height * sy).toInt()),
+                    filterQuality = FilterQuality.None,
+                )
+            }
             if (headImage != null && headTile != null) {
                 // Centred on its tile, as the game's sprite is.
-                val hx = headTile.first * TILE + TILE / 2 - HEAD / 2 - crop.left
-                val hy = headTile.second * TILE + TILE / 2 - HEAD / 2 - crop.top
+                val hx = originX + headTile.first * tile + tile / 2 - HEAD / 2 - crop.left
+                val hy = originY + headTile.second * tile + tile / 2 - HEAD / 2 - crop.top
                 drawImage(
                     headImage,
                     dstOffset = IntOffset((hx * sx).toInt(), (hy * sy).toInt()),
@@ -414,12 +492,23 @@ private fun RegionMap(
                     filterQuality = FilterQuality.None,
                 )
             }
-            for (t in cursor) {
+            val spriteAt = cursorFrom.takeIf { cursor.isNotEmpty() }
+            if (cursorImages != null && spriteAt != null) {
+                val img = if (bigCursor.value) cursorImages.second else cursorImages.first
+                val cx = originX + spriteAt.first * tile + tile / 2 - img.width / 2 - crop.left
+                val cy = originY + spriteAt.second * tile + tile / 2 - img.height / 2 - crop.top
+                drawImage(
+                    img,
+                    dstOffset = IntOffset((cx * sx).toInt(), (cy * sy).toInt()),
+                    dstSize = IntSize((img.width * sx).toInt(), (img.height * sy).toInt()),
+                    filterQuality = FilterQuality.None,
+                )
+            } else for (t in cursor) {
                 drawMapCursor(
-                    left = t.x * TILE - crop.left,
-                    top = t.y * TILE - crop.top,
-                    right = (t.x + t.w) * TILE - crop.left,
-                    bottom = (t.y + t.h) * TILE - crop.top,
+                    left = originX + t.x * tile - crop.left,
+                    top = originY + t.y * tile - crop.top,
+                    right = originX + (t.x + t.w) * tile - crop.left,
+                    bottom = originY + (t.y + t.h) * tile - crop.top,
                     sx = sx,
                     sy = sy,
                     big = bigCursor.value,
@@ -623,9 +712,11 @@ private fun FlyList(model: RegionMapModel?, targets: com.pokedaisy.app.companion
                     GbaText(tr("No town to fly to yet."), OptionColors.label, OptionColors.labelShadow, m, modifier = Modifier.padding(m.u * 8))
                 } else LazyColumn(Modifier.fillMaxSize()) {
                     items(targets.destinations, key = { it }) { mapsec ->
-                        val s = model?.sections?.get(mapsec)
+                        // A DS game's destinations are its fly spots (spawn ids), named by their town.
+                        val ds = if (activeGame.isDsGame) com.pokedaisy.app.companion.data.gen4ConfigFor(activeGame)?.flySpotName(mapsec) else null
+                        val s = if (ds != null) null else model?.sections?.get(mapsec)
                         OptionLine(
-                            gameCase(s?.name ?: "#$mapsec"), s?.takeIf { it.region > 0 && model != null }?.let { regionName(model!!.images, it.region) },
+                            gameCase(ds ?: s?.name ?: "#$mapsec"), s?.takeIf { it.region > 0 && model != null }?.let { regionName(model!!.images, it.region) },
                             selected = false, m, labelWeight = 0.62f, divider = true,
                         ) { onPick(mapsec) }
                     }
@@ -641,6 +732,7 @@ internal fun flyMessage(r: com.pokedaisy.app.companion.data.FlyResult): String =
     com.pokedaisy.app.companion.data.FlyResult.IN_BATTLE -> tr("You can't do that during a battle.")
     com.pokedaisy.app.companion.data.FlyResult.NO_BADGE -> tr("FLY needs a new BADGE first.")
     com.pokedaisy.app.companion.data.FlyResult.CANT_FLY_HERE -> tr("You can't FLY from here.")
+    com.pokedaisy.app.companion.data.FlyResult.PARTNER -> tr("You can't FLY while someone is traveling with you.")
     com.pokedaisy.app.companion.data.FlyResult.NO_FLYER -> tr("Nobody in the party knows FLY.")
     else -> tr("It can't be used here.")
 }
@@ -763,3 +855,221 @@ fun regionMapContentBounds(bitmap: Bitmap): IntRect {
     while (bottom > h - h / 4 && row(bottom - 1, left, right)) bottom--
     return IntRect(left, top, right, bottom)
 }
+
+/** HeartGold / SoulSilver's map moves this many map pixels a second with the stick all the way over (the map is 376
+ * across: about three seconds end to end). */
+private const val POKEGEAR_STICK_SPEED = 120f
+private const val POKEGEAR_STICK_DEAD = 0.2f
+
+/**
+ * HeartGold / SoulSilver's Pokégear map, as the game shows it: the map as tall as the tab (or twice that, ZOOM / X),
+ * scrolled to keep the cursor in the middle, with the game's own red cursor - free to roam, smoothly, with the left stick
+ * (the companion's window), a cell at a time with the D-pad, or where a tap puts it; a drag pans the map and leaves the
+ * cursor be (the view follows the cursor again once it moves). The buttons
+ * stand in a column on its right, as the game's do. The cursor names the cell it's on through [onCell] (the caller's
+ * selection, like a tap); it comes to rest on a cell's middle, and follows [cell] when the caller moves it (PLACES, ME).
+ */
+@Composable
+private fun PokegearMapView(
+    bitmap: Bitmap,
+    style: MapLabelStyle,
+    head: Bitmap?,
+    playerTile: Pair<Int, Int>?,
+    cursorSprite: Pair<Bitmap, Bitmap>?,
+    tile: Int,
+    cell: Pair<Int, Int>?,
+    label: String,
+    onCell: (Int, Int) -> Unit,
+    self: FocusRequester,
+    buttons: @Composable ColumnScope.(zoomed: Boolean, toggleZoom: () -> Unit) -> Unit,
+) {
+    val image = remember(bitmap) { bitmap.asImageBitmap() }
+    val headImage = remember(head) { head?.asImageBitmap() }
+    val cursorImages = remember(cursorSprite) { cursorSprite?.let { (a, b) -> a.asImageBitmap() to b.asImageBitmap() } }
+    val bigCursor = rememberBlink(CURSOR_FRAME_MS, enabled = CompanionTweaks[CompanionTweaks.Tweak.MAP_CURSOR_BLINK], label = "map-cursor")
+    val mapW = bitmap.width.toFloat()
+    val mapH = bitmap.height.toFloat()
+    fun centreOf(c: Pair<Int, Int>) = Offset(c.first * tile + tile / 2f, c.second * tile + tile / 2f)
+    fun cellOf(p: Offset) = floor(p.x / tile).toInt().coerceIn(0, (bitmap.width - 1) / tile) to
+        floor(p.y / tile).toInt().coerceIn(0, (bitmap.height - 1) / tile)
+    // The cursor in map pixels: on the caller's cell (the player's, at first).
+    val start = cell ?: playerTile
+    var pos by remember { mutableStateOf(start?.let(::centreOf) ?: Offset(mapW / 2, mapH / 2)) }
+    var zoomed by remember { mutableStateOf(false) }
+    // Where a drag left the view (its middle, in map pixels); null = on the cursor.
+    var panned by remember { mutableStateOf<Offset?>(null) }
+    val report by rememberUpdatedState(onCell)
+    // The last cell this view named: the caller echoing it back isn't a move (the cursor may be cells further on by then).
+    val named = remember { arrayOfNulls<Pair<Int, Int>>(1) }
+    fun emit(x: Int, y: Int) { named[0] = x to y; report(x, y) }
+    // The caller moved it (PLACES, ME, the player landing elsewhere): there it goes.
+    LaunchedEffect(cell, playerTile) {
+        val to = cell ?: playerTile ?: return@LaunchedEffect
+        if (to != named[0] && cellOf(pos) != to) { pos = centreOf(to); panned = null }
+    }
+    fun moveTo(p: Offset) {
+        val clamped = Offset(p.x.coerceIn(0f, mapW - 1), p.y.coerceIn(0f, mapH - 1))
+        val before = cellOf(pos)
+        pos = clamped
+        val now = cellOf(clamped)
+        if (now != before) emit(now.first, now.second)
+    }
+    fun rest() {
+        val c = cellOf(pos)
+        pos = centreOf(c)
+        emit(c.first, c.second)
+    }
+    // The stick: a velocity while it's tilted, the cursor resting on its cell once it's let go.
+    var stick by remember { mutableStateOf(Offset.Zero) }
+    val tilted = stick.getDistance() > POKEGEAR_STICK_DEAD
+    CompanionStickHandler { x, y -> stick = Offset(x, y); true }
+    LaunchedEffect(tilted) {
+        if (!tilted) return@LaunchedEffect
+        var last = withFrameNanos { it }
+        try {
+            while (true) {
+                val now = withFrameNanos { it }
+                val dt = (now - last) / 1e9f
+                last = now
+                val s = stick
+                val mag = ((s.getDistance() - POKEGEAR_STICK_DEAD) / (1 - POKEGEAR_STICK_DEAD)).coerceIn(0f, 1f)
+                if (mag > 0f) { panned = null; moveTo(pos + s / s.getDistance() * (mag * POKEGEAR_STICK_SPEED * zoomFactor(zoomed) * dt)) }
+            }
+        } finally {
+            rest()
+        }
+    }
+    CompanionKeyHandler { key, repeat -> if (key == MenuKey.X && !repeat) { zoomed = !zoomed; true } else false }
+    val sound = LocalClickSound.current
+    val keys = remember { MutableInteractionSource() }
+    val focused by keys.collectIsFocusedAsState()
+    val shape = PixelRoundedShape(12.dp)
+    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .focusStart(true)
+                .onPreviewKeyEvent { e ->
+                    if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    val (dx, dy) = when (e.key) {
+                        Key.DirectionLeft -> -1 to 0
+                        Key.DirectionRight -> 1 to 0
+                        Key.DirectionUp -> 0 to -1
+                        Key.DirectionDown -> 0 to 1
+                        else -> return@onPreviewKeyEvent false
+                    }
+                    val (x, y) = cellOf(pos)
+                    val tx = x + dx
+                    val ty = y + dy
+                    // Off the map's right edge: on to the buttons.
+                    if (tx !in 0..((bitmap.width - 1) / tile) || ty !in 0..((bitmap.height - 1) / tile)) return@onPreviewKeyEvent false
+                    pos = centreOf(tx to ty)
+                    panned = null
+                    emit(tx, ty)
+                    true
+                }
+                .gbaFocusRing(focused, shape)
+                .focusRequester(self)
+                .focusable(interactionSource = keys)
+                .clip(shape)
+                .drawWithContent {
+                    drawContent()
+                    val px = (MAP_FRAME / 5).toPx().coerceAtLeast(1f)
+                    drawLayeredFrame(
+                        listOf(OptionColors.frameDark to 2 * px, OptionColors.frameLight to px, (if (OptionColors.dark) OptionColors.titleFill else Color.White) to 2 * px),
+                        radius = 12.dp.toPx(),
+                    )
+                },
+        ) {
+            val density = LocalDensity.current
+            val viewW = with(density) { maxWidth.toPx() }
+            val viewH = with(density) { maxHeight.toPx() }
+            // Screen pixels per map pixel: the map as tall as the view, twice that zoomed.
+            val scale = viewH / mapH * zoomFactor(zoomed)
+            // The view's top-left in map pixels: the cursor (or where a drag left it) in the middle, the map's edges never
+            // past the view's.
+            fun camera(): Offset {
+                val w = viewW / scale
+                val h = viewH / scale
+                val c = panned ?: pos
+                val x = if (w >= mapW) (mapW - w) / 2 else (c.x - w / 2).coerceIn(0f, mapW - w)
+                val y = if (h >= mapH) (mapH - h) / 2 else (c.y - h / 2).coerceIn(0f, mapH - h)
+                return Offset(x, y)
+            }
+            fun viewMiddle() = camera() + Offset(viewW / scale / 2, viewH / scale / 2)
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(scale) {
+                        detectTapGestures { p ->
+                            sound()
+                            // The view stays where it is: the cursor goes to the tapped cell in it.
+                            panned = viewMiddle()
+                            moveTo(camera() + p / scale)
+                            rest()
+                        }
+                    }
+                    .pointerInput(scale) {
+                        // Dragging pans the map with the finger; the cursor stays on its place.
+                        detectDragGestures { change, drag ->
+                            change.consume()
+                            panned = viewMiddle() - drag / scale
+                            // Held at the map's edges, so the next drag back moves it at once.
+                            panned = viewMiddle()
+                        }
+                    },
+            ) {
+                val cam = camera()
+                fun at(x: Float, y: Float) = IntOffset(((x - cam.x) * scale).toInt(), ((y - cam.y) * scale).toInt())
+                drawImage(
+                    image,
+                    dstOffset = at(0f, 0f),
+                    dstSize = IntSize((mapW * scale).toInt(), (mapH * scale).toInt()),
+                    filterQuality = FilterQuality.None,
+                )
+                if (headImage != null && playerTile != null) {
+                    val c = centreOf(playerTile)
+                    drawImage(
+                        headImage,
+                        dstOffset = at(c.x - HEAD / 2, c.y - HEAD / 2),
+                        dstSize = IntSize((HEAD * scale).toInt(), (HEAD * scale).toInt()),
+                        filterQuality = FilterQuality.None,
+                    )
+                }
+                // On whole map pixels, as a sprite is.
+                val cx = floor(pos.x)
+                val cy = floor(pos.y)
+                if (cursorImages != null) {
+                    val img = if (bigCursor.value) cursorImages.second else cursorImages.first
+                    drawImage(
+                        img,
+                        dstOffset = at(cx - img.width / 2 + 0.5f, cy - img.height / 2 + 0.5f),
+                        dstSize = IntSize((img.width * scale).toInt(), (img.height * scale).toInt()),
+                        filterQuality = FilterQuality.None,
+                    )
+                } else {
+                    val (tx, ty) = cellOf(pos)
+                    drawMapCursor(
+                        left = tx * tile - cam.x.toInt(), top = ty * tile - cam.y.toInt(),
+                        right = (tx + 1) * tile - cam.x.toInt(), bottom = (ty + 1) * tile - cam.y.toInt(),
+                        sx = scale, sy = scale, big = bigCursor.value,
+                    )
+                }
+            }
+            // The place name over the view's top left, near the map's own pixel size (its font stays whole pixels).
+            val labelScale = viewH / mapH * 0.9f
+            MapLabel(style, label, null, IntRect(0, 0, (viewW / labelScale).toInt(), mapH.toInt()), labelScale, labelScale)
+        }
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxHeight(),
+        ) {
+            buttons(zoomed) { zoomed = !zoomed }
+        }
+    }
+}
+
+/** How much nearer the map is zoomed in (ZOOM / X). */
+private fun zoomFactor(zoomed: Boolean) = if (zoomed) 2f else 1f

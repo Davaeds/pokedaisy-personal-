@@ -20,7 +20,8 @@ object GbaControls {
         A(MgbaCore.Key.A, "A"), B(MgbaCore.Key.B, "B"),
         L(MgbaCore.Key.L, "L"), R(MgbaCore.Key.R, "R"),
         START(MgbaCore.Key.START, "START"), SELECT(MgbaCore.Key.SELECT, "SELECT"),
-        START2(MgbaCore.Key.START, "START 2"), SELECT2(MgbaCore.Key.SELECT, "SELECT 2"),
+        // On a DS game they're its own X / Y ([DS_X] / [DS_Y]: GbaInput swaps them in).
+        START2(MgbaCore.Key.START or DS_X, "START 2"), SELECT2(MgbaCore.Key.SELECT or DS_Y, "SELECT 2"),
         TURBO_A(MgbaCore.Key.A or TURBO, "TURBO A"), TURBO_B(MgbaCore.Key.B or TURBO, "TURBO B");
 
         val prop get() = name.lowercase()
@@ -45,6 +46,10 @@ object GbaControls {
 
     /** Above every GBA key bit: a [load] value with it is a turbo button for the bits below. */
     const val TURBO = 1 shl 16
+
+    /** START 2 / SELECT 2's mark: on a DS game ([GbaInput.ds]) the key presses the DS's X / Y instead. */
+    const val DS_X = 1 shl 17
+    const val DS_Y = 1 shl 18
 
     private fun file(dir: File) = File(dir, "controls.properties")
 

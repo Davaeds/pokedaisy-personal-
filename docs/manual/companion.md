@@ -28,7 +28,7 @@ Some tabs only appear when the game has what they need. `DEX` needs the game's P
 
 ### Choosing your tabs
 
-Up to five tabs fit next to the gear. To pick them, open SETTINGS and tap `TAB BAR` in the COMPANION group, or tap the `TAB BAR` button at the bottom of `MORE`. Each tab there says `SHOWN` or `HIDDEN`; tap one to flip it. The title counts how many you've placed (for example `5/5`). If the bar is full, hide one first. Tabs always sit in the same order on the bar, whichever you pick.
+Up to five tabs fit next to the gear. To pick them, open SETTINGS and tap `TAB BAR` in the COMPANION group, or tap the `TAB BAR` button at the bottom of `MORE`. Each tab there says `SHOWN` or `HIDDEN`; tap one to flip it. The title counts how many you've placed (for example `5/5`). If the bar is full, hide one first. Tabs always sit in the same order on the bar, whichever you pick. When the game you're playing doesn't have one of your tabs (a game with no DEX, say), its place goes to one of the game's other tabs, so the bar stays full whenever the game has enough.
 
 Your choice is shared by every game. A tab the running game doesn't have shows `N/A` and keeps its setting for the games that do.
 

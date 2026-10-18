@@ -216,6 +216,8 @@ enum class FlyResult {
     IN_BATTLE,
     /** Not from this map (indoors, a cave). */
     CANT_FLY_HERE,
+    /** Someone walks with the player (Platinum's partner flag): the game itself won't fly then. */
+    PARTNER,
     /** Nobody in the party knows Fly (any more). */
     NO_FLYER,
     FAILED,

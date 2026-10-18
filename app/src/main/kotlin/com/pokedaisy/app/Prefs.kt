@@ -402,6 +402,12 @@ class Prefs(context: Context) {
         get() = p.getBoolean("single_screen", false)
         set(v) = p.edit().putBoolean("single_screen", v).apply()
 
+    /** A DS game on two screens: the bottom display shows the companion instead of the DS touch screen (its own
+     * one button under both, COMPANION / GAME SCREEN, or BACK switch back and forth; kept). */
+    var dsBottomCompanion: Boolean
+        get() = p.getBoolean("ds_bottom_companion", false)
+        set(v) = p.edit().putBoolean("ds_bottom_companion", v).apply()
+
     /** Single-screen devices: the companion's side panel is locked beside the game (see [SidePanel]). */
     var sidePanelDocked: Boolean
         get() = p.getBoolean("side_panel_docked", false)

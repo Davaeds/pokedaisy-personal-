@@ -187,6 +187,12 @@ data class SnapshotView(
     val mapNum: Int = 0,
     /** Event flags / vars and the ROM tables behind HERE / NEXT BOSS; null = not for this game. */
     val progress: SaveProgress? = null,
+    /** A Repel's steps left where the reader has them itself (a DS game, [Telemetry.repelSteps]); null = see [progress]. */
+    val repelSteps: Int? = null,
+    /** [Telemetry.regionMapTile]: the player's region-map tile where the reader has it (a DS game's Town Map block). */
+    val regionMapTile: Pair<Int, Int>? = null,
+    /** [Telemetry.townsVisited]: the first-arrival flags that colour a DS Town Map's towns; null = not read. */
+    val townsVisited: Long? = null,
     val guideTables: GuideTables? = null,
     /** A trainer battle's whole opposing party, in party order (the FOE TEAM strip). */
     val enemyParty: List<MonView> = emptyList(),
@@ -279,6 +285,8 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
     // v2 ROMs export the icon-graphics table addresses; hand them to the live
     // sprite reader so nothing has to be bundled.
     DecompIconSource.tables = t.icons
+    // HeartGold / SoulSilver's Pokégear map follows the save's state (PokegearMap).
+    t.pokegearState?.let { PokegearMap.state = it to (t.townsVisited ?: 0L) }
 
     val party = (0 until t.partyCount.coerceAtMost(PARTY_SIZE)).map { i ->
         val m = t.party[i]
@@ -303,7 +311,8 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
             maxHp = m.maxHp,
             status = statusLabel(m.status),
             types = monTypes(type1, type2),
-            iconAsset = spriteAsset("pokemon", m.species),
+            // A DS game's eggs keep their species: the egg's own icon is NdsArt's 494.
+            iconAsset = spriteAsset("pokemon", if (isEgg && activeGame.isDsGame) 494 else m.species),
             genderSymbol = m.genderSymbol,
             moves = moves,
             exp = if (isEgg) null else expProgress(m.species, m.level, m.exp),
@@ -425,6 +434,9 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
         mapGroup = t.mapGroup,
         mapNum = t.mapNum,
         progress = t.progress,
+        repelSteps = t.repelSteps,
+        regionMapTile = t.regionMapTile,
+        townsVisited = t.townsVisited,
         guideTables = t.guideTables,
         enemyParty = t.enemyParty.map { m ->
             val st = activeSpeciesTypeData[m.species]

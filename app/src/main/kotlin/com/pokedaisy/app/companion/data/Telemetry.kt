@@ -28,6 +28,14 @@ const val POCKET_POKE_BALLS = 1
 const val POCKET_TM_HM = 2
 const val POCKET_BERRIES = 3
 const val POCKET_KEY_ITEMS = 4
+// Gen 4's own pockets (HeartGold / SoulSilver's bag shows them apart); everything that knows only the five above folds
+// them into ITEMS ([basePocket]).
+const val POCKET_MEDICINE = 5
+const val POCKET_MAIL = 6
+const val POCKET_BATTLE_ITEMS = 7
+
+/** [pocket] as one of the five pockets every game has: Gen 4's MEDICINE / MAIL / BATTLE ITEMS ride with ITEMS. */
+fun basePocket(pocket: Int): Int = if (pocket >= POCKET_MEDICINE) POCKET_ITEMS else pocket
 
 data class Mon(
     val species: Int,
@@ -124,6 +132,15 @@ data class Telemetry(
     val mapSecName: String? = null,
     /** What the TRAINER CARD shows (TrainerCard.kt); null where the game has no [NativeConfig.trainerCard]. */
     val trainerCard: TrainerCardInfo? = null,
+    /** A Repel's steps left, where the reader has it itself (a DS game); null = from [progress]'s variable (GBA). */
+    val repelSteps: Int? = null,
+    /** The player's tile on the region map where the reader works it out itself (a DS game: their Town Map block); null =
+     * from the map section and position ([PlayerMapTile]). */
+    val regionMapTile: Pair<Int, Int>? = null,
+    /** The towns the player has been to, as the game's first-arrival flags (bit n = first arrival n; a DS game). */
+    val townsVisited: Long? = null,
+    /** HeartGold / SoulSilver: the Pokégear's skin << 2 | its map's unlock level ([PokegearMap]); null elsewhere. */
+    val pokegearState: Int? = null,
 )
 
 /** ROM addresses of the icon-graphics tables (0 = unknown). */

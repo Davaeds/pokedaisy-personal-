@@ -33,6 +33,8 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -747,9 +749,11 @@ fun activity(expandIntro: Boolean = false, start: Boolean = false, make: () -> a
     names.forEach { File(roms, it).apply { writeText("x"); setLastModified(1_700_000_000_000L) } }
     // What GameTitles.identify would have cached for the real ROMs (the fakes don't hash to them).
     val titles = mapOf(names[1] to "Pokémon Unbound", names[2] to "Pokémon Emerald", names[3] to "Pokémon Radical Red", names[4] to "Pokémon Gaia")
+    // ... and what kind each is (the cover when a game has no art): Emerald retail GBA, the rest hacks.
     File(ctx.filesDir, "rom-titles.tsv").writeText(names.joinToString("") { n ->
         val f = File(roms, n)
-        "${f.absolutePath}\t${f.length()}\t${f.lastModified()}\t${titles[n].orEmpty()}\n"
+        val kind = if (n == names[2]) "GBA" else "HACK"
+        "${f.absolutePath}\t${f.length()}\t${f.lastModified()}\t${titles[n].orEmpty()}\t$kind\n"
     })
     File(ctx.filesDir, "saves").mkdirs()
     File(ctx.filesDir, "saves/firered-hack.sav").writeText("x")
@@ -938,9 +942,31 @@ fun homeMapsec(game: GameKind) = when (game) {
     else -> 0x58 // MAPSEC_PALLET_TOWN
 }
 
+/** A DS game's real snapshot (-PndsFixture): the fixture's main RAM read the way the app reads it. */
+fun ndsSnapshot(): SnapshotView {
+    val main = File("../../test/resources/fixtures/${System.getProperty("ndsFixture")}/mainram.bin").readBytes()
+    val reader = object : com.pokedaisy.app.companion.data.MemoryReader {
+        override fun readCoreMemory(addr: Long, size: Int): ByteArray {
+            val o = (addr - 0x02000000L).toInt()
+            return if (o < 0 || o + size > main.size) ByteArray(size) else main.copyOfRange(o, o + size)
+        }
+    }
+    val cfg = com.pokedaisy.app.companion.data.gen4ConfigFor(activeGame) ?: error("not a DS game: $activeGame")
+    // connected / game: what the Poller adds once it has detected the cart
+    return com.pokedaisy.app.companion.data.buildSnapshotView(com.pokedaisy.app.companion.data.readGen4Telemetry(reader, cfg))
+        .copy(connected = true, game = activeGame)
+}
+
 fun main(args: Array<String>) {
     // The docs' shots (gradle docsShots) never show a game's art: no ROM art, only the invented map.
     if (docsMode) installDocsArt() else romArt()
+    // A DS game's art from its cart (-PndsRom): icons, item icons, the Pokégear map's pieces.
+    System.getProperty("ndsRom").orEmpty().takeIf { it.isNotBlank() }?.let { path ->
+        val dir = RomArt.dir(android.content.Context().filesDir)
+        com.pokedaisy.app.companion.data.PokegearMap.dir = dir
+        com.pokedaisy.app.companion.data.NdsArt.dir = dir
+        if (com.pokedaisy.app.companion.data.NdsArt.extractTo(File(path), dir)) println("nds art: from ${File(path).name}")
+    }
     // A FireRed-engine hack's own region map (Unbound, Odyssey, ...) from -Prom.
     System.getProperty("rom").orEmpty().takeIf { it.isNotBlank() }?.let { path ->
         val f = File(path)
@@ -970,7 +996,44 @@ fun main(args: Array<String>) {
     val bw = panelW ?: 1240
     val bd = if (panelW != null) com.pokedaisy.app.companion.ui.sidePanelDensity(bw, bh) else 2.625f
     val tw = 1920; val th = 1080; val td = 2.5f
-    val all = listOf(
+    val real = if (System.getProperty("ndsFixture").orEmpty().isNotBlank()) listOf(
+        Shot("$g-real-party", bw, bh, bd, companion("PARTY", snap = ::ndsSnapshot)),
+        Shot("$g-real-items", bw, bh, bd, companion("ITEMS", snap = ::ndsSnapshot)),
+        // Another pocket: its colours on the backdrop and the band.
+        Shot("$g-real-items-medicine", bw, bh, bd, companion("ITEMS", snap = ::ndsSnapshot)) {
+            onNodeWithContentDescription("Medicine").performClick()
+        },
+        // The machines: a move's name over its number, HMs in their tag.
+        Shot("$g-real-items-tms", bw, bh, bd, companion("ITEMS", snap = ::ndsSnapshot)) {
+            onNodeWithContentDescription("TMs & HMs").performClick()
+        },
+        // An item open and starred: the red card, its star and the FAVORITES button at the end of the pockets.
+        Shot("$g-real-items-favorite", bw, bh, bd, companion("ITEMS", snap = ::ndsSnapshot)) {
+            onNodeWithText("Quick Claw").performClick()
+            repeat(10) { mainClock.advanceTimeByFrame() }
+            onNodeWithContentDescription("FAVORITE").performClick()
+        },
+        Shot("$g-real-map", bw, bh, bd, companion("MAP", snap = ::ndsSnapshot)),
+        Shot("$g-real-dex", bw, bh, bd, companion("DEX", snap = ::ndsSnapshot)),
+        Shot("$g-real-dex-entry", bw, bh, bd, companion("DEX", snap = ::ndsSnapshot)) {
+            onAllNodesWithText("BULBASAUR", substring = true, ignoreCase = true).onFirst().performClick()
+        },
+        Shot("$g-real-dex-johto", bw, bh, bd, companion("DEX", snap = ::ndsSnapshot)) {
+            onAllNodesWithText("NATIONAL DEX", ignoreCase = true).onFirst().performClick()
+        },
+        Shot("$g-real-dex-evolve", bw, bh, bd, companion("DEX", snap = ::ndsSnapshot)) {
+            onAllNodesWithText("BULBASAUR", substring = true, ignoreCase = true).onFirst().performClick()
+            onAllNodesWithText("EVOLVE", ignoreCase = true).onFirst().performClick()
+        },
+        Shot("$g-real-dex-moves", bw, bh, bd, companion("DEX", snap = ::ndsSnapshot)) {
+            onAllNodesWithText("BULBASAUR", substring = true, ignoreCase = true).onFirst().performClick()
+            onAllNodesWithText("MOVES", ignoreCase = true).onFirst().performClick()
+        },
+        Shot("$g-real-map-zoom", bw, bh, bd, companion("MAP", snap = ::ndsSnapshot)) {
+            onNodeWithContentDescription("ZOOM").performSemanticsAction(SemanticsActions.OnClick)
+        },
+    ) else emptyList()
+    val all = real + listOf(
         Shot("$g-party", bw, bh, bd, companion("PARTY")),
         // The lead holds a Potion, the second a QUICK CLAW: the tag in each slot's corner and the game's marker by the icon.
         Shot("$g-party-held", bw, bh, bd, companion("PARTY") {
@@ -1361,6 +1424,23 @@ fun main(args: Array<String>) {
             }
         }),
         Shot("library-list", tw, th, td, activity { LibraryActivity() }),
+        // A game with no cover art: its kind (CategoryArt), at a list row's size and a grid tile's.
+        Shot("library-category-art", 2000, 560, 2.625f, {
+            {
+                androidx.compose.foundation.layout.Column(
+                    androidx.compose.ui.Modifier.background(androidx.compose.ui.graphics.Color(0xFF202020)).padding(12.dp),
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+                ) {
+                    for (size in listOf(44.dp, 120.dp)) {
+                        androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                            for (c in com.pokedaisy.app.RomCategory.entries) {
+                                com.pokedaisy.app.companion.ui.CategoryArt(c, androidx.compose.ui.Modifier.size(size))
+                            }
+                        }
+                    }
+                }
+            }
+        }),
         // The dual-screen launcher: the list on the top screen, the selected game's media on the bottom.
         Shot("launcher-main", tw, th, td, launcher()),
         Shot("launcher-second", bw, bh, bd, launcher(second = true)),
@@ -1905,7 +1985,7 @@ fun main(args: Array<String>) {
                 setContent(content)
                 mainClock.advanceTimeBy(500)
                 runCatching { shot.action(this) }
-                    .onFailure { println("${shot.name}: action failed: ${it.message?.lineSequence()?.first()}") }
+                    .onFailure { println("${shot.name}: action failed: ${it.message?.lineSequence()?.first()}"); if (System.getenv("SHOT_TRACE") != null) it.printStackTrace(System.out) }
                 // Frame by frame, so transitions started by the action run to the end.
                 repeat(90) { mainClock.advanceTimeByFrame() }
                 Thread.sleep(300) // bitmaps load on Dispatchers.IO

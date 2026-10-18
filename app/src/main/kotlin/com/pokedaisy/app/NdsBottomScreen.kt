@@ -1,0 +1,187 @@
+package com.pokedaisy.app
+
+import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Rect
+import android.view.MotionEvent
+import android.view.View
+import android.widget.FrameLayout
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import android.view.Gravity
+import com.pokedaisy.app.companion.i18n.tr
+import com.pokedaisy.app.companion.ui.OptionButton
+import com.pokedaisy.app.companion.ui.rememberGbaTextMetrics
+import java.nio.ByteBuffer
+import java.util.concurrent.CopyOnWriteArrayList
+
+/**
+ * A DS game's bottom (touch) screen on the bottom display, where the companion goes for a GBA game: the DS's own
+ * picture and its stylus from this screen's touches. The companion goes on the game's screen instead, as on a
+ * one-screen device (PokeDaisyActivity.syncPresentation). The frame is copied between frames on the emu thread
+ * ([NdsBottomFrame.publish]), like the top screen's ([EmulatorView.publishFrame]).
+ */
+object NdsBottomFrame {
+    const val W = 256
+    const val H = 192
+
+    private val lock = Any()
+    private val pixels: ByteBuffer = ByteBuffer.allocateDirect(W * H * 4)
+    /** The core's bottom-screen buffer while a DS core runs ([bind] / [unbind]). */
+    private var source: ByteBuffer? = null
+    private val views = CopyOnWriteArrayList<NdsTouchScreenView>()
+
+    /** Emu thread, once the DS core is up. */
+    fun bind(buffer: ByteBuffer?) = synchronized(lock) { source = buffer }
+
+    /** Emu thread, before the core frees its buffer. */
+    fun unbind() = synchronized(lock) { source = null }
+
+    /** Emu thread, after each frame the screen shows. */
+    fun publish() {
+        synchronized(lock) {
+            val src = source ?: return
+            src.rewind()
+            pixels.clear()
+            pixels.put(src)
+        }
+        for (v in views) v.postInvalidateOnAnimation()
+    }
+
+    internal fun copyInto(bitmap: Bitmap) = synchronized(lock) {
+        pixels.rewind()
+        bitmap.copyPixelsFromBuffer(pixels)
+    }
+
+    internal fun attach(v: NdsTouchScreenView) = views.add(v)
+    internal fun detach(v: NdsTouchScreenView) = views.remove(v)
+
+    /** The bottom display's content for a DS game: its touch screen, on black. */
+    fun content(context: Context): View = FrameLayout(context).apply {
+        setBackgroundColor(Color.BLACK)
+        addView(NdsTouchScreenView(context), FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+    }
+}
+
+/**
+ * The bottom display for a DS game on two screens: the DS touch screen, or the companion in its place (the player's
+ * pick, Prefs.dsBottomCompanion). One button switches them, in the same place for both: centred in the bar the touch
+ * screen's 4:3 leaves under it (COMPANION, or GAME SCREEN back), the companion taking the touch screen's area above it.
+ * BACK with nothing left to go back from also returns to the touch screen (PokeDaisyActivity.companionBackTap).
+ */
+@SuppressLint("ViewConstructor")
+class NdsBottomHost(
+    context: Context,
+    companion: () -> View,
+    showCompanion: Boolean,
+    /** The player switched: true = the companion now. */
+    private val onSwitch: (Boolean) -> Unit,
+) : FrameLayout(context) {
+    private val touch = NdsBottomFrame.content(context)
+    private val companionView = companion()
+    private var label by mutableStateOf(showCompanion)
+    private val button = CompanionColors.track(ComposeView(context)).apply {
+        setContent {
+            val m = rememberGbaTextMetrics()
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                OptionButton(if (label) tr("GAME SCREEN") else tr("COMPANION"), m, onClick = { show(!showingCompanion) })
+            }
+        }
+    }
+    var showingCompanion = showCompanion
+        private set
+
+    init {
+        setBackgroundColor(Color.BLACK)
+        addView(touch, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(companionView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, Gravity.TOP))
+        addView(button, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
+        apply(showCompanion)
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        // The touch screen's height at its own 4:3 (NdsTouchScreenView), the button's bar the rest; a display with no
+        // room under it keeps a bar of a button's height, the companion above it.
+        val screenH = minOf(h, (minOf(w.toFloat() / NdsBottomFrame.W, h.toFloat() / NdsBottomFrame.H) * NdsBottomFrame.H).toInt())
+        val minBar = (resources.displayMetrics.density * 56).toInt()
+        val bar = maxOf(h - screenH, minBar)
+        post {
+            companionView.layoutParams = (companionView.layoutParams as LayoutParams).apply { height = h - bar }
+            button.layoutParams = (button.layoutParams as LayoutParams).apply { height = bar }
+            requestLayout()
+        }
+    }
+
+    /** Shows the companion ([on]) or the touch screen, and tells [onSwitch] when that's a change. */
+    fun show(on: Boolean) {
+        if (on == showingCompanion) return
+        apply(on)
+        onSwitch(on)
+    }
+
+    private fun apply(on: Boolean) {
+        showingCompanion = on
+        label = on
+        companionView.visibility = if (on) VISIBLE else GONE
+        touch.visibility = if (on) GONE else VISIBLE
+        // No stylus left down on a screen that's gone.
+        if (on) MgbaCore.pkNdsTouch(false, 0, 0)
+    }
+}
+
+/** The DS's bottom screen, as large as fits at its own 4:3, top-centred; touches on it are the stylus. */
+class NdsTouchScreenView(context: Context) : View(context) {
+    private val bitmap = Bitmap.createBitmap(NdsBottomFrame.W, NdsBottomFrame.H, Bitmap.Config.ARGB_8888)
+    private val paint = Paint().apply { isFilterBitmap = false }
+    private val dst = Rect()
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        NdsBottomFrame.attach(this)
+    }
+
+    override fun onDetachedFromWindow() {
+        NdsBottomFrame.detach(this)
+        MgbaCore.pkNdsTouch(false, 0, 0)
+        super.onDetachedFromWindow()
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        val scale = minOf(w.toFloat() / NdsBottomFrame.W, h.toFloat() / NdsBottomFrame.H)
+        val dw = (NdsBottomFrame.W * scale).toInt()
+        val dh = (NdsBottomFrame.H * scale).toInt()
+        val left = (w - dw) / 2
+        dst.set(left, 0, left + dw, dh)
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        NdsBottomFrame.copyInto(bitmap)
+        canvas.drawBitmap(bitmap, null, dst, paint)
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (dst.isEmpty) return false
+        val x = ((event.x - dst.left) * NdsBottomFrame.W / dst.width()).toInt()
+        val y = ((event.y - dst.top) * NdsBottomFrame.H / dst.height()).toInt()
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                val inside = x in 0 until NdsBottomFrame.W && y in 0 until NdsBottomFrame.H
+                MgbaCore.pkNdsTouch(inside, x, y)
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> MgbaCore.pkNdsTouch(false, 0, 0)
+        }
+        return true
+    }
+}

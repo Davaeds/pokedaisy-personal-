@@ -1,0 +1,579 @@
+// nds_dump: headless melonDS for DS test fixtures, mgba_dump's twin (see README.md here).
+//
+//   nds_dump ROM.nds SAVE.sav [--jit] < script.txt
+//
+// Boots ROM with melonDS's FreeBIOS and generated firmware (no BIOS / firmware files), reading SAVE
+// when it exists and writing every save the game makes back to it - so give it a copy, never a real
+// save. Then runs the stdin script (README.md lists the commands).
+
+#include <NDS.h>
+#include <NDSCart.h>
+#include <GPU.h>
+#include <Savestate.h>
+#include <Args.h>
+
+#include "pk_nds_platform.h"
+#include "pk_nds_field.h"
+#include "pk_nds_call.h"
+#include "pk_nds_wide.h"
+#include "pk_nds_music.h"
+
+#include <zlib.h>
+
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <memory>
+#include <string>
+#include <vector>
+
+using namespace melonDS;
+
+static std::string savePath;
+static NDS* nds = nullptr;
+static u32 heldKeys = 0;     // pressed keys, bit = melonDS key index (A 0 .. L 9, X 10, Y 11)
+static bool touching = false;
+static u16 touchX = 0, touchY = 0;
+static u64 frameCount = 0;
+static int wideMargin = 0;   // wide MX [MY]: EXPAND drawn every frame (pk_nds_wide.cpp)
+static bool wideDrawn = false;
+static u32 read32(u32 addr) { return nds->ARM9Read32(addr); }
+static void write32(u32 addr, u32 v) { nds->ARM9Write32(addr, v); }
+static int wildOff = 0;          // wildoff 1: WILD ENCOUNTERS OFF, the field read run every frame (pk_nds_field.cpp)
+static int battlesSeen = 0;      // battles started since wildoff (the field read's BATTLE bit going on)
+
+static void onSave(PkNdsHost*, const uint8_t* data, uint32_t len, uint32_t, uint32_t)
+{
+    FILE* f = fopen(savePath.c_str(), "wb");
+    if (!f) { fprintf(stderr, "can't write %s\n", savePath.c_str()); return; }
+    fwrite(data, 1, len, f);
+    fclose(f);
+}
+
+static void onStop(PkNdsHost*, int reason) { fprintf(stderr, "DS stopped (reason %d)\n", reason); }
+
+static void logLine(int level, const char* msg)
+{
+    if (level >= 2 || getenv("NDS_DUMP_VERBOSE")) fprintf(stderr, "%s", msg);
+}
+
+static std::vector<u8> readFile(const char* path)
+{
+    std::vector<u8> out;
+    FILE* f = fopen(path, "rb");
+    if (!f) return out;
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    out.resize(n);
+    if (fread(out.data(), 1, n, f) != (size_t) n) out.clear();
+    fclose(f);
+    return out;
+}
+
+static bool writeFile(const std::string& path, const void* data, size_t len)
+{
+    FILE* f = fopen(path.c_str(), "wb");
+    if (!f) { fprintf(stderr, "can't write %s\n", path.c_str()); return false; }
+    fwrite(data, 1, len, f);
+    fclose(f);
+    return true;
+}
+
+// --- PNG (RGB, filter 0 rows, one zlib stream) ---
+
+static void put32(std::vector<u8>& v, u32 x)
+{
+    v.push_back(x >> 24); v.push_back(x >> 16); v.push_back(x >> 8); v.push_back(x);
+}
+
+static void chunk(std::vector<u8>& png, const char* type, const std::vector<u8>& data)
+{
+    put32(png, (u32) data.size());
+    size_t start = png.size();
+    png.insert(png.end(), type, type + 4);
+    png.insert(png.end(), data.begin(), data.end());
+    put32(png, (u32) crc32(0, png.data() + start, (uInt) (png.size() - start)));
+}
+
+static bool writePng(const std::string& path, const u32* argb, int w, int h)
+{
+    std::vector<u8> raw;
+    raw.reserve((size_t) (w * 3 + 1) * h);
+    for (int y = 0; y < h; y++) {
+        raw.push_back(0);
+        for (int x = 0; x < w; x++) {
+            u32 p = argb[y * w + x];
+            raw.push_back(p >> 16); raw.push_back(p >> 8); raw.push_back(p);
+        }
+    }
+    uLongf zlen = compressBound((uLong) raw.size());
+    std::vector<u8> z(zlen);
+    compress2(z.data(), &zlen, raw.data(), (uLong) raw.size(), 6);
+    z.resize(zlen);
+    std::vector<u8> png = {0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'};
+    std::vector<u8> ihdr;
+    put32(ihdr, w); put32(ihdr, h);
+    ihdr.insert(ihdr.end(), {8, 2, 0, 0, 0});
+    chunk(png, "IHDR", ihdr);
+    chunk(png, "IDAT", z);
+    chunk(png, "IEND", {});
+    return writeFile(path, png.data(), png.size());
+}
+
+// Both screens, top over bottom, 256x384.
+static bool shot(const std::string& path)
+{
+    std::vector<u32> px(256 * 384);
+    int fb = nds->GPU.FrontBuffer;
+    for (int s = 0; s < 2; s++) {
+        const u32* src = nds->GPU.Framebuffer[fb][s].get();
+        if (src) memcpy(px.data() + s * 256 * 192, src, 256 * 192 * 4);
+    }
+    return writePng(path, px.data(), 256, 384);
+}
+
+// --- input ---
+
+static u32 parseKeys(const char* s)
+{
+    static const char* names[] = {"A", "B", "SELECT", "START", "RIGHT", "LEFT", "UP", "DOWN", "R", "L", "X", "Y"};
+    u32 bits = 0;
+    std::string list(s);
+    size_t pos = 0;
+    while (pos <= list.size()) {
+        size_t comma = list.find(',', pos);
+        std::string key = list.substr(pos, comma == std::string::npos ? std::string::npos : comma - pos);
+        bool found = key == "NONE" || key.empty();
+        for (int i = 0; i < 12; i++) {
+            if (key == names[i]) { bits |= 1u << i; found = true; }
+        }
+        if (!found) fprintf(stderr, "unknown key %s\n", key.c_str());
+        if (comma == std::string::npos) break;
+        pos = comma + 1;
+    }
+    return bits;
+}
+
+// skipdraw N: as fast-forward at Nx does, only every Nth frame is drawn (GPU::SkipDraw on the others); 0 = all
+static int skipDraw = 0;
+
+static void runFrames(int n, u32 keys)
+{
+    for (int i = 0; i < n; i++) {
+        // The frames the caller looks at (the last of each run) are always drawn.
+        bool draw = !skipDraw || i == n - 1 || (frameCount + 1) % skipDraw == 0;
+        bool drawNext = !skipDraw || i + 1 >= n - 1 || (frameCount + 2) % skipDraw == 0;
+        nds->GPU.SkipDraw = !draw;
+        nds->GPU.SkipDrawNext = !drawNext;
+        nds->SetKeyMask(~keys & 0xFFF);
+        if (touching) nds->TouchScreen(touchX, touchY);
+        else nds->ReleaseScreen();
+        nds->RunFrame();
+        frameCount++;
+        static int wasBattle = 0;
+        int battle = 0;
+        if (auto* cart = nds->NDSCartSlot.GetCart()) {
+            if (const PkNdsFieldGame* g = pk_nds_field_game(cart->GetHeader().GameCode, cart->GetHeader().ROMVersion)) {
+                int bits = pk_nds_field_state(g, read32, write32, wildOff);
+                pk_nds_call_frame(nds, g);
+                battle = (bits & PK_NDS_FIELD_BATTLE) != 0;
+                if (battle && !wasBattle) battlesSeen++;
+                wasBattle = battle;
+            }
+        }
+        // As the app: a battle's margins are its background, everything else the overworld's 3D.
+        if (wideMargin)
+            wideDrawn = pk_nds_wide_frame(nds, nds->GPU.Framebuffer[nds->GPU.FrontBuffer][0].get(), draw, !battle, true, battle) || wideDrawn;
+    }
+}
+
+// --- savestates (melonDS's own format, the save memory left out of the picture: the cart's
+// SRAM rides in the state, so loading one also puts that save back in RAM - never on disk here) ---
+
+static bool saveState(const std::string& path)
+{
+    Savestate st;
+    if (!nds->DoSavestate(&st) || st.Error) { fprintf(stderr, "savestate failed\n"); return false; }
+    st.Finish();
+    return writeFile(path, st.Buffer(), st.Length());
+}
+
+static bool loadState(const std::string& path)
+{
+    std::vector<u8> data = readFile(path.c_str());
+    if (data.empty()) { fprintf(stderr, "can't read %s\n", path.c_str()); return false; }
+    Savestate st(data.data(), (u32) data.size(), false);
+    if (st.Error || !nds->DoSavestate(&st) || st.Error) { fprintf(stderr, "loadstate failed\n"); return false; }
+    return true;
+}
+
+static u32 num(const char* s) { return (u32) strtoul(s, nullptr, 0); }
+
+// 16-bit stereo PCM at [rate] Hz.
+static bool writeWav(const char* path, const std::vector<s16>& pcm, int rate)
+{
+    FILE* f = fopen(path, "wb");
+    if (!f) return false;
+    u32 data = (u32) (pcm.size() * 2), riff = 36 + data, fmtLen = 16, byteRate = (u32) rate * 4, r = (u32) rate;
+    u16 pcmTag = 1, ch = 2, align = 4, bits = 16;
+    fwrite("RIFF", 1, 4, f); fwrite(&riff, 4, 1, f); fwrite("WAVEfmt ", 1, 8, f);
+    fwrite(&fmtLen, 4, 1, f); fwrite(&pcmTag, 2, 1, f); fwrite(&ch, 2, 1, f); fwrite(&r, 4, 1, f);
+    fwrite(&byteRate, 4, 1, f); fwrite(&align, 2, 1, f); fwrite(&bits, 2, 1, f);
+    fwrite("data", 1, 4, f); fwrite(&data, 4, 1, f); fwrite(pcm.data(), 2, pcm.size(), f);
+    fclose(f);
+    return true;
+}
+
+
+// fieldinfo: the field read's raw words and bits (pk_nds_field.cpp), for the cart's table entry.
+static void fieldInfo()
+{
+    auto* cart = nds->NDSCartSlot.GetCart();
+    const PkNdsFieldGame* g = cart ? pk_nds_field_game(cart->GetHeader().GameCode, cart->GetHeader().ROMVersion) : nullptr;
+    if (!g) { printf("fieldinfo: no table for this cart\n"); fflush(stdout); return; }
+    u32 fs = read32(g->fieldSystemPtr);
+    u32 pm = fs ? read32(fs + g->offProcessManager) : 0;
+    u32 av = fs ? read32(fs + g->offPlayerAvatar) : 0;
+    printf("fieldinfo frame %llu: fs %08X pm %08X parent %08X child %08X pause %u task %08X running %u avatar %08X state %u"
+           " childInit %08X battleInit %08X bg3 %d -> bits 0x%X\n",
+           (unsigned long long) frameCount, fs, pm, pm ? read32(pm) : 0, pm ? read32(pm + 4) : 0, pm ? read32(pm + 8) : 0,
+           fs ? read32(fs + g->offTask) : 0, fs ? read32(fs + g->offRunningFieldMap) : 0, av, av ? read32(av + g->offAvatarState) : 0,
+           pm && read32(pm + 4) ? read32(read32(pm + 4)) : 0, read32(g->battleTemplate), pk_nds_bg3_tiles(nds), pk_nds_field_state(g, read32, write32, wildOff));
+    fflush(stdout);
+}
+
+int main(int argc, char** argv)
+{
+    if (argc < 3) {
+        fprintf(stderr, "usage: nds_dump ROM.nds SAVE.sav [--jit] < script\n");
+        return 2;
+    }
+    bool jit = argc > 3 && !strcmp(argv[3], "--jit");
+    savePath = argv[2];
+    pkNdsSetLog(logLine);
+
+    std::vector<u8> rom = readFile(argv[1]);
+    if (rom.empty()) { fprintf(stderr, "can't read %s\n", argv[1]); return 1; }
+    std::vector<u8> save = readFile(argv[2]);
+
+    static PkNdsHost host {onSave, onStop, nullptr};
+
+    NDSArgs args;
+    // The app's JIT: no fast memory (pk_nds.cpp)
+    if (jit) args.JIT = JITArgs {32, true, true, false};
+    else args.JIT = std::nullopt;
+    nds = new NDS(std::move(args), &host);
+    nds->Reset();
+
+    NDSCart::NDSCartArgs cartArgs;
+    if (!save.empty()) {
+        cartArgs.SRAM = std::make_unique<u8[]>(save.size());
+        memcpy(cartArgs.SRAM.get(), save.data(), save.size());
+        cartArgs.SRAMLength = (u32) save.size();
+    }
+    auto romCopy = std::make_unique<u8[]>(rom.size());
+    memcpy(romCopy.get(), rom.data(), rom.size());
+    auto cart = NDSCart::ParseROM(std::move(romCopy), (u32) rom.size(), &host, std::move(cartArgs));
+    if (!cart) { fprintf(stderr, "not a DS ROM\n"); return 1; }
+    nds->SetNDSCart(std::move(cart));
+    nds->Reset();
+    nds->SetupDirectBoot("rom.nds");
+    nds->Start();
+    fprintf(stderr, "booted %s, save %u bytes\n", argv[1], nds->GetNDSSaveLength());
+
+    char line[512];
+    while (fgets(line, sizeof(line), stdin)) {
+        char* hash = strchr(line, '#');
+        if (hash) *hash = 0;
+        char cmd[64] = {0}, a[256] = {0}, b[64] = {0}, c[64] = {0}, d[64] = {0};
+        int n = sscanf(line, "%63s %255s %63s %63s %63s", cmd, a, b, c, d);
+        if (n <= 0) continue;
+
+        if (!strcmp(cmd, "wait")) {
+            runFrames((int) num(a), heldKeys);
+        } else if (!strcmp(cmd, "keys")) {
+            heldKeys = parseKeys(a);
+        } else if (!strcmp(cmd, "press")) {
+            runFrames(1, heldKeys | parseKeys(a));
+            runFrames(1, heldKeys);
+        } else if (!strcmp(cmd, "hold")) {
+            runFrames((int) num(b), heldKeys | parseKeys(a));
+            runFrames(1, heldKeys);
+        } else if (!strcmp(cmd, "touch")) {
+            // touch X Y [N]: the stylus down at (X, Y) on the bottom screen for N frames (default 2), then up
+            touching = true;
+            touchX = (u16) num(a);
+            touchY = (u16) num(b);
+            runFrames(n > 3 ? (int) num(c) : 2, heldKeys);
+            touching = false;
+            runFrames(1, heldKeys);
+        } else if (!strcmp(cmd, "shot")) {
+            shot(a);
+        } else if (!strcmp(cmd, "shots")) {
+            // shots PREFIX EVERY COUNT: COUNT shots EVERY frames apart, PREFIX_0000.png ...
+            int every = (int) num(b), count = (int) num(c);
+            for (int i = 0; i < count; i++) {
+                runFrames(every, heldKeys);
+                char path[300];
+                snprintf(path, sizeof(path), "%s_%04d.png", a, i);
+                shot(path);
+            }
+        } else if (!strcmp(cmd, "dump")) {
+            // Main RAM (4 MB at 0x02000000), shared WRAM (32 KB) and the ARM9's DTCM (16 KB, its stack)
+            std::string dir(a);
+            writeFile(dir + "/mainram.bin", nds->MainRAM, 0x400000);
+            writeFile(dir + "/swram.bin", nds->SharedWRAM, nds->SharedWRAMSize);
+            writeFile(dir + "/dtcm.bin", nds->ARM9.DTCM, 0x4000);
+            writeFile(dir + "/itcm.bin", nds->ARM9.ITCM, 0x8000);
+        } else if (!strcmp(cmd, "savestate")) {
+            saveState(a);
+        } else if (!strcmp(cmd, "loadstate")) {
+            loadState(a);
+        } else if (!strcmp(cmd, "savefile")) {
+            writeFile(a, nds->GetNDSSave(), nds->GetNDSSaveLength());
+        } else if (!strcmp(cmd, "peek8") || !strcmp(cmd, "peek16") || !strcmp(cmd, "peek32")) {
+            u32 addr = num(a), v;
+            if (!strcmp(cmd, "peek8")) v = nds->ARM9Read8(addr);
+            else if (!strcmp(cmd, "peek16")) v = nds->ARM9Read16(addr);
+            else v = nds->ARM9Read32(addr);
+            printf("%s 0x%08X = 0x%X (%u)\n", cmd, addr, v, v);
+            fflush(stdout);
+        } else if (!strcmp(cmd, "poke8") || !strcmp(cmd, "poke16") || !strcmp(cmd, "poke32")) {
+            u32 addr = num(a), v = num(b);
+            if (!strcmp(cmd, "poke8")) nds->ARM9Write8(addr, (u8) v);
+            else if (!strcmp(cmd, "poke16")) nds->ARM9Write16(addr, (u16) v);
+            else nds->ARM9Write32(addr, v);
+        } else if (!strcmp(cmd, "wide")) {
+            // wide MX [MY]: EXPAND with MX DS pixels left and right, MY above and below (0 = off; MY defaults to 0)
+            wideMargin = (int) num(a);
+            int my = n > 2 ? (int) num(b) : 0;
+            pk_nds_wide_set(nds, wideMargin > 0);
+            pk_nds_wide_need(wideMargin, wideMargin, my, my);
+            wideDrawn = false;
+        } else if (!strcmp(cmd, "wideshot")) {
+            // wideshot FILE: the last wide frame (RGBA words -> PNG)
+            if (!wideDrawn) { fprintf(stderr, "wideshot: no wide frame\n"); continue; }
+            int x, y, w, h;
+            pk_nds_wide_rect(&x, &y, &w, &h);
+            std::vector<u32> px((size_t) w * h), argb((size_t) w * h);
+            pk_nds_wide_view(px.data(), x, y, w, h);
+            for (size_t i = 0; i < argb.size(); i++) {
+                u32 p = px[i];
+                argb[i] = 0xFF000000u | ((p & 0xFF) << 16) | (p & 0xFF00) | ((p >> 16) & 0xFF);
+            }
+            writePng(a, argb.data(), w, h);
+        } else if (!strcmp(cmd, "wideshots")) {
+            // wideshots PREFIX EVERY COUNT: COUNT wide frames EVERY frames apart, PREFIX_0000.png ...
+            int every = (int) num(b), count = (int) num(c);
+            for (int i = 0; i < count; i++) {
+                runFrames(every, heldKeys);
+                if (!wideDrawn) continue;
+                int x, y, w, h;
+                pk_nds_wide_rect(&x, &y, &w, &h);
+                std::vector<u32> px((size_t) w * h), argb((size_t) w * h);
+                pk_nds_wide_view(px.data(), x, y, w, h);
+                for (size_t k = 0; k < argb.size(); k++) {
+                    u32 p = px[k];
+                    argb[k] = 0xFF000000u | ((p & 0xFF) << 16) | (p & 0xFF00) | ((p >> 16) & 0xFF);
+                }
+                char path[300];
+                snprintf(path, sizeof(path), "%s_%04d.png", a, i);
+                writePng(path, argb.data(), w, h);
+            }
+        } else if (!strcmp(cmd, "scriptgo")) {
+            // scriptgo FILE: as script, but back once it has started (a battle doesn't free the field for a while)
+            auto* cart = nds->NDSCartSlot.GetCart();
+            const PkNdsFieldGame* g = cart ? pk_nds_field_game(cart->GetHeader().GameCode, cart->GetHeader().ROMVersion) : nullptr;
+            std::vector<u8> bytes = readFile(a);
+            int seq = pk_nds_call_script(nds, g, bytes.data(), (u32) bytes.size());
+            int f = 0;
+            while (seq && pk_nds_call_status(seq) == 0 && f < 20) { runFrames(1, heldKeys); f++; }
+            printf("scriptgo %s: %s\n", a, seq ? "started" : "refused");
+            fflush(stdout);
+        } else if (!strcmp(cmd, "bgdump")) {
+            // bgdump BG FILE: engine A's text BG whole (its map's size), as the hardware reads it; clear = magenta
+            int bg = (int) num(a);
+            u16 cnt = nds->GPU.GPU2D_A.BGCnt[bg & 3];
+            int w = (cnt >> 14) & 1 ? 512 : 256, h = (cnt >> 14) & 2 ? 512 : 256;
+            std::vector<u32> argb((size_t) w * h);
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++) {
+                    u16 c = pk_nds_bg_pixel(nds, bg, x, y);
+                    argb[(size_t) y * w + x] = !c ? 0xFFFF00FFu
+                        : 0xFF000000u | ((c & 0x1F) * 255 / 31) << 16 | (((c >> 5) & 0x1F) * 255 / 31) << 8 | ((c >> 10) & 0x1F) * 255 / 31;
+                }
+            writePng(b, argb.data(), w, h);
+            printf("bgdump %d: %dx%d, cnt %04X, scroll %d,%d\n", bg, w, h, cnt, nds->GPU.GPU2D_A.BGXPos[bg & 3], nds->GPU.GPU2D_A.BGYPos[bg & 3]);
+            fflush(stdout);
+        } else if (!strcmp(cmd, "widecheck")) {
+            // widecheck N: N frames, each checked where the slices overlap the game's frame
+            int frames = n > 1 ? (int) num(a) : 1, cmpTotal = 0, diffTotal = 0, farTotal = 0, badFrames = 0;
+            for (int i = 0; i < frames; i++) {
+                runFrames(1, heldKeys);
+                int c, d, f;
+                pk_nds_wide_check(nds, nds->GPU.Framebuffer[nds->GPU.FrontBuffer][0].get(), &c, &d, &f);
+                cmpTotal += c; diffTotal += d; farTotal += f;
+                if (f) badFrames++;
+            }
+            printf("widecheck %d frames: %d overlap pixels compared, %d differ (%d by more than a texel), %d frames with those\n",
+                frames, cmpTotal, diffTotal, farTotal, badFrames);
+            fflush(stdout);
+        } else if (!strcmp(cmd, "skipdraw")) {
+            skipDraw = (int) num(a);
+        } else if (!strcmp(cmd, "battlemenu")) {
+            // battlemenu N: the battle controller's step (pk_nds_battle_command) each frame for N frames, as it changes
+            auto* cart = nds->NDSCartSlot.GetCart();
+            const PkNdsFieldGame* g = cart ? pk_nds_field_game(cart->GetHeader().GameCode, cart->GetHeader().ROMVersion) : nullptr;
+            int frames = (int) num(a), last = -100;
+            for (int i = 0; i < frames; i++) {
+                int m = pk_nds_battle_command(g, read32);
+                if (m != last) { printf("battlemenu frame %d: %d\n", i, m); last = m; }
+                runFrames(1, heldKeys);
+            }
+            fflush(stdout);
+        } else if (!strcmp(cmd, "widecount")) {
+            int c[8];
+            pk_nds_wide_counts(c);
+            printf("widecount frame %llu: above %d %d %d, beside %d %d, below %d %d %d polygons\n",
+                (unsigned long long) frameCount, c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7]);
+            fflush(stdout);
+        } else if (!strcmp(cmd, "wildoff")) {
+            // wildoff 1 / 0: WILD ENCOUNTERS OFF / back on; battles counts the battles started since
+            wildOff = (int) num(a);
+            battlesSeen = 0;
+        } else if (!strcmp(cmd, "battles")) {
+            printf("battles %d\n", battlesSeen);
+            fflush(stdout);
+        } else if (!strcmp(cmd, "action")) {
+            // action N [A0 A1 A2 A3]: post pk_nds_call's action N (1 = PC) for the next frame, then report when it ran
+            auto* cart = nds->NDSCartSlot.GetCart();
+            const PkNdsFieldGame* g = cart ? pk_nds_field_game(cart->GetHeader().GameCode, cart->GetHeader().ROMVersion) : nullptr;
+            u32 args[4] = {n > 2 ? num(b) : 0, n > 3 ? num(c) : 0, n > 4 ? num(d) : 0, 0};
+            if (n > 5) sscanf(line, "%*s %*s %*s %*s %*s %u", &args[3]);
+            int seq = pk_nds_call_action(nds, g, (int) num(a), args);
+            int st = 0, f = 0;
+            while (seq && (st = pk_nds_call_status(seq)) == 0 && f < 20) { runFrames(1, heldKeys); f++; }
+            printf("action %s: job %d %s after %d frames\n", a, seq, !seq ? "refused" : st > 0 ? "ran" : "never ran", f);
+            u32 res[PK_NDS_MAX_RESULTS];
+            if (st > 0 && pk_nds_call_results(seq, res)) {
+                printf("results:");
+                for (int i = 0; i < PK_NDS_MAX_RESULTS; i++) printf(" %X", res[i]);
+                printf("\n");
+            }
+            fflush(stdout);
+        } else if (!strcmp(cmd, "call")) {
+            // call FN [A0 A1 A2 A3]: the game's function FN (Thumb: odd) from the field's main loop next frame (pk_nds_call)
+            auto* cart = nds->NDSCartSlot.GetCart();
+            const PkNdsFieldGame* g = cart ? pk_nds_field_game(cart->GetHeader().GameCode, cart->GetHeader().ROMVersion) : nullptr;
+            u32 v[5] = {0};
+            int got = sscanf(line, "%*s %i %i %i %i %i", (int*) &v[0], (int*) &v[1], (int*) &v[2], (int*) &v[3], (int*) &v[4]);
+            PkNdsOp op = {v[0], {v[1], v[2], v[3], v[4]}};
+            int seq = got > 0 ? pk_nds_call_ops(nds, g, &op, 1) : 0;
+            int st = 0, f = 0;
+            while (seq && (st = pk_nds_call_status(seq)) == 0 && f < 20) { runFrames(1, heldKeys); f++; }
+            u32 res[PK_NDS_MAX_RESULTS] = {0};
+            if (st > 0) pk_nds_call_results(seq, res);
+            printf("call 0x%08X: %s, r0 = 0x%X\n", v[0], !seq ? "refused" : st > 0 ? "ran" : "never ran", res[0]);
+            fflush(stdout);
+        } else if (!strcmp(cmd, "script")) {
+            // script FILE: a field script (the game's bytecode, e.g. assembled with pret/pokeplatinum's macros) run as
+            // the PC action runs its own; then frames until the field is free again (at most 3000)
+            auto* cart = nds->NDSCartSlot.GetCart();
+            const PkNdsFieldGame* g = cart ? pk_nds_field_game(cart->GetHeader().GameCode, cart->GetHeader().ROMVersion) : nullptr;
+            std::vector<u8> bytes = readFile(a);
+            int seq = pk_nds_call_script(nds, g, bytes.data(), (u32) bytes.size());
+            int f = 0;
+            while (seq && pk_nds_call_status(seq) == 0 && f < 20) { runFrames(1, heldKeys); f++; }
+            int run = 0;
+            while (seq && run < 3000) {
+                runFrames(1, heldKeys);
+                run++;
+                if (g && (pk_nds_field_state(g, read32, nullptr, 0) & PK_NDS_FIELD_LOCKED) == 0) break;
+            }
+            printf("script %s: %s, field free after %d frames\n", a, seq ? "started" : "refused", run);
+            fflush(stdout);
+        } else if (!strcmp(cmd, "music")) {
+            // music SECONDS FILE.wav: STEADY's music instance (pk_nds_music) begun from the game as it is now, run alone
+            // for SECONDS (the game doesn't move), its audio written out; then the time it took per frame
+            int frames = (int) (num(a) * 60);
+            const int rate = 48000;
+            auto t0 = std::chrono::steady_clock::now();
+            bool ok = pk_nds_music_begin(nds, rate);
+            double beginMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+            std::vector<s16> pcm;
+            s16 buf[4096];
+            t0 = std::chrono::steady_clock::now();
+            int stall = 0, stallAt = -1;
+            for (int i = 0; ok && i < frames; i++) {
+                int got = pk_nds_music_frame(buf, 2048);
+                pcm.insert(pcm.end(), buf, buf + got * 2);
+                if (pk_nds_music_stalled() > stall) { stall = pk_nds_music_stalled(); stallAt = i; }
+                if (getenv("MUSIC_DEBUG") && (i < 30 || i % 60 == 0)) {
+                    char line[400];
+                    pk_nds_music_debug(line, sizeof(line));
+                    printf("music %d: still %d %s\n", i, pk_nds_music_stalled(), line);
+                }
+            }
+            printf("music stall: longest %d frames (to frame %d)\n", stall, stallAt);
+            double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+            pk_nds_music_end();
+            writeWav(b, pcm, rate);
+            printf("music: %s, begin %.1f ms, %.3f ms a frame, %zu samples (%.2f s)\n", ok ? "playing" : "failed", beginMs,
+                frames ? ms / frames : 0.0, pcm.size() / 2, pcm.size() / 2.0 / rate);
+            fflush(stdout);
+        } else if (!strcmp(cmd, "livewav")) {
+            // livewav SECONDS FILE.wav: the game's own audio over SECONDS of frames (keys held as set)
+            int frames = (int) (num(a) * 60);
+            std::vector<s16> pcm;
+            s16 buf[4096];
+            while (nds->SPU.ReadOutput(buf, 2048) > 0) {}
+            for (int i = 0; i < frames; i++) {
+                runFrames(1, heldKeys);
+                int got = nds->SPU.ReadOutput(buf, 2048);
+                pcm.insert(pcm.end(), buf, buf + got * 2);
+            }
+            writeWav(b, pcm, 48000);   // NDSArgs' default output rate
+        } else if (!strcmp(cmd, "trace")) {
+            // trace N: N frames (keys held as set), each one's field bits and the top screen's master brightness
+            auto* cart = nds->NDSCartSlot.GetCart();
+            const PkNdsFieldGame* g = cart ? pk_nds_field_game(cart->GetHeader().GameCode, cart->GetHeader().ROMVersion) : nullptr;
+            int frames = (int) num(a);
+            for (int i = 0; i < frames; i++) {
+                runFrames(1, heldKeys);
+                int bits = g ? pk_nds_field_state(g, read32, nullptr, 0) : 0;
+                printf("trace %llu: bits %03X brightA %04X brightB %04X dispA %08X bg3 %d\n", (unsigned long long) frameCount, bits,
+                    nds->GPU.GPU2D_A.MasterBrightness, nds->GPU.GPU2D_B.MasterBrightness, nds->GPU.GPU2D_A.DispCnt,
+                    pk_nds_bg3_tiles(nds));
+            }
+            fflush(stdout);
+        } else if (!strcmp(cmd, "bench")) {
+            // bench N: N frames as fast as they go, then the average ms per frame (with wide on, its frames too)
+            int frames = (int) num(a);
+            auto t0 = std::chrono::steady_clock::now();
+            runFrames(frames, heldKeys);
+            double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+            printf("bench %d frames: %.3f ms a frame (wide %d)\n", frames, ms / frames, wideMargin);
+            fflush(stdout);
+        } else if (!strcmp(cmd, "itcm32")) {
+            // itcm32 ADDR VALUE: a word into the hook's spare ITCM (an argument a call points at)
+            u32 val = num(b);
+            pk_nds_call_itcm_write(nds, num(a), &val, 4);
+        } else if (!strcmp(cmd, "fieldinfo")) {
+            fieldInfo();
+        } else if (!strcmp(cmd, "frame")) {
+            printf("frame %llu\n", (unsigned long long) frameCount);
+            fflush(stdout);
+        } else if (!strcmp(cmd, "echo")) {
+            printf("%s", line + 5);
+            fflush(stdout);
+        } else {
+            fprintf(stderr, "unknown command %s\n", cmd);
+        }
+    }
+    pk_nds_wide_set(nullptr, false);   // its helper threads joined
+    pk_nds_music_end(true);
+    delete nds;
+    return 0;
+}

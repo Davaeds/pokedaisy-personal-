@@ -31,6 +31,9 @@ class GbaInput {
 
     fun setControls(map: Map<Int, Int>) { controls = map }
 
+    /** A DS game runs: START 2 / SELECT 2 ([GbaControls.DS_X] / [GbaControls.DS_Y]) press its X / Y. */
+    @Volatile var ds = false
+
     /** @return true if the event was consumed. */
     fun onKey(keyCode: Int, down: Boolean): Boolean {
         val bit = keyToBit(keyCode) ?: return false
@@ -116,7 +119,18 @@ class GbaInput {
         KeyEvent.KEYCODE_DPAD_UP_RIGHT -> MgbaCore.Key.UP or MgbaCore.Key.RIGHT
         KeyEvent.KEYCODE_DPAD_DOWN_LEFT -> MgbaCore.Key.DOWN or MgbaCore.Key.LEFT
         KeyEvent.KEYCODE_DPAD_DOWN_RIGHT -> MgbaCore.Key.DOWN or MgbaCore.Key.RIGHT
-        else -> controls[keyCode]   // remappable face/shoulder/menu buttons
+        else -> controls[keyCode]?.let(::forCore)   // remappable face/shoulder/menu buttons
+    }
+
+    /** A binding's bits for the game running: START 2 / SELECT 2 are X / Y on a DS, else START / SELECT. */
+    private fun forCore(bits: Int): Int {
+        val marks = GbaControls.DS_X or GbaControls.DS_Y
+        if (bits and marks == 0) return bits
+        if (!ds) return bits and marks.inv()
+        var out = bits and marks.inv() and (MgbaCore.Key.START or MgbaCore.Key.SELECT).inv()
+        if (bits and GbaControls.DS_X != 0) out = out or MgbaCore.Key.X
+        if (bits and GbaControls.DS_Y != 0) out = out or MgbaCore.Key.Y
+        return out
     }
 
     companion object {

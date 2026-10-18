@@ -153,6 +153,9 @@ fun pocketLabel(pocket: Int): String = when (pocket) {
     POCKET_TM_HM -> "TMs & HMs"
     POCKET_BERRIES -> "Berries"
     POCKET_KEY_ITEMS -> "Key Items"
+    POCKET_MEDICINE -> "Medicine"
+    POCKET_MAIL -> "Mail"
+    POCKET_BATTLE_ITEMS -> "Battle Items"
     else -> "Items"
 }
 
