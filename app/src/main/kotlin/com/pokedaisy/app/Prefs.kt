@@ -372,6 +372,11 @@ class Prefs(context: Context) {
         get() = p.getBoolean("gba_colors", false)
         set(v) = p.edit().putBoolean("gba_colors", v).apply()
 
+    /** SHADERS > UNLIT SCREEN: the GBA's screen with no light of its own - white is its backing ([ScreenShaders.UNLIT]). */
+    var unlitScreen: Boolean
+        get() = p.getBoolean("unlit_screen", false)
+        set(v) = p.edit().putBoolean("unlit_screen", v).apply()
+
     /** The screen effect over the game: LCD grid, scanlines or CRT ([ScreenShaders.effectFor]). */
     var screenFilter: ScreenFilter
         get() = ScreenFilter.entries.firstOrNull { it.name == p.getString("screen_filter", null) } ?: ScreenFilter.NONE

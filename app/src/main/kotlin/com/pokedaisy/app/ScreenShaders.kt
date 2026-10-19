@@ -98,6 +98,40 @@ internal object ScreenShaders {
     """.trimIndent()
 
     /**
+     * SHADERS > UNLIT SCREEN ([Prefs.unlitScreen], GitHub #105): the GBA's own screen had no light of its
+     * own - room light went in through each LCD cell, off a grey-green backing behind it and out again,
+     * so white was that backing, never a glow. Ours, not a port (the issue's examples, Pixel Transparency
+     * and PT-SkyWalker541, were only looked at): in linear light a pixel is the backing times what its
+     * cell lets through, times what the cell the light came in through let through - up-left of it,
+     * [shadowOffset] GBA pixels, since the backing sits behind the cells - so dark pixels drop a soft
+     * shadow (four taps [shadowSoft] apart, read smoothly) onto the light ones beside them, while dark
+     * stays dark. Its own pass between SMOOTHING and FILTER (any filter draws over it), at the
+     * view's pixels or FILTER's whole multiple: the shadow falls between GBA pixels. Picked in the
+     * browser harness on Emerald's battle and FireRed's START menu at the Thor's 1620x1080.
+     */
+    val UNLIT = """
+        $HEADER
+        const float gamma = 2.2;
+        const vec3 backing = vec3(0.82, 0.84, 0.77);
+        const vec2 shadowOffset = vec2(0.6, 0.8);
+        const float shadowSoft = 0.4;
+        const float shadowStrength = 0.6;
+        const vec3 luma709 = vec3(0.2126, 0.7152, 0.0722);
+        float through(vec2 p) {
+            return dot(pow(texture2D(uTex, p / uTexSize).rgb, vec3(gamma)), luma709);
+        }
+        void main() {
+            vec2 pos = vUv * uTexSize;
+            vec3 c = texture2D(uTex, uSmoothed > 0.5 ? vUv : (floor(pos) + 0.5) / uTexSize).rgb;
+            vec2 s = pos - shadowOffset;
+            float t = 0.25 * (through(s + vec2(-shadowSoft, -shadowSoft)) + through(s + vec2(shadowSoft, -shadowSoft))
+                            + through(s + vec2(-shadowSoft, shadowSoft)) + through(s + vec2(shadowSoft, shadowSoft)));
+            vec3 l = pow(c, vec3(gamma)) * pow(backing, vec3(gamma)) * mix(1.0, t, shadowStrength);
+            gl_FragColor = vec4(pow(l, vec3(1.0 / gamma)), 1.0);
+        }
+    """.trimIndent()
+
+    /**
      * LCD: a dark grid line along the top and left third of every GBA pixel. mGBA's
      * `res/shaders/lcd.shader` (Copyright (C) 2017 Dominus Iniquitatis, MIT - see NOTICE),
      * its line brightness from GRID (`uGrid.x` darkening: SOFT 0.2 is about its 0.9 default doubled).

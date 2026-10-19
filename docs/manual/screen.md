@@ -3,7 +3,7 @@ title: Screen, aspect and shaders
 summary: Change how the game sits on the top screen and how it looks, from widescreen EXPAND to LCD and CRT filters, frames and dark mode.
 section: player
 order: 3
-keywords: [widescreen, fullscreen, 16:9, 3:2, ratio, bezel, border, frame, crt, lcd, scanlines, xbrz, scalefx, upscale, night, appearance, framerate, fps, performance, graphics, look]
+keywords: [widescreen, fullscreen, 16:9, 3:2, ratio, bezel, border, frame, crt, lcd, scanlines, xbrz, scalefx, upscale, unlit, backlight, pixel transparency, night, appearance, framerate, fps, performance, graphics, look]
 ---
 
 The top screen is wider than a GBA, so there's a choice to make about the space around the game. You can keep the GBA's own shape, stretch it, or let PokeDaisy draw more of the world into the gaps. On top of that you can run the picture through a filter, put a frame around it and switch the app's windows to a dark look.
@@ -65,9 +65,9 @@ The clock follows your device's 12 or 24 hour setting. Money shows for the games
 
 ## Shaders
 
-`SHADERS` opens a page of effects for how the game is drawn. They stack: you can have smoothing, the GBA's colours and a filter all at once.
+`SHADERS` opens a page of effects for how the game is drawn. They stack: you can have smoothing, the GBA's colours, the unlit screen and a filter all at once.
 
-![The SHADERS page with FILTER, GRID, SMOOTHING, GBA COLORS and ON COMPANION rows](shots/settings-shaders.png)
+![The SHADERS page with FILTER, GRID, SMOOTHING, GBA COLORS, UNLIT SCREEN and ON COMPANION rows](shots/settings-shaders.png)
 
 ### Filter
 
@@ -98,9 +98,13 @@ Smoothing only applies to the game, never to the companion. On devices whose gra
 
 The GBA's own screen was darker and less saturated than a modern one, and the games' colours were picked for it. `GBA COLORS` shows them the way they looked back then. It works with any filter. Off by default.
 
+### UNLIT SCREEN
+
+The first GBA had no light behind its screen. Light from the room went in through the screen and bounced off a dull grey green backing, so white parts of the picture showed that backing instead of glowing, and dark pixels cast a faint shadow onto it, down and to the right. `UNLIT SCREEN` draws the game that way. It's softer on the eyes than bright white, and it pairs well with `GBA COLORS` and the `LCD` filter. Off by default.
+
 ### On the companion too
 
-`ON COMPANION` (on by default) puts the same `FILTER` and `GBA COLORS` over the companion screen and the status bar, so both screens match. The grid is sized to the game's pixels, so the lines line up with the top screen's. This needs Android 13 or newer; on older devices the companion keeps its plain look.
+`ON COMPANION` (on by default) puts the same `FILTER` and `GBA COLORS` (not `UNLIT SCREEN`) over the companion screen and the status bar, so both screens match. The grid is sized to the game's pixels, so the lines line up with the top screen's. This needs Android 13 or newer; on older devices the companion keeps its plain look.
 
 ## Overlay: a frame around the game
 

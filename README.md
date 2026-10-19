@@ -167,7 +167,8 @@ under LANGUAGE in either Settings screen. Species, move and item names and the G
   you walk; held while walking, it looks ahead with your character kept on screen).
 - **Shaders** (optional): an LCD grid (plain or on paper), scanlines or a CRT look, and the colours as the GBA's own screen
   showed them - on the game and, if you like, the companion screen too. Edge smoothing (xBRZ, xBR, ScaleFX) on the game,
-  alone or under any of them.
+  alone or under any of them. UNLIT SCREEN shows the first GBA's screen with no light behind it: white is the screen's
+  grey-green backing and dark pixels cast a soft shadow onto it.
 - **Overlays** (optional, Settings > OVERLAY): a frame around the game - two of PokeDaisy's own, or your
   own RetroArch overlays (a `.cfg` with its PNG, a `.zip` of them, or any PNG with a see-through screen).
   None come bundled: bring the ones you already use. Pick them from either screen.

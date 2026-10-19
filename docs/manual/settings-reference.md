@@ -52,7 +52,7 @@ The `DISPLAY OPTIONS` page:
 | Setting | Choices | What it does | More |
 | --- | --- | --- | --- |
 | `STATUS BAR` | **`OFF`**, `GAME`, `COMPANION` | A strip with the game, location, money, clock and battery, over the game or over the companion's tabs. | [Screen](screen.md) |
-| `SHADERS` | a page (shows the current filter) | `FILTER`, `GRID`, `SMOOTHING`, `GBA COLORS` and `ON COMPANION`; see the next table. | [Screen](screen.md) |
+| `SHADERS` | a page (shows the current filter) | `FILTER`, `GRID`, `SMOOTHING`, `GBA COLORS`, `UNLIT SCREEN` and `ON COMPANION`; see the next table. | [Screen](screen.md) |
 | `OVERLAY` | **`NONE`**, `DAISY`, `BEZEL`, your imports (a page) | A frame around the game. Import your own RetroArch overlays here with `IMPORT FILE`. | [Screen](screen.md) |
 | `COMPANION` | **`AT BOTTOM`**, `UNDER GAME` | Only on a device with one screen: where the companion sits when you hold it upright. With `EXPAND`, `UNDER GAME` gives the touch controls their own strip at the bottom, and it's greyed out without touch controls. | [Devices](devices.md) |
 
@@ -64,6 +64,7 @@ The `SHADERS` page:
 | `GRID` | `SOFT`, **`MEDIUM`**, `STRONG` | How strong the grid is for `LCD` and `LCD PAPER`. Greyed out for the others. |
 | `SMOOTHING` | **`OFF`**, `xBRZ`, `xBR`, `SCALEFX` | Smooths the pixel art's edges on the game (never the companion). Shows `N/A` on devices that can't run it. |
 | `GBA COLORS` | `ON`, **`OFF`** | The colours as the GBA's own screen showed them. Works with any filter. |
+| `UNLIT SCREEN` | `ON`, **`OFF`** | The first GBA's screen with no light behind it: white shows the screen's grey green backing, and dark pixels cast a soft shadow. Works with any filter. |
 | `ON COMPANION` | **`ON`**, `OFF` | `FILTER` and `GBA COLORS` on the companion and the status bar too (Android 13 and newer). |
 
 ### Library

@@ -187,6 +187,14 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
             renderer.setGbaColors(v)
         }
 
+    /** SHADERS > UNLIT SCREEN ([Prefs.unlitScreen], [ScreenShaders.UNLIT]): drawn between SMOOTHING and FILTER. */
+    var unlit: Boolean = false
+        set(v) {
+            if (field == v) return
+            field = v
+            renderer.setUnlit(v)
+        }
+
     /** SHADERS > FILTER's effect ([Prefs.screenFilter], [ScreenShaders.effectFor]); null = none. */
     internal var screenEffect: ScreenShaders.Effect? = null
         set(v) {
@@ -333,9 +341,9 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
     }
 
     /**
-     * Draws the frame in up to three passes: the GBA colour correction ([gbaColors]) at the
-     * GBA's own size, a prescaled screen effect ([setEffect]) at the largest whole multiple of
-     * it that fits, then the result onto the view - nearest-filtered, or smoothly once an
+     * Draws the frame in up to four passes: the GBA colour correction ([gbaColors]) at the
+     * GBA's own size, UNLIT SCREEN ([setUnlit]) at the size the next pass reads, a prescaled
+     * screen effect ([setEffect]) at the largest whole multiple of it that fits, then the result onto the view - nearest-filtered, or smoothly once an
      * effect has scaled it up (from a whole multiple, so its grid stays even). An effect that
      * isn't prescaled is that last pass itself. With neither, it's the one plain pass it always was.
      *
@@ -369,6 +377,7 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
         private var dirtyGeometry = true
         private var stretch = false
         private var gbaColors = false
+        private var unlit = false
         private var effect: ScreenShaders.Effect? = null
         /** SMOOTHING's passes; [smoothPrograms] are built from them on the GL thread. */
         private var smoothPasses: List<LoadedPass>? = null
@@ -389,11 +398,13 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
 
         private var plain: Program? = null
         private var colorProgram: Program? = null
+        private var unlitProgram: Program? = null
         private var effectProgram: Program? = null
         private var effectProgramFor: ScreenShaders.Effect? = null
         private var texId = 0
         private var texAllocated = false
         private var colorTarget = RenderTarget()
+        private var unlitTarget = RenderTarget()
         private var effectTarget = RenderTarget()
         @Volatile var holdFrame: () -> Boolean = { false }
         @Volatile var framesShown = 0L
@@ -486,6 +497,8 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
 
         fun setGbaColors(on: Boolean) = synchronized(lock) { gbaColors = on }
 
+        fun setUnlit(on: Boolean) = synchronized(lock) { unlit = on }
+
         fun setEffect(e: ScreenShaders.Effect?) = synchronized(lock) { effect = e }
 
         fun setGrid(x: Float, y: Float) = synchronized(lock) { gridX = x; gridY = y }
@@ -512,10 +525,12 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
             GLES20.glClearColor(0f, 0f, 0f, 1f)
             plain = Program(ScreenShaders.PLAIN)
             colorProgram = Program(ScreenShaders.GBA_COLOR)
+            unlitProgram = Program(ScreenShaders.UNLIT)
             overlayProgram = Program(ScreenShaders.OVERLAY)
             effectProgram = null
             effectProgramFor = null
             colorTarget = RenderTarget()
+            unlitTarget = RenderTarget()
             effectTarget = RenderTarget()
             smoothPrograms = null
             smoothBuiltFor = null
@@ -625,9 +640,27 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
                 input = smoothed
                 smooth = true
             }
+            // UNLIT SCREEN: at the size the next pass reads (FILTER's whole multiple, else the view's own pixels),
+            // since its shadow falls between GBA pixels; that pass then reads it where it is, like SMOOTHING's.
+            val shade = unlitProgram
+            var unlitDrawn = false
+            if (unlit && shade != null) {
+                val (w, h) = if (prescaled) texW * kx to texH * ky
+                    else maxOf(1, quadW.roundToInt()) to maxOf(1, quadH.roundToInt())
+                if (unlitTarget.ensure(w, h)) {
+                    // Read smoothly: the shadow's taps sit between pixels; its own pixel is read at its centre.
+                    GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, unlitTarget.fbo)
+                    GLES20.glViewport(0, 0, w, h)
+                    drawQuad(shade, input, passUv, fullQuad, smooth = true, smoothed = smoothed != 0)
+                    input = unlitTarget.tex
+                    smooth = true
+                    unlitDrawn = true
+                }
+            }
+            val readsPicture = smoothed != 0 || unlitDrawn
             if (prescaled) {
                 if (effectTarget.ensure(texW * kx, texH * ky)) {
-                    pass(fx!!, input, effectTarget, sample = smoothed != 0)
+                    pass(fx!!, input, effectTarget, sample = readsPicture)
                     input = effectTarget.tex
                     smooth = true
                 }
@@ -637,7 +670,7 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
 
             GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
             GLES20.glViewport(0, 0, surfaceW, surfaceH)
-            drawQuad(last, input, viewUv, pos, smooth, smoothed = smoothed != 0 && !prescaled)
+            drawQuad(last, input, viewUv, pos, smooth, smoothed = readsPicture && !prescaled)
             if (overlayOnTop && win == null) drawOverlay()
         }
 

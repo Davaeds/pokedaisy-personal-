@@ -633,6 +633,10 @@ private fun shaderRows(s: CompanionSettings, changed: () -> Unit): List<SettingR
         },
         // The colours as the GBA's own LCD showed them; stacks with any filter.
         SettingRow(tk("GBA COLORS"), if (s.gbaColors) tk("ON") else tk("OFF")) { s.setGbaColors(!s.gbaColors); changed() },
+        // The GBA's screen with no light of its own: white shows its backing, dark pixels cast a shadow; stacks too.
+        SettingRow(tk("UNLIT SCREEN"), if (s.unlitScreen) tk("ON") else tk("OFF"), labelBadge = NewFeatures.badge(NewFeatures.UNLIT_SCREEN)) {
+            s.setUnlitScreen(!s.unlitScreen); changed()
+        },
         // FILTER and GBA COLORS over this screen too (and the status bar).
         SettingRow(tk("ON COMPANION"), if (s.companionShaders) tk("ON") else tk("OFF")) { s.setCompanionShaders(!s.companionShaders); changed() },
     )

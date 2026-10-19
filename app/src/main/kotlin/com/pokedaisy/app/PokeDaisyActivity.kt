@@ -1144,6 +1144,11 @@ class PokeDaisyActivity : Activity() {
             Prefs(this@PokeDaisyActivity).gbaColors = on
             runOnUiThread { syncGameScreen() }
         }
+        override val unlitScreen get() = Prefs(this@PokeDaisyActivity).unlitScreen
+        override fun setUnlitScreen(on: Boolean) {
+            Prefs(this@PokeDaisyActivity).unlitScreen = on
+            runOnUiThread { syncGameScreen() }
+        }
         override val screenFilter get() = Prefs(this@PokeDaisyActivity).screenFilter
         override fun setScreenFilter(filter: ScreenFilter) {
             Prefs(this@PokeDaisyActivity).screenFilter = filter
@@ -2135,6 +2140,7 @@ class PokeDaisyActivity : Activity() {
             engine.gbSceneGame = if (romIsGameBoy) wideGame else WideScreen.OFF
         }
         view.gbaColors = prefs.gbaColors
+        view.unlit = prefs.unlitScreen
         CompanionColors.set(
             prefs.gbaColors && prefs.companionShaders,
             if (prefs.companionShaders) prefs.screenFilter else ScreenFilter.NONE,

@@ -795,6 +795,14 @@ class SettingsActivity : ComponentActivity() {
                 prefs.gbaColors = !prefs.gbaColors
                 revision++
             },
+            // The GBA's screen with no light of its own: white shows its backing, dark pixels cast a shadow; stacks too.
+            SettingRow(
+                tk("UNLIT SCREEN"), if (prefs.unlitScreen) tk("ON") else tk("OFF"),
+                labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.UNLIT_SCREEN),
+            ) {
+                prefs.unlitScreen = !prefs.unlitScreen
+                revision++
+            },
             // FILTER and GBA COLORS over the companion too (and the status bar).
             SettingRow(tk("ON COMPANION"), if (prefs.companionShaders) tk("ON") else tk("OFF")) {
                 prefs.companionShaders = !prefs.companionShaders

@@ -145,6 +145,7 @@ internal val trSettings: Map<String, Tr> = mapOf(
     "STRONG" to Tr(ja = "つよい", fr = "FORT", de = "STARK", it = "FORTE", es = "FUERTE", br = "FORTE", pt = "FORTE"),
     "SCANLINES" to Tr(ja = "スキャンライン", fr = "SCANLINES", de = "SCANLINES", it = "SCANLINE", es = "SCANLINES", br = "SCANLINES", pt = "SCANLINES"),
     "CRT" to Tr(ja = "ブラウンかん", fr = "CRT", de = "CRT", it = "CRT", es = "CRT", br = "CRT", pt = "CRT"),
+    "UNLIT SCREEN" to Tr(ja = "バックライト なし", fr = "SANS LUMIÈRE", de = "UNBELEUCHTET", it = "SENZA LUCE", es = "SIN LUZ", br = "SEM LUZ", pt = "SEM LUZ"),
     "GBA COLORS" to Tr(ja = "GBAの いろ", fr = "COULEURS GBA", de = "GBA-FARBEN", it = "COLORI GBA", es = "COLORES GBA", br = "CORES GBA", pt = "CORES GBA"),
     "ASPECT" to Tr(ja = "アスペクト", fr = "FORMAT", de = "FORMAT", it = "FORMATO", es = "FORMATO", br = "PROPORÇÃO", pt = "PROPORÇÃO"),
     "AUTO ZOOM IN" to Tr(ja = "オート ズームイン", fr = "ZOOM AUTO", de = "AUTO-ZOOM", it = "ZOOM AUTO", es = "ZOOM AUTO", br = "ZOOM AUTO", pt = "ZOOM AUTO"),

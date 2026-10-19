@@ -249,6 +249,10 @@ interface CompanionSettings {
     val gbaColors: Boolean
     fun setGbaColors(on: Boolean)
 
+    /** The unlit GBA screen on the game - see [Prefs.unlitScreen]. */
+    val unlitScreen: Boolean get() = false
+    fun setUnlitScreen(on: Boolean) {}
+
     /** The screen effect over the game - see [Prefs.screenFilter]. */
     val screenFilter: ScreenFilter
     fun setScreenFilter(filter: ScreenFilter)

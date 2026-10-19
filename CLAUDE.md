@@ -947,6 +947,11 @@ desaturated (its DARKEN_COLOUR looked more vibrant than plain LCD), + procedural
 the view pass flips. Shaders get `uTex` / `vUv` / `uTexSize`. None of it shows in Paparazzi / ui-preview:
 screenshot the Thor (`adb exec-out screencap -p -d <display id>`), or run the real shader strings in WebGL
 (GLSL ES 1.0, same as GLES2) in the browser pane - how the CRT was tuned, on a 240x160 frame at 1620x1080.
+SHADERS > UNLIT SCREEN (`Prefs.unlitScreen`, OFF, NEW tag; GitHub #105, the "pixel transparency" look): `ScreenShaders.UNLIT`,
+ours (the issue's shaders were only looked at - one has no licence): linear light = backing x the pixel x (the cell up-left it
+came in through, 4 smooth taps), so white is the grey-green backing and dark pixels drop a soft shadow. Its own pass after
+SMOOTHING, at FILTER's whole multiple (prescaled) else the view's pixels, which the next pass reads as a picture (`uSmoothed`);
+the game only, not ON COMPANION. Tuned in the browser harness on headless Emerald battle / FireRed START frames.
 SHADERS > SMOOTHING (`Prefs.smoothing`: OFF / xBRZ / xBR / SCALEFX, GitHub #42; SABR, also asked for, notched
 edges in the harness) runs libretro's own .glsl files, unmodified in `assets/shaders/`, between GBA COLORS and FILTER:
 `EmulatorView.RetroProgram` draws them as RetroArch would (VertexCoord / TexCoord / MVPMatrix, Texture / TextureSize /
