@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
@@ -128,6 +129,8 @@ fun SidePanelHost(
      * puts it on the newest start ([FocusStarts]) when nothing in the companion has it yet. True = taken.
      */
     focusKeys: ((key: MenuKey, repeat: Boolean, start: () -> Unit) -> Boolean)? = null,
+    /** The window fills the screen, unframed (the game's screen of a two-screen device whose companion was closed). */
+    fullScreen: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val box = remember { IntArray(4) }   // the window's left / top / right / bottom, for the dim's taps
@@ -151,7 +154,7 @@ fun SidePanelHost(
         ),
     ) {
         val outer = LocalDensity.current
-        val (ww, wh) = companionWindowSize(constraints.maxWidth, constraints.maxHeight)
+        val (ww, wh) = if (fullScreen) constraints.maxWidth to constraints.maxHeight else companionWindowSize(constraints.maxWidth, constraints.maxHeight)
         // The window's chrome (frame, X, legend) at the companion's own scale.
         val chrome = Density(sidePanelDensity(ww, wh), outer.fontScale)
         Layout(
@@ -164,14 +167,14 @@ fun SidePanelHost(
                     // L / R at the tab bar's ends: the buttons that step it.
                     LocalCompanionWindow provides window,
                 ) {
-                    WindowFrame(window, Modifier.onFocusChanged { hasFocus = it.hasFocus }) { SidePanelCompanion(compactText, content) }
-                    if (window) WindowCloseButton(onClose)
+                    WindowFrame(window && !fullScreen, Modifier.onFocusChanged { hasFocus = it.hasFocus }) { SidePanelCompanion(compactText, content) }
+                    if (window) WindowCloseButton(onClose, if (fullScreen) FULL_SCREEN_CLOSE_ALPHA else 1f)
                 }
             },
         ) { measurables, constraints ->
             val w = constraints.maxWidth
             val h = constraints.maxHeight
-            val (cw, ch) = if (window) companionWindowSize(w, h) else w to h
+            val (cw, ch) = if (window && !fullScreen) companionWindowSize(w, h) else w to h
             val companion = measurables[0].measure(Constraints.fixed(cw, ch))
             val close = measurables.getOrNull(1)?.measure(Constraints())
             val left = (w - cw) / 2
@@ -212,9 +215,13 @@ private fun WindowFrame(window: Boolean, modifier: Modifier, content: @Composabl
     ) { content() }
 }
 
+/** The full-screen companion's X sits on its top right corner, over what's there (a title's battery, a party slot):
+ *  see-through, so that stays readable. */
+private const val FULL_SCREEN_CLOSE_ALPHA = 0.55f
+
 /** The window's X: a white framed square like the side panel's tabs, top right of the window. */
 @Composable
-private fun WindowCloseButton(onClose: () -> Unit) {
+private fun WindowCloseButton(onClose: () -> Unit, alpha: Float = 1f) {
     val m = rememberGbaTextMetrics()
     val u = m.u
     val noRipple = remember { MutableInteractionSource() }
@@ -223,6 +230,7 @@ private fun WindowCloseButton(onClose: () -> Unit) {
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .size(u * 24, u * 24)
+            .alpha(alpha)
             .drawBehind {
                 val px = u.toPx()
                 drawPixelRoundRect(Color.Black.copy(alpha = 0.25f), Offset(0f, 2 * px), size, radius = 3 * px, step = px)

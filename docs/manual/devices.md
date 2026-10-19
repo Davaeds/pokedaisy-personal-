@@ -33,9 +33,16 @@ Casting your phone to a TV (Smart View, screen mirroring) or plugging one in giv
 
 ### CLOSE COMPANION
 
-Want the bottom screen for something else while you play, like a video or a chat app? At the very bottom of the companion's `SETTINGS`, under `CLOSE GAME` and `RESTART GAME`, tap `CLOSE COMPANION`. The game keeps running and the bottom screen is free for other apps. Press `BACK` on the game to bring the companion back.
+Want the companion's screen for something else while you play, like a video or a chat app? At the very bottom of the companion's `SETTINGS`, under `CLOSE GAME` and `RESTART GAME`, tap `CLOSE COMPANION`. The game keeps running and the companion's screen is free for other apps. Press `BACK` on the game to bring the companion back.
 
-It's there on two-screen devices while `SWAP SCREENS` is off.
+With `SWAP SCREENS` on, the companion has the main screen, so that's the one you get back: the game stays on its screen, and you can keep playing it there, touch included, while you use another app on the main one. Your buttons go to whichever screen you touched last, so tap the game before you press a button for it.
+
+Meanwhile the companion lives on the game's screen: tap `BACK`, the small tab at the bottom of the right edge, or the HUD's `COMPANION` button and it opens over the game, filling that screen. `B`, `START` and the X close it again, as with the window on a one-screen handheld (see below). To put it back on the main screen, tap `OPEN COMPANION` at the bottom of its `SETTINGS`, where `CLOSE COMPANION` was.
+
+> [!TIP]
+> On the AYN Thor, set the Thor's own controller focus mode to Auto-Lock. Then the buttons follow whichever screen you touch: tap the game to play it, tap the other app to use it. With the focus locked to the top screen, the buttons keep going to the top screen's app even while you touch the game.
+
+It's there on every two-screen device.
 
 ### SINGLE SCREEN
 
@@ -51,6 +58,8 @@ On a handheld with one screen, like the Retroid Pocket 6, the companion shares t
 - `SIDE PANEL`: the companion is a panel on the right side of the screen, which you can lock beside the game.
 
 Flipped from the companion, it switches right away.
+
+Rather not see the small tab at the bottom of the screen's right edge? Turn off `COMPANION TAB`, right under `COMPANION VIEW`. `BACK` and the HUD's `COMPANION` button still open the companion.
 
 On a tall screen, about 2.5 inches high or more like the Retroid Pocket 6, the companion's text is a little smaller in the window, so more fits on each page.
 

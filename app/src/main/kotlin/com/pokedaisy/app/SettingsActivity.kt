@@ -613,6 +613,15 @@ class SettingsActivity : ComponentActivity() {
                 prefs.companionWindow = !prefs.companionWindow
                 revision++
             }.takeIf { !usesSecondScreen },
+            // The white tab at the screen's right edge that opens it (BACK and the HUD's COMPANION still do).
+            SettingRow(
+                tk("COMPANION TAB"), onOff(prefs.companionTab),
+                labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.COMPANION_TAB),
+                subtitle = "The tab at the right edge that opens it",
+            ) {
+                prefs.companionTab = !prefs.companionTab
+                revision++
+            }.takeIf { !usesSecondScreen },
             // Game and companion trade screens; the game picks it up on resume.
             SettingRow(tk("SWAP SCREENS"), onOff(Screens.swapped(this, prefs)), subtitle = "Game and companion trade screens") {
                 Screens.setSwapped(this, prefs, !Screens.swapped(this, prefs))

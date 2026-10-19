@@ -169,6 +169,24 @@ open class CompanionScreenshotTest {
 
     @Test fun party() = tab("PARTY")
 
+    /** PARTY before the player is in the game (the title screen: GameStart): the game's empty slots, PRESS START. */
+    @Test fun waiting() {
+        GameStart.waiting = true
+        try {
+            paparazzi.snapshot { CompanionScreen(SampleCompanion.snapshot, SampleCompanion.Slots, SampleCompanion.Settings()) }
+        } finally {
+            GameStart.waiting = false
+        }
+    }
+
+    /** The companion over the game on the game's screen, filling it (CLOSE COMPANION with SWAP SCREENS: SidePanelHost's
+     *  fullScreen) - the window's X on its corner. */
+    @Test fun fullScreenWindow() = paparazzi.snapshot {
+        SidePanelHost(window = true, onClose = {}, fullScreen = true) {
+            CompanionScreen(SampleCompanion.snapshot, SampleCompanion.Slots, SampleCompanion.Settings(), initialTab = "SETTINGS")
+        }
+    }
+
     /** MORE, left of the gear: the tabs off the bar (CARD, STATES; CHEEVOS with RetroAchievements) as app icons. */
     @Test fun more() = paparazzi.snapshot {
         CompanionScreen(

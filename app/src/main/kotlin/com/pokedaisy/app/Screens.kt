@@ -36,17 +36,29 @@ object Screens {
      * the main display already.
      */
     fun mainDisplayLaunch(activity: Activity): Bundle? {
-        @Suppress("DEPRECATION") // Activity.display is API 30+; the window's display is the activity's on every version.
-        val here = activity.windowManager.defaultDisplay.displayId
-        if (here == Display.DEFAULT_DISPLAY) return null
+        if (isOnMainDisplay(activity)) return null
         return ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
     }
 
     /** Whether [activity]'s window is on the device's main display (the Thor's top screen). */
-    fun isOnMainDisplay(activity: Activity): Boolean {
-        @Suppress("DEPRECATION") // Activity.display is API 30+; the window's display is the activity's on every version.
-        return activity.windowManager.defaultDisplay.displayId == Display.DEFAULT_DISPLAY
-    }
+    fun isOnMainDisplay(activity: Activity): Boolean = displayOf(activity) == Display.DEFAULT_DISPLAY
+
+    /** The display [activity] is on now (it follows a move to another display: [moveToDisplay]). */
+    fun displayOf(activity: Activity): Int =
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) activity.display?.displayId ?: Display.DEFAULT_DISPLAY
+        else @Suppress("DEPRECATION") activity.windowManager.defaultDisplay.displayId
+
+    /**
+     * Moves [activity]'s task, running, to display [displayId] (its singleTask instance stays: onNewIntent and a
+     * configuration change, no restart - checked on the Thor). CLOSE COMPANION with SWAP SCREENS: the game goes to the
+     * second screen, so the main one is free for other apps. False if Android refused.
+     */
+    fun moveToDisplay(activity: Activity, displayId: Int): Boolean = runCatching {
+        activity.startActivity(
+            Intent(activity, activity.javaClass).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle(),
+        )
+    }.isSuccess
 
     /** On an activity reopened by [reopenOnMainDisplay]: when, so a move that didn't take isn't tried again in a loop. */
     private const val EXTRA_MOVED_AT = "com.pokedaisy.app.MOVED_TO_MAIN_DISPLAY_AT"
@@ -79,14 +91,11 @@ object Screens {
      * resumes it again, and that mustn't loop.
      */
     fun bringToMainDisplay(activity: Activity) {
-        val options = mainDisplayLaunch(activity) ?: return
-        if (!hasSecond(activity)) return
+        if (isOnMainDisplay(activity) || !hasSecond(activity)) return
         val now = System.currentTimeMillis()
         if (now - lastBring < MOVE_GUARD_MS) return
         lastBring = now
-        runCatching {
-            activity.startActivity(Intent(activity, activity.javaClass).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options)
-        }
+        moveToDisplay(activity, Display.DEFAULT_DISPLAY)
     }
 
     /** SWAP SCREENS only means something with two. */

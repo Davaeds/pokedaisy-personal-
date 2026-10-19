@@ -40,8 +40,11 @@ object NewFeatures {
     /** SETTINGS > TOUCH CONTROLS: layouts, size, opacity, extra buttons and EDIT LAYOUT (companion.ui.TouchControls). */
     const val TOUCH_CONTROLS = "touch_controls"
 
+    /** SETTINGS > COMPANION TAB: hide the edge tab that opens the companion on one screen (SidePanel). */
+    const val COMPANION_TAB = "companion_tab"
+
     /** Every feature that gets the tag. */
-    val ALL = listOf(HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB, TOUCH_CONTROLS)
+    val ALL = listOf(HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB, TOUCH_CONTROLS, COMPANION_TAB)
 
     private const val DAYS = 7
     private const val DAY_MS = 24 * 60 * 60 * 1000L

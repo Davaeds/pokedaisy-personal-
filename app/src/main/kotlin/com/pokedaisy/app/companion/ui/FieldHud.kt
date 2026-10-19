@@ -1045,11 +1045,13 @@ private fun HudMapPanel(snapshot: SnapshotView, m: GbaTextMetrics, fly: FlyActio
             val gap = u * 3
             // The title's height: a line and its 6u padding each way.
             val mapH = maxHeight - titleM.lineHeight - titleM.u * 12 - gap
-            Column(Modifier.width(minOf(maxWidth, mapH * aspect)).fillMaxHeight().then(window), verticalArrangement = Arrangement.spacedBy(gap)) {
+            // The map at its own shape, never stretched: as tall as there's room for, or as wide.
+            val mapW = minOf(maxWidth, mapH * aspect)
+            Column(Modifier.width(mapW).then(window), verticalArrangement = Arrangement.spacedBy(gap)) {
                 if (glass) GlassTitle(tk("MAP"), gameCase(snapshot.location.mapSecName), titleM, onClose)
                 else OptionTitleWindow(tk("MAP"), titleM, trailing = gameCase(snapshot.location.mapSecName), onBack = onClose)
                 // MapScreen draws its own frame: no window around it.
-                Box(Modifier.weight(1f).fillMaxWidth()) { MapScreen(snapshot, fly = fly) }
+                Box(Modifier.width(mapW).height(mapW / aspect)) { MapScreen(snapshot, fly = fly, keepShape = true) }
             }
         }
     }

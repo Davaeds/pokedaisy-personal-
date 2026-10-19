@@ -41,7 +41,8 @@ class PerformanceGuardsTest {
             finally.indexOf("onCoreStopping?.invoke()") in 0 until finally.indexOf("MgbaCore.pkDeinit()"),
         )
         val activity = read("PokeDaisyActivity.kt")
-        val onPause = activity.substring(activity.indexOf("override fun onPause()")).substringBefore("\n    }\n")
+        // onPause's work (pauseGame: onPause skips it only for the pause around a move to the other screen).
+        val onPause = activity.substring(activity.indexOf("private fun pauseGame()")).substringBefore("\n    }\n")
         assertTrue(
             "onPause must unbind the view before stopping the engine",
             onPause.indexOf("view.unbindCoreBlocking()") in 0 until onPause.indexOf("engine.stop"),

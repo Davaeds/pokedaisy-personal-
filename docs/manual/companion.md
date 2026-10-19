@@ -26,6 +26,10 @@ A few more are off the bar to begin with and wait under `MORE`: `CARD` (your [tr
 
 Some tabs only appear when the game has what they need. `DEX` needs the game's Pokédex data and `GUIDE` needs a guide for that game, so a game without them has fewer tabs. The bag tab also takes the game's own word for it: `PACK` in Gold, Silver, Crystal, Crystal Clear and Prism, `CUBE` in Unbound, `INVENTORY` in R.O.W.E., `POCKETS` in Super Mariomon, `BAG` everywhere else.
 
+### Before you're in the game
+
+While the game is still on its title screen, its intro or the CONTINUE menu, `PARTY`, `BAG`, `MAP` and `CARD` wait: they show the game's own empty party slots with `PRESS START` blinking, rather than whatever party the game has loaded so far. They fill in as soon as you're walking around or in a battle. A game resumed from where you left it is in the game already, so they show right away. `STATES`, `SETTINGS` and the rest work the whole time, so you can still load a save state from the title screen.
+
 ### Choosing your tabs
 
 Up to five tabs fit next to the gear. To pick them, open SETTINGS and tap `TAB BAR` in the COMPANION group, or tap the `TAB BAR` button at the bottom of `MORE`. Each tab there says `SHOWN` or `HIDDEN`; tap one to flip it. The title counts how many you've placed (for example `5/5`). If the bar is full, hide one first. Tabs always sit in the same order on the bar, whichever you pick. When the game you're playing doesn't have one of your tabs (a game with no DEX, say), its place goes to one of the game's other tabs, so the bar stays full whenever the game has enough.
@@ -71,7 +75,7 @@ The options come in groups, the ones you change while playing first:
 
 - **FF / SPEED**: `FF`, `FF SPEED`, `GAME SPEED`, `REWIND` and `SPEED OPTIONS` (a page with `SCENE SPEEDS`, `FF MODE` and `FF MUSIC`). See [Fast-forward](fast-forward.md).
 - **GAMEPLAY**: `WILD ENCOUNTERS`, `AUTO-RUN`, `RUN INDOORS` and `CHEATS`. See [Controls](controls.md) and [Cheats](cheats.md).
-- **SCREEN**: `ASPECT`, `HUD`, `DISPLAY OPTIONS` (a page with `STATUS BAR`, `SHADERS` and `OVERLAY`), `DARK MODE`, `FPS / CPU` and, depending on your device, `BATTLE BUTTONS`, `COMPANION VIEW`, `SWAP SCREENS` or `SINGLE SCREEN`. See [Screen and display](screen.md).
+- **SCREEN**: `ASPECT`, `HUD`, `DISPLAY OPTIONS` (a page with `STATUS BAR`, `SHADERS` and `OVERLAY`), `DARK MODE`, `FPS / CPU` and, depending on your device, `BATTLE BUTTONS`, `COMPANION VIEW`, `COMPANION TAB`, `SWAP SCREENS` or `SINGLE SCREEN`. See [Screen and display](screen.md).
 - **COMPANION**: `BATTLE HINTS`, `ONE-TAP MOVES`, `FOE IVS`, `TAB BAR`, `CLICK SOUND` and `TWEAKS`.
 - **CONTROLS**: `GAME BUTTONS`, `HOTKEYS`, `QUICK MENU` and `TOUCH CONTROLS`. See [Controls](controls.md).
 - **APP**: `LANGUAGE` and `HELP` (this manual).
@@ -108,7 +112,7 @@ At the very end of SETTINGS, under a line, are two buttons:
 
 Both ask before they do anything.
 
-On a device with two screens there's also `CLOSE COMPANION`. It hands the bottom screen back to Android while the game keeps running, so you can use another app down there. Press BACK on the game to bring the companion back.
+On a device with two screens there's also `CLOSE COMPANION`. It hands the companion's screen back to Android while the game keeps running, so you can use another app there (the top screen with `SWAP SCREENS` on). Press BACK on the game to bring the companion back. With `SWAP SCREENS` on, BACK opens it over the game instead, and `OPEN COMPANION` at the bottom of its `SETTINGS` puts it back on the top screen.
 
 > [!TIP]
 > Not sure what a row does? `HELP`, the last row of SETTINGS, opens this manual right on the bottom screen.

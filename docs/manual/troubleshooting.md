@@ -105,7 +105,7 @@ You can always get the newest version by hand from the [releases page](https://g
 
 On a device whose main display is the bottom one, the game ends up on the bottom and the companion on top. Turn on `SWAP SCREENS` (Settings, `SCREEN` group, on either screen) and they trade places. See [Devices](devices.md).
 
-If the companion has disappeared from the bottom screen entirely, you may have tapped `CLOSE COMPANION`. Press BACK on the game to bring it back.
+If the companion has disappeared from its screen entirely, you may have tapped `CLOSE COMPANION`. Tap the game, then press BACK to bring it back.
 
 ## What does PokeDaisy send over the internet?
 

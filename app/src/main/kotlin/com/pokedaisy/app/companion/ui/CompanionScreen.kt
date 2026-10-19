@@ -414,6 +414,7 @@ fun CompanionScreen(
                     // STATES / SETTINGS / ACHIEVEMENTS / MORE work before the game's data does.
                     !loaded && current != "STATES" && current != "SETTINGS" && current != "ACHIEVEMENTS" && current != "MORE" -> "LOADING"
                     current in cachedTabs -> "LOADING"
+                    GameStart.waiting && current in WAITING_TABS -> "WAITING"
                     current == "PARTY" && openDetail != null -> "PARTY/DETAIL"
                     current == "DEX" && dexUi.open != null -> "DEX/DETAIL"
                     else -> current
@@ -433,7 +434,7 @@ fun CompanionScreen(
                             lastSwitchNanos[0] = now
                             if (rapid) {
                                 EnterTransition.None togetherWith ExitTransition.None
-                            } else if (targetState == "LOADING" || initialState == "LOADING") {
+                            } else if (targetState == "LOADING" || initialState == "LOADING" || targetState == "WAITING" || initialState == "WAITING") {
                                 fadeIn(tween(250)) togetherWith fadeOut(tween(200))
                             } else if (targetState.substringBefore('/') == initialState.substringBefore('/')) {
                                 // A tab's own summary opening / closing: a zoom rather than a slide.
@@ -465,6 +466,8 @@ fun CompanionScreen(
                             }
                         } else if (paneKey == "LOADING") {
                             LoadingView(snapshot.error, Modifier.fillMaxSize())
+                        } else if (paneKey == "WAITING") {
+                            WaitingView(Modifier.fillMaxSize())
                         } else if (paneKey == "PARTY/DETAIL") {
                             // A mon's summary takes over the whole tab (back returns to the slots).
                             MonDetailScreen(
@@ -648,6 +651,18 @@ fun CompanionScreen(
 object CompanionStatusBar {
     var shown by androidx.compose.runtime.mutableStateOf(false)
 }
+
+/**
+ * The game hasn't been played yet this boot (the title screen, the intro, CONTINUE loading the save): the RAM holds no
+ * party yet, or the last one, so PARTY / BAG / MAP / CARD show [WaitingView] instead ([WAITING_TABS]). Set by the game's
+ * activity; false everywhere else (previews, tests).
+ */
+object GameStart {
+    var waiting by androidx.compose.runtime.mutableStateOf(false)
+}
+
+/** The tabs that wait for the game ([GameStart]): what they show is the save's. */
+private val WAITING_TABS = setOf("PARTY", "ITEMS", "MAP", "CARD")
 
 /**
  * A tab id's label: the bag tab takes the game's own word from its START menu
@@ -895,6 +910,34 @@ private fun LoadingView(status: String?, modifier: Modifier = Modifier) {
         if (showStatus && !status.isNullOrBlank()) {
             Spacer(Modifier.height(m.u * 4))
             GbaText(tr(status), OptionColors.onBackdrop.copy(alpha = 0.8f), OptionColors.onBackdropShadow, small, maxLines = 3)
+        }
+    }
+}
+
+/**
+ * PARTY / BAG / MAP / CARD before the player is in the game ([GameStart]): the game's own party slots, empty and dimmed,
+ * under an OPTION window - a rocking Poké Ball, what's coming, and a PRESS START blinking like the title screen's.
+ */
+@Composable
+private fun WaitingView(modifier: Modifier = Modifier) {
+    val m = rememberGbaTextMetrics()
+    val small = rememberGbaTextMetrics(1f)
+    val transition = rememberInfiniteTransition(label = "waiting")
+    val blink by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1200, easing = LinearEasing)), label = "press-start")
+    Box(modifier) {
+        // The game's look, none of its data: its slots with no one in them.
+        Box(Modifier.fillMaxSize().alpha(0.45f)) { PartyScreen(emptyList(), onMonClick = {}) }
+        OptionListWindow(m, Modifier.align(Alignment.Center).padding(horizontal = m.u * 16)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = m.u * 4)) {
+                RockingPokeBall(Modifier.size(m.u * 28))
+                Spacer(Modifier.height(m.u * 6))
+                GbaText(
+                    tr("Your party shows up here once you're in the game."),
+                    OptionColors.label, OptionColors.labelShadow, small, maxLines = 3,
+                )
+                Spacer(Modifier.height(m.u * 6))
+                GbaText(tr("PRESS START"), OptionColors.value, OptionColors.valueShadow, m, modifier = Modifier.alpha(if (blink < 0.6f) 1f else 0f))
+            }
         }
     }
 }

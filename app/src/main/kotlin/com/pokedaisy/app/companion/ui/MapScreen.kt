@@ -103,6 +103,8 @@ fun MapScreen(
     fly: com.pokedaisy.app.companion.FlyAction? = null,
     /** FLY's destinations open first - for screenshot tests, which can't tap. */
     initialFly: com.pokedaisy.app.companion.data.FlyTargets? = null,
+    /** Never stretched, not even a little (the HUD's MAP popup): the map at its own shape, centred. */
+    keepShape: Boolean = false,
 ) {
     val gen = rememberArtGeneration()
     // RomRegionMap lands a hack's own map in the background and announces it as new art.
@@ -202,7 +204,7 @@ fun MapScreen(
                 val mapAspect = crop.width.toFloat() / crop.height
                 val boxAspect = maxWidth / maxHeight
                 val fitted = when {
-                    maxOf(boxAspect / mapAspect, mapAspect / boxAspect) <= MAX_MAP_STRETCH -> Modifier.fillMaxSize()
+                    !keepShape && maxOf(boxAspect / mapAspect, mapAspect / boxAspect) <= MAX_MAP_STRETCH -> Modifier.fillMaxSize()
                     boxAspect > mapAspect -> Modifier.size(maxHeight * mapAspect, maxHeight)
                     else -> Modifier.size(maxWidth, maxWidth / mapAspect)
                 }

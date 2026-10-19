@@ -293,12 +293,14 @@ fun CompanionSettingsScreen(
                                     )
                                 })
                             }
-                            // Its screen for other apps while the game keeps running; BACK on the game reopens it.
+                            // Its screen for other apps while the game keeps running; BACK on the game reopens it. Closed while
+                            // swapped, this companion is the one over the game: OPEN COMPANION puts it back on its own screen.
                             if (settings.canCloseCompanion) {
+                                val closed = settings.companionClosed
                                 OptionButton(
-                                    tk("CLOSE COMPANION"), m,
+                                    tk(if (closed) "OPEN COMPANION" else "CLOSE COMPANION"), m,
                                     modifier = Modifier.fillMaxWidth().padding(start = m.u * 10, end = m.u * 10, bottom = m.u * 10),
-                                    onClick = settings::closeCompanion,
+                                    onClick = if (closed) settings::openCompanion else settings::closeCompanion,
                                 )
                             }
                         }
@@ -450,6 +452,13 @@ private fun homeRows(
                 tk("COMPANION VIEW"), companionViewLabel(window),
                 labelBadge = NewFeatures.badge(NewFeatures.COMPANION_WINDOW), subtitle = "A window over the game, or a side panel",
             ) { s.setCompanionWindow(!window); changed() }
+        },
+        // The white tab at the screen's right edge that opens it (BACK and the HUD's COMPANION still do).
+        s.companionTab?.let { tab ->
+            SettingRow(
+                tk("COMPANION TAB"), onOff(tab),
+                labelBadge = NewFeatures.badge(NewFeatures.COMPANION_TAB), subtitle = "The tab at the right edge that opens it",
+            ) { s.setCompanionTab(!tab); changed() }
         },
         // Two screens: the game and the companion trade screens (this companion moves with them).
         SettingRow(tk("SWAP SCREENS"), onOff(s.swapScreens), subtitle = "Game and companion trade screens") { s.setSwapScreens(!s.swapScreens); changed() }

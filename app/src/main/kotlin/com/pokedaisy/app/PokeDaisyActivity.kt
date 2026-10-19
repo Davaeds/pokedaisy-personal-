@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.compositionContext
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
@@ -61,6 +62,7 @@ import com.pokedaisy.app.companion.ui.GameStatusBar
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.pokedaisy.app.companion.data.isGen2
 import com.pokedaisy.app.companion.data.isGen1
@@ -211,6 +213,38 @@ class PokeDaisyActivity : Activity() {
     /** The game's stage (game, status bar, touch controls, HUD, side panel): the activity's
      * content, or the second screen's with SWAP SCREENS (see [syncPresentation]). */
     private lateinit var stage: GameStageLayout
+
+    /**
+     * The recomposer of every Compose view on [stage] (the FIELD HUD, the touch controls, BATTLE BUTTONS, the status
+     * bar, the panels), for this activity's life. Compose otherwise uses the window's, and a ComposeView keeps the
+     * coroutine scope of the first one it met: with SWAP SCREENS the stage changes windows (the second screen's is
+     * made again after HOME, sleep, the lid), that first one is cancelled with its window, and every tap handler on
+     * the stage started in a dead scope - the views still took the touches, but nothing happened.
+     */
+    private val stageRecomposer = androidx.compose.runtime.Recomposer(androidx.compose.ui.platform.AndroidUiDispatcher.Main)
+    private val stageRecomposing = kotlinx.coroutines.CoroutineScope(androidx.compose.ui.platform.AndroidUiDispatcher.Main)
+        .launch { stageRecomposer.runRecomposeAndApplyChanges() }
+    /**
+     * The player is in the game (GameStart): the field or a battle has shown, or they walked (three positions - a game
+     * whose field screen isn't learned yet), or the game resumed from a state. Before that (the title screen, the intro,
+     * CONTINUE loading the save) the companion's PARTY / BAG / MAP / CARD wait. Emu thread writes, UI reads.
+     */
+    @Volatile private var playing = true
+    private val playPositions = HashSet<Long>()
+
+    /** A boot that starts at the title screen: the save tabs wait until the player is in the game. */
+    private fun waitForPlay() {
+        playing = false
+        synchronized(playPositions) { playPositions.clear() }
+        com.pokedaisy.app.companion.ui.GameStart.waiting = true
+    }
+
+    /** In the game (or resumed into it): the save tabs show. */
+    private fun nowPlaying() {
+        playing = true
+        runOnUiThread { com.pokedaisy.app.companion.ui.GameStart.waiting = false }
+    }
+
     /** The companion as the activity's content while the screens are swapped, with its owner. */
     private var mainCompanion: View? = null
     private var mainCompanionOwner: ComposeHostOwner? = null
@@ -1004,14 +1038,21 @@ class PokeDaisyActivity : Activity() {
         override fun closeGame() {
             exitGame()   // drives the normal onPause()/onStop() lifecycle, which already suspends+saves
         }
-        override val canCloseCompanion get() = secondScreen()?.let { !Screens.swapped(this@PokeDaisyActivity, Prefs(this@PokeDaisyActivity), it) } == true
+        override val canCloseCompanion get() = secondScreen() != null
         override fun closeCompanion() {
             runOnUiThread {
-                companionClosed = true
+                val target = secondScreen()
+                val swap = target != null && Screens.swapped(this@PokeDaisyActivity, Prefs(this@PokeDaisyActivity), target) && !debugMirror && !romIsNds
+                this@PokeDaisyActivity.companionClosed = true
                 syncPresentation()
+                // Swapped, the companion is this activity's screen (the main one): the game moves to the second
+                // screen as this activity's own content, its touch and keys its own, and the main screen is free.
+                if (swap && target != null) moveToDisplay(target.displayId)
                 showHud(com.pokedaisy.app.companion.i18n.tr("Companion closed. Press BACK to bring it back."))
             }
         }
+        override val companionClosed get() = companionOverGame.value
+        override fun openCompanion() = runOnUiThread { reopenCompanion() }
         override val autoResume get() = Prefs(this@PokeDaisyActivity).autoResume
         override fun setTweak(key: String, on: Boolean) = Prefs(this@PokeDaisyActivity).setTweak(key, on)
         override val clickSound get() = clickSoundOn
@@ -1144,6 +1185,12 @@ class PokeDaisyActivity : Activity() {
         override fun setCompanionWindow(on: Boolean) {
             Prefs(this@PokeDaisyActivity).companionWindow = on
             runOnUiThread { sidePanel.setWindow(on) }
+        }
+        override val companionTab get() =
+            if (::sidePanel.isInitialized && sidePanel.enabled) Prefs(this@PokeDaisyActivity).companionTab else null
+        override fun setCompanionTab(on: Boolean) {
+            Prefs(this@PokeDaisyActivity).companionTab = on
+            runOnUiThread { sidePanel.openTabShown = on }
         }
         override fun setSwapScreens(on: Boolean) {
             Screens.setSwapped(this@PokeDaisyActivity, Prefs(this@PokeDaisyActivity), on)
@@ -1312,6 +1359,8 @@ class PokeDaisyActivity : Activity() {
             }
         }
         stage = root
+        // Compose on the stage runs on its own recomposer, for this activity's life (see stageRecomposer).
+        root.compositionContext = stageRecomposer
         setContentView(root)
         // Compose's window-level recomposer looks for a ViewTreeLifecycleOwner
         // starting from the window's root view, not just the individual
@@ -1515,6 +1564,16 @@ class PokeDaisyActivity : Activity() {
             ffMusicWillRender = { key -> ffMusicRenderer?.willRender(key) == true }
             onSample = {   // runs on the emu thread
                 val snap = telemetry.refresh()
+                if (!playing && snap.connected) {
+                    val moved = synchronized(playPositions) {
+                        playPositions.add((snap.mapGroup.toLong() shl 48) or (snap.mapNum.toLong() shl 32) or (snap.x.toLong() shl 16) or (snap.y.toLong() and 0xFFFF))
+                        playPositions.size >= PLAY_POSITIONS
+                    }
+                    if (onField.value || snap.inBattle || moved) {
+                        Log.i("pokedaisy", "playing: field=${onField.value} battle=${snap.inBattle} positions=${synchronized(playPositions) { playPositions.size }} at ${snap.mapGroup}.${snap.mapNum} (${snap.x},${snap.y})")
+                        nowPlaying()
+                    }
+                }
                 // SMART FF reads the game's own gMain once the game is known (no scan
                 // guesswork), and learns the field's main callback from the player moving.
                 telemetry.knownGMain()?.let { (addr, inBattleOff) -> FfMenuWatch.useKnownGMain(addr, inBattleOff) }
@@ -1546,7 +1605,7 @@ class PokeDaisyActivity : Activity() {
                 telemetry.refresh()
                 com.pokedaisy.app.companion.data.SnapshotCache.write(state, telemetry.forState())
             }
-            onResumeResult = { loaded -> if (!loaded) telemetry.dropCached() }
+            onResumeResult = { loaded -> if (!loaded) { telemetry.dropCached(); runOnUiThread { waitForPlay() } } }
             onBattleInputSample = {   // runs on the emu thread, ~15x/sec
                 telemetry.refreshBattleInputFast()?.let { (battler, state) ->
                     setBattleMenuState(battler, state, telemetry.battleMenuCursor())
@@ -1628,9 +1687,17 @@ class PokeDaisyActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (movePause) {
+            // The move's pause: the game never stopped. Only the screens follow (their configuration change may have
+            // come before the pause).
+            movePause = false
+            followDisplay()
+            return
+        }
         // The game's task brought up on the bottom screen (the app's icon tapped there): back to the top one, so the
         // companion can have the bottom (a Presentation can't share the game's display).
-        if (!Screens.isOnMainDisplay(this)) Screens.bringToMainDisplay(this)
+        // Not while the companion is closed: then the game is on the second screen on purpose (SWAP SCREENS).
+        if (!companionClosed) Screens.bringToMainDisplay(this)
         com.pokedaisy.app.companion.ui.OptionColors.inGame = true
         goImmersive()
         view.onResume()
@@ -1697,6 +1764,7 @@ class PokeDaisyActivity : Activity() {
         if (st.freshBootFile.exists()) {
             st.freshBootFile.delete()
             st.resumeFile.delete()
+            waitForPlay()
             engine.start(romData ?: r, save, null)
             view.postDelayed({ (engine.lastError ?: engine.lastNotice)?.let { Toast.makeText(this, it, Toast.LENGTH_LONG).show() } }, 1500)
             return true
@@ -1707,6 +1775,7 @@ class PokeDaisyActivity : Activity() {
         freshLaunch = false
         if (launch && !Prefs(this).autoResume) {
             st.resumeFile.delete()
+            waitForPlay()
             engine.start(romData ?: r, save, null)
             view.postDelayed({ (engine.lastError ?: engine.lastNotice)?.let { Toast.makeText(this, it, Toast.LENGTH_LONG).show() } }, 1500)
             return true
@@ -1723,6 +1792,8 @@ class PokeDaisyActivity : Activity() {
         if (resume != null && !telemetry.snapshot.value.hasData) {
             com.pokedaisy.app.companion.data.SnapshotCache.read(resume)?.let { telemetry.showCached(it) }
         }
+        // Resumed from a state: the player was in the game (a menu included). A boot: the title screen first.
+        if (resume != null) nowPlaying() else waitForPlay()
         engine.start(romData ?: r, save, resume)
         if (!engine.running) telemetry.dropCached()
         view.postDelayed({ (engine.lastError ?: engine.lastNotice)?.let { Toast.makeText(this, it, Toast.LENGTH_LONG).show() } }, 1500)
@@ -1742,11 +1813,29 @@ class PokeDaisyActivity : Activity() {
         RetroAchievements.onUnlockSound = null
         unlockSound?.release()
         unlockSound = null
+        stageRecomposer.cancel()
+        stageRecomposing.cancel()
+        com.pokedaisy.app.companion.ui.GameStart.waiting = false
         super.onDestroy()
     }
 
     override fun onPause() {
         super.onPause()
+        // Android's pause around moving this activity to the other screen (moveToDisplay): the game runs on.
+        val moving = movingSince != 0L && android.os.SystemClock.uptimeMillis() - movingSince < MOVE_PAUSE_MS
+        movingSince = 0L
+        if (moving) { movePause = true; return }
+        pauseGame()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // The move's pause turned out to be a real one: stop the game as onPause would have.
+        if (movePause) { movePause = false; pauseGame() }
+    }
+
+    /** Everything onPause does: the game stops (or holds, asleep), its listeners and the second screen go. */
+    private fun pauseGame() {
         keyCapture.cancel()
         runCatching { displayManager.unregisterDisplayListener(displayListener) }
         runCatching { inputManager.unregisterInputDeviceListener(inputDeviceListener) }
@@ -1794,10 +1883,31 @@ class PokeDaisyActivity : Activity() {
      * EmulatorView's bindCore) moves into the second screen's window and a
      * companion becomes this activity's content.
      */
-    /** The player closed the companion (SETTINGS > CLOSE COMPANION): its screen is the device's until BACK. */
+    /**
+     * The player closed the companion (SETTINGS > CLOSE COMPANION): its screen is the device's until BACK. With SWAP
+     * SCREENS that's the main one, so this activity moves to the second screen meanwhile (the game its content).
+     */
     private var companionClosed = false
     /** A DS game's bottom display (touch screen or companion), while it's up. */
     private var dsBottom: NdsBottomHost? = null
+
+    /**
+     * Closed while swapped: the game has the second screen to itself and the companion opens over it, as on one screen
+     * (the side panel's tab, the HUD's COMPANION), its SETTINGS offering OPEN COMPANION. Compose state for that button.
+     */
+    private val companionOverGame = androidx.compose.runtime.mutableStateOf(false)
+
+    /** The companion back on its own screen (the game back to the main screen first if it moved off it; the screens are
+     *  arranged again once it's there, onConfigurationChanged). */
+    private fun reopenCompanion() {
+        if (!companionClosed) return
+        companionClosed = false
+        if (!Screens.isOnMainDisplay(this)) moveToDisplay(Display.DEFAULT_DISPLAY)
+        syncPresentation()
+    }
+
+    /** The display this activity was on at the last [syncPresentation]: a move to another one re-arranges the screens. */
+    private var shownOnDisplay = Display.DEFAULT_DISPLAY
 
     private fun syncPresentation() {
         if (!::engine.isInitialized) return
@@ -1805,12 +1915,23 @@ class PokeDaisyActivity : Activity() {
         // A DS game keeps both its screens where a DS has them (no SWAP SCREENS), and its touch screen stays up
         // whatever CLOSE COMPANION says: the companion is on the game's screen, as on one-screen devices.
         val swap = target != null && Screens.swapped(this, Prefs(this), target) && !debugMirror && !romIsNds
-        if (companionClosed && target != null && !swap && !romIsNds) {
+        shownOnDisplay = Screens.displayOf(this)
+        // The companion closed, or this activity off the main screen (the companion closed while swapped, or on its
+        // way back from there): the game alone, here. A Presentation can't share this activity's display.
+        if (((companionClosed && !romIsNds) || shownOnDisplay != Display.DEFAULT_DISPLAY) && target != null) {
             presentation?.let { it.dismiss(); it.releaseContent() }
             presentation = null
             showStage()
+            // Closed while swapped, the game on the second screen: the companion opens over it there, as on one screen.
+            // It fills that screen (the companion's own, on a device like the Thor), whatever COMPANION VIEW says.
+            val over = companionClosed && shownOnDisplay != Display.DEFAULT_DISPLAY && !debugMirror
+            companionOverGame.value = over
+            sidePanel.setFullScreen(over)
+            syncSingleScreen(over)
             return
         }
+        companionOverGame.value = false
+        sidePanel.setFullScreen(false)
         val current = presentation
         if (current != null && target != null && current.display.displayId == target.displayId &&
             current.isShowing && swap == (mainCompanion != null)
@@ -1882,6 +2003,50 @@ class PokeDaisyActivity : Activity() {
         com.pokedaisy.app.companion.ui.theme.DarkMode.systemDark =
             com.pokedaisy.app.companion.ui.theme.DarkMode.isSystemDark(this)
         if (::sidePanel.isInitialized) syncSingleScreen(singleScreen)
+        followDisplay()
+    }
+
+    /**
+     * Moves this activity to [displayId] (CLOSE COMPANION while swapped, BACK from there). Android delivers that as a
+     * new intent, with a pause and a resume around it: the game keeps running through those ([movePause]).
+     */
+    private fun moveToDisplay(displayId: Int) {
+        movingSince = android.os.SystemClock.uptimeMillis()
+        if (!Screens.moveToDisplay(this, displayId)) movingSince = 0L
+    }
+
+    /** When [moveToDisplay] asked Android to move this activity (0 = not moving). */
+    private var movingSince = 0L
+
+    /** onPause let the game run on: it was [moveToDisplay]'s pause, which onResume (or a real stop, onStop) ends. */
+    private var movePause = false
+
+    /** Moved to the other screen (CLOSE COMPANION while swapped, BACK from there): the screens' contents follow. */
+    private fun followDisplay() {
+        if (Screens.displayOf(this) == shownOnDisplay) return
+        syncPresentation()
+        val decor = window.decorView
+        decor.removeCallbacks(refocus)
+        decor.postDelayed(refocus, REFOCUS_DELAY_MS)
+    }
+
+    /**
+     * Android can lose this window's focus on the way to another display: the Thor's input dispatcher asked to focus it
+     * while its input info still named the old display ("Found window ... in display 0, but it should belong to display
+     * 4"), dropped the focus, and never asked again - the game took no buttons until it was closed. Flipping the window
+     * unfocusable and back makes the window manager ask again.
+     */
+    private val refocus = Runnable {
+        if (isFinishing || hasWindowFocus()) return@Runnable
+        Log.i("pokedaisy", "no focus after a display move: asking again")
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        window.decorView.post { window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE) }
+    }
+
+    // A move between two screens of one size changes no configuration; the moved activity gets the focus.
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) followDisplay()
     }
 
     /** The game's stage as this activity's content (dropping the swapped companion). */
@@ -2435,10 +2600,10 @@ class PokeDaisyActivity : Activity() {
     private fun companionBackTap() {
         // EDIT LAYOUT over the game: BACK is its DONE.
         if (touchEditor != null) { touchEditBack.back(); return }
-        if (companionClosed) {
-            // The companion was closed: BACK brings it back.
-            companionClosed = false
-            syncPresentation()
+        // The companion was closed: BACK brings it back. Not while it opens over the game instead (closed while swapped):
+        // then BACK is that companion's, as on one screen, and its OPEN COMPANION puts it back on its own screen.
+        if (companionClosed && !companionOverGame.value) {
+            reopenCompanion()
         } else if (dsBottom?.showingCompanion == true && !sidePanel.windowOpen) {
             // A DS game's companion on the bottom display (and none open over the game): BACK is its own, and with
             // nothing left to go back from it goes back to the touch screen.
@@ -2676,6 +2841,7 @@ class PokeDaisyActivity : Activity() {
         }
         val save = SavesLocation.saveFor(this, Prefs(this), r)
         syncCheats()
+        waitForPlay()
         engine.start(romData ?: r, save, null)
         showHud(com.pokedaisy.app.companion.i18n.tr("Game restarted"))
     }
@@ -2752,6 +2918,13 @@ class PokeDaisyActivity : Activity() {
         const val EXTRA_FROM_FRONTEND = "fromFrontend"
         private val GBA_EXT = RomArchive.ROM_EXTENSIONS + RomArchive.EXTENSIONS
         private const val DEBUG_MIRROR_WIDTH_DP = 420
+        /** How long after asking to move to the other screen a pause is that move's (Android delivers it at once). */
+        private const val MOVE_PAUSE_MS = 2_000L
+        private const val REFOCUS_DELAY_MS = 600L
+        /** Places the player has stood on before a game whose field isn't known counts as being played: the title and
+         *  CONTINUE already change it two or three times (Too Many Types 2 fills it in on the title), so a couple of
+         *  steps more. */
+        private const val PLAY_POSITIONS = 5
         private const val EXTRA_DUMP_FIXTURE = "dumpFixture"
         private const val EXTRA_DUMP_FIXTURE_FORCE = "dumpFixtureForce"
         private const val EWRAM_BASE = 0x02000000L

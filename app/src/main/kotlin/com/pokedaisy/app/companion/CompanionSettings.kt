@@ -133,11 +133,20 @@ interface CompanionSettings {
      * activity lifecycle. Caller (the UI) is expected to confirm first. */
     fun closeGame()
 
-    /** Whether the companion can step off its own screen while the game runs (two screens, not swapped). */
+    /** Whether the companion can step off its own screen while the game runs (two screens; swapped, the game moves to the second). */
     val canCloseCompanion: Boolean get() = false
 
     /** Closes the companion's screen (the device's own launcher shows there) - BACK on the game brings it back. */
     fun closeCompanion() {}
+
+    /**
+     * The companion was closed while the screens were swapped: the game has the second screen and this companion opens
+     * over it, as on one screen. Its SETTINGS then offers OPEN COMPANION ([openCompanion]) instead of CLOSE COMPANION.
+     */
+    val companionClosed: Boolean get() = false
+
+    /** Puts the companion back on its own screen (the main one, the game back on the second). */
+    fun openCompanion() {}
 
     /** Whether battle-only strategic hints (move effectiveness chips, foe
      * Weak-to/Resists/Immune-to) are shown — see [Prefs.showHints]. */
@@ -280,6 +289,11 @@ interface CompanionSettings {
      */
     val companionWindow: Boolean? get() = null
     fun setCompanionWindow(on: Boolean) {}
+
+    /** SETTINGS > COMPANION TAB: the edge tab that opens the companion ([com.pokedaisy.app.Prefs.companionTab]). Null
+     * where [companionWindow] is (no row). */
+    val companionTab: Boolean? get() = null
+    fun setCompanionTab(on: Boolean) {}
 
     /** The game on the second screen and the companion on the main one - see [Prefs.swapScreens]. */
     val swapScreens: Boolean get() = false

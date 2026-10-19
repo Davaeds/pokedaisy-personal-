@@ -1012,6 +1012,27 @@ round. The GLSurfaceView makes a new GL thread each time it's attached again, an
 goes to the old, exited thread - so `EmulatorView` hands the frame buffer over under a lock, not through the queue.
 The stage keeps its own ViewTree owners (set on itself), the Presentation's are on a frame around its content.
 `Screens` finds the second screen (ui-preview shims it as the Thor's).
+Every Compose view on the stage runs on `stageRecomposer` (the activity's own, set as the stage's `compositionContext`):
+a ComposeView keeps the coroutine scope of the first window recomposer it met, the stage changes windows on every
+HOME / sleep / lid close while swapped, and once that first one was cancelled every tap handler on the stage (HUD, touch
+controls, BATTLE BUTTONS) started dead - the views swallowed touches and nothing happened. Never let a view that moves
+between windows fall back to the window's recomposer. CLOSE COMPANION works swapped too: the activity itself moves to the
+second display (`Screens.moveToDisplay`, the game its content, the main screen Android's; Android 10+ keeps both screens'
+activities resumed); meanwhile the companion opens over the game there as on one screen (`companionOverGame`:
+`syncSingleScreen(true)`, the side panel's tab / window, BACK opens it) and its SETTINGS shows OPEN COMPANION
+(`CompanionSettings.companionClosed` / `openCompanion`), which moves the activity back. The new intent's pause / resume
+around a move is skipped (`movePause`), so the game doesn't reload. The Thor's input dispatcher can drop the window's focus on a move (it
+asks while the window's input info still names the old display, then never again: no buttons reached the game after OPEN
+COMPANION), so `followDisplay` checks 600 ms later and flips FLAG_NOT_FOCUSABLE off and on to make it ask again (`refocus`). SETTINGS > COMPANION TAB (`Prefs.companionTab`, NEW
+tag) hides that white edge tab (`SidePanel.openTabShown`); BACK and the HUD's COMPANION still open the companion. Over the
+game there the companion fills the screen (`SidePanel.setFullScreen` -> `SidePanelHost(fullScreen)`: window keys, no frame),
+whatever COMPANION VIEW says. The Thor's own controller focus mode decides where its pad goes: locked to the top screen
+(`screen_focus_lock`), touching the bottom moves Android's focus but not the pad; the user's fix was its Auto-Lock mode.
+**Before the player is in the game** (`GameStart.waiting`, CompanionScreen's WAITING pane: the game's empty party slots +
+PRESS START): PARTY / BAG / MAP / CARD wait on a boot from the title (RESTART, a fresh launch) until `onField`, a battle or
+`PLAY_POSITIONS` places walked (Too Many Types 2 fills its position in on the title); a resume from a state counts as
+playing at once (`waitForPlay` / `nowPlaying` in PokeDaisyActivity). Android drops the first touch on the second screen after the game opens (an input reconfiguration
+cancels it, system-side).
 **SINGLE SCREEN** (SETTINGS > SCREEN on both screens, only with a second screen; `Prefs.singleScreen`, OFF, NEW tag; a player's
 request to multitask without closing the app): `PokeDaisyActivity.secondScreen()` returns null while it's on, so `syncPresentation`
 takes the one-screen path below (window / side panel, HUD, BATTLE BUTTONS, the user's rotation) and the second display is Android's.

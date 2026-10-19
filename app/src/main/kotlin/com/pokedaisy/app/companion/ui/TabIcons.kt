@@ -10,6 +10,9 @@ import androidx.compose.ui.graphics.Color
 internal object TabIcons {
     class TabIcon(val bitmap: List<String>, val palette: Map<Char, Color>)
 
+    /** Every icon is this many pixels square. */
+    const val SIZE = 16
+
     private val OUTLINE = Color(0xFF303038)
     private val WHITE = Color(0xFFF8F8F8)
 
