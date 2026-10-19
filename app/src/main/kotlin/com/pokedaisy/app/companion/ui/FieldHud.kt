@@ -1,5 +1,7 @@
 package com.pokedaisy.app.companion.ui
 
+import com.pokedaisy.app.companion.data.guideId
+import com.pokedaisy.app.companion.data.gameGuide
 import com.pokedaisy.app.companion.data.isDsGame
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -344,7 +346,16 @@ fun FieldHud(
             GuideRomSource.encounters(live, snapshot.mapGroup, snapshot.mapNum, wildSet)
         }
     }
-    val wildHere = wild ?: if (live == null) null else remember(read, snapshot.pokedex) { hudWild(read, snapshot.pokedex) }
+    // A game whose guide has its own tables (a DS game, Polished Crystal): GUIDE > HERE's world, for the save and clock.
+    val world = if (live == null) remember(snapshot.game) { gameGuide(guideId(snapshot.game, null))?.world } else null
+    val worldHere = remember(world, snapshot.mapGroup, snapshot.mapNum, snapshot.progress) {
+        world?.encounters(snapshot.mapGroup, snapshot.mapNum, snapshot.progress)
+    }
+    val wildHere = wild ?: when {
+        live != null -> remember(read, snapshot.pokedex) { hudWild(read, snapshot.pokedex) }
+        world != null -> remember(worldHere, snapshot.pokedex) { hudWild(worldHere, snapshot.pokedex) }
+        else -> null
+    }
 
     // SIZE: a density whose GBA pixel (rememberGbaTextMetrics' 20dp / 16) is exactly the wanted whole screen pixels.
     val base = LocalDensity.current

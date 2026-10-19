@@ -141,6 +141,8 @@ enum class GuideId {
     RECHARGED_EMERALD,
     EMERALD_LEGACY,
     POLISHED_CRYSTAL,
+    // The DS games: HeartGold and SoulSilver share their text, not their wild Pokémon.
+    PLATINUM, HEARTGOLD, SOULSILVER,
 }
 
 /** [live]'s guide; else by [game] (a config whose tables didn't check out has no live tables). */
@@ -149,6 +151,10 @@ fun guideId(game: GameKind?, live: GuideTables?): GuideId? = live?.guide ?: when
     GameKind.EMERALD -> GuideId.EMERALD
     // A Game Boy game: no GBA tables; its guide carries its own (GameGuide.world).
     GameKind.POLISHED_CRYSTAL -> GuideId.POLISHED_CRYSTAL
+    // A DS game: its guide carries its own tables too (Gen4World).
+    GameKind.PLATINUM -> GuideId.PLATINUM
+    GameKind.HEARTGOLD -> GuideId.HEARTGOLD
+    GameKind.SOULSILVER -> GuideId.SOULSILVER
     else -> null
 }
 
@@ -188,6 +194,9 @@ fun gameGuide(id: GuideId?): GameGuide? = when (id) {
     GuideId.RECHARGED_EMERALD -> GUIDE_RECHARGED_EMERALD
     GuideId.EMERALD_LEGACY -> GUIDE_EMERALD_LEGACY
     GuideId.POLISHED_CRYSTAL -> GUIDE_POLISHED_CRYSTAL
+    GuideId.PLATINUM -> GUIDE_PLATINUM
+    GuideId.HEARTGOLD -> GUIDE_HEARTGOLD
+    GuideId.SOULSILVER -> GUIDE_SOULSILVER
     null -> null
 }
 

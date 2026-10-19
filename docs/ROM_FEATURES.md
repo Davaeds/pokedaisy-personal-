@@ -28,6 +28,8 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | Ruby / Sapphire | USA rev 1 and 2 | ✅ | ✅ | ✅ | — | ✅ | ✅ | — | ◐ ⁵ | ✅ | ✅ | ✅ |
 | Ruby / Sapphire | USA rev 0, ES / DE / FR / IT | ✅ | ✅ | ✅ | — | ✅ | ✅ | — | ◐ ⁵ | ✅ | ✅ | ✅ |
 | Ruby / Sapphire | JP | ✅ | ✅ | ✅ | — | ✅ | ✅ | — | ◐ ⁵ | ✅ | ✅ | ✅ |
+| Platinum (DS) | USA rev 1 | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ |
+| HeartGold / SoulSilver (DS) | USA | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ |
 | Amethyst | 1.3.0, 1.4.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ |
 | Ash Gray | 4.5.3, Fork Bug Fix 1.0 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ |
 | Celia's Stupid Romhack | 1.1.4 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — |
@@ -155,6 +157,13 @@ change to any of the places listed under "Where it's decided" updates its rows h
     FLY go by RAM alone (the walk counter, wFontLoaded's text box bit, the joypad and warp flags). FLY's list is the game's
     own (Gen 1: the visited towns in town map order; Crystal: the visited flypoints of the region the Fly map would show).
     Gold / Silver and the Crystal hacks: not yet (their RAM moved).
+14. The DS games' features are `app/src/main/cpp/nds/`: EXPAND draws the 3D overworld's margins from the game's own
+    polygons (`pk_nds_wide.cpp`; battles carry their background, HP boxes and text box to the edges, tuned on HG/SS);
+    the field read, WILD ENCOUNTERS' hold (the map's rates at 0) and the bike / surf bits are `pk_nds_field.cpp`; PC and FLY
+    run the game's own functions and scripts from its main loop (`pk_nds_call.cpp`, the hook and scripts from
+    `scripts/gen_nds_stub.py`). Addresses from pret/pokeplatinum's and pokeheartgold's `.xMAP`s (both build the retail
+    ROMs byte for byte), checked headless with `native-capture/nds_dump` (`fieldinfo`, `action`, `wildoff`, `widecheck`).
+    No battle input yet: SMART FF's battle wait reads HG/SS's battle controller, but nothing presses the game's menus.
 
 ## What each column is
 

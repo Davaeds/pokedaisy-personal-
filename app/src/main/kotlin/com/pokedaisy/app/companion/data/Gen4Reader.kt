@@ -31,6 +31,9 @@ data class Gen4Config(
     val savePockets: IntArray? = null,
     /** The save's Pokédex in the body ([readGen4PokedexState]); null = no DEX. */
     val pokedexOff: Int? = null,
+    /** Its National Dex byte (Pokedex.nationalDexObtained) and the game's dex tables. */
+    val nationalDexOff: Int = 0,
+    val pokedexTables: PokedexTables? = null,
     /** Each map header's place name (its map label). */
     val mapPlaces: Map<Int, String>,
     /** The companion's pocket for an item (the game's own; the rest under ITEMS). */
@@ -47,7 +50,41 @@ data class Gen4Config(
     val pokegear: Gen4Pokegear? = null,
     /** HeartGold / SoulSilver: SavePokegear's second word in the body (skin in bits 18-24, mapUnlockLevel 27-28), or -1. */
     val pokegearWordOff: Int = -1,
+    /** VarsFlags in the body: [numVars] vars from VAR 0x4000, then 2912 flag bits - the GUIDE's [SaveProgress]
+     * ([readGen4Progress]); -1 = none. */
+    val varsFlagsOff: Int = -1,
+    val numVars: Int = 0,
+    /** HeartGold / SoulSilver: the Kanto badges' byte in TrainerInfo ([trainerOff] + this; the Johto / Sinnoh badges'
+     * is +0x1A in both games), or -1. */
+    val kantoBadgesOff: Int = -1,
 )
+
+/** The GUIDE's clock: the hour (0-23) the DS's clock says, as a var past the save's own (the DS games keep no time of
+ * day in their save; melonDS's clock is the device's, pk_nds.cpp). */
+const val GEN4_VAR_HOUR = 0x10000
+
+/** The badges as flags past the save's own: [GEN4_BADGE_FLAG] + badge id (Platinum's BADGE_ID_*: COAL 0 .. BEACON 7;
+ * HG / SS's BADGE_*: ZEPHYR 0 .. RISING 7, then BOULDER 8 .. EARTH 15), from TrainerInfo's badge bytes. Gym leaders'
+ * own trainer flags are no good for that: HG / SS clears them again for rematches. */
+const val GEN4_BADGE_FLAG = 0x20000
+
+private const val GEN4_FLAG_BYTES = 2912 / 8
+
+/** The save's event flags and vars, as the GUIDE reads them ([Gen4Config.varsFlagsOff]), with the hour as
+ * [GEN4_VAR_HOUR]; null without them. */
+fun readGen4Progress(r: MemoryReader, cfg: Gen4Config, body: Long, hour: Int = java.time.LocalTime.now().hour): SaveProgress? {
+    if (cfg.varsFlagsOff < 0) return null
+    val vars = r.readCoreMemory(body + cfg.varsFlagsOff, cfg.numVars * 2)
+    val flags = r.readCoreMemory(body + cfg.varsFlagsOff + cfg.numVars * 2, GEN4_FLAG_BYTES)
+    if (vars.size < cfg.numVars * 2 || flags.size < GEN4_FLAG_BYTES) return null
+    val trainer = r.readCoreMemory(body + cfg.trainerOff, 0x20)
+    val badges = byteArrayOf(trainer.getOrElse(0x1A) { 0 }, if (cfg.kantoBadgesOff >= 0) trainer.getOrElse(cfg.kantoBadgesOff) { 0 } else 0)
+    return SaveProgress(
+        flags, vars,
+        flagBanks = listOf(SaveBank(GEN4_BADGE_FLAG, 0, 16) to badges),
+        varBanks = listOf(SaveBank(GEN4_VAR_HOUR, 0, 1) to byteArrayOf(hour.toByte(), 0)),
+    )
+}
 
 /**
  * Where the player is on HeartGold / SoulSilver's Pokégear map (unk_02092BE8.c): on the main matrix their own block
@@ -188,6 +225,15 @@ val GEN4_PLATINUM_US = Gen4Config(
     bagOff = 0x630,
     locationOff = 0x1280,
     repelStepsOff = 0x8073,
+    // SAVE_TABLE_ENTRY_POKEDEX (found by its magic in the `platinum` fixture's SaveData at +0x133C); pokeplatinum's
+    // struct Pokedex keeps nationalDexObtained at 0x31B (its recordedLanguages are MAX_SPECIES + 1 = 496 bytes)
+    pokedexOff = 0x1328,
+    nationalDexOff = 0x31B,
+    pokedexTables = POKEDEX_PLATINUM,
+    // SAVE_TABLE_ENTRY_VARS_FLAGS: VAR_PLAYER_STARTER (0x4030) holds the starter in the `platinum` fixture, and the
+    // flags after them its new game's (FLAG_TALKED_TO_MOM, FLAG_BAG_ACQUIRED, ...); the Town Map reads the same block.
+    varsFlagsOff = 0xDAC,
+    numVars = 288,
     mapPlaces = mapPlacesPlatinum,
     itemPockets = itemPocketsPlatinum,
     flySpots = flySpotsPlatinum,
@@ -223,10 +269,16 @@ private fun gen4HeartGoldFamily(saveDataPtr: Long) = Gen4Config(
     mapPlaces = mapPlacesHeartGold,
     // SAVE_POKEDEX's chunk (found by its magic in the player's save, checked live)
     pokedexOff = 0x12B8,
+    nationalDexOff = 0x337,
+    pokedexTables = POKEDEX_HEARTGOLD,
     itemPockets = itemPocketsHeartGold,
     flySpots = flySpotsHeartGold,
     // SAVE_FLAGS' chunk (0xDE4) + its 0x170 vars
     flagsOff = 0xDE4 + 0x170 * 2,
+    varsFlagsOff = 0xDE4,
+    numVars = 0x170,
+    // PlayerProfile: johtoBadges at 0x1A, kantoBadges at 0x1F (include/player_data.h)
+    kantoBadgesOff = 0x1F,
     // SAVE_POKEGEAR's chunk (0xBAE0) + 4
     pokegearWordOff = 0xBAE4,
     pokegear = Gen4Pokegear(
@@ -536,6 +588,7 @@ fun readGen4Telemetry(r: MemoryReader, cfg: Gen4Config): Telemetry {
         townsVisited = map?.firstArrivals ?: flypoints,
         pokegearState = pokegearState,
         pokedex = readGen4PokedexState(r, cfg, body),
+        progress = readGen4Progress(r, cfg, body),
     )
 }
 

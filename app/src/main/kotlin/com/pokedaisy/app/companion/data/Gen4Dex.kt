@@ -5,17 +5,28 @@ import android.graphics.BitmapFactory
 import java.io.File
 
 /**
- * A DS game's POKéDEX (HeartGold / SoulSilver): its pages and front pictures, which [NdsArt] takes from the player's own
- * cart into rom-art once ([NdsArt.HEARTGOLD_DEX], [NdsArt.HEARTGOLD_FRONT]); the seen / caught flags from the save
- * ([readGen4PokedexState]). Species ids are National Dex numbers (1-493).
+ * A DS game's POKéDEX (Platinum, HeartGold / SoulSilver): its pages and front pictures, which [NdsArt] takes from the
+ * player's own cart into rom-art once ([NdsArt.PLATINUM_DEX], [NdsArt.HEARTGOLD_DEX] ...); the seen / caught flags from
+ * the save ([readGen4PokedexState]). Species ids are National Dex numbers (1-493).
  */
 class Gen4DexTables(
     /** The pages' file and the pictures' folder under rom-art. */
     val pages: String,
     val fronts: String,
+    /** Each machine's move: TM01..TM92, then HM01..HM08 (the games' HM05 differ). */
+    val tmMoves: IntArray,
 )
 
-val GEN4_DEX_HEARTGOLD = Gen4DexTables(NdsArt.HEARTGOLD_DEX, NdsArt.HEARTGOLD_FRONT)
+val GEN4_DEX_PLATINUM = Gen4DexTables(NdsArt.PLATINUM_DEX, NdsArt.PLATINUM_FRONT, tmMovesPlatinum)
+val GEN4_DEX_HEARTGOLD = Gen4DexTables(NdsArt.HEARTGOLD_DEX, NdsArt.HEARTGOLD_FRONT, tmMovesHeartGold)
+
+/** Platinum's dex: Sinnoh's 210 (their order from the cart, [Gen4Dex.regionalOrder]) and the National Dex's 493, in
+ * feet and pounds as the US game prints its pages. */
+val POKEDEX_PLATINUM = PokedexTables(
+    entries = 0, frontPics = 0, palettes = 0, speciesInfo = 0, speciesToNational = 0, abilityNames = 0, footprints = 0,
+    speciesCount = 494, nationalCount = 493, regionalCount = 210, regionName = "SINNOH",
+    gen4 = GEN4_DEX_PLATINUM, categorySuffix = "Pokémon",
+)
 
 /** HeartGold / SoulSilver's dex: Johto's 256 (their order from the cart, [Gen4Dex.regionalOrder]) and the National Dex's
  * 493, in feet and pounds as the US games print their pages. */
@@ -32,8 +43,8 @@ object Gen4Dex {
     /** One cart's pages and the rest of each species' row, as NdsArt wrote them. */
     internal class Pages(
         val entries: Map<Int, DexEntry>,
-        /** National numbers in Johto Dex order. */
-        val johto: IntArray,
+        /** National numbers in the regional Dex's order (Sinnoh's, Johto's). */
+        val regional: IntArray,
         val evolutions: Map<Int, List<EvoLink>>,
         val levelUp: Map<Int, List<LevelMove>>,
         /** TM01 .. TM92 then HM01 .. HM08 a bit each, low bit first. */
@@ -46,10 +57,10 @@ object Gen4Dex {
     /** No.[national]'s page, or null before the cart's pages are in. */
     fun entry(t: Gen4DexTables, national: Int): DexEntry? = load(t)?.entries?.get(national)
 
-    /** The Johto Dex's order (national numbers), once loaded; [regionalOrder] loads it. */
-    fun cachedRegionalOrder(t: Gen4DexTables): IntArray? = pages?.takeIf { pagesFor?.first == pathOf(t) }?.johto
+    /** The regional Dex's order (national numbers), once loaded; [regionalOrder] loads it. */
+    fun cachedRegionalOrder(t: Gen4DexTables): IntArray? = pages?.takeIf { pagesFor?.first == pathOf(t) }?.regional
 
-    fun regionalOrder(t: Gen4DexTables): IntArray? = load(t)?.johto?.takeIf { it.isNotEmpty() }
+    fun regionalOrder(t: Gen4DexTables): IntArray? = load(t)?.regional?.takeIf { it.isNotEmpty() }
 
     fun evolutions(t: Gen4DexTables): Map<Int, List<EvoLink>>? = load(t)?.evolutions?.takeIf { it.isNotEmpty() }
 
@@ -58,8 +69,8 @@ object Gen4Dex {
     /** [species]' TMs and HMs ("TM06", the move), from the cart's bits and the bag's machine list. */
     fun machines(t: Gen4DexTables, species: Int): List<TeachMove>? {
         val bits = load(t)?.machines?.get(species) ?: return null
-        return tmMovesHeartGold.indices.filter { i -> i / 8 < bits.size && (bits[i / 8].toInt() shr (i % 8)) and 1 != 0 }.map { i ->
-            TeachMove(if (i < 92) "TM%02d".format(i + 1) else "HM%02d".format(i - 91), tmMovesHeartGold[i])
+        return t.tmMoves.indices.filter { i -> i / 8 < bits.size && (bits[i / 8].toInt() shr (i % 8)) and 1 != 0 }.map { i ->
+            TeachMove(if (i < 92) "TM%02d".format(i + 1) else "HM%02d".format(i - 91), t.tmMoves[i])
         }
     }
 
@@ -87,11 +98,11 @@ object Gen4Dex {
     }
 
     /** NdsArt's lines: species, category, description, height dm, weight hg, the six stats (the page's order), type 1 / 2,
-     * catch rate, gender ratio, egg groups 1 / 2, abilities 1 / 2; then (a cart read since v8) the Johto number, the
+     * catch rate, gender ratio, egg groups 1 / 2, abilities 1 / 2; then (a cart read since v8) the regional number, the
      * evolutions, the level-up moves and the TM / HM bits. */
     internal fun parse(lines: List<String>): Pages {
         val entries = HashMap<Int, DexEntry>()
-        val johto = HashMap<Int, Int>()
+        val regional = HashMap<Int, Int>()
         val evolutions = HashMap<Int, List<EvoLink>>()
         val levelUp = HashMap<Int, List<LevelMove>>()
         val machines = HashMap<Int, ByteArray>()
@@ -115,7 +126,7 @@ object Gen4Dex {
                 genderRatio = i(14),
                 eggGroups = listOf(i(15), i(16)).distinct().mapNotNull { eggGroupName(it) },
             )
-            if (i(19) > 0) johto[i(19)] = n
+            if (i(19) > 0) regional[i(19)] = n
             c.getOrNull(20)?.takeIf { it.isNotEmpty() }?.split(';')?.mapNotNull { e ->
                 val (m, p, to) = e.split(',').map { it.toIntOrNull() ?: return@mapNotNull null }.takeIf { it.size == 3 } ?: return@mapNotNull null
                 if (to !in 1..493 || to == n) null else EvoLink(n, to, evoReqs(m, p))
@@ -128,11 +139,11 @@ object Gen4Dex {
                 runCatching { ByteArray(hex.length / 2) { hex.substring(it * 2, it * 2 + 2).toInt(16).toByte() } }.getOrNull()
             }?.let { machines[n] = it }
         }
-        val order = johto.keys.sorted().let { nums -> IntArray(nums.size) { johto.getValue(nums[it]) } }
+        val order = regional.keys.sorted().let { nums -> IntArray(nums.size) { regional.getValue(nums[it]) } }
         return Pages(entries, order, evolutions, levelUp, machines)
     }
 
-    /** pokeheartgold's EVO_* (include/constants/pokemon.h): Gen 3's 1-15, then 16 / 17 a stone on a male / female, 18 /
+    /** pokeheartgold's EVO_* (include/constants/pokemon.h; pokeplatinum's generated/evolution_methods.txt: the same): Gen 3's 1-15, then 16 / 17 a stone on a male / female, 18 /
      * 19 holding an item by day / night, 20 knowing a move, 21 another Pokémon in the party, 22 / 23 a level as a male /
      * female, 24-26 levelling up at a place (Sinnoh's magnetic field, moss rock, ice rock). */
     private fun evoReqs(m: Int, p: Int): List<EvoReq> {
@@ -167,10 +178,11 @@ object Gen4Dex {
 
 /**
  * The save's Pokédex ([Gen4Config.pokedexOff] into the SaveData's body: magic 0xBEEFCAFE, caught then seen - a bit per
- * species, No.1 first - and the National Dex's byte at +0x337): null before the save is loaded.
+ * species, No.1 first - and the National Dex's byte at [Gen4Config.nationalDexOff]): null before the save is loaded.
  */
 fun readGen4PokedexState(r: MemoryReader, cfg: Gen4Config, body: Long): PokedexState? {
     val off = cfg.pokedexOff ?: return null
+    val tables = cfg.pokedexTables ?: return null
     val d = r.readCoreMemory(body + off, 0x340)
     if (d.size < 0x340) return null
     val magic = (d[0].toLong() and 0xFF) or ((d[1].toLong() and 0xFF) shl 8) or ((d[2].toLong() and 0xFF) shl 16) or ((d[3].toLong() and 0xFF) shl 24)
@@ -178,5 +190,5 @@ fun readGen4PokedexState(r: MemoryReader, cfg: Gen4Config, body: Long): PokedexS
     fun bit(base: Int, n: Int) = (d[base + (n - 1) / 8].toInt() shr ((n - 1) % 8)) and 1 != 0
     val seen = (1..493).filter { bit(4 + 64, it) }.toSet()
     val caught = (1..493).filter { bit(4, it) && it in seen }.toSet()
-    return PokedexState(POKEDEX_HEARTGOLD, seen, caught, national = d[0x337].toInt() != 0)
+    return PokedexState(tables, seen, caught, national = d[cfg.nationalDexOff].toInt() != 0)
 }

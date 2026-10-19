@@ -69,7 +69,7 @@ Public readers can't see that repo, so user-facing docs don't name it or link to
   yourself for `python3 scripts/gen_*.py` or `gradle render`.
 - `local.properties` (untracked): Android `sdk.dir`.
 - `third_party/mgba`: git submodule at mGBA `0.10.5`; `third_party/rcheevos`: at `v12.5.0`
-  (`make submodules` fetches both).
+  (`make submodules` fetches them and `third_party/melonds`).
 - ROMs/saves for headless captures: `scripts/host_roms.conf`. On-device paths:
   `scripts/roms.conf` (`/sdcard/Android/data/com.pokedaisy.app/files/...`).
 - The package / applicationId was renamed twice: `com.pokedaisey.PokeDaiseyApp` →
@@ -484,6 +484,17 @@ data, `gen_polished_crystal_guide.py`, every build checked; `readGen2Telemetry` 
 trade flags as banks 0x10000+ / 0x20000+ and the clock as var 0x10000). Its controls were run through the real controller headless:
 the Game Boy battle menus drop presses as they open and after a cursor move, so every Game Boy pick (FIGHT / BAG / RUN / a move) now
 steers on the menu read each frame (`driveGbPickLocked`, `GbPartySwitch.battleMenu`) - docs/DEVELOPMENT.md's Polished section.
+**Nintendo DS (2026-10-19)**: Platinum (USA rev 1) and HeartGold / SoulSilver
+(USA) on melonDS (`third_party/melonds` at 1.1; our changes are one patch, `third_party/patches/melonds-pokedaisy.patch`,
+applied at configure time - edit the submodule, then `git -C third_party/melonds diff >` it). App code in
+`app/src/main/cpp/nds/` (core, field read, function caller, EXPAND from the game's own polygons, STEADY = a second melonDS
+from the game's state with its ARM9 stopped, its ARM7 FIFO drained every frame), `Gen4*.kt` / `NdsArt.kt` (reads from the
+SaveData in RAM; art, DEX pages from the player's cart, never bundled), the DS bottom screen on the bottom display
+(`NdsBottomScreen.kt`). Addresses from pret's pokeplatinum / pokeheartgold `.xMAP`s; headless with
+`native-capture/nds_dump` (its README); docs/DEVELOPMENT.md's "Nintendo DS". DEX on both (`POKEDEX_PLATINUM` /
+`_HEARTGOLD`, pages from the cart); GUIDE on both (`GuidePlatinum.kt`, `GuideHeartGold.kt` over `Gen4World`:
+`scripts/gen_gen4_guide.py` writes the wild sets, boss teams and HERE's items from the decomps; gym leaders go by badge -
+HG / SS clears the leaders' trainer flags for rematches; `readGen4Progress` adds the badges and the DS clock's hour).
 **Companion options (2026-10-08)**: RESUME GAMES (`Prefs.autoResume`, top-screen Settings > LIBRARY; off =
 a launch boots the save, a return from HOME still resumes - `freshLaunch`), CLOSE COMPANION (SETTINGS, two
 screens: the Presentation goes away until BACK on the game), STATUS BAR OFF / GAME / COMPANION (`Prefs.statusBarOnCompanion`,

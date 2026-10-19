@@ -63,6 +63,24 @@ private fun rawAreas(guide: GuideId): List<String> = when (guide) {
     // No area data yet: HERE lists the wild Pokémon alone.
     GuideId.GLAZED, GuideId.IMPERIUM, GuideId.QUETZAL, GuideId.QUETZAL_V084, GuideId.LAZARUS, GuideId.SEAGLASS, GuideId.TMT2, GuideId.SOULGOLD,
     GuideId.MARIOMON, GuideId.RECHARGED_EMERALD, GuideId.ELITE_REDUX -> emptyList()
+    // The DS games: item balls and hidden items (scripts/gen_gen4_guide.py), keyed by place - see [areaSection].
+    GuideId.PLATINUM -> PT_AREAS_RAW
+    GuideId.HEARTGOLD, GuideId.SOULSILVER -> HG_AREAS_RAW
+}
+
+private val hgHeaderPlaces: Map<Int, Int> by lazy {
+    HG_HEADER_PLACES.split(',').associate { p -> p.split(':').let { it[0].toInt() to it[1].toInt() } }
+}
+
+/**
+ * The area HERE lists things for: the region map section the reader names ([regionSec]), except on a DS game, whose
+ * area data goes by the place of the map header the player is on ([mapNum]: Platinum's map label, HG / SS's mapsec) -
+ * the map's own, where the Town Map / Pokégear block can be another place's (a cave under a route).
+ */
+fun areaSection(game: GameKind?, mapNum: Int, regionSec: Int): Int = when (game) {
+    GameKind.PLATINUM -> mapPlaceIdsPlatinum[mapNum] ?: regionSec
+    GameKind.HEARTGOLD, GameKind.SOULSILVER -> hgHeaderPlaces[mapNum] ?: regionSec
+    else -> regionSec
 }
 
 /** Whether [guide] has area data at all (then HERE shows even without the ROM tables). */

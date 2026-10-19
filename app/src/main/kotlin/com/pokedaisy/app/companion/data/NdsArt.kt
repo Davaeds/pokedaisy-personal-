@@ -21,11 +21,13 @@ object NdsArt {
     const val HEARTGOLD_ITEMS = "nds/heartgold/items"
     /** HeartGold / SoulSilver's bag pocket buttons ([bagPockets]): pocket 0-7 in the game's order, open or not. */
     fun heartGoldPocket(pocket: Int, open: Boolean) = "nds/heartgold/bag/pocket_${pocket}_${if (open) "on" else "off"}"
-    /** HeartGold / SoulSilver's DEX pages from the cart ([dex]): a line a species, tab-separated (see [Gen4Dex]). */
+    /** The DEX pages from the cart ([dex]): a line a species, tab-separated (see [Gen4Dex]). */
     const val HEARTGOLD_DEX = "nds/heartgold/dex.tsv"
+    const val PLATINUM_DEX = "nds/platinum/dex.tsv"
     /** Each species' front picture (80 x 80, its first frame) under here as `<species>.png`. */
     const val HEARTGOLD_FRONT = "nds/heartgold/front"
-    private const val VERSION = 8
+    const val PLATINUM_FRONT = "nds/platinum/front"
+    private const val VERSION = 9
     /** The Town Map's art under rom-art/regionmap: the map, each fly location's block sprite and the player's head. */
     const val PLATINUM_MAP = "platinum_sinnoh"
     fun platinumBlock(shape: Int, variant: Int) = "pt_block_${shape}_$variant"
@@ -79,11 +81,13 @@ object NdsArt {
                 write(dir, "$itemDir/$item.png", icon.png())
             }
         }
-        if (platinum) file(f, header, "/graphic/tmap_gra.narc")?.let { townMap(Narc(it), dir) }
-        else {
+        if (platinum) {
+            file(f, header, "/graphic/tmap_gra.narc")?.let { townMap(Narc(it), dir) }
+            dex(f, header, dir, DEX_PLATINUM)
+        } else {
             file(f, header, "/a/1/4/4")?.let { pokegear(Narc(it), dir) }
             file(f, header, "/a/0/1/5")?.let { bagPockets(Narc(it), dir) }
-            dex(f, header, dir, soulSilver = code == "IPGE")
+            dex(f, header, dir, if (code == "IPGE") DEX_SOULSILVER else DEX_HEARTGOLD)
         }
         marker.parentFile?.mkdirs()
         marker.writeText(stamp)
@@ -299,31 +303,52 @@ object NdsArt {
         }
     }
 
+    /** Where one cart keeps what [dex] reads: file paths and text banks. */
+    private class DexFiles(
+        val msg: String, val description: Int, val category: Int, val abilities: Int,
+        val zukan: String, val personal: String, val regional: String, val learnsets: String, val evolutions: String,
+        val pics: String, val pages: String, val fronts: String,
+    )
+
+    // pret/pokeheartgold: msgdata a/0/2/7 (803 HeartGold's descriptions, 804 SoulSilver's, 816 categories, 720
+    // abilities), the dex data a/0/7/4, personal a/0/0/2, the Johto numbers a/1/3/8, wotbl a/0/3/3, evo a/0/3/4, pokegra a/0/0/4.
+    private val DEX_HEARTGOLD = DexFiles("/a/0/2/7", 803, 816, 720, "/a/0/7/4", "/a/0/0/2", "/a/1/3/8", "/a/0/3/3",
+        "/a/0/3/4", "/a/0/0/4", HEARTGOLD_DEX, HEARTGOLD_FRONT)
+    private val DEX_SOULSILVER = DexFiles("/a/0/2/7", 804, 816, 720, "/a/0/7/4", "/a/0/0/2", "/a/1/3/8", "/a/0/3/3",
+        "/a/0/3/4", "/a/0/0/4", HEARTGOLD_DEX, HEARTGOLD_FRONT)
+    // pret/pokeplatinum (platinum.us/filesys.csv, generated/text_banks.h): pl_msg's 706 descriptions (the US entries),
+    // 711 categories, 610 abilities; zukan_data_gira (Giratina's Altered Forme, the dex's default); the Sinnoh numbers
+    // in pl_pokezukan (national_to_regional).
+    private val DEX_PLATINUM = DexFiles("/msgdata/pl_msg.narc", 706, 711, 610,
+        "/application/zukanlist/zkn_data/zukan_data_gira.narc", "/poketool/personal/pl_personal.narc",
+        "/poketool/pl_pokezukan.narc", "/poketool/personal/wotbl.narc", "/poketool/personal/evo.narc",
+        "/poketool/pokegra/pl_pokegra.narc", PLATINUM_DEX, PLATINUM_FRONT)
+
     /**
-     * HeartGold / SoulSilver's DEX pages ([HEARTGOLD_DEX]) and front pictures ([HEARTGOLD_FRONT]), all from the cart:
-     * - text (msgdata, a/0/2/7, by bank): the description (803 HeartGold, 804 SoulSilver: each game its own), the
-     *   category (816), ability names (720) - [Gen4Text];
-     * - height (dm) and weight (hg): the dex data's members 0 / 1 (a/0/7/4), a u32 per species;
-     * - the personal record (a/0/0/2, by species, 0x2C bytes): base stats, types, catch rate, gender ratio, egg groups,
+     * The DEX pages ([DexFiles.pages]) and front pictures ([DexFiles.fronts]), all from the cart ([DexFiles] has where):
+     * - text (msgdata, by bank): the description (HeartGold and SoulSilver each their own), the category, ability names -
+     *   [Gen4Text];
+     * - height (dm) and weight (hg): the dex data's members 0 / 1, a u32 per species;
+     * - the personal record (by species, 0x2C bytes): base stats, types, catch rate, gender ratio, egg groups,
      *   abilities, and the TM / HM bits (0x1C-0x2B);
-     * - the Johto Dex number (a/1/3/8 member 0, a u16 per species), the evolutions (a/0/3/4, by species: 7 x {method,
-     *   param, target}) and the level-up moves (a/0/3/3, by species: level << 9 | move, ending 0xFFFF);
-     * - the front picture: pokegra (a/0/0/4) member species x 6 + 3 (male; + 2 female where there's no male one), its
-     *   pixels unscrambled as the game does (pokepic.c's UnscanPokepic_PtHGSS: each u16 XORed with an LCG seeded by the
+     * - the regional Dex number (member 0, a u16 per species), the evolutions (by species: 7 x {method, param,
+     *   target}) and the level-up moves (by species: level << 9 | move, ending 0xFFFF);
+     * - the front picture: pokegra member species x 6 + 3 (male; + 2 female where there's no male one), its pixels
+     *   unscrambled as the game does (pokepic.c's UnscanPokepic_PtHGSS: each u16 XORed with an LCG seeded by the
      *   first), 160 x 80 linear 4bpp, two frames side by side; the palette species x 6 + 4.
      */
-    private fun dex(f: RandomAccessFile, header: ByteArray, dir: File, soulSilver: Boolean) {
-        val msg = Narc(file(f, header, "/a/0/2/7") ?: return)
-        val text = msg.member(if (soulSilver) 804 else 803)?.let { Gen4Text.lines(it) } ?: return
-        val category = msg.member(816)?.let { Gen4Text.lines(it) } ?: return
-        val abilities = msg.member(720)?.let { Gen4Text.lines(it) } ?: emptyList()
-        val zukan = Narc(file(f, header, "/a/0/7/4") ?: return)
+    private fun dex(f: RandomAccessFile, header: ByteArray, dir: File, d: DexFiles) {
+        val msg = Narc(file(f, header, d.msg) ?: return)
+        val text = msg.member(d.description)?.let { Gen4Text.lines(it) } ?: return
+        val category = msg.member(d.category)?.let { Gen4Text.lines(it) } ?: return
+        val abilities = msg.member(d.abilities)?.let { Gen4Text.lines(it) } ?: emptyList()
+        val zukan = Narc(file(f, header, d.zukan) ?: return)
         val heights = zukan.member(0) ?: return
         val weights = zukan.member(1) ?: return
-        val personal = Narc(file(f, header, "/a/0/0/2") ?: return)
-        val johto = Narc(file(f, header, "/a/1/3/8") ?: return).member(0) ?: return
-        val learnsets = Narc(file(f, header, "/a/0/3/3") ?: return)
-        val evolutions = Narc(file(f, header, "/a/0/3/4") ?: return)
+        val personal = Narc(file(f, header, d.personal) ?: return)
+        val johto = Narc(file(f, header, d.regional) ?: return).member(0) ?: return
+        val learnsets = Narc(file(f, header, d.learnsets) ?: return)
+        val evolutions = Narc(file(f, header, d.evolutions) ?: return)
         val sb = StringBuilder()
         for (species in 1..493) {
             val p = personal.member(species) ?: continue
@@ -340,7 +365,7 @@ object NdsArt {
                 b(0).toString(), b(1).toString(), b(2).toString(), b(4).toString(), b(5).toString(), b(3).toString(),
                 b(6).toString(), b(7).toString(), b(8).toString(), b(0x10).toString(), b(0x14).toString(), b(0x15).toString(),
                 abilities.getOrElse(b(0x16)) { "" }, if (b(0x17) != 0) abilities.getOrElse(b(0x17)) { "" } else "",
-                // Its Johto Dex number (0: not in it), its evolutions (method,param,target;...), its level-up moves
+                // Its regional Dex number (0: not in it), its evolutions (method,param,target;...), its level-up moves
                 // (level:move,...) and its TM / HM bits (TM01 .. TM92, HM01 .. HM08, low bit first) as hex.
                 if (species * 2 + 2 <= johto.size) u16(johto, species * 2).toString() else "0",
                 evolutions.member(species)?.let { e ->
@@ -358,8 +383,8 @@ object NdsArt {
             )
             sb.append(cells.joinToString("\t") { it.replace("\t", " ") }).append('\n')
         }
-        write(dir, HEARTGOLD_DEX, sb.toString().toByteArray())
-        val pics = Narc(file(f, header, "/a/0/0/4") ?: return)
+        write(dir, d.pages, sb.toString().toByteArray())
+        val pics = Narc(file(f, header, d.pics) ?: return)
         for (species in 1..493) {
             val pal = palettes(pics.member(species * 6 + 4)).firstOrNull() ?: continue
             val chars = ncgrData(pics.member(species * 6 + 3))?.takeIf { it.size >= 6400 }
@@ -370,7 +395,7 @@ object NdsArt {
                 val v = u8(px, y * 80 + x / 2).let { if (x and 1 == 1) it shr 4 else it and 15 }
                 if (v != 0) img.argb[y * 80 + x] = pal[v]
             }
-            write(dir, "$HEARTGOLD_FRONT/$species.png", img.png())
+            write(dir, "${d.fronts}/$species.png", img.png())
         }
     }
 

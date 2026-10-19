@@ -1695,10 +1695,82 @@ built-in frames, storage + import - ui-preview compiles it, `OverlaysTest` cover
   half-screen side panel, 4:3) and an import of a drawn wooden frame (window found from alpha) around a
   stand-in game, with the same placement code; `settings-overlay*` / `*-settings-overlay` are the pages.
 
+## Nintendo DS (melonDS)
+
+Platinum (USA rev 1, `CPUE`) and HeartGold / SoulSilver (USA, `IPKE` / `IPGE`) run on melonDS, with the companion,
+EXPAND and STEADY music.
+
+**The core.** `third_party/melonds` (a submodule pinned to upstream 1.1) builds its core library only, with the
+software 3D renderer (no OpenGL) and the JIT without fast memory. Our changes are one patch,
+`third_party/patches/melonds-pokedaisy.patch`, applied to the submodule's working tree at configure time by
+`apply_melonds_patch.cmake` (once; a tree that has it is left alone): EXPAND's GPU3D hooks (every polygon past culling,
+the lists' swap at VBlank, the clipper), the software renderer's column range, fast-forward's frame skip
+(`GPU::SkipDraw` / `SkipDrawNext`: no 2D lines or 3D render on a frame nobody sees, decided at line 215 where the next
+frame's 3D starts, never while display capture is on) and `NDS::Current` as a plain static (Android's emulated
+`thread_local` cost ~8% of the emulation thread). To change it: edit `third_party/melonds`, then
+`git -C third_party/melonds diff > third_party/patches/melonds-pokedaisy.patch`. Moving the submodule means re-making the
+patch. melonDS and its bundled pieces (FatFs, Teakra, xxHash, tiny-AES-c, blip_buf, Dolphin's code) are in NOTICE and
+the LICENSES page.
+
+**The app side.** `app/src/main/cpp/nds/`: `pk_nds.cpp` (the core behind the same JNI shape as mGBA's: frames, audio,
+saves, states, input, the stylus), `pk_nds_platform.cpp` (melonDS's Platform: files, threads, the save callback),
+`pk_nds_field.cpp` (the field read: field / text / menu / battle / bike / surf bits, the BGM id, WILD ENCOUNTERS' hold,
+the battle controller's command), `pk_nds_call.cpp` + `stub/pk_nds_hook.c` (running the game's own functions from its
+main loop: PC, FLY), `pk_nds_wide.cpp` (EXPAND), `pk_nds_music.cpp` (STEADY). Saves: the game writes its flash a sector
+at a time, so the file (512 KB) is written once the writes have been quiet a while, and before a state or a close.
+States carry the save memory's CRC32 in a header of ours, so a resume checks `pk_nds_state_matches_save` like the GBA's
+`pkStateMatchesSave` (save files are sacred). The DS's bottom screen goes on the bottom display (`NdsBottomScreen.kt`)
+where the companion goes for a GBA game; one GAME SCREEN / COMPANION toggle swaps them.
+
+**Reads and tables.** Everything comes from pret's decomps, which build the retail ROMs byte for byte
+(`$DECOMPS/pokeplatinum`, `$DECOMPS/pokeheartgold`, built in Docker): addresses from their `.xMAP`, struct offsets from
+their headers, each checked on headless captures. `Gen4Reader.kt` reads the game's SaveData in RAM (party, the eight
+pockets, money, map, Repel steps); `scripts/gen_gen4_tables.py platinum|heartgold` writes the names, types, moves,
+items (and their pockets), map headers' place names, icon palettes and FLY spots (`Gen4Tables*.kt`, `Gen4TownMap*.kt`);
+`scripts/gen_nds_stub.py` assembles the hook (clang for armv5te) and the PC scripts (the decomps' own macros) into
+`pk_nds_stub_gen.h`. Art and text come from the player's cart (`NdsArt.kt`, through the cart's file system: party and
+item icons, HG/SS's bag pocket buttons, Platinum's Town Map, and HG/SS's DEX pages as `dex.tsv` - entries, the Johto
+order, evolutions, level-up moves, TM / HM bits - plus front pictures); bump `NdsArt.VERSION` when what it writes
+changes. `Gen4Dex.kt` / `DexDetails` read those pages (Gen 4 evolution methods 16-26 decoded by `evoReqs`). Each game's
+dex is a `PokedexTables` with `gen4` set (`POKEDEX_PLATINUM`: Sinnoh's 210 from `pl_pokezukan.narc`; `POKEDEX_HEARTGOLD`:
+Johto's 256 from `a/1/3/8`), and the save's seen / caught flags are read from its Pokedex struct (`Gen4Config.pokedexOff`
+and `nationalDexOff`: the struct's languages array differs in size, so the National Dex byte moved: 0x31B in Platinum,
+0x337 in HG / SS). The TM / HM lists differ in HM05 (Defog / Whirlpool): `tmMovesPlatinum` lives in
+`Gen4MachinesPlatinum.kt`, a file of its own, since `Gen4TablesPlatinum.kt`'s static initializer is at the JVM's limit.
+
+**GUIDE.** `scripts/gen_gen4_guide.py` writes `GuideGen4PlatinumGen.kt` / `GuideGen4HeartGoldGen.kt` from the decomps,
+numbers only: every map header's wild set (Platinum's grass with its day / night pair, HG / SS's per time of day and
+each version's own branch, surf, rock smash, rods and HG / SS's night fish), the bosses' teams, and HERE's item balls
+and hidden items with their done flags, keyed by place. `Gen4World` (`GuideGen4.kt`) picks from them for the save and
+the DS clock's hour; `readGen4Progress` reads the save's VarsFlags (`Gen4Config.varsFlagsOff`: Platinum's at body
+0xDAC, after a bag 12 bytes longer than its pockets) plus the badges from TrainerInfo as flags (`GEN4_BADGE_FLAG`):
+gym leaders count by badge, since HG / SS clears the leaders' own trainer flags again for rematches. The hand-written
+pages (`GuidePlatinum.kt`, `GuideHeartGold.kt`) come from the decomps' scripts, in our own words, `verified = false`.
+`Gen4GuideTest` pins them on the fixtures; ui-preview's `*-real-guide*` shots render them.
+
+**EXPAND.** The overworld is 3D, so the margins are drawn, not rebuilt: every polygon the game submits is clipped again
+shifted by about a screen into lists of our own (left, right, above, below, the corners), and a second unthreaded
+software renderer draws only the rows and columns the shown window needs. The middle is the game's own frame, untouched
+(`nds_dump`'s `widecheck` must find no difference). Battles carry their 512 px BG3 background past the screen, and the
+HP boxes, the text box and the field menu's bar to the edges, from the nearest steady rows (sprites tracked per row so
+a flicker in the intro doesn't reach the margins).
+
+**Fast-forward.** A shown frame of an FF group draws; the others skip drawing (above), which took 4x from ~200 to 240
+DS frames a second on the Thor. SMART's battle wait reads HG/SS's `BattleContext.command` (5 =
+SELECTION_SCREEN_INPUT) and reports it as `MgbaCore.FIELD_BATTLE_INPUT`. STEADY music is a second melonDS loaded from
+the game's own state with its ARM9 stopped: the sound driver runs on the ARM7 from data already in RAM, so it plays on
+from that moment by itself, loops and tempo included. Its ARM7 FIFO must be drained every frame as the ARM9 would (a
+full FIFO stalls the driver into a buzz); a new song id starts a new copy, a song fading out in the game fades the copy.
+
+**Headless.** `native-capture/nds_dump` (its README): scripted input, shots, RAM dumps, states, EXPAND checks, music
+copies, calls and scripts. The fixtures `platinum`, `platinum_battle` and `heartgold` are its dumps (main RAM with only
+the read ranges kept); `PlatinumDecodeTest`, `NdsArtHeartGoldTest` and the reader tests run on them (the cart-backed ones
+need the ROM, like the other ROM tests). No Platinum save existed: one was played headless; HG/SS use the player's own.
+
 ## Build
 
 ```bash
-git submodule update --init third_party/mgba third_party/rcheevos   # first time only (or: make submodules)
+git submodule update --init third_party/mgba third_party/rcheevos third_party/melonds   # first time only (or: make submodules)
 ./gradlew :app:assembleDebug                                        # or: make apk
 ```
 

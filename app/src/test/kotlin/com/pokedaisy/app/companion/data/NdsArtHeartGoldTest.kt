@@ -57,8 +57,8 @@ class NdsArtHeartGoldTest {
             assertTrue(bulbasaur[2].isNotBlank())
             // ... its Johto order, evolutions, level-up moves and TMs, as the companion reads them
             val pages = Gen4Dex.parse(dex)
-            assertEquals(256, pages.johto.size)
-            assertEquals(listOf(152, 153, 154, 155), pages.johto.take(4))       // CHIKORITA first
+            assertEquals(256, pages.regional.size)
+            assertEquals(listOf(152, 153, 154, 155), pages.regional.take(4))       // CHIKORITA first
             assertEquals(listOf(EvoLink(1, 2, listOf(EvoReq.Level(16)))), pages.evolutions[1])
             assertEquals(LevelMove(1, 33), pages.levelUp[1]?.first())           // TACKLE
             val eevee = pages.evolutions[133].orEmpty().map { it.to }.toSet()

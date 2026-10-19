@@ -38,6 +38,15 @@ class PlatinumDecodeTest {
         assertEquals(6 to 8, t.x to t.y)
         assertEquals("Twinleaf Town", t.mapSecName)
     }
+
+    @Test
+    fun `the save's Pokedex - seen TURTWIG and the rival's CHIMCHAR, caught TURTWIG, no National Dex`() {
+        val dex = read().pokedex!!
+        assertEquals(POKEDEX_PLATINUM, dex.tables)
+        assertEquals(setOf(387, 390), dex.seen)
+        assertEquals(setOf(387), dex.caught)
+        assertFalse(dex.national)
+    }
 }
 
 /** A party Pokémon the game holds decrypted in RAM (its flags say so) reads the same as the encrypted one. */

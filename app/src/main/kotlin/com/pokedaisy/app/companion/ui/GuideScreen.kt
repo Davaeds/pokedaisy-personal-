@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.pokedaisy.app.companion.data.EncounterSlot
 import com.pokedaisy.app.companion.data.hasAreaGuide
+import com.pokedaisy.app.companion.data.areaSection
 import com.pokedaisy.app.companion.data.areaThings
 import com.pokedaisy.app.companion.data.areaKey
 import com.pokedaisy.app.companion.data.englishMapSecName
@@ -405,7 +406,7 @@ private fun herePage(
         .filter { e -> e.areas.any { areaKey(it) == key } }
         .distinctBy { it.title }
 
-    val things = areaThings(guideId, snapshot.regionMapSectionId)
+    val things = areaThings(guideId, areaSection(snapshot.game, snapshot.mapNum, snapshot.regionMapSectionId))
     fun done(t: AreaThing) = areaDone(t, snapshot, ctx, dex)
     fun qty(t: AreaThing) = if (t.qty > 1) " x${t.qty}" else ""
     // Place names (and the hint's map names) are game data: only the sentences around them are translated.

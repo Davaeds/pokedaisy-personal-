@@ -942,6 +942,9 @@ fun homeMapsec(game: GameKind) = when (game) {
     else -> 0x58 // MAPSEC_PALLET_TOWN
 }
 
+/** A Pokémon in the game's regional Dex, for the DEX entry shots: Sinnoh's opens on TURTWIG. */
+fun ndsFirstMon(game: GameKind) = if (game == GameKind.PLATINUM) "TURTWIG" else "BULBASAUR"
+
 /** A DS game's real snapshot (-PndsFixture): the fixture's main RAM read the way the app reads it. */
 fun ndsSnapshot(): SnapshotView {
     val main = File("../../test/resources/fixtures/${System.getProperty("ndsFixture")}/mainram.bin").readBytes()
@@ -1016,21 +1019,40 @@ fun main(args: Array<String>) {
         Shot("$g-real-map", bw, bh, bd, companion("MAP", snap = ::ndsSnapshot)),
         Shot("$g-real-dex", bw, bh, bd, companion("DEX", snap = ::ndsSnapshot)),
         Shot("$g-real-dex-entry", bw, bh, bd, companion("DEX", snap = ::ndsSnapshot)) {
-            onAllNodesWithText("BULBASAUR", substring = true, ignoreCase = true).onFirst().performClick()
+            onAllNodesWithText(ndsFirstMon(game), substring = true, ignoreCase = true).onFirst().performClick()
         },
         Shot("$g-real-dex-johto", bw, bh, bd, companion("DEX", snap = ::ndsSnapshot)) {
             onAllNodesWithText("NATIONAL DEX", ignoreCase = true).onFirst().performClick()
         },
         Shot("$g-real-dex-evolve", bw, bh, bd, companion("DEX", snap = ::ndsSnapshot)) {
-            onAllNodesWithText("BULBASAUR", substring = true, ignoreCase = true).onFirst().performClick()
+            onAllNodesWithText(ndsFirstMon(game), substring = true, ignoreCase = true).onFirst().performClick()
             onAllNodesWithText("EVOLVE", ignoreCase = true).onFirst().performClick()
         },
         Shot("$g-real-dex-moves", bw, bh, bd, companion("DEX", snap = ::ndsSnapshot)) {
-            onAllNodesWithText("BULBASAUR", substring = true, ignoreCase = true).onFirst().performClick()
+            onAllNodesWithText(ndsFirstMon(game), substring = true, ignoreCase = true).onFirst().performClick()
             onAllNodesWithText("MOVES", ignoreCase = true).onFirst().performClick()
         },
         Shot("$g-real-map-zoom", bw, bh, bd, companion("MAP", snap = ::ndsSnapshot)) {
             onNodeWithContentDescription("ZOOM").performSemanticsAction(SemanticsActions.OnClick)
+        },
+        Shot("$g-real-guide", bw, bh, bd, companion("GUIDE", snap = ::ndsSnapshot)),
+        // HERE on a route: the fixture's save moved to its first route's grass (Platinum's ROUTE 201, HG / SS's ROUTE 29).
+        Shot("$g-real-guide-route", bw, bh, bd, companion("GUIDE", snap = {
+            ndsSnapshot().let { s ->
+                val header = if (game == GameKind.PLATINUM) 342 else 33
+                val name = (if (game == GameKind.PLATINUM) com.pokedaisy.app.companion.data.mapPlacesPlatinum
+                    else com.pokedaisy.app.companion.data.mapPlacesHeartGold)[header].orEmpty()
+                s.copy(mapNum = header, location = s.location.copy(mapSecName = name))
+            }
+        })),
+        Shot("$g-real-guide-boss", bw, bh, bd, companion("GUIDE", snap = ::ndsSnapshot)) {
+            onAllNodesWithText("NEXT BOSS", ignoreCase = true).onFirst().performClick()
+        },
+        Shot("$g-real-guide-whereis", bw, bh, bd, companion("GUIDE", snap = ::ndsSnapshot)) {
+            onAllNodesWithText("WHERE IS", ignoreCase = true).onFirst().performClick()
+        },
+        Shot("$g-real-guide-stuck", bw, bh, bd, companion("GUIDE", snap = ::ndsSnapshot)) {
+            onAllNodesWithText("STUCK?", ignoreCase = true).onFirst().performClick()
         },
     ) else emptyList()
     val all = real + listOf(

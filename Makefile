@@ -32,8 +32,8 @@ help: ## Show this help
 
 ##@ App
 
-submodules: ## Fetch the mGBA + rcheevos submodules (first build only)
-	git submodule update --init third_party/mgba third_party/rcheevos
+submodules: ## Fetch the mGBA, rcheevos and melonDS submodules (first build only)
+	git submodule update --init third_party/mgba third_party/rcheevos third_party/melonds
 
 apk: ## Build the debug APK
 	./gradlew :app:assembleDebug
