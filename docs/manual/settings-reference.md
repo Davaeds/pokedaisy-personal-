@@ -38,7 +38,7 @@ The `SPEED OPTIONS` page:
 | `AUTO ZOOM IN` | **`ON`**, `OFF` | Only with `ASPECT` on `EXPAND`: conversations, signs and menus ease the zoom back in. Battles always do. | [Screen](screen.md) |
 | `HUD` | **`ON`**, `OFF` (a page) | Your party, a minimap, your Poké Balls and `BAG` / `WILD` buttons on the game while you walk around, with `LAYOUT`, `LOOK`, `SIZE` and which parts show. | [HUD](hud.md) |
 | `BATTLE BUTTONS` | **`ON`**, `OFF` | Only on a device with one screen (or with `SINGLE SCREEN` on): `FIGHT`, `POKéMON` and `RUN` at the top right, beside the battle. | [Battle](battle.md) |
-| `DISPLAY OPTIONS` | a page | `STATUS BAR`, `SHADERS`, `OVERLAY` and, on a phone, `COMPANION`; see the next table. | [Screen](screen.md) |
+| `DISPLAY OPTIONS` | a page | `STATUS BAR`, `SHADERS`, `OVERLAY`, `LIGHT COMPANION` and, on a phone, `COMPANION`; see the next table. | [Screen](screen.md) |
 | `COMPANION VIEW` | **`WINDOW`**, `SIDE PANEL` | Only on a device with one screen (or with `SINGLE SCREEN` on): the companion as a window in the middle, over the game, or as a panel on the right, when you hold it sideways. | [Devices](devices.md) |
 | `COMPANION TAB` | **`ON`**, `OFF` | Where `COMPANION VIEW` shows: the small tab at the bottom of the screen's right edge that opens the companion. Off, `BACK` and the HUD's `COMPANION` button still do. | [Devices](devices.md) |
 | `SWAP SCREENS` | `ON`, **`OFF`** | Only on a device with two screens: the game on the second screen and the companion on the main one. With a TV as the second screen it starts `ON`: the game on the TV. | [Devices](devices.md) |
@@ -54,6 +54,7 @@ The `DISPLAY OPTIONS` page:
 | `STATUS BAR` | **`OFF`**, `GAME`, `COMPANION` | A strip with the game, location, money, clock and battery, over the game or over the companion's tabs. | [Screen](screen.md) |
 | `SHADERS` | a page (shows the current filter) | `FILTER`, `GRID`, `SMOOTHING`, `GBA COLORS`, `UNLIT SCREEN` and `ON COMPANION`; see the next table. | [Screen](screen.md) |
 | `OVERLAY` | **`NONE`**, `DAISY`, `BEZEL`, your imports (a page) | A frame around the game. Import your own RetroArch overlays here with `IMPORT FILE`. | [Screen](screen.md) |
+| `LIGHT COMPANION` | **`AUTO`**, `ON`, `OFF` | For slow devices: the companion redraws less and without animations, so your buttons don't reach the game late. `AUTO` turns it on where it's needed. | [Screen](screen.md#light-companion-for-slow-devices) |
 | `COMPANION` | **`AT BOTTOM`**, `UNDER GAME` | Only on a device with one screen: where the companion sits when you hold it upright. With `EXPAND`, `UNDER GAME` gives the touch controls their own strip at the bottom, and it's greyed out without touch controls. | [Devices](devices.md) |
 
 The `SHADERS` page:

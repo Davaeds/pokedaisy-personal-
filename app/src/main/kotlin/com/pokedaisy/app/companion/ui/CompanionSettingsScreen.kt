@@ -225,9 +225,12 @@ fun CompanionSettingsScreen(
                     Page.CHEATS -> cheatRows(settings) { tick++ } + SettingRow(tk("CANCEL"), null) { page = Page.HOME }
                     // Small preferences, each on by default (CompanionTweaks).
                     Page.TWEAKS -> CompanionTweaks.Tweak.entries.map { t ->
-                        SettingRow(t.label, if (CompanionTweaks[t]) tk("ON") else tk("OFF"), subtitle = t.description) {
-                            CompanionTweaks[t] = !CompanionTweaks[t]
-                            settings.setTweak(t.key, CompanionTweaks[t])
+                        // LIGHT COMPANION keeps the animations off whatever these say (CompanionTweaks.get).
+                        val held = t.motion && com.pokedaisy.app.companion.LightCompanion.on
+                        SettingRow(t.label, if (CompanionTweaks.stored(t)) tk("ON") else tk("OFF"),
+                                   subtitle = if (held) "Off while LIGHT COMPANION is on" else t.description) {
+                            CompanionTweaks[t] = !CompanionTweaks.stored(t)
+                            settings.setTweak(t.key, CompanionTweaks.stored(t))
                             tick++
                         }
                     } + SettingRow(tk("CANCEL"), null) { page = Page.HOME }
@@ -588,6 +591,8 @@ private fun displayRows(s: CompanionSettings, changed: () -> Unit, navigate: (Pa
                 })
             }
         },
+        // A slow device: the companion redrawn less, without animations, so the game's buttons don't wait on it.
+        lightCompanionRow({ title, choices, current, onPick -> select(Selector(title, choices, current) { onPick(it); changed() }) }) { s.setLightCompanion(it) },
         // A phone upright: the companion along the screen's bottom, or right under the game (the touch controls below it).
         s.portraitUnderGame?.let { under ->
             uprightCompanionRow(under, s.gameAspect == GameAspect.WIDE && s.wideSupported, s.touchControlsShown) { s.setPortraitUnderGame(it); changed() }

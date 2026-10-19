@@ -35,6 +35,8 @@ private object Budget {
     const val RETAINED_GROWTH = 16L shl 20
     /** Wall time per switch (composition + the frames between taps), on average. */
     const val MS_PER_SWITCH = 400.0
+    /** UI-thread time for a battle sample that changed nothing on screen. */
+    const val MS_PER_BATTLE_SAMPLE = 50.0
 }
 
 /** Bar layouts to cycle: the default, then the tabs off it by default. */
@@ -127,7 +129,64 @@ fun main() {
                 .format(msPerSwitch, Budget.MS_PER_SWITCH)
         }
     }
+    failures += battleSamples(light = false)
+    failures += battleSamples(light = true)
     if (desktopDispatchNpes > 0) println("stress: skipped $desktopDispatchNpes desktop-only OnPositionedDispatcher NPEs (Compose 1.5)")
     failures.forEach { println("stress FAILED: $it") }
     System.exit(if (failures.isEmpty()) 0 else 1)
+}
+
+/**
+ * The BATTLE tab as a battle feeds it: a new snapshot every sample (4 a second in a battle, each
+ * with a new frame counter), and the game's menu flipping between its actions and its moves.
+ * Times what each costs the UI thread (recomposition, layout and drawing) - the thread that also
+ * takes the device's buttons, so on a slow device a costly sample leaves the game's presses
+ * waiting (the RG DS: FIGHT, then no buttons until the moves showed on the companion).
+ */
+private fun battleSamples(light: Boolean): List<String> {
+    val failures = mutableListOf<String>()
+    // LIGHT COMPANION: no animations, a cut between the battle's panes.
+    com.pokedaisy.app.companion.LightCompanion.mode =
+        if (light) com.pokedaisy.app.companion.LightCompanionMode.ON else com.pokedaisy.app.companion.LightCompanionMode.OFF
+    val tag = if (light) "BATTLE, LIGHT" else "BATTLE"
+    val action = trainerBattle(com.pokedaisy.app.companion.data.BATTLE_INPUT_ACTION_SELECT).withBench()
+    val holder = androidx.compose.runtime.mutableStateOf(action)
+    runSkikoComposeUiTest(Size(1240f, 1080f), Density(2.625f)) {
+        mainClock.autoAdvance = false
+        setContent {
+            CompanionScreen(holder.value, FakeSlots(), FakeSettings(), FakeBattleInput(false), initialTab = "PARTY")
+        }
+        fun frames(n: Int): Double {
+            val t0 = System.nanoTime()
+            repeat(n) { mainClock.advanceTimeByFrame() }
+            return (System.nanoTime() - t0) / 1e6
+        }
+        var frame = 0L
+        fun sample(state: Int) {
+            frame += 15
+            holder.value = (if (state == action.battleInputState) action else action.copy(battleInputState = state)).copy(frameCounter = frame)
+        }
+        frames(120)
+        // Warm up both menus once (class loading, first text layouts).
+        repeat(3) {
+            sample(com.pokedaisy.app.companion.data.BATTLE_INPUT_MOVE_SELECT); frames(30)
+            sample(com.pokedaisy.app.companion.data.BATTLE_INPUT_ACTION_SELECT); frames(30)
+        }
+        // A sample with nothing to show changed: the one frame it costs.
+        val idle = (1..40).map { sample(com.pokedaisy.app.companion.data.BATTLE_INPUT_ACTION_SELECT); frames(1) }
+        // The menu flips: the frames until the pane has swapped (its crossfade).
+        val flips = (1..10).flatMap {
+            listOf(com.pokedaisy.app.companion.data.BATTLE_INPUT_MOVE_SELECT, com.pokedaisy.app.companion.data.BATTLE_INPUT_ACTION_SELECT).map { st ->
+                sample(st); frames(15)
+            }
+        }
+        val quiet = (1..20).map { frames(1) }
+        println(
+            "stress [$tag]: %.2f ms a frame with nothing new, %.2f ms a sample (nothing changed), %.1f ms a menu flip (15 frames)"
+                .format(quiet.average(), idle.average(), flips.average()),
+        )
+        if (idle.average() > Budget.MS_PER_BATTLE_SAMPLE) failures += "[$tag] %.1f ms per unchanged sample (budget %.0f)"
+            .format(idle.average(), Budget.MS_PER_BATTLE_SAMPLE)
+    }
+    return failures
 }

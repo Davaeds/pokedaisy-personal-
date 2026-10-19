@@ -3,12 +3,12 @@ title: Screen, aspect and shaders
 summary: Change how the game sits on the top screen and how it looks, from widescreen EXPAND to LCD and CRT filters, frames and dark mode.
 section: player
 order: 3
-keywords: [widescreen, fullscreen, 16:9, 3:2, ratio, bezel, border, frame, crt, lcd, scanlines, xbrz, scalefx, upscale, unlit, backlight, pixel transparency, night, appearance, framerate, fps, performance, graphics, look]
+keywords: [lag, slow device, input delay, light companion, widescreen, fullscreen, 16:9, 3:2, ratio, bezel, border, frame, crt, lcd, scanlines, xbrz, scalefx, upscale, unlit, backlight, pixel transparency, night, appearance, framerate, fps, performance, graphics, look]
 ---
 
 The top screen is wider than a GBA, so there's a choice to make about the space around the game. You can keep the GBA's own shape, stretch it, or let PokeDaisy draw more of the world into the gaps. On top of that you can run the picture through a filter, put a frame around it and switch the app's windows to a dark look.
 
-Everything on this page is in the `SCREEN` group of Settings, on both screens: the top screen's Settings (from the library) and the companion's `SETTINGS` tab. `STATUS BAR`, `SHADERS` and `OVERLAY` are on its `DISPLAY OPTIONS` page. A change made on the companion shows on the game straight away.
+Everything on this page is in the `SCREEN` group of Settings, on both screens: the top screen's Settings (from the library) and the companion's `SETTINGS` tab. `STATUS BAR`, `SHADERS`, `OVERLAY` and `LIGHT COMPANION` are on its `DISPLAY OPTIONS` page. A change made on the companion shows on the game straight away.
 
 ## Aspect: how the game fills the screen
 
@@ -159,6 +159,16 @@ The theme only changes the top screen outside a game. While you play, the compan
 `FPS / CPU` shows a small readout in the game's top-left corner: how many frames the game ran in the last second and how much of the CPU PokeDaisy is using. It should read about 60 at normal speed.
 
 Tap the readout to open a longer panel with frame times, late frames, the screen's refresh and pacing, audio underruns, battery temperature, thermal state and memory. It's useful when a game feels choppy; see [Troubleshooting](troubleshooting.md#the-game-feels-choppy-or-the-device-runs-hot).
+
+## Light companion for slow devices
+
+On a slower handheld, the companion can keep the device so busy that your button presses reach the game late: you press a button and nothing happens for a moment, often right after `FIGHT` while the companion draws your moves. `LIGHT COMPANION` makes the companion easier on the device:
+
+- it redraws only when something it shows has changed, and at most twice a second (a battle's menu changing still shows at once);
+- its animations are off: the bouncing party icons, the blinking map cursor, sliding tabs and the battle buttons' fade;
+- `ON COMPANION` under `SHADERS` is off, so no filter is drawn over the companion.
+
+`AUTO`, the default, turns it on by itself on a device that looks slow, and on any device once your buttons have come late a few times, which it remembers from then on. The line under the setting says what `AUTO` decided. `ON` and `OFF` choose for yourself.
 
 ## Other screen settings
 

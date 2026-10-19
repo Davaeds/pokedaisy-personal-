@@ -257,6 +257,10 @@ interface CompanionSettings {
     val screenFilter: ScreenFilter
     fun setScreenFilter(filter: ScreenFilter)
 
+    /** DISPLAY OPTIONS > LIGHT COMPANION ([LightCompanion], whose mode is Compose state): the activity also stores it
+     * and re-applies what it changes (ON COMPANION's shaders). */
+    fun setLightCompanion(mode: LightCompanionMode) { LightCompanion.mode = mode }
+
     /** Whether SHADERS also draw over the companion - see [Prefs.companionShaders]. */
     val companionShaders: Boolean
     fun setCompanionShaders(on: Boolean)

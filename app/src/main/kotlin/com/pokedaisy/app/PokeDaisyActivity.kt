@@ -1165,6 +1165,11 @@ class PokeDaisyActivity : Activity() {
             runOnUiThread { syncGameScreen() }
         }
         override val smoothingAvailable get() = GlCaps.gles3(this@PokeDaisyActivity)
+        override fun setLightCompanion(mode: com.pokedaisy.app.companion.LightCompanionMode) {
+            com.pokedaisy.app.companion.LightCompanion.mode = mode
+            Prefs(this@PokeDaisyActivity).lightCompanion = mode.id
+            runOnUiThread { syncGameScreen() }
+        }
         override val companionShaders get() = Prefs(this@PokeDaisyActivity).companionShaders
         override fun setCompanionShaders(on: Boolean) {
             Prefs(this@PokeDaisyActivity).companionShaders = on
@@ -2141,9 +2146,11 @@ class PokeDaisyActivity : Activity() {
         }
         view.gbaColors = prefs.gbaColors
         view.unlit = prefs.unlitScreen
+        // LIGHT COMPANION: no shader over the companion's views (one more pass over each, every frame).
+        val companionShaders = prefs.companionShaders && !com.pokedaisy.app.companion.LightCompanion.on
         CompanionColors.set(
-            prefs.gbaColors && prefs.companionShaders,
-            if (prefs.companionShaders) prefs.screenFilter else ScreenFilter.NONE,
+            prefs.gbaColors && companionShaders,
+            if (companionShaders) prefs.screenFilter else ScreenFilter.NONE,
             ScreenShaders.gridFor(prefs.screenFilter, prefs.gridStrength),
         )
         view.screenEffect = ScreenShaders.effectFor(prefs.screenFilter)
@@ -2450,6 +2457,7 @@ class PokeDaisyActivity : Activity() {
     // --- input ---------------------------------------------------------------
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        noteKeyDelay(event)
         // The companion's rebind waiting for keys: they're its alone - not the game's, the hotkeys' or BACK's.
         if (keyCapture.onKey(event)) return true
         if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) {
@@ -2498,6 +2506,24 @@ class PokeDaisyActivity : Activity() {
      * the window's business (it's closed and the key wasn't pressed in it, BACK, or a key that's no button, like
      * the volume). The hotkeys still hear every key, but only to let go of a hold (FF / slow-mo held as it opened).
      */
+    /**
+     * How long a button press waited before it reached here, on the UI thread that also draws the companion: logged when
+     * late, and LIGHT COMPANION's AUTO counts the late ones (an RG DS's buttons did nothing after FIGHT until the
+     * companion had drawn the move list). A device it finds slow is remembered, and starts light from then on.
+     */
+    private fun noteKeyDelay(event: KeyEvent) {
+        if (event.action != KeyEvent.ACTION_DOWN || event.repeatCount != 0) return
+        val now = android.os.SystemClock.uptimeMillis()
+        val delay = now - event.eventTime
+        if (delay < com.pokedaisy.app.companion.LightCompanion.LATE_KEY_MS) return
+        Log.w("pokedaisy/perf", "key ${KeyEvent.keyCodeToString(event.keyCode)} reached the game $delay ms late")
+        if (com.pokedaisy.app.companion.LightCompanion.noteKeyDelay(delay, now)) {
+            Log.w("pokedaisy/perf", "buttons keep coming late: LIGHT COMPANION's AUTO turns it on")
+            Prefs(this).lightCompanionMeasured = true
+            if (com.pokedaisy.app.companion.LightCompanion.on) syncGameScreen()
+        }
+    }
+
     private fun menuKeyTakes(event: KeyEvent): Boolean? {
         val code = event.keyCode
         val down = event.action == KeyEvent.ACTION_DOWN

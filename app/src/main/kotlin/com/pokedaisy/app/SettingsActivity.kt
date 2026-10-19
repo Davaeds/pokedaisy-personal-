@@ -551,6 +551,11 @@ class SettingsActivity : ComponentActivity() {
             SettingRow(tk("SHADERS"), prefs.screenFilter.label, opensPage = true, subtitle = "LCD, CRT and scanline looks, smoothing") { screen = Screen.SHADERS },
             // A frame around the game: the built-in ones and imported RetroArch overlays, on their own page.
             SettingRow(tk("OVERLAY"), overlayLabel(overlayChoices(overlayStore), prefs.overlay), opensPage = true, subtitle = "A frame around the game") { screen = Screen.OVERLAYS },
+            // A slow device: the companion redrawn less, without animations, so the game's buttons don't wait on it.
+            com.pokedaisy.app.companion.ui.lightCompanionRow({ title, choices, current, onPick -> selector = Selector(title, choices, current) { onPick(it); revision++ } }) {
+                com.pokedaisy.app.companion.LightCompanion.mode = it
+                prefs.lightCompanion = it.id
+            },
             // One screen held upright: the companion along the bottom, or right under the game (the touch controls below it).
             com.pokedaisy.app.companion.ui.uprightCompanionRow(
                 prefs.portraitCompanionUnderGame, prefs.gameAspect == com.pokedaisy.app.companion.GameAspect.WIDE,

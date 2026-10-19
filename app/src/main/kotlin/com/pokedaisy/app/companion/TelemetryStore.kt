@@ -63,6 +63,20 @@ class TelemetryStore {
     }
 
     private var logCount = 0
+    private var lastPublishNanos = 0L
+
+    /**
+     * LIGHT COMPANION ([LightCompanion]): whether sample [s] goes to the companion. Not when nothing it shows changed
+     * (the frame counter moves every sample), and at most every [LightCompanion.MIN_UPDATE_MS] - but a battle starting
+     * or ending, or its menu changing (the move list the player waits for), always at once.
+     */
+    private fun lightPublishes(s: SnapshotView): Boolean {
+        val prev = _snapshot.value
+        if (s.inBattle != prev.inBattle || s.battleInputState != prev.battleInputState || s.connected != prev.connected ||
+            s.game != prev.game || s.unsupported != prev.unsupported) return true
+        if (s.copy(frameCounter = prev.frameCounter) == prev) return false
+        return System.nanoTime() - lastPublishNanos >= LightCompanion.MIN_UPDATE_MS * 1_000_000L
+    }
 
     /** Call on the emulator thread. Returns the fresh sample so the caller
      * can cheaply reuse fields from it (e.g. [SnapshotView.inBattle] /
@@ -90,7 +104,9 @@ class TelemetryStore {
                 return s
             }
         }
+        if (LightCompanion.on && !lightPublishes(s)) return s
         _snapshot.value = s
+        lastPublishNanos = System.nanoTime()
         if (logCount++ % 5 == 0) {
             // pockets=<pocket id>:<count>,... - lets scripts/smoke_test.sh (and
             // manual debugging) verify item CATEGORIZATION specifically, not

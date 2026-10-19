@@ -1477,6 +1477,17 @@ top-left corner on a small dark box (the HUD's messages moved top-right) - frame
 (`CpuUsage`, /proc/self/stat over all cores), twice a second. A tap on it or near it (`TOUCH_REACH`) opens the panel
 (`PerfReading`, shadowed text with no box - the user's call: box on the short one, none on the long): frames on screen, late frames (the GL wait timing out), frame time avg / worst,
 emulation load, refresh + pacing, speed, audio underruns, battery temperature, thermal status, memory.
+**LIGHT COMPANION** (DISPLAY OPTIONS on both screens, `Prefs.lightCompanion` AUTO / ON / OFF, NEW tag; `companion/LightCompanion.kt`,
+2026-10-20, an RG DS report: after FIGHT the game took no buttons until the companion had drawn the move list, the picture
+running all along): the device's buttons reach the game through `dispatchKeyEvent` on the UI thread, which also draws the
+companion, so a weak chip's busy companion leaves presses waiting. While on: TelemetryStore hands the companion a sample only
+when something but the frame counter changed, at most every 500 ms (a battle starting / ending or its menu changing goes at
+once); CompanionTweaks' motion tweaks read OFF (their rows keep the player's choice); the battle pane cuts instead of
+crossfading; ON COMPANION's shaders are off. AUTO = `DevicePerformance.looksWeak` (low-RAM flag, < 3 GB, no core over 2.3 GHz:
+the RK3568's A55s top out at 2.0) or a button handled 150 ms+ late 3 times in a minute (`noteKeyDelay`, logged as
+`pokedaisy/perf`; remembered in `Prefs.lightCompanionMeasured`). ui-preview's `stress` times the BATTLE tab's samples and menu
+flips with it off and on. The cure for every device would be game keys off the UI thread (a focused window on its own
+Looper) - not done: it changes how every key arrives (two-screen focus, BACK, the Thor's focus modes).
 **Heat**: the STEADY background pass runs at most 10x real time (`BACKGROUND_FRAME_NANOS`; songs being heard go flat
 out), and gives up on a song that failed on 2 launches (`FfMusicCache.failures`) - a failing song kept the pass, and a
 second core, running on every launch.

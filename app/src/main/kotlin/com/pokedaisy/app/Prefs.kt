@@ -382,6 +382,17 @@ class Prefs(context: Context) {
         get() = ScreenFilter.entries.firstOrNull { it.name == p.getString("screen_filter", null) } ?: ScreenFilter.NONE
         set(v) = p.edit().putString("screen_filter", v.name).apply()
 
+    /** DISPLAY OPTIONS > LIGHT COMPANION: AUTO / ON / OFF ([com.pokedaisy.app.companion.LightCompanionMode.id]). */
+    var lightCompanion: Int
+        get() = p.getInt("light_companion", 0)
+        set(v) = p.edit().putInt("light_companion", v).apply()
+
+    /** LIGHT COMPANION's AUTO saw this device's buttons come late ([com.pokedaisy.app.companion.LightCompanion.noteKeyDelay]):
+     * it starts light from then on. */
+    var lightCompanionMeasured: Boolean
+        get() = p.getBoolean("light_companion_measured", false)
+        set(v) = p.edit().putBoolean("light_companion_measured", v).apply()
+
     /** Whether SHADERS (filter and GBA COLORS) also draw over the companion and status bar ([CompanionColors]). */
     var companionShaders: Boolean
         get() = p.getBoolean("companion_shaders", true)

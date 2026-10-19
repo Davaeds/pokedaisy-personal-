@@ -1,6 +1,7 @@
 package com.pokedaisy.app.companion.ui
 
 import androidx.compose.foundation.layout.Column
+import com.pokedaisy.app.companion.i18n.tk
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.draw.drawBehind
@@ -100,6 +101,7 @@ val SETTING_KEYWORDS: Map<String, String> = mapOf(
     "ASPECT" to "stretch ratio fullscreen full screen size scale 3:2 wide widescreen 16:9 expand zoom",
     "AUTO ZOOM IN" to "expand wide zoom close-up closeup dialogue conversation sign menu text box pull in automatic",
     "SHADERS" to "filter lcd crt scanlines grid gba colors color correction effects screen look smoothing xbr xbrz scalefx upscale hd edges unlit pixel transparency backlight",
+    "LIGHT COMPANION" to "lag laggy slow slowdown stutter performance weak device low end battery buttons late input delay unresponsive animations smooth",
     "UNLIT SCREEN" to "pixel transparency transparent backlight backlit no backlight unlit reflective backing shadow drop shadow original gba screen white",
     "SMOOTHING" to "xbr xbrz scalefx upscale upscaler hd edges smooth anti alias filter",
     "OVERLAY" to "overlay overlays border borders bezel bezels frame skin retroarch background wallpaper decoration",
@@ -226,4 +228,24 @@ private fun Modifier.revealOnce(done: () -> Unit): Modifier = composed {
         done()
     }
     onSizeChanged { size = it }.bringIntoViewRequester(requester)
+}
+
+/**
+ * DISPLAY OPTIONS > LIGHT COMPANION, on both screens ([com.pokedaisy.app.companion.LightCompanion]): AUTO / ON / OFF
+ * from a pick-list ([pick]: title, choices, the current one, what to do with the pick); AUTO's subtitle says what it
+ * decided for this device.
+ */
+fun lightCompanionRow(pick: (String, List<String>, String, (String) -> Unit) -> Unit, set: (com.pokedaisy.app.companion.LightCompanionMode) -> Unit): SettingRow {
+    val light = com.pokedaisy.app.companion.LightCompanion
+    val modes = com.pokedaisy.app.companion.LightCompanionMode.entries
+    val current = light.mode.label
+    return SettingRow(
+        tk("LIGHT COMPANION"), current,
+        labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.LIGHT_COMPANION),
+        subtitle = when {
+            light.mode != com.pokedaisy.app.companion.LightCompanionMode.AUTO -> "For slow devices: fewer redraws, no animations"
+            light.on -> "On: this device needs it"
+            else -> "Off: this device keeps up"
+        },
+    ) { pick(tk("LIGHT COMPANION"), modes.map { it.label }, current) { l -> modes.firstOrNull { it.label == l }?.let(set) } }
 }

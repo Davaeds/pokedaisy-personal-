@@ -80,6 +80,8 @@ If it's below 60 or stutters:
 - The first time you play a game with `FF MUSIC` on `STEADY`, PokeDaisy records its music in the background, which keeps a second processor core busy for a while. It's capped, but on a small device you may notice the heat. `SPED-UP` or `OFF` skips it.
 - Close other apps running in the background, and check the device isn't in a battery saver mode.
 
+If the picture runs fine but your buttons react late, for example nothing happens for a moment after `FIGHT`, set `LIGHT COMPANION` to `ON` (Settings, `SCREEN` group, `DISPLAY OPTIONS`). See [Light companion](screen.md#light-companion-for-slow-devices).
+
 ## Achievements won't unlock
 
 Check these:

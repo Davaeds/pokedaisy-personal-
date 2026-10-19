@@ -4,6 +4,8 @@ import com.pokedaisy.app.companion.i18n.tr
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -153,7 +155,11 @@ fun BattleControlsScreen(
             if (!picking) Spacer(Modifier.height(8.dp))
             AnimatedContent(
                 targetState = battleInputState,
-                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                // LIGHT COMPANION: a cut, so a slow device draws one pane, not two crossfading for 180 ms.
+                transitionSpec = {
+                    if (com.pokedaisy.app.companion.LightCompanion.on) EnterTransition.None togetherWith ExitTransition.None
+                    else fadeIn(tween(180)) togetherWith fadeOut(tween(120))
+                },
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 label = "battle-controls-state",
             ) { state ->

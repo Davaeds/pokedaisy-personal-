@@ -1422,6 +1422,11 @@ fun main(args: Array<String>) {
         Shot("$g-settings-display", bw, bh, bd, companion("SETTINGS")) {
             onNodeWithText("DISPLAY OPTIONS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         },
+        // LIGHT COMPANION's pick-list (AUTO / ON / OFF).
+        Shot("$g-settings-light", bw, bh, bd, companion("SETTINGS")) {
+            onNodeWithText("DISPLAY OPTIONS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+            onNodeWithText("LIGHT COMPANION").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        },
         // SPEED OPTIONS: SCENE SPEEDS (BATTLE / TEXT / MENU SPEED...) over FF MODE / FF MUSIC, then BATTLE SPEED's pick-list.
         Shot("$g-settings-scenes", bw, bh, bd, companion("SETTINGS")) {
             onNodeWithText("SPEED OPTIONS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
