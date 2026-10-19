@@ -91,6 +91,13 @@ Public readers can't see that repo, so user-facing docs don't name it or link to
   (`make submodules` fetches them and `third_party/melonds`).
 - ROMs/saves for headless captures: `scripts/host_roms.conf`. On-device paths:
   `scripts/roms.conf` (`/sdcard/Android/data/com.pokedaisy.app/files/...`).
+- The ROMs the tests read (`RETAIL_ROM_DIR`, `-DromDir` / `POKEDAISY_ROM_DIR` to move it) sit in
+  `~/Downloads/Game ROMs & Emulation/`: `gba/` (the default dir; others are found relative to it), `gbc/`, `nds/` and
+  `Pokemon Multi Language/<name>/<name>.gba` (every other-language retail build, a folder each - the only copy). Retail
+  keeps its No-Intro name; a hack is `Pokemon <Title> (v<version>) (<variant>).<ext>` (Polished Crystal's
+  `Pokemon Polished Crystal (v3.2.3) (Faithful).gbc`). Nothing loose in `~/Downloads`. A test, host_roms.conf line or
+  fixture README naming a ROM uses these names; renaming a file means grepping for the old one (many tests skip
+  quietly when their ROM isn't found, so a stale name only shows as a test that did nothing).
 - The package / applicationId was renamed twice: `com.pokedaisey.PokeDaiseyApp` →
   `com.pokedaisey.app` → `com.pokedaisy.app` (2026-10-07, fixing the "Daisey" misspelling
   everywhere, prefs file and `LaunchActivity` component included; the GitHub repo became

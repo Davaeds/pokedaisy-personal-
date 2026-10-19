@@ -341,12 +341,19 @@ def glazed_symbols(rom):
 # by scanning near English's offset for a blob of the same size (the palette,
 # tilemaps and Poke Ball beside them are identical), FONT_SMALL through
 # English's literal pool. RomArt writes them to partyem_<lang>/.
-EMERALD_MULTILANG = os.path.expanduser("~/Downloads/Game ROMs & Emulation/gba/emerald-multilang")
+# A folder per game in "Pokemon Multi Language", the ROM inside named like it.
+MULTI_LANGUAGE = os.path.expanduser("~/Downloads/Game ROMs & Emulation/Pokemon Multi Language")
+
+
+def multi_language_rom(name):
+    return os.path.join(MULTI_LANGUAGE, name, name + ".gba")
+
+
 EMERALD_EU_ROMS = {
-    "ES": os.path.join(EMERALD_MULTILANG, "Pokemon - Edicion Esmeralda (Spain).gba"),
-    "DE": os.path.join(EMERALD_MULTILANG, "Pokemon - Smaragd-Edition (Germany).gba"),
-    "FR": os.path.join(EMERALD_MULTILANG, "Pokemon - Version Emeraude (France).gba"),
-    "IT": os.path.join(EMERALD_MULTILANG, "Pokemon - Versione Smeraldo (Italy).gba"),
+    "ES": multi_language_rom("Pokemon - Edicion Esmeralda (Spain)"),
+    "DE": multi_language_rom("Pokemon - Smaragd-Edition (Germany)"),
+    "FR": multi_language_rom("Pokemon - Version Emeraude (France)"),
+    "IT": multi_language_rom("Pokemon - Versione Smeraldo (Italy)"),
 }
 EMERALD_EU_OFFSETS = {  # gPartyMenuBg_Gfx, gStatusGfx_Icons, gFontSmallLatinGlyphs
     "ES": (0xD96728, 0xD96ECC, 0x636218),

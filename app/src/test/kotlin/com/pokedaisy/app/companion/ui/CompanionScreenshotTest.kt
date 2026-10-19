@@ -1341,7 +1341,7 @@ open class CompanionScreenshotTest {
         romLanguage = 'E'
         romGameCode = ""
         val rom = java.io.File(java.io.File(RETAIL_ROM_DIR).parentFile,
-            if (polished) "gbc/polishedcrystal-3.2.3.gbc"
+            if (polished) "gbc/Pokemon Polished Crystal (v3.2.3).gbc"
             else if (prism) "gbc/Pokemon Prism (v0.95 build 254 Hotfix 5).gbc"
             else if (gold) "gbc/Pokemon - Gold Version (USA, Europe) (SGB Enhanced) (GB Compatible).gbc"
             else if (silver) "gbc/Pokemon - Silver Version (USA, Europe) (SGB Enhanced) (GB Compatible).gbc"
@@ -1852,18 +1852,18 @@ open class CompanionScreenshotTest {
 /** Fake companion inputs for screenshots / previews. */
 private const val LG_ROM = "Pokemon - LeafGreen Version (USA, Europe) (Rev 1).gba"
 private const val RUBY_ROM = "Pokemon - Ruby Version (USA, Europe) (Rev 1).gba"
-private const val RR_ROM = "1636 - Pokemon Radical Red.gba"
+private const val RR_ROM = "Pokemon Radical Red (v4.1).gba"
 private const val SG_ROM = "Pokemon SoulGold (v1.1.4).gba"
 private const val SG12_ROM = "Pokemon SoulGold (v1.2).gba"
 private const val SG12B_ROM = "Pokemon SoulGold (v1.2) (Alt 1).gba"
 private const val AM141_ROM = "Pokemon Amethyst (v1.4.1).gba"
-private const val EM_ES_ROM = "emerald-multilang/Pokemon - Edicion Esmeralda (Spain).gba"
-private const val EM_DE_ROM = "emerald-multilang/Pokemon - Smaragd-Edition (Germany).gba"
-private const val EM_FR_ROM = "emerald-multilang/Pokemon - Version Emeraude (France).gba"
-private const val EM_IT_ROM = "emerald-multilang/Pokemon - Versione Smeraldo (Italy).gba"
-private const val EM_JA_ROM = "emerald-multilang/Pocket Monsters - Emerald (Japan).gba"
-// The other-language FireRed / LeafGreen / Ruby / Sapphire ROMs, beside the retail dir.
-private const val ML = "../../Pokemon Multi Language/"
+// The other-language ROMs: "Pokemon Multi Language" beside the retail dir, a folder per game.
+private const val ML = "../Pokemon Multi Language/"
+private const val EM_ES_ROM = ML + "Pokemon - Edicion Esmeralda (Spain)/Pokemon - Edicion Esmeralda (Spain).gba"
+private const val EM_DE_ROM = ML + "Pokemon - Smaragd-Edition (Germany)/Pokemon - Smaragd-Edition (Germany).gba"
+private const val EM_FR_ROM = ML + "Pokemon - Version Emeraude (France)/Pokemon - Version Emeraude (France).gba"
+private const val EM_IT_ROM = ML + "Pokemon - Versione Smeraldo (Italy)/Pokemon - Versione Smeraldo (Italy).gba"
+private const val EM_JA_ROM = ML + "Pocket Monsters - Emerald (Japan)/Pocket Monsters - Emerald (Japan).gba"
 private const val ML_FR_DE = ML + "Pokemon - Feuerrote Edition (Germany)/Pokemon - Feuerrote Edition (Germany).gba"
 private const val ML_LG_ES = ML + "Pokemon - Edicion Verde Hoja (Spain)/Pokemon - Edicion Verde Hoja (Spain).gba"
 private const val ML_SA_FR = ML + "Pokemon - Version Saphir (France) (Rev 1)/Pokemon - Version Saphir (France) (Rev 1).gba"
