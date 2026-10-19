@@ -336,11 +336,11 @@ KOTLIN = os.path.join(ROOT, "app", "src", "main", "kotlin", "com", "pokedaisy", 
 
 
 def retail_sha1s():
-    """The retail releases the app knows by SHA-1: GameTitles' hand-written ones (above its hacks) and
+    """The retail releases the app knows by SHA-1: GameTitles' RETAIL map (its HACKS come after it) and
     the generated other-language ports (RETAIL_PORT_TITLES). Hacks share the game codes, but WIDE is
     checked on retail only."""
     hand = open(os.path.join(KOTLIN, "GameTitles.kt")).read()
-    hand = hand[hand.index("private val HAND"):hand.index("// Hacks")]
+    hand = hand[hand.index("private val RETAIL"):hand.index("private val HACKS")]
     ports = open(os.path.join(KOTLIN, "companion", "data", "RetailPortsGen.kt")).read()
     ports = ports[ports.index("RETAIL_PORT_TITLES"):]
     return set(re.findall(r'"([0-9a-f]{40})" to', hand + ports))

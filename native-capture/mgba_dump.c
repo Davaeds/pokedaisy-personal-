@@ -1201,8 +1201,9 @@ int main(int argc, char** argv) {
             }
         } else if (!strcmp(cmd, "wideinfo")) {
             // How the last frame went: its mode (0 glow, 1 map, 2 battle), tilemap score (0..1000, -1 untried), torn.
-            printf("wideinfo: frame %u mode %d score %d torn %d close %d scene %d\n", core->frameCounter(core), pk_wide_last_mode(),
-                   pk_wide_last_score(), pk_wide_last_torn(), pk_wide_wants_close(), pk_wide_scene());
+            printf("wideinfo: frame %u mode %d score %d torn %d close %d scene %d battle %d\n", core->frameCounter(core),
+                   pk_wide_last_mode(), pk_wide_last_score(), pk_wide_last_torn(), pk_wide_wants_close(), pk_wide_scene(),
+                   pk_wide_last_battle_ways());
             if (gbGame) {   // and the Game Boy's registers as the frame ended
                 const uint8_t* io = ((struct GB*) core->board)->memory.io;
                 printf("wideinfo: lcdc %02x scx %d scy %d wx %d wy %d\n", io[GB_REG_LCDC], io[GB_REG_SCX], io[GB_REG_SCY],

@@ -1297,6 +1297,19 @@ only keeps a 256x256 ring of tiles in VRAM (`field_camera.c`), so the rest would
   contact sheet. Checked on both games: boot (intro, title, Continue, FireRed's recap) to the map, and map -> a
   scripted wild battle (`setwildbattle` / `dowildbattle` / `end` poked at `0x0203FF00`, `call
   ScriptContext_SetupScript`: FireRed rev 1 `0x08069AF9`, Emerald `0x08098EF9`) -> RUN -> map.
+- **Every battle scene, pictured**: `scripts/wide_battle_shots.py [--only NAME] [--margin N]` (Pillow, `$DECOMPS`) runs a
+  scripted wild battle in one build of every game in `build/wide/wide.json` once per battle scene and shoots a wide
+  frame every 10 frames, into `build/wide/battles/` (`index.html`: a sheet per game, the intro slide, text, action and
+  move menus, the move's animation; a film of every shot per scene). Scenes are forced through the game's own scene
+  functions (`rompatch` to `movs r0, #N; bx lr`): FireRed's `GetBattleTerrainOverride` (20 scenes) +
+  `BattleSetup_GetTerrainId` (the intro's slide), Emerald / R/S's `BattleSetup_GetEnvironmentId` (10 terrains) +
+  `GetCurrentMapBattleScene` (gym, Magma, Aqua, the Elite Four, Frontier) - found by code, and in the CFRU hacks
+  under the jump CFRU puts at rev 0's entry; in the gcc-built Emerald hacks (Seaglass, Lazarus, SoulGold, ...) by what
+  they do (`find_by_role`: the scene function returns the save's map header's battleType byte, the terrain function's
+  result is the one call stored into the variable the background loaders read). Heart and Soul, Too Many Types 2,
+  Celia and Recharged Yellow get only the save's own scene so far. Each shot is
+  labelled with how the strips were drawn (`wideinfo`'s `battle` = `pk_wide_last_battle_ways`: `=` BG3 as VRAM has
+  it, `R` / `O` / `<` / `>` the mirrored cases).
 - **One motion per event** (`pk_wide_scene`, `WideCamera`): the camera no longer reacts to what's already on screen.
   pk_wide.c says what the frame *is* a frame early - FIELD, TEXT (controls locked + a text box / line effect), OVERLAY
   (a picture on BG0 over most of the field), BATTLE_START (battle_transition.c's `sTransitionData` is set:

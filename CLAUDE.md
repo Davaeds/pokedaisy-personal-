@@ -899,6 +899,8 @@ ports; the gcc builds - expansion's Lazarus, SoulGold, Heart and Soul, ..., and 
 OAM, never trusted alone). ASPECT has three values now, so the companion's row is an `OptionSelector`. Off the map the
 strips are **ambient edges** (a glow from the game's own edge pixels), crossfaded with the map strips; look at transition
 changes with `widerec` + `scripts/wide_gif.py --sheet` (boot and a scripted wild battle, both games), not by guessing.
+Battle strips: `scripts/wide_battle_shots.py` pictures every battle scene (terrains, gym, Elite Four, ...) of every WIDE
+game, each shot labelled with which of the strips' ways drew it (docs/DEVELOPMENT.md's WIDE section).
 **ZOOM + look-around** (`WideCamera`, `pk_wide_view`): any window around the frame, whole GBA pixels per step
 (`levelsFor`), pulled back to 1x on `pk_wide_scene` (TEXT: the field's `CONTROLS_LOCKED` + a text box / line effect;
 OVERLAY: a BG0 picture over the field; BATTLE_START: `sTransitionData` set, `PK_WIDE_TRANSITION_PTR`; OFF: a battle /

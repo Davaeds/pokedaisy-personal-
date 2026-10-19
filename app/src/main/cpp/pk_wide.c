@@ -1482,6 +1482,9 @@ static bool inBattleScreen(void) {
     return (disp & 7) == 0 && (disp & 0x0800) && ((cnt >> 2) & 3) == 2 && ((cnt >> 8) & 31) == 26 && (cnt >> 14) == 1;
 }
 
+/** Which of the strips' ways the last frame's battle took past the edges (PK_WIDE_BATTLE_*), for mgba_dump's `wideinfo`. */
+static int lastBattleWays;
+
 /** The battle screen's rectangle [x0, x1) x [y0, y1) (screen coordinates, past the edges allowed) into dst; `hole`
  * marks pixels with nothing drawn (BG3 transparent or windowed out, no sprite; above and below the screen, all). */
 static void drawBattleRegion(int x0, int y0, int x1, int y1, bool skipFrame, uint32_t* dst, int stride, uint32_t alpha) {
@@ -1491,6 +1494,9 @@ static void drawBattleRegion(int x0, int y0, int x1, int y1, bool skipFrame, uin
     bool repeats = false;
     bool offBg3 = (x0 < 0 || x1 > PK_WIDE_W) && battleSceneOffBg3();
     bool broken[2] = { x0 < 0 && battleEdgeBroken(0), x1 > PK_WIDE_W && battleEdgeBroken(1) };
+    if (x0 < 0 || x1 > PK_WIDE_W)
+        lastBattleWays |= PK_WIDE_BATTLE_DRAWN | (offBg3 ? PK_WIDE_BATTLE_OFF_BG3 : 0)
+            | (broken[0] ? PK_WIDE_BATTLE_BROKEN_LEFT : 0) | (broken[1] ? PK_WIDE_BATTLE_BROKEN_RIGHT : 0);
     for (int j = 0; j < h; j++) {
         int y = y0 + j;
         if (y < 0 || y >= PK_WIDE_H) {
@@ -1511,6 +1517,7 @@ static void drawBattleRegion(int x0, int y0, int x1, int y1, bool skipFrame, uin
         if (scr != repeatsScr) {
             repeatsScr = scr;
             repeats = battleBgRepeats(vram, scr);
+            if (repeats && (x0 < 0 || x1 > PK_WIDE_W)) lastBattleWays |= PK_WIDE_BATTLE_REPEATS;
         }
         for (int x = 0; x < w; x++) {
             int sx = x0 + x, ci = 0;
@@ -2032,6 +2039,7 @@ void pk_wide_reset(void) {
     mix = 0;
     rawView.w = 0;
     lastMode = PK_WIDE_MODE_NONE;
+    lastBattleWays = 0;
     lastScore = -1;
     lastClose = 1;
     lastScene = PK_WIDE_SCENE_OFF;
@@ -2041,6 +2049,7 @@ void pk_wide_reset(void) {
 
 int pk_wide_last_score(void) { return gbGame ? pk_wide_gb_last_score() : lastScore; }
 int pk_wide_last_mode(void) { return gbGame ? pk_wide_gb_last_mode() : lastMode; }
+int pk_wide_last_battle_ways(void) { return gbGame ? 0 : lastBattleWays; }
 int pk_wide_last_torn(void) { return gbGame ? 0 : lastTorn; }
 int pk_wide_last_vram_torn(void) { return gbGame ? pk_wide_gb_last_torn() : drawingLine >= PK_WIDE_H - 1 ? vramTorn : vramTornLast; }
 
@@ -2252,6 +2261,7 @@ int pk_wide_view(struct mCore* core, const uint32_t* frame, uint32_t* out, struc
         configured = false;   // off for this game until it's configured again: never the same fault twice
         gbGame = false;
         lastMode = PK_WIDE_MODE_NONE;
+        lastBattleWays = 0;
         lastClose = 1;
         if (v.w > PK_WIDE_MAX_VIEW_W) v.w = PK_WIDE_MAX_VIEW_W;
         if (v.h > PK_WIDE_MAX_VIEW_H) v.h = PK_WIDE_MAX_VIEW_H;
@@ -2357,6 +2367,7 @@ static int viewInner(struct mCore* core, const uint32_t* frame, uint32_t* out, s
     // OFF leaves zoomed out - the party / bag screen zoomed out and the battle zoomed back in after it.
     bool inBattle = C[PK_WIDE_GMAIN] && (r8((uint32_t) (C[PK_WIDE_GMAIN] + C[PK_WIDE_INBATTLE_OFF])) & 2);
     lastMode = valid ? PK_WIDE_MODE_MAP : battle ? PK_WIDE_MODE_BATTLE : menu ? PK_WIDE_MODE_MENU : PK_WIDE_MODE_NONE;
+    lastBattleWays = 0;
     bool locked = C[PK_WIDE_CONTROLS_LOCKED] && r8((uint32_t) C[PK_WIDE_CONTROLS_LOCKED]);
     bool transition = transitionRunning();
     // Only a FireRed-engine game has the map preview: anywhere else a BG0 that fills the screen is something else -

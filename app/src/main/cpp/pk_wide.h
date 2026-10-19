@@ -182,6 +182,15 @@ int pk_wide_fault(void);
 enum { PK_WIDE_MODE_NONE, PK_WIDE_MODE_MAP, PK_WIDE_MODE_BATTLE, PK_WIDE_MODE_MENU };
 int pk_wide_last_mode(void);
 
+/** How the last battle frame's strips were drawn past the edges (scripts/wide_battle_shots.py labels its shots with
+ * it): any strip at all, mirrored in because BG3 is one 256 px picture repeated, because BG1 / BG2 draw scenery at
+ * the edge, or because BG3 doesn't go on past the left / right edge. 0 outside battles. */
+enum {
+    PK_WIDE_BATTLE_DRAWN = 1, PK_WIDE_BATTLE_REPEATS = 2, PK_WIDE_BATTLE_OFF_BG3 = 4,
+    PK_WIDE_BATTLE_BROKEN_LEFT = 8, PK_WIDE_BATTLE_BROKEN_RIGHT = 16,
+};
+int pk_wide_last_battle_ways(void);
+
 /** The Game Boy's EXPAND (pk_wide_gb.c: Pokémon Yellow's overworld past its 160 x 144 screen). Every pk_wide_* call
  * above hands over to these while a Game Boy game is configured; the frame is then 160 x 144 and the views are in its
  * pixels. */
