@@ -60,6 +60,14 @@ interface CompanionSettings {
     fun setWildEncounters(percent: Int) {}
     val wildEncountersSupported: Boolean get() = false
 
+    /** REUSABLE TMS - see [com.pokedaisy.app.Prefs.reusableTms]; [reusableTmsSupported]: the ROM's code that uses a TM
+     * up is known ([com.pokedaisy.app.companion.data.ReusableTms]). */
+    val reusableTms: Boolean get() = false
+    fun setReusableTms(on: Boolean) {}
+    val reusableTmsSupported: Boolean get() = false
+    /** The game's own TMs never run out ([com.pokedaisy.app.companion.data.ReusableTms.BUILT_IN]): the row says so. */
+    val reusableTmsBuiltIn: Boolean get() = false
+
     /** Whether fast-forward is currently toggled on (independent of the hold trigger). */
     val ffToggled: Boolean
     fun setFfToggled(on: Boolean)

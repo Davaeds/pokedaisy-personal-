@@ -17,6 +17,10 @@
 // and RetroAchievements hashes gba->memory.rom. So the original bytes under every
 // patch are kept here (sFixes): pk_cheats_overlay puts them back into a bus read,
 // pk_cheats_swap_rom swaps them in and out around RA's hash.
+//
+// The app's own game options that change the ROM (REUSABLE TMS: ReusableTms.kt)
+// are patches too, kept in a list of their own (sOptions) so loading cheats never
+// drops them: pk_cheats_patch / pk_cheats_unpatch, the same overlay and swap.
 
 #include <stdint.h>
 #include <stdio.h>
@@ -49,6 +53,10 @@ struct pk_fix {
 
 static struct pk_fix sFixes[PK_MAX_FIXES];
 static int sFixCount;
+
+#define PK_MAX_OPTIONS 64
+static struct pk_fix sOptions[PK_MAX_OPTIONS];
+static int sOptionCount;
 
 static int pk_cheats_is_gba(struct mCore* core) {
     return core && core->platform(core) == mPLATFORM_GBA;
@@ -150,11 +158,9 @@ int pk_cheats_apply(struct mCore* core, const char* text, size_t len) {
     return ok ? (int) n : -1;
 }
 
-// Puts the file's own bytes back into `dst`, a bus read of [addr, addr + len)
-// from the cheated core, wherever a cheat patched the ROM.
-void pk_cheats_overlay(uint32_t addr, uint8_t* dst, int len) {
-    for (int i = 0; i < sFixCount; i++) {
-        const struct pk_fix* f = &sFixes[i];
+static void pk_fixes_overlay(const struct pk_fix* fixes, int count, uint32_t addr, uint8_t* dst, int len) {
+    for (int i = 0; i < count; i++) {
+        const struct pk_fix* f = &fixes[i];
         for (int b = 0; b < f->width; b++) {
             uint32_t a = f->addr + (uint32_t) b;
             // Mirrors of the cart (wait states 1 and 2) read the same ROM.
@@ -168,15 +174,16 @@ void pk_cheats_overlay(uint32_t addr, uint8_t* dst, int len) {
     }
 }
 
-// Swaps the patched ROM bytes with the originals; twice is a no-op. For hashing
-// the ROM the file holds (RetroAchievements) while cheats are in, on the emu
-// thread so no frame runs in between.
-void pk_cheats_swap_rom(struct mCore* core) {
-    if (!pk_cheats_is_gba(core)) {
-        return;
-    }
-    for (int i = 0; i < sFixCount; i++) {
-        struct pk_fix* f = &sFixes[i];
+// Puts the file's own bytes back into `dst`, a bus read of [addr, addr + len)
+// from the cheated core, wherever a cheat or a game option patched the ROM.
+void pk_cheats_overlay(uint32_t addr, uint8_t* dst, int len) {
+    pk_fixes_overlay(sFixes, sFixCount, addr, dst, len);
+    pk_fixes_overlay(sOptions, sOptionCount, addr, dst, len);
+}
+
+static void pk_fixes_swap(struct mCore* core, struct pk_fix* fixes, int count) {
+    for (int i = 0; i < count; i++) {
+        struct pk_fix* f = &fixes[i];
         for (int b = 0; b < f->width; b++) {
             uint8_t* rom = pk_rom_byte(core, f->addr + b);
             if (rom) {
@@ -188,8 +195,80 @@ void pk_cheats_swap_rom(struct mCore* core) {
     }
 }
 
+// Swaps the patched ROM bytes with the originals; twice is a no-op. For hashing
+// the ROM the file holds (RetroAchievements) while cheats are in, on the emu
+// thread so no frame runs in between.
+void pk_cheats_swap_rom(struct mCore* core) {
+    if (!pk_cheats_is_gba(core)) {
+        return;
+    }
+    pk_fixes_swap(core, sFixes, sFixCount);
+    pk_fixes_swap(core, sOptions, sOptionCount);
+}
+
+// A game option's ROM patch: `value` over [addr, addr + len) (len <= 4), only if
+// the ROM holds `expect` over [expectAddr, expectAddr + expectLen) - the code
+// around it, so a ROM built differently is never patched. Returns 1 if it went in
+// (or was in already), 0 if the code didn't match.
+int pk_cheats_patch(struct mCore* core, uint32_t expectAddr, const uint8_t* expect, int expectLen,
+                    uint32_t addr, const uint8_t* value, int len) {
+    if (!pk_cheats_is_gba(core) || len < 1 || len > 4 || addr < BASE_CART0 || addr >= BASE_CART_SRAM) {
+        return 0;
+    }
+    for (int i = 0; i < sOptionCount; i++) {
+        if (sOptions[i].addr == addr) {
+            return 1;
+        }
+    }
+    if (sOptionCount >= PK_MAX_OPTIONS) {
+        return 0;
+    }
+    // The file's bytes: a cheat may sit on them (read through the overlay).
+    uint8_t live[64];
+    if (expectLen < 1 || expectLen > (int) sizeof(live)) {
+        return 0;
+    }
+    for (int i = 0; i < expectLen; i++) {
+        uint8_t* rom = pk_rom_byte(core, expectAddr + i);
+        if (!rom) {
+            return 0;
+        }
+        live[i] = *rom;
+    }
+    pk_fixes_overlay(sFixes, sFixCount, expectAddr, live, expectLen);
+    if (memcmp(live, expect, (size_t) expectLen)) {
+        return 0;
+    }
+    struct pk_fix* f = &sOptions[sOptionCount++];
+    f->addr = addr;
+    f->width = len;
+    struct GBA* gba = core->board;
+    for (int b = 0; b < len; b++) {
+        int8_t old = 0;
+        // mGBA's own patch: copies a still-mapped ROM file first (_pristineCow).
+        GBAPatch8(gba->cpu, addr + b, (int8_t) value[b], &old);
+        f->orig[b] = (uint8_t) old;
+    }
+    return 1;
+}
+
+// Takes every game option's patch out again (the file's bytes back).
+void pk_cheats_unpatch(struct mCore* core) {
+    if (pk_cheats_is_gba(core)) {
+        for (int i = sOptionCount - 1; i >= 0; i--) {
+            for (int b = 0; b < sOptions[i].width; b++) {
+                uint8_t* rom = pk_rom_byte(core, sOptions[i].addr + b);
+                if (rom) {
+                    *rom = sOptions[i].orig[b];
+                }
+            }
+        }
+    }
+    sOptionCount = 0;
+}
+
 int pk_cheats_rom_patched(void) {
-    return sFixCount > 0;
+    return sFixCount > 0 || sOptionCount > 0;
 }
 
 // Checks one cheat's code lines ('\n'-separated) on a scratch cheat device - no

@@ -43,8 +43,14 @@ object NewFeatures {
     /** SETTINGS > COMPANION TAB: hide the edge tab that opens the companion on one screen (SidePanel). */
     const val COMPANION_TAB = "companion_tab"
 
+    /** SETTINGS > REUSABLE TMS: a TM stays in the bag after it teaches a move (companion.data.ReusableTms). */
+    const val REUSABLE_TMS = "reusable_tms"
+
     /** Every feature that gets the tag. */
-    val ALL = listOf(HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB, TOUCH_CONTROLS, COMPANION_TAB)
+    val ALL = listOf(
+        HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB, TOUCH_CONTROLS,
+        COMPANION_TAB, REUSABLE_TMS,
+    )
 
     private const val DAYS = 7
     private const val DAY_MS = 24 * 60 * 60 * 1000L

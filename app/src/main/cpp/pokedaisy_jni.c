@@ -163,6 +163,7 @@ static void pkTeardown(void) {
         // _vfdClose, or a free of freed memory (Crashlytics, 1.2.1's Game Boy games).
         bool coreClosesSave = !pk_is_gba(g.core);
         pk_cheats_clear(g.core);        // and forgets the ROM bytes it kept
+        pk_cheats_unpatch(g.core);      // the game options' (REUSABLE TMS) too
         g.core->deinit(g.core);         // unloads ROM, flushes save VFile
         g.core = NULL;
         if (coreClosesSave) {
@@ -1255,6 +1256,37 @@ Java_com_pokedaisy_app_MgbaCore_pkCheatsApply(JNIEnv* env, jobject thiz, jstring
     pthread_rwlock_unlock(&pk_coreLock);
     (*env)->ReleaseStringUTFChars(env, jText, text);
     return n;
+}
+
+// Emu thread: a game option's ROM patch (ReusableTms.kt) - `value` at `addr`, only
+// where the ROM holds `expect` from `expectAddr` (the code around it). Under the
+// core lock, so a ROM read never sees half a patch.
+JNIEXPORT jboolean JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkRomPatch(JNIEnv* env, jobject thiz, jlong expectAddr, jbyteArray jExpect,
+                                           jlong addr, jbyteArray jValue) {
+    jsize expectLen = (*env)->GetArrayLength(env, jExpect);
+    jsize len = (*env)->GetArrayLength(env, jValue);
+    uint8_t expect[64];
+    uint8_t value[4];
+    if (expectLen < 1 || expectLen > (jsize) sizeof(expect) || len < 1 || len > (jsize) sizeof(value)) {
+        return JNI_FALSE;
+    }
+    (*env)->GetByteArrayRegion(env, jExpect, 0, expectLen, (jbyte*) expect);
+    (*env)->GetByteArrayRegion(env, jValue, 0, len, (jbyte*) value);
+    pthread_rwlock_wrlock(&pk_coreLock);
+    int ok = g.core ? pk_cheats_patch(g.core, (uint32_t) expectAddr, expect, expectLen, (uint32_t) addr, value, len) : 0;
+    pthread_rwlock_unlock(&pk_coreLock);
+    return ok ? JNI_TRUE : JNI_FALSE;
+}
+
+// Emu thread: takes every game option's ROM patch out again.
+JNIEXPORT void JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkRomUnpatch(JNIEnv* env, jobject thiz) {
+    pthread_rwlock_wrlock(&pk_coreLock);
+    if (g.core) {
+        pk_cheats_unpatch(g.core);
+    }
+    pthread_rwlock_unlock(&pk_coreLock);
 }
 
 // For pokedaisy_ra.c: the file's ROM bytes in and out around RA's hash (emu thread).

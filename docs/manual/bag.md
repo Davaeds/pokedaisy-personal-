@@ -1,9 +1,9 @@
 ---
 title: Bag
-summary: Every pocket of your bag with icons and descriptions, favorite items, which Pokémon can use a TM, and using an item from the bottom screen.
+summary: Every pocket of your bag with icons and descriptions, favorite items, which Pokémon can use a TM, reusable TMs, and using an item from the bottom screen.
 section: companion
 order: 3
-keywords: [items, inventory, cube, pockets, tm, hm, description, sort, use item, berries, key items, star, starred, pin, favourite]
+keywords: [items, inventory, cube, pockets, tm, hm, reusable tm, infinite tm, technical machine, description, sort, use item, berries, key items, star, starred, pin, favourite]
 ---
 
 The bag tab shows everything you're carrying, pocket by pocket, as the game has it right now. It's handy for a quick count before a long cave, or for reading what an item does without digging through the game's menus.
@@ -53,6 +53,15 @@ Under the icons, a line names the best fit and, if its moves are full, which mov
 
 > [!NOTE]
 > The TM party row works in FireRed, LeafGreen, Ruby, Sapphire and Emerald (the original games) so far.
+
+## Reusable TMs
+
+Normally a TM is gone once it teaches a move, so you think twice before using a rare one. Turn on `REUSABLE TMS` in the companion's `SETTINGS`, `GAMEPLAY` group, and a TM stays in your bag after it teaches a move, just like an HM. It's `OFF` until you turn it on.
+
+Everything else about TMs works as the game has it: which Pokémon can learn one, forgetting a move to make room, selling one at a shop. The change applies at once, no restart needed, and turning it off makes TMs single use again.
+
+> [!NOTE]
+> `REUSABLE TMS` works in FireRed, LeafGreen, Emerald, Ruby and Sapphire (every language and release PokeDaisy supports), and in Emerald Kaizo, Emerald Legacy, Orange Islands, FireRed Rocket Edition, Ultra Violet and Celia's Stupid Romhack. In Radical Red, Unbound and SoulGold a TM already stays after use, so the setting shows `ON`, greyed out. Prism and Polished Crystal keep their TMs too, and Elite Redux keeps no counts at all. In other games it shows `N/A`.
 
 ## Using an item from the companion
 

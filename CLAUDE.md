@@ -525,6 +525,15 @@ onto grass with `warp` (0x39 g n 0xFF x y; newer expansion asserts unless a `wai
 a cross-map warp - its own map worked), the grass found from the layout's metatile attributes. `pk_field_state`'s `wildRoll` sets it each frame the field is free (not locked / battle / FireRed's quest log
 replay, which sets it itself) with probability 1 - keep; NORMAL puts it back once, only if we set it. Walked headless
 (mgba_dump `wild ADDR KEEP`, warp into Route 101 / Route 1 grass): OFF 360 steps, none; 50% about twice NORMAL's steps.
+**REUSABLE TMS** (GitHub #135, GAMEPLAY on the companion, `Prefs.reusableTms` OFF, NEW tag; `ReusableTms.kt`): a ROM patch, the
+TM-number check before each `RemoveBagItem` (`cmp item, #ITEM_HM01-1; bhi`) turned into a `b`. The sites are found by their code
+when a game loads (`ReusableTms.find`, beside WildEncounters.find): the FireRed engine has three, Emerald / Ruby / Sapphire one,
+all calling one function or none (Ash Gray / Ghost Grey kept one of three: none). That gives every retail cart in every language
+and the hacks on that code (Kaizo, Emerald Legacy, Orange Islands, Rocket Edition, Ultra Violet, Celia). Radical Red / Unbound / SoulGold's
+TMs never run out by themselves (checked headless), so `ReusableTms.BUILT_IN` shows the row ON, greyed. Game-option patches are a
+list beside the cheats' in `pk_cheats.c` (`sOptions`: loading cheats never drops them), with the same overlay / RA swap, so the
+Poller's hash and RetroAchievements' see the file; they don't pause achievements. Played headless with mgba_dump's `rompatch`
+(docs/ROM_FEATURES.md note 15). The newer-engine hacks build the check another way: each needs its own site.
 **QoL batch 2**: PC anywhere on every language + FireRed rev 0 + Ruby / Sapphire (`port_field_items.py` maps PcFns, each
 checked against its gSpecials; R/S's special is ShowPokemonStorageSystem, 60, same opcodes) and so on the hacks using those
 tables (CFRU, Gaia, Odyssey, Orange Islands, Ultra Violet: retail's gSpecials, checked). The field reads take the WIDE

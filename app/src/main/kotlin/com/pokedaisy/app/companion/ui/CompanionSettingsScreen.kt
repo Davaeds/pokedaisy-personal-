@@ -414,6 +414,17 @@ private fun homeRows(
             enabled = s.wildEncountersSupported, subtitle = "In grass, caves and water") {
             if (s.wildEncountersSupported) { s.setWildEncounters(if (s.wildEncounters == 0) 100 else 0); changed() }
         },
+        // A TM stays in the bag after it teaches a move, as an HM does (ReusableTms.kt: the ROM's own check patched).
+        // A game whose own TMs never run out (ReusableTms.BUILT_IN) shows ON, greyed, and says so.
+        SettingRow(
+            tk("REUSABLE TMS"),
+            when { s.reusableTmsBuiltIn -> tk("ON"); s.reusableTmsSupported -> onOff(s.reusableTms); else -> tk("N/A") },
+            enabled = s.reusableTmsSupported && !s.reusableTmsBuiltIn,
+            labelBadge = NewFeatures.badge(NewFeatures.REUSABLE_TMS),
+            subtitle = if (s.reusableTmsBuiltIn) "This game's TMs never run out" else "A TM stays in the bag after use",
+        ) {
+            if (s.reusableTmsSupported) { s.setReusableTms(!s.reusableTms); changed() }
+        },
         // B held for the player while walking on the field; holding it walks. Never on a bike or in a menu.
         SettingRow(tk("AUTO-RUN"), if (s.fieldReadable) onOff(s.autoRun) else tk("N/A"), enabled = s.fieldReadable,
             subtitle = "Holding B walks instead") { if (s.fieldReadable) { s.setAutoRun(!s.autoRun); changed() } },

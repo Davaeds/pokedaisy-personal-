@@ -184,6 +184,11 @@ class FakeSettings(showHintsInitially: Boolean = true, initialTabs: List<String>
     override val wildEncounters get() = wildPercent
     override fun setWildEncounters(percent: Int) { wildPercent = percent }
     override val wildEncountersSupported get() = true
+    private var reusableTmsOn = false
+    override val reusableTms get() = reusableTmsOn
+    override fun setReusableTms(on: Boolean) { reusableTmsOn = on }
+    override val reusableTmsSupported get() = true
+    override val reusableTmsBuiltIn get() = com.pokedaisy.app.companion.data.activeGame in com.pokedaisy.app.companion.data.ReusableTms.BUILT_IN
     override fun gbaControlBindings() = GbaControls.Btn.entries.associateWith {
         listOf(when (it) { GbaControls.Btn.START2 -> "BUTTON_X"; GbaControls.Btn.SELECT2 -> "BUTTON_Y"; else -> "BUTTON_${it.name}" })
     }
@@ -1339,9 +1344,14 @@ fun main(args: Array<String>) {
         Shot("$g-settings-companion", bw, bh, bd, companion("SETTINGS")) {
             onNodeWithText("ONE-TAP MOVES").performScrollTo()
         },
-        // GAMEPLAY: WILD ENCOUNTERS, AUTO-RUN, RUN INDOORS, CHEATS, then WILD ENCOUNTERS flipped OFF.
+        // GAMEPLAY: WILD ENCOUNTERS, REUSABLE TMS, AUTO-RUN, RUN INDOORS, CHEATS, then WILD ENCOUNTERS flipped OFF and
+        // REUSABLE TMS in view (OFF; -Pgame=UNBOUND: ON, greyed).
         Shot("$g-settings-controls", bw, bh, bd, companion("SETTINGS")) {
             onNodeWithText("WILD ENCOUNTERS").performScrollTo()
+        },
+        Shot("$g-settings-reusable-tms", bw, bh, bd, companion("SETTINGS")) {
+            // Scrolled to AUTO-RUN, the row under it: a greyed row (Unbound's, Radical Red's: BUILT_IN) won't scroll to itself here.
+            onNodeWithText(com.pokedaisy.app.companion.i18n.tr("AUTO-RUN")).performScrollTo()
         },
         Shot("$g-settings-wild", bw, bh, bd, companion("SETTINGS")) {
             onNodeWithText("WILD ENCOUNTERS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)

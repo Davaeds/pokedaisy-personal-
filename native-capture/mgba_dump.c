@@ -69,6 +69,10 @@
 //   gbpeek BANK ADDR N - GB (hex): print N bytes of WRAM bank BANK at ADDR (C000-CFFF ignores the bank)
 //   gbcallat AT FN A B HL - GB (hex): the game calls FN (A, B, HL) from its loop at AT, back there after (pk_gb_call_at)
 //   gbvdump DIR        - GB: VRAM (both banks), OAM and the Color palettes into DIR
+//   rompatch AT EXPECT ADDR VALUE - a game option's ROM patch the way the app makes it
+//                        (pk_cheats_patch; hex, EXPECT / VALUE as byte strings):
+//                        VALUE at ADDR only where the ROM holds EXPECT from AT
+//   romunpatch         - take the game options' patches out again (pk_cheats_unpatch)
 //   romcheck ROMFILE   - compare the ROM as the companion reads it (bus +
 //                        pk_cheats_overlay) and as RA hashes it (swapped) with
 //                        the file
@@ -693,6 +697,31 @@ static int romDiffs(const uint8_t* file, size_t size, bool overlay) {
     return diffs;
 }
 
+static int hexBytes(const char* hex, uint8_t* out, int max) {
+    int n = 0;
+    while (hex[0] && hex[1] && n < max) {
+        unsigned v;
+        if (sscanf(hex, "%2x", &v) != 1) break;
+        out[n++] = (uint8_t) v;
+        hex += 2;
+    }
+    return n;
+}
+
+static void cmdRomPatch(const char* line) {
+    unsigned at = 0, addr = 0;
+    char expectHex[129] = {0}, valueHex[9] = {0};
+    if (sscanf(line, "%*s %x %128s %x %8s", &at, expectHex, &addr, valueHex) != 4) {
+        printf("rompatch: AT EXPECT ADDR VALUE\n");
+        return;
+    }
+    uint8_t expect[64], value[4];
+    int el = hexBytes(expectHex, expect, sizeof(expect));
+    int vl = hexBytes(valueHex, value, sizeof(value));
+    int ok = pk_cheats_patch(core, at, expect, el, addr, value, vl);
+    printf("rompatch %08x: %s, rom patched: %s\n", addr, ok ? "in" : "code didn't match", pk_cheats_rom_patched() ? "yes" : "no");
+}
+
 static void cmdRomCheck(const char* path) {
     FILE* f = fopen(path, "rb");
     if (!f) {
@@ -1049,6 +1078,11 @@ int main(int argc, char** argv) {
             cheatText[0] = '\0';
             pk_cheats_clear(core);
             printf("cheatclear: rom patched: %s\n", pk_cheats_rom_patched() ? "yes" : "no");
+        } else if (!strcmp(cmd, "rompatch")) {
+            cmdRomPatch(line);
+        } else if (!strcmp(cmd, "romunpatch")) {
+            pk_cheats_unpatch(core);
+            printf("romunpatch: rom patched: %s\n", pk_cheats_rom_patched() ? "yes" : "no");
         } else if (!strcmp(cmd, "romcheck")) {
             sscanf(line, "%*s %255[^\n]", arg1);
             cmdRomCheck(arg1);

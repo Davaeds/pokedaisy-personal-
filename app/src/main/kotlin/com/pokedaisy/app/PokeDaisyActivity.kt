@@ -148,6 +148,8 @@ class PokeDaisyActivity : Activity() {
     private var fieldGame = WideScreen.OFF
     /** WILD ENCOUNTERS: the game's own switch, found in the ROM after it loads ([WildEncounters.find]; 0 = none). */
     @Volatile private var wildFlag = 0L
+    /** REUSABLE TMS: the ROM's spots that use a TM up ([com.pokedaisy.app.companion.data.ReusableTms]; empty = none). */
+    private var tmSites: List<com.pokedaisy.app.companion.data.ReusableTms.Site> = emptyList()
     /** EXPAND's one-time offer is up on the companion ([CompanionSettings.expandOffer]). */
     private val expandOfferUp = androidx.compose.runtime.mutableStateOf(false)
     private var states: SaveStates? = null
@@ -981,6 +983,14 @@ class PokeDaisyActivity : Activity() {
         }
         override val wildEncountersSupported get() = (fieldGame != WideScreen.OFF && wildFlag != 0L) || gbField() != null ||
             romIsNds && ::engine.isInitialized && engine.fieldState and MgbaCore.FIELD_KNOWN != 0
+        override val reusableTms get() = Prefs(this@PokeDaisyActivity).reusableTms
+        override fun setReusableTms(on: Boolean) {
+            Prefs(this@PokeDaisyActivity).reusableTms = on
+            if (::engine.isInitialized) engine.setReusableTms(tmSites, on)
+        }
+        override val reusableTmsSupported get() = tmSites.isNotEmpty()
+        override val reusableTmsBuiltIn get() =
+            com.pokedaisy.app.companion.data.activeGame in com.pokedaisy.app.companion.data.ReusableTms.BUILT_IN
         override val ffToggled get() = if (::engine.isInitialized) engine.fastForwardToggled else false
         override fun setFfToggled(on: Boolean) {
             if (::engine.isInitialized) engine.setFastForwardToggled(on)
@@ -1450,15 +1460,22 @@ class PokeDaisyActivity : Activity() {
         wideGame = if (nds) WideScreen.OFF else WideScreen.gameFor(crc)
         fieldGame = if (!gba) WideScreen.OFF else WideScreen.fieldGameFor(crc)
         wildFlag = 0L
+        tmSites = emptyList()
+        if (::engine.isInitialized) engine.setReusableTms(tmSites, false)
         gbFieldCache = null
         if (::engine.isInitialized) engine.gbField = null
         if (gba) Thread({
             val flag = com.pokedaisy.app.companion.data.WildEncounters.find(r)
             Log.i("pokedaisy", "wild encounters: switch %08X".format(flag))
+            // REUSABLE TMS: the spots that use a TM up, by their code (none = the row shows N/A).
+            val tms = com.pokedaisy.app.companion.data.ReusableTms.find(r)
+            Log.i("pokedaisy", "reusable TMs: ${tms.size} site(s)")
             runOnUiThread {
                 if (romData != r) return@runOnUiThread
                 wildFlag = flag
                 if (::engine.isInitialized) engine.wildFlag = flag
+                tmSites = tms
+                if (::engine.isInitialized) engine.setReusableTms(tms, Prefs(this).reusableTms)
             }
         }, "wild-encounters").start()
         Prefs(this).let { p ->
@@ -1632,7 +1649,7 @@ class PokeDaisyActivity : Activity() {
         }
     }
 
-    /** SCENE SPEEDS, AUTO-RUN, RUN INDOORS and WILD ENCOUNTERS onto [e], and the game whose field they read (EXPAND on or off). */
+    /** SCENE SPEEDS, AUTO-RUN, RUN INDOORS, WILD ENCOUNTERS and REUSABLE TMS onto [e], and the game whose field they read (EXPAND on or off). */
     private fun applyFieldPrefs(e: EmulatorEngine) {
         val p = Prefs(this)
         e.fieldGame = fieldGame
@@ -1645,6 +1662,7 @@ class PokeDaisyActivity : Activity() {
         e.runIndoors = p.runIndoors && companionSettings.runIndoorsSupported
         e.wildFlag = wildFlag
         e.wildEncounters = p.wildEncounters
+        e.setReusableTms(tmSites, p.reusableTms)
     }
 
     override fun onNewIntent(intent: Intent) {

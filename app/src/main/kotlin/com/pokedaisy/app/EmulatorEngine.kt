@@ -109,6 +109,18 @@ class EmulatorEngine(
     @Volatile var wildFlag = 0L
     @Volatile var wildEncounters = 100
 
+    /** REUSABLE TMS: the ROM's spots that use a TM up ([com.pokedaisy.app.companion.data.ReusableTms]; empty = none
+     * known) and whether they're patched; both go in on the next frame boundary ([setReusableTms]). */
+    @Volatile private var tmSites: List<com.pokedaisy.app.companion.data.ReusableTms.Site> = emptyList()
+    @Volatile private var reusableTms = false
+    @Volatile private var tmPatchDirty = false
+
+    fun setReusableTms(sites: List<com.pokedaisy.app.companion.data.ReusableTms.Site>, on: Boolean) {
+        tmSites = sites
+        reusableTms = on
+        tmPatchDirty = true
+    }
+
     /** A Game Boy game's PC / FLY / WILD ENCOUNTERS ([com.pokedaisy.app.companion.data.GbField], its code checked), or
      * null. WILD ENCOUNTERS OFF holds the game's own encounter state every frame ([gbWildHeld]). */
     @Volatile var gbField: com.pokedaisy.app.companion.data.GbField? = null
@@ -656,6 +668,7 @@ class EmulatorEngine(
         // After the resume (a state never carries cheats) and before the first frame.
         // The save was backed up above, before any cheat could touch it.
         applyCheats()
+        applyTmPatch()
 
         val sampleRate = MgbaCore.pkSampleRate()
         // Out of audio resources (or a device mid-reroute) mustn't take the process down:
@@ -1229,8 +1242,23 @@ class EmulatorEngine(
         runCatching { RetroAchievements.setCheatsActive(n > 0) }
     }
 
+    /** REUSABLE TMS onto the ROM (emu thread): the sites patched, or the file's bytes back. */
+    private fun applyTmPatch() {
+        tmPatchDirty = false
+        MgbaCore.pkRomUnpatch()
+        val sites = tmSites
+        if (!gba || !reusableTms || sites.isEmpty()) return
+        val all = sites.all {
+            MgbaCore.pkRomPatch(it.at, it.expect, it.branch, com.pokedaisy.app.companion.data.ReusableTms.ALWAYS_SKIP)
+        }
+        // All or none: a ROM that only matched in part would still use TMs up on the other paths.
+        if (!all) MgbaCore.pkRomUnpatch()
+        Log.i("pokedaisy", "reusable TMs: ${if (all) "${sites.size} site(s) patched" else "code didn't match"}")
+    }
+
     private fun servicePending() {
         if (cheatsDirty) applyCheats()
+        if (tmPatchDirty) applyTmPatch()
         // The jobs queued by now (one a job queues runs on a later frame); a delayed one waits its frames.
         repeat(fieldItemJobs.size) {
             val job = fieldItemJobs.poll() ?: return@repeat

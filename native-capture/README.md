@@ -83,6 +83,8 @@ One command per line:
 | `wideshot FILE` | Write the last wide frame (`240 + 2 * MARGIN` x 160) as a PPM |
 | `widecentre FILE` | Write the last frame's rebuild of the middle 240x160 (with `widecheck` on) as a PPM, to diff against `shot` |
 | `widerec FILE N` | Run N frames (keys as `keys` holds them) recording every wide frame into FILE - `scripts/wide_gif.py FILE out.gif` makes an animation (or a contact sheet) of it |
+| `rompatch AT EXPECT ADDR VALUE` | A game option's ROM patch as the app makes it (`pk_cheats_patch`, REUSABLE TMS: `ReusableTms.kt`; all hex, EXPECT and VALUE as byte strings): VALUE at ADDR, only where the ROM holds EXPECT from AT. Repo builds only, like `cheat`; `romcheck` then shows the file's bytes through the overlay and the swap |
+| `romunpatch` | Take those patches out again |
 | `romcheck ROMFILE` | Compare the ROM with the file three ways: the raw bus, the bus through `pk_cheats_overlay` (what the Poller hashes) and swapped (what RetroAchievements hashes) |
 
 Lines starting with `#`, and blank lines, are ignored.

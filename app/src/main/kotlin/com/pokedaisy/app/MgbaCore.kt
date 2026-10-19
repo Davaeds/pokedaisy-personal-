@@ -204,6 +204,14 @@ object MgbaCore {
      * ones only; "" = none). Returns how many loaded, -1 if it didn't parse. */
     external fun pkCheatsApply(text: String): Int
 
+    /** Emu thread: a game option's ROM patch (REUSABLE TMS, [com.pokedaisy.app.companion.data.ReusableTms]) -
+     * [value] (1-4 bytes) at [addr], only where the ROM holds [expect] from [expectAddr]. The Poller's reads and
+     * RetroAchievements' hash still see the file's bytes, like a cheat's. False if the code didn't match. */
+    external fun pkRomPatch(expectAddr: Long, expect: ByteArray, addr: Long, value: ByteArray): Boolean
+
+    /** Emu thread: every game option's ROM patch out again. */
+    external fun pkRomUnpatch()
+
     // --- FF-music rendering (see FfMusicRenderer) ---
     // A second, fully independent core, never the player's real session —
     // no save file, never shown, never touched by input. Same one-frame-

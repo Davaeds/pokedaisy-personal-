@@ -142,6 +142,11 @@ class Prefs(context: Context) {
         get() = if (p.getInt("wild_encounters", 100) == 0) 0 else 100
         set(v) = p.edit().putInt("wild_encounters", v).apply()
 
+    /** REUSABLE TMS: a TM stays in the bag after it teaches a move, as an HM does (ReusableTms.kt). */
+    var reusableTms: Boolean
+        get() = p.getBoolean("reusable_tms", false)
+        set(v) = p.edit().putBoolean("reusable_tms", v).apply()
+
     /** Remembered speed-cycle index per ROM (keyed by CRC32). */
     fun speedIndexFor(romKey: String): Int = p.getInt("speed_$romKey", 0)
     fun setSpeedIndexFor(romKey: String, index: Int) = p.edit().putInt("speed_$romKey", index).apply()
