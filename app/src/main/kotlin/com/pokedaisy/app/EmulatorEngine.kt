@@ -526,7 +526,10 @@ class EmulatorEngine(
 
     /** A bag item's work on the game (FieldItems.kt), run on the next frame boundary: [run] gets the game's
      * functions and whether it's busy (a battle, a menu screen, the region map). */
-    private class FieldItemJob(val inBattle: Boolean, var delayFrames: Int, val run: (com.pokedaisy.app.companion.data.GameCalls, Boolean) -> Unit)
+    private class FieldItemJob(val inBattle: Boolean, var delayFrames: Int, val run: (com.pokedaisy.app.companion.data.GameCalls, Boolean) -> Unit) {
+        /** Frames waited for a clean frame end ([MgbaCore.pkCallSafe]). */
+        var waitedFrames = 0
+    }
     private val fieldItemJobs = java.util.concurrent.ConcurrentLinkedQueue<FieldItemJob>()
 
     /** Runs [run] on the emu thread between frames with the game's functions ([com.pokedaisy.app.companion.data.GameCalls])
@@ -1267,6 +1270,13 @@ class EmulatorEngine(
                 fieldItemJobs.add(job)
                 return@repeat
             }
+            // The game's code part-way through this frame (its interrupt handler, a lag frame): its functions are
+            // called on a later frame that ends cleanly, never in the middle of its own (MgbaCore.pkCallSafe).
+            if (gba && job.waitedFrames < CALL_WAIT_FRAMES && !MgbaCore.pkCallSafe()) {
+                job.waitedFrames++
+                fieldItemJobs.add(job)
+                return@repeat
+            }
             // Not with a menu screen or the region map up either: the game itself only uses items from its bag.
             // A Game Boy game: its scene must be the plain field.
             val busy = job.inBattle || if (gba) menuOpen || mapOpen else !gbOnField
@@ -1433,6 +1443,10 @@ class EmulatorEngine(
         /** The last loop started on the native core, by any engine (there's one core, `g` in pokedaisy_jni.c). */
         @Volatile private var coreLoop: Thread? = null
         private val coreLock = Any()
+
+        /** Frames a field-item job waits for a clean frame end (MgbaCore.pkCallSafe) - after that its calls just fail
+         * (pk_call refuses them), so the job reports its own failure rather than calling into the game mid-code. */
+        const val CALL_WAIT_FRAMES = 120
 
         /** FIELD HUD: frames of plain field before [onField] comes on (~1/3 s at 1x). */
         const val FIELD_SETTLE_FRAMES = 20

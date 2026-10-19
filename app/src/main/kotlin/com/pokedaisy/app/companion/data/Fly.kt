@@ -293,9 +293,14 @@ fun flyStart(fns: FieldItemFns, mapsec: Int, target: FlyTargets, busy: Boolean, 
 }
 
 /** FLY's second step: the cut-in's Pokémon under the party cursor, then the Fly map's choice; the game flies.
- * If that can't happen, the field comes back as it was (faded in, controls free). */
-fun flyFinish(fns: FieldItemFns, mapsec: Int, target: FlyTargets, g: GameCalls): Boolean {
+ * If that can't happen, the field comes back as it was (faded in, controls free). [leftField]: the game's main
+ * callback isn't the field's any more (a menu, a script's screen, a battle, a map load started during the fade) -
+ * then nothing at all: SetFlyWarpDestination hands the game CB2_ReturnToField, and on top of another screen or a map
+ * load that crashed FireRed (2026-10-20: a black screen, its save blocks zeroed, after a quick-menu FLY on the Thor).
+ * Whatever took the game off the field brings it back, faded in. */
+fun flyFinish(fns: FieldItemFns, mapsec: Int, target: FlyTargets, g: GameCalls, leftField: Boolean = false): Boolean {
     val fly = fns.fly ?: return false
+    if (leftField) return false
     val ok = runCatching {
         g.write(fly.partyMenuSlotId, byteArrayOf(target.flyerSlot.toByte())) && warp(fly, mapsec, g)
     }.getOrDefault(false)

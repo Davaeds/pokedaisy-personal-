@@ -219,6 +219,48 @@ static void pkRenderTeardown(void) {
     rg.audioAvail = 0;
 }
 
+// Where the game's main loop waits for VBlank, as a stack depth: the System-mode stack pointer most frames end with
+// (the game in its wait - a spin on gMain.intrCheck in FireRed, VBlankIntrWait in Emerald - with nothing of its own
+// in progress). pk_call_safe calls the game's functions only at that depth. Counted per loaded game.
+#define PK_REST_SLOTS 8
+static uint32_t pkRestSp[PK_REST_SLOTS];
+static uint32_t pkRestCount[PK_REST_SLOTS];
+
+static uint32_t pk_sys_sp(struct ARMCore* cpu) {
+    return cpu->privilegeMode == MODE_SYSTEM || cpu->privilegeMode == MODE_USER
+        ? (uint32_t) cpu->gprs[ARM_SP] : (uint32_t) cpu->bankedRegisters[BANK_NONE][0];
+}
+
+static void pk_rest_reset(void) {
+    memset(pkRestSp, 0, sizeof(pkRestSp));
+    memset(pkRestCount, 0, sizeof(pkRestCount));
+}
+
+static void pk_rest_note(struct mCore* core) {
+    struct ARMCore* cpu = (struct ARMCore*) core->cpu;
+    if (cpu->privilegeMode == MODE_IRQ) {
+        return;
+    }
+    uint32_t sp = pk_sys_sp(cpu);
+    int low = 0;
+    for (int i = 0; i < PK_REST_SLOTS; i++) {
+        if (pkRestSp[i] == sp) {
+            if (pkRestCount[i] < 100000) pkRestCount[i]++;
+            return;
+        }
+        if (pkRestCount[i] < pkRestCount[low]) low = i;
+    }
+    pkRestSp[low] = sp;
+    pkRestCount[low] = 1;
+}
+
+/** The main loop's waiting depth, or 0 until enough frames have ended (about a second's worth). */
+static uint32_t pk_rest_sp(void) {
+    int best = 0;
+    for (int i = 1; i < PK_REST_SLOTS; i++) if (pkRestCount[i] > pkRestCount[best]) best = i;
+    return pkRestCount[best] >= 30 ? pkRestSp[best] : 0;
+}
+
 JNIEXPORT jboolean JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkInit(JNIEnv* env, jobject thiz,
                                                   jstring jRomPath, jstring jSavePath) {
@@ -303,6 +345,7 @@ Java_com_pokedaisy_app_MgbaCore_pkInit(JNIEnv* env, jobject thiz,
 
     core->reset(core);
     pkHealRtc(core);
+    pk_rest_reset();   // a new game: its own main loop depth
 
     pthread_rwlock_wrlock(&pk_coreLock);
     g.core = core;
@@ -445,6 +488,7 @@ Java_com_pokedaisy_app_MgbaCore_pkRunFrame(JNIEnv* env, jobject thiz) {
         }
     }
     g.core->runFrame(g.core);
+    if (pk_is_gba(g.core)) pk_rest_note(g.core);
     pkDrainAudio();
     // WIDE: only with a game it knows and a window set. 32-bit colour, like the screen's upload.
     struct PkWideView v = { g.viewX, g.viewY, g.viewW, g.viewH };
@@ -706,10 +750,34 @@ Java_com_pokedaisy_app_MgbaCore_pkRenderReadAudio(JNIEnv* env, jobject thiz, jsh
 // PK_CALL_SENTINEL (an address in the ROM header, never executed), then put
 // everything back. Tested headless with native-capture/mgba_dump's `call`.
 #define PK_CALL_SENTINEL 0x080000C0u
+// Whether the game's own code can be called right now (pk_call): parked on a `b .` (the render core), or the game
+// waiting for VBlank with nothing of its own in progress - not in an interrupt, its System stack back at the main
+// loop's depth (pk_rest_sp). A frame often ends part-way through the game's code instead (its VBlank handler running,
+// a lag frame's logic), and a call there lands in the middle of the game's own read-modify-writes: FadeScreen while
+// VBlank's handler was part-way through updating the palette fade, the handler then wrote its stale copy back, and the
+// FLY warp that followed never finished loading (2026-10-20: a black screen, then a reset, on the Thor; reproduced
+// with mgba_dump's `stepinto 3` + FLY's calls). The caller waits for a frame that ends well. Before the depth is
+// known (the game's first second) a call goes ahead, as it always did.
+static int pk_call_safe(struct mCore* core) {
+    struct ARMCore* cpu = (struct ARMCore*) core->cpu;
+    uint32_t pc = (uint32_t) cpu->gprs[ARM_PC];
+    if (cpu->executionMode == MODE_THUMB && core->rawRead16(core, pc - WORD_SIZE_THUMB * 2, -1) == 0xE7FE) {
+        return 1;   // b . - parked
+    }
+    if (cpu->privilegeMode == MODE_IRQ) {
+        return 0;
+    }
+    uint32_t rest = pk_rest_sp();
+    return !rest || pk_sys_sp(cpu) == rest;
+}
+
 static __thread uint32_t pk_call_r0; // what this thread's last pk_call returned in r0 (the render core calls on another thread)
 static int pk_call(struct mCore* core, uint32_t fn, const uint32_t args[4]) {
     if (!pk_is_gba(core)) {
         return 0;   // an ARM-only trick: the GB core's CPU is an SM83
+    }
+    if (!pk_call_safe(core)) {
+        return 0;
     }
     struct ARMCore* cpu = (struct ARMCore*) core->cpu;
     struct ARMRegisterFile saved = cpu->regs;
@@ -771,6 +839,12 @@ static int pk_call(struct mCore* core, uint32_t fn, const uint32_t args[4]) {
     memcpy(gba->cachedRegisters, cached, sizeof(cached));
     cpu->halted = halted;
     return ok;
+}
+
+// Whether a pkCall on the player's core can run now (pk_call_safe): the field-item jobs wait a frame when it can't.
+JNIEXPORT jboolean JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkCallSafe(JNIEnv* env, jobject thiz) {
+    return g.core && pk_is_gba(g.core) && pk_call_safe(g.core) ? JNI_TRUE : JNI_FALSE;
 }
 
 // Calls the game's own function `fn` (r0-r3 = a0-a3) on the player's core, between

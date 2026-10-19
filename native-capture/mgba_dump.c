@@ -241,11 +241,54 @@ static void wideAfterFrame(void) {}
 // `wild ADDR KEEP`: WILD ENCOUNTERS' roll before every frame, as the app runs it (-1 = off).
 static int wildKeep = -1;
 
+// Where the game's main loop waits for VBlank, as a stack depth: the System-mode stack pointer most frames end with
+// (the game in its wait - a spin on gMain.intrCheck in FireRed, VBlankIntrWait in Emerald - with nothing of its own
+// in progress). pk_call_safe calls the game's functions only at that depth. Counted per loaded game.
+#define PK_REST_SLOTS 8
+static uint32_t pkRestSp[PK_REST_SLOTS];
+static uint32_t pkRestCount[PK_REST_SLOTS];
+
+static uint32_t pk_sys_sp(struct ARMCore* cpu) {
+    return cpu->privilegeMode == MODE_SYSTEM || cpu->privilegeMode == MODE_USER
+        ? (uint32_t) cpu->gprs[ARM_SP] : (uint32_t) cpu->bankedRegisters[BANK_NONE][0];
+}
+
+__attribute__((unused)) static void pk_rest_reset(void) {
+    memset(pkRestSp, 0, sizeof(pkRestSp));
+    memset(pkRestCount, 0, sizeof(pkRestCount));
+}
+
+static void pk_rest_note(struct mCore* core) {
+    struct ARMCore* cpu = (struct ARMCore*) core->cpu;
+    if (cpu->privilegeMode == MODE_IRQ) {
+        return;
+    }
+    uint32_t sp = pk_sys_sp(cpu);
+    int low = 0;
+    for (int i = 0; i < PK_REST_SLOTS; i++) {
+        if (pkRestSp[i] == sp) {
+            if (pkRestCount[i] < 100000) pkRestCount[i]++;
+            return;
+        }
+        if (pkRestCount[i] < pkRestCount[low]) low = i;
+    }
+    pkRestSp[low] = sp;
+    pkRestCount[low] = 1;
+}
+
+/** The main loop's waiting depth, or 0 until enough frames have ended (about a second's worth). */
+static uint32_t pk_rest_sp(void) {
+    int best = 0;
+    for (int i = 1; i < PK_REST_SLOTS; i++) if (pkRestCount[i] > pkRestCount[best]) best = i;
+    return pkRestCount[best] >= 30 ? pkRestSp[best] : 0;
+}
+
 static void runFrame(void) {
 #ifdef HAVE_PK_WIDE
     if (wildKeep >= 0) pk_field_state(core, 0, wildKeep);
 #endif
     core->runFrame(core);
+    if (core->platform(core) == mPLATFORM_GBA) pk_rest_note(core);
     wideAfterFrame();
 }
 
@@ -553,9 +596,31 @@ static void gb_loop(struct mCore* core, int frames, bool crystal) {
     free(states);
 }
 
+// Whether the game's own code can be called right now (pk_call): parked on a `b .` (the render core), or the game
+// waiting for VBlank with nothing of its own in progress - not in an interrupt, its System stack back at the main
+// loop's depth (pk_rest_sp). A frame often ends part-way through the game's code instead (its VBlank handler running,
+// a lag frame's logic), and a call there lands in the middle of the game's own read-modify-writes: FadeScreen while
+// VBlank's handler was part-way through updating the palette fade, the handler then wrote its stale copy back, and the
+// FLY warp that followed never finished loading (2026-10-20: a black screen, then a reset, on the Thor; reproduced
+// with mgba_dump's `stepinto 3` + FLY's calls). The caller waits for a frame that ends well. Before the depth is
+// known (the game's first second) a call goes ahead, as it always did.
+static int pk_call_safe(struct mCore* core) {
+    struct ARMCore* cpu = (struct ARMCore*) core->cpu;
+    uint32_t pc = (uint32_t) cpu->gprs[ARM_PC];
+    if (cpu->executionMode == MODE_THUMB && core->rawRead16(core, pc - WORD_SIZE_THUMB * 2, -1) == 0xE7FE) {
+        return 1;   // b . - parked
+    }
+    if (cpu->privilegeMode == MODE_IRQ) {
+        return 0;
+    }
+    uint32_t rest = pk_rest_sp();
+    return !rest || pk_sys_sp(cpu) == rest;
+}
+
 static uint32_t pk_call_r0; // what the last pk_call returned in r0
 
 static bool pk_call(struct mCore* core, uint32_t fn, const uint32_t args[4]) {
+    if (!pk_call_safe(core)) return false;
     struct ARMCore* cpu = (struct ARMCore*) core->cpu;
     struct ARMRegisterFile saved = cpu->regs;
     uint32_t prefetch0 = cpu->prefetch[0], prefetch1 = cpu->prefetch[1];
@@ -899,6 +964,9 @@ int main(int argc, char** argv) {
             int got = sscanf(line, "%*s %63s %63s %63s %63s %63s", a, v[0], v[1], v[2], v[3]);
             uint32_t args[4] = {0};
             for (int i = 0; i < 4 && i < got - 1; i++) args[i] = (uint32_t) strtoul(v[i], NULL, 0);
+            int waited = 0;
+            for (; waited < 60 && !pk_call_safe(core); waited++) runFrame();
+            if (waited) printf("call: waited %d frame(s) for a safe point\n", waited);
             bool ok = pk_call(core, (uint32_t) strtoul(a, NULL, 0), args);
             if (ok) printf("call %s(%s %s %s %s): returned 0x%X\n", a, v[0], v[1], v[2], v[3], pk_call_r0);
             else printf("call %s(%s %s %s %s): DID NOT RETURN\n", a, v[0], v[1], v[2], v[3]);

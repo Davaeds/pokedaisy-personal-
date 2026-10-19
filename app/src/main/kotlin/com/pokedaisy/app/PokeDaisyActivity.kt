@@ -793,9 +793,13 @@ class PokeDaisyActivity : Activity() {
                     .getOrElse { com.pokedaisy.app.companion.data.FlyResult.FAILED }
                 Log.i("pokedaisy", "fly to $mapsec: $started")
                 if (started == com.pokedaisy.app.companion.data.FlyResult.OK) {
-                    engine.requestFieldItemJob(false, com.pokedaisy.app.companion.data.FLY_FADE_FRAMES) { c, _ ->
-                        val ok = com.pokedaisy.app.companion.data.flyFinish(support.fns, mapsec, targets, c)
-                        Log.i("pokedaisy", "fly to $mapsec: ${if (ok) "flying" else "failed, field handed back"}")
+                    engine.requestFieldItemJob(false, com.pokedaisy.app.companion.data.FLY_FADE_FRAMES) { c, leftField ->
+                        val ok = com.pokedaisy.app.companion.data.flyFinish(support.fns, mapsec, targets, c, leftField)
+                        Log.i("pokedaisy", "fly to $mapsec: ${when {
+                            ok -> "flying"
+                            leftField -> "the game left the field during the fade, not taken"
+                            else -> "failed, field handed back"
+                        }}")
                     }
                 }
                 val shown = if (inBattle && started == com.pokedaisy.app.companion.data.FlyResult.NOT_NOW) {

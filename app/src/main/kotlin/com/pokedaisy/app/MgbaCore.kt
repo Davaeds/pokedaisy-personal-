@@ -48,6 +48,10 @@ object MgbaCore {
      * core and gives back its r0, or -1 if it never returned. Emu thread, between frames. */
     external fun pkCall(fn: Long, a0: Int, a1: Int, a2: Int, a3: Int): Long
 
+    /** Whether [pkCall] can run now: the frame ended with the CPU in the BIOS, not part-way through the game's own
+     * code (its interrupt handler, a lag frame) - pokedaisy_jni.c's pk_call_safe. Field-item jobs wait a frame if not. */
+    external fun pkCallSafe(): Boolean
+
     external fun pkSetKeys(mask: Int)
     external fun pkRunFrame()
 

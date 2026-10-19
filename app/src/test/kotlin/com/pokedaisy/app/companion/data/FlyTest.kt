@@ -128,6 +128,18 @@ class FlyTest {
     }
 
     @Test
+    fun `the game leaving the field during the fade stops the flight, and nothing is touched`() {
+        val g = Game()
+        val t = flyTargets(g.fns, false, g)
+        assertEquals(FlyResult.OK, flyStart(g.fns, 0x5B, t, false, g))
+        assertFalse(flyFinish(g.fns, 0x5B, t, g, leftField = true))
+        // No warp, no party cursor, no fade back: the screen that took over brings the field back itself.
+        assertEquals(listOf("lock", "fade 1"), g.calls)
+        assertEquals(-1, g.flewTo)
+        assertTrue(g.ram.isEmpty())
+    }
+
+    @Test
     fun `a second step that can't go on hands the field back`() {
         val g = Game()
         val t = flyTargets(g.fns, false, g)
