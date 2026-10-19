@@ -14,7 +14,8 @@ import java.io.File
  */
 object RomFolder {
 
-    private val EXTENSIONS = RomArchive.ROM_EXTENSIONS + RomArchive.EXTENSIONS
+    // A getter: ROM_EXTENSIONS follows the DS / Game Boy switches, which LibraryActivity sets after this object may load.
+    private val EXTENSIONS get() = RomArchive.ROM_EXTENSIONS + RomArchive.EXTENSIONS
     private const val MAX_ROM_BYTES = 32L shl 20
     /** A DS cart: 512 MB at most (Platinum and HeartGold are 128, Black 256). */
     private const val MAX_DS_ROM_BYTES = 512L shl 20

@@ -181,6 +181,18 @@ object GameTitles {
     fun category(context: Context, rom: File): RomCategory? =
         cache(context)[rom.absolutePath]?.takeIf { it.matches(rom) }?.category
 
+    /** Which console [rom] runs on (GB / GBC / GBA / NDS, never HACK: a hack is its base game's), if [identify] has
+     * looked at this exact file. Cheap. The library's quick views filter on it. */
+    fun platform(context: Context, rom: File): RomCategory? =
+        cache(context)[rom.absolutePath]?.takeIf { it.matches(rom) }?.platform
+
+    /** [rom]'s console from its header: [categoryOf] without the hack check. */
+    private fun platformOf(rom: File): RomCategory = when {
+        RomIdentity.isNds(rom) -> RomCategory.NDS
+        RomIdentity.isGameBoy(rom) -> if (RomIdentity.isGameBoyColor(rom)) RomCategory.GBC else RomCategory.GB
+        else -> RomCategory.GBA
+    }
+
     /** [rom]'s [RomCategory] (reads its header; [sha1] when [identify] hashed it). A Pokémon cart hashed but known as
      * neither retail nor a hack is a hack too (an unsupported one); a cart nobody hashes is its platform's. */
     private fun categoryOf(rom: File, sha1: String?, hashed: Boolean): RomCategory = when {
@@ -201,13 +213,20 @@ object GameTitles {
         val cache = cache(context)
         var changed = false
         for (rom in roms) {
-            if (cache[rom.absolutePath]?.let { it.matches(rom) && it.category != null } == true || !rom.isFile) continue
+            val known = cache[rom.absolutePath]?.takeIf { it.matches(rom) && it.category != null }
+            if (!rom.isFile || known?.platform != null) continue
+            // Named before platforms were kept: only the header to read, no hash.
+            if (known != null) {
+                cache[rom.absolutePath] = Entry(known.size, known.modified, known.title, known.category, platformOf(rom))
+                changed = true
+                continue
+            }
             val nds = RomIdentity.isNds(rom)
             val worthHashing = if (nds) RomIdentity.ndsGameCode(rom) in NDS_CODES
                 else RomIdentity.gameCode(rom) in CODES || RomIdentity.isGameBoy(rom)
             val sha1 = if (worthHashing) RomIdentity.sha1(rom) else null
             val title = sha1?.let { BY_SHA1[it] }
-            cache[rom.absolutePath] = Entry(rom.length(), rom.lastModified(), title, categoryOf(rom, sha1, worthHashing))
+            cache[rom.absolutePath] = Entry(rom.length(), rom.lastModified(), title, categoryOf(rom, sha1, worthHashing), platformOf(rom))
             changed = true
         }
         // Forget files that are gone, so the cache doesn't grow forever.
@@ -232,11 +251,17 @@ object GameTitles {
             .trim().trimEnd('-', ' ')
             .ifEmpty { name }
 
-    private class Entry(val size: Long, val modified: Long, val title: String?, val category: RomCategory?) {
+    private class Entry(
+        val size: Long, val modified: Long, val title: String?, val category: RomCategory?,
+        val platform: RomCategory? = category?.takeIf { it != RomCategory.HACK },
+    ) {
         fun matches(rom: File) = size == rom.length() && modified == rom.lastModified()
     }
 
     private var loaded: MutableMap<String, Entry>? = null
+
+    /** Read the file again (ui-preview writes one per shot). */
+    @Synchronized internal fun reload() { loaded = null }
 
     @Synchronized
     private fun cache(context: Context): MutableMap<String, Entry> = loaded ?: load(context).also { loaded = it }
@@ -260,17 +285,20 @@ object GameTitles {
                 if (line == KNOWN) stale = false
                 if (line == CATEGORIES) categoriesStale = false
                 val p = line.split('\t')
-                // A 4-column line is from before categories: no category, so identify() reads it again.
-                if (p.size != 4 && p.size != 5) return@forEachLine
+                // A 4-column line is from before categories: no category, so identify() reads it again. A 5-column
+                // one from before platforms: a hack's is read again (the others' platform is their category).
+                if (p.size !in 4..6) return@forEachLine
                 val size = p[1].toLongOrNull() ?: return@forEachLine
                 val modified = p[2].toLongOrNull() ?: return@forEachLine
                 val category = p.getOrNull(4)?.let { c -> RomCategory.entries.firstOrNull { it.name == c } }
-                map[p[0]] = Entry(size, modified, p[3].ifEmpty { null }, category)
+                val platform = p.getOrNull(5)?.let { c -> RomCategory.entries.firstOrNull { it.name == c } }
+                map[p[0]] = if (platform != null) Entry(size, modified, p[3].ifEmpty { null }, category, platform)
+                    else Entry(size, modified, p[3].ifEmpty { null }, category)
             }
             // Written before a game was added (an app update): ask the nameless files again.
             if (stale) map.values.removeAll { it.title == null }
             // Categories decided another way (Yellow was GBC once): every file's is asked again.
-            if (categoriesStale) map.replaceAll { _, e -> Entry(e.size, e.modified, e.title, null) }
+            if (categoriesStale) map.replaceAll { _, e -> Entry(e.size, e.modified, e.title, null, null) }
         }
         return map
     }
@@ -280,7 +308,7 @@ object GameTitles {
         val tmp = File(f.parentFile, "${f.name}.tmp")
         runCatching {
             tmp.writeText(KNOWN + "\n" + CATEGORIES + "\n" + entries.entries.joinToString("") { (path, e) ->
-                "$path\t${e.size}\t${e.modified}\t${e.title.orEmpty()}\t${e.category?.name.orEmpty()}\n"
+                "$path\t${e.size}\t${e.modified}\t${e.title.orEmpty()}\t${e.category?.name.orEmpty()}\t${e.platform?.name.orEmpty()}\n"
             })
             tmp.renameTo(f)
         }

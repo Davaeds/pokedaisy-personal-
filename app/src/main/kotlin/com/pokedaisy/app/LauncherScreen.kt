@@ -96,13 +96,15 @@ import java.io.File
 class LauncherState {
     var games by mutableStateOf<List<File>>(emptyList())
         private set
-    /** The RECENTLY PLAYED strip over the games (up to 3, newest first). */
-    var recent by mutableStateOf<List<File>>(emptyList())
-        private set
+    /** The quick views' pills over the games (LibraryView: ALL, FAVORITES, RECENT, the consoles and HACKS held)... */
+    var views by mutableStateOf<List<LibraryView>>(emptyList())
+    /** ...the open one ([games] are its), and LEFT / RIGHT's step to the next while on them ([viewCursor]). */
+    var view by mutableStateOf(LibraryView.ALL)
+    var onPickView: (LibraryView) -> Unit = {}
     /** The cursor in the games... */
     var selected by mutableIntStateOf(0)
-    /** ...or on the RECENTLY PLAYED strip, at this tile (-1 = in the games). */
-    var recentCursor by mutableIntStateOf(-1)
+    /** ...or on the quick views' row: UP off the games' top row lands there, UP again in the header. */
+    var viewCursor by mutableStateOf(false)
     /** Games per row as last laid out: 1 in the list view, the grid's columns in the grid view. */
     var columns by mutableIntStateOf(1)
     /** The cursor up in the header, on this button (-1 = in the list): UP off the list's top lands on the first. Where
@@ -124,93 +126,74 @@ class LauncherState {
     /** Bumped when a game's media lands on the device (re-reads the media screen). */
     var mediaGeneration by mutableIntStateOf(0)
 
-    val current: File? get() = if (recentCursor >= 0) recent.getOrNull(recentCursor) else games.getOrNull(selected)
+    /** The game the cursor is on, or was on before it went up to the quick views / header (the media screen keeps it). */
+    val current: File? get() = games.getOrNull(selected)
 
-    /** A new list, keeping the cursor on its game where it can (else on [prefer] - the strip's first tile when it's
-     * the last played - else where it was). */
-    fun setGames(list: List<File>, recentList: List<File>, prefer: String?) {
-        val keep = current?.absolutePath ?: prefer
-        val onStrip = recentCursor >= 0 || current == null
+    /** A new list, keeping the cursor on its game where it can (else on [prefer], else where it was). [fresh]: another
+     * quick view - the cursor starts on its first game (the list scrolls to its top, LauncherList). */
+    fun setGames(list: List<File>, prefer: String?, fresh: Boolean = false) {
+        val keep = games.getOrNull(selected)?.absolutePath ?: prefer
         games = list
-        recent = recentList
-        val inRecent = recentList.indexOfFirst { it.absolutePath == keep }
-        if (onStrip && inRecent >= 0) {
-            recentCursor = inRecent
+        if (fresh) {
+            selected = 0
             return
         }
-        recentCursor = -1
         selected = list.indexOfFirst { it.absolutePath == keep }.takeIf { it >= 0 } ?: selected.coerceIn(0, (list.size - 1).coerceAtLeast(0))
     }
 
-    /** UP / DOWN: a row (a grid row in the grid view); up off the games' top row onto the strip, down off it into them. */
+    /** UP / DOWN: a row (a grid row in the grid view); up off the games' top row onto the quick views, then the header. */
     fun moveRow(delta: Int) {
         if (headerCursor >= 0) {
-            if (delta > 0) headerCursor = -1
-            return
-        }
-        if (recentCursor >= 0) {
-            // Up off the strip: the header's first button (sort).
-            if (delta < 0) headerCursor = 0
-            if (delta > 0 && games.isNotEmpty()) {
-                selected = recentCursor.coerceAtMost(columns - 1).coerceAtMost(games.lastIndex)
-                recentCursor = -1
+            if (delta > 0) {
+                headerCursor = -1
+                viewCursor = views.isNotEmpty()
             }
             return
         }
-        if (games.isEmpty()) return
+        if (viewCursor) {
+            if (delta < 0) headerCursor = 0
+            if (delta < 0 || games.isNotEmpty()) viewCursor = false
+            return
+        }
+        if (games.isEmpty()) {
+            if (delta < 0) { if (views.isNotEmpty()) viewCursor = true else headerCursor = 0 }
+            return
+        }
         val next = selected + delta * columns
         when {
-            next < 0 -> if (delta < 0) {
-                if (recent.isNotEmpty()) recentCursor = (selected % columns).coerceAtMost(recent.lastIndex) else headerCursor = 0
-            }
+            next < 0 -> if (delta < 0) { if (views.isNotEmpty()) viewCursor = true else headerCursor = 0 }
             // Down into a last row that's short of this column: its last game.
             next > games.lastIndex -> if (selected / columns < games.lastIndex / columns) selected = games.lastIndex
             else -> selected = next
         }
     }
 
-    /** LEFT / RIGHT: along the strip or a grid row; in the list view, a page. */
+    /** LEFT / RIGHT: the next quick view while on them, along a grid row; in the list view, a page. */
     fun moveColumn(delta: Int) {
         when {
             headerCursor >= 0 -> headerCursor = (headerCursor + delta).coerceIn(0, (headerCount - 1).coerceAtLeast(0))
-            recentCursor >= 0 -> recentCursor = (recentCursor + delta).coerceIn(0, recent.lastIndex)
+            viewCursor -> views.getOrNull(views.indexOf(view) + delta)?.let(onPickView)
             columns > 1 -> if (games.isNotEmpty()) selected = (selected + delta).coerceIn(0, games.lastIndex)
             else -> page(delta)
         }
     }
 
-    /** L / R: [PAGE] rows at a time (off the strip, into the games). */
+    /** L / R: [PAGE] rows at a time. */
     fun page(delta: Int) {
-        if (games.isEmpty() || headerCursor >= 0) return
-        if (recentCursor >= 0) {
-            if (delta < 0) return
-            recentCursor = -1
-            selected = 0
-            return
-        }
-        val next = selected + delta * PAGE * columns
-        if (next < 0 && selected < columns && recent.isNotEmpty()) {
-            recentCursor = 0
-            return
-        }
-        selected = next.coerceIn(0, games.lastIndex)
+        if (games.isEmpty() || headerCursor >= 0 || viewCursor) return
+        selected = (selected + delta * PAGE * columns).coerceIn(0, games.lastIndex)
     }
 
-    /** A tap: the cursor onto [rom] - the strip's tile when [fromRecent]. */
-    fun select(rom: File, fromRecent: Boolean = false) {
+    /** A tap: the cursor onto [rom]. */
+    fun select(rom: File) {
         headerCursor = -1
-        if (fromRecent) {
-            recent.indexOfFirst { it.absolutePath == rom.absolutePath }.takeIf { it >= 0 }?.let { recentCursor = it }
-            return
-        }
-        games.indexOfFirst { it.absolutePath == rom.absolutePath }.takeIf { it >= 0 }?.let { selected = it; recentCursor = -1 }
+        viewCursor = false
+        games.indexOfFirst { it.absolutePath == rom.absolutePath }.takeIf { it >= 0 }?.let { selected = it }
     }
 
-    /** Whether the cursor is on [rom] - on the strip's tile when [fromRecent], else in the games. */
-    fun isCursor(rom: File, fromRecent: Boolean): Boolean =
-        if (headerCursor >= 0) false
-        else if (fromRecent) recentCursor >= 0 && recent.getOrNull(recentCursor)?.absolutePath == rom.absolutePath
-        else recentCursor < 0 && games.getOrNull(selected)?.absolutePath == rom.absolutePath
+    /** Whether the cursor is on [rom]. */
+    fun isCursor(rom: File): Boolean =
+        headerCursor < 0 && !viewCursor && games.getOrNull(selected)?.absolutePath == rom.absolutePath
 
     /** X: out (130 ms), trade screens, in (210 ms). Needs a frame clock: launch it from a composition's scope. */
     suspend fun swap(onSwapped: (Boolean) -> Unit) {

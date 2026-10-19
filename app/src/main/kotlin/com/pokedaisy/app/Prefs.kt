@@ -39,6 +39,11 @@ class Prefs(context: Context) {
         get() = p.getInt("library_sort", 0)   // LibrarySort.NAME
         set(v) = p.edit().putInt("library_sort", v).apply()
 
+    /** The library's quick view: a [LibraryView] id (ALL, FAVORITES, RECENT, a console, HACKS). */
+    var libraryView: Int
+        get() = p.getInt("library_view", 0)   // LibraryView.ALL
+        set(v) = p.edit().putInt("library_view", v).apply()
+
     /** 0 = list, 1 = grid — Library screen's view-mode toggle. */
     var libraryViewMode: Int
         get() = p.getInt("library_view_mode", 0)

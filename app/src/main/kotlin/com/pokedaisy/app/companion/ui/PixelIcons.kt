@@ -195,6 +195,19 @@ object PixelIcons {
         ".11...11.",
     )
 
+    /** A clock face at ten past: the library's RECENT view. [star]'s size. */
+    val clock = listOf(
+        "..11111..",
+        ".1.....1.",
+        "1...1...1",
+        "1...1...1",
+        "1...111.1",
+        "1.......1",
+        "1.......1",
+        ".1.....1.",
+        "..11111..",
+    )
+
     /** [star]'s outline alone: not a favorite (yet) - the Library's FAVORITE menu entry. */
     val starOutline: List<String> = star.mapIndexed { y, row ->
         String(CharArray(row.length) { x ->

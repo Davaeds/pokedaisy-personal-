@@ -718,6 +718,47 @@ fun favoriteLibrary() {
         .map { File(roms, it).absolutePath }.toSet()
 }
 
+/**
+ * [favoriteLibrary] with a game on every console (Yellow, Crystal, a Crystal hack, Platinum - DS turned on), so every quick
+ * view has a pill, and a play history (Emerald last, then Crystal, Unbound, Yellow) for RECENTLY PLAYED; [view] open.
+ */
+fun platformLibrary(view: com.pokedaisy.app.LibraryView = com.pokedaisy.app.LibraryView.ALL) {
+    favoriteLibrary()
+    val ctx = android.content.Context()
+    val prefs = Prefs(ctx)
+    for (dir in listOfNotNull(ctx.filesDir, ctx.getExternalFilesDir(null))) File(dir, "features").apply { mkdirs() }.resolve("nds").writeText("")
+    val roms = File(ctx.filesDir, "roms")
+    val extra = mapOf(
+        "Pokemon - Yellow Version (USA, Europe).gb" to Triple("Pokémon Yellow", "GB", "GB"),
+        "Pokemon - Crystal Version (USA, Europe) (Rev 1).gbc" to Triple("Pokémon Crystal", "GBC", "GBC"),
+        "Pokemon Crystal Clear (v2.6.0).gbc" to Triple("Pokémon Crystal Clear", "HACK", "GBC"),
+        "4997 - Pokemon - Platinum Version (USA).nds" to Triple("Pokémon Platinum", "NDS", "NDS"),
+    )
+    extra.keys.forEach { File(roms, it).apply { writeText("x"); setLastModified(1_700_000_000_000L) } }
+    // Dated a week ago like the others (datedLibrary), so they aren't NEW.
+    val added = File(ctx.filesDir, "rom-added.tsv")
+    added.appendText(extra.keys.joinToString("") { "${File(roms, it).absolutePath}\t${System.currentTimeMillis() - 7 * 24 * 3_600_000L}\t1\n" })
+    com.pokedaisy.app.RomAdded.reload()
+    // Every game's title, category and console (GameTitles' cache): the activity()'s six are GBA.
+    val titles = File(ctx.filesDir, "rom-titles.tsv")
+    // "#categories" as GameTitles writes it: without it every category reads as stale (asked again, never here).
+    // And "#known" (GameTitles.KNOWN), else the nameless games' rows read as stale too.
+    val known = com.pokedaisy.app.GameTitles::class.java.getDeclaredField("KNOWN").apply { isAccessible = true }.get(null) as String
+    val lines = listOf(known, "#categories\t2") + titles.readLines().filter { it.isNotBlank() && !it.startsWith("#") }.map { "$it\tGBA" } + extra.map { (n, t) ->
+        val f = File(roms, n)
+        "${f.absolutePath}\t${f.length()}\t${f.lastModified()}\t${t.first}\t${t.second}\t${t.third}"
+    }
+    titles.writeText(lines.joinToString("") { "$it\n" })
+    com.pokedaisy.app.GameTitles.reload()
+    for (n in listOf("Pokemon - Yellow Version (USA, Europe).gb", "Pokemon Unbound (v2.1.1.1).gba",
+            "Pokemon - Crystal Version (USA, Europe) (Rev 1).gbc", "Pokemon - Emerald Version (USA, Europe).gba")) {
+        prefs.pushRecentRom(File(roms, n).absolutePath)
+        Thread.sleep(2)
+    }
+    prefs.lastRomPath = File(roms, "Pokemon - Emerald Version (USA, Europe).gba").absolutePath
+    prefs.libraryView = view.id
+}
+
 fun pcBoxes(icons: Boolean = false): () -> (@Composable () -> Unit) = {
     val state = pcBoxesDemo()
     val content: @Composable () -> Unit = {
@@ -789,6 +830,8 @@ fun activity(expandIntro: Boolean = false, start: Boolean = false, make: () -> a
     prefs.cheatsEnabled = false
     prefs.touchControlsStyle = com.pokedaisy.app.companion.TouchControlsStyle()
     prefs.portraitCompanionUnderGame = false
+    for (dir in listOfNotNull(ctx.filesDir, ctx.getExternalFilesDir(null))) File(dir, "features/nds").delete()
+    prefs.libraryView = com.pokedaisy.app.LibraryView.ALL.id
     prefs.lastRomPath = File(roms, names[0]).absolutePath
     names.take(3).reversed().forEach { prefs.pushRecentRom(File(roms, it).absolutePath) }
     make().also { a ->
@@ -1456,6 +1499,22 @@ fun main(args: Array<String>) {
             }
         }),
         Shot("library-list", tw, th, td, activity { LibraryActivity() }),
+        // The quick views (pills over the games): ALL, FAVORITES, RECENTLY PLAYED and one per console the library holds,
+        // each in its colour; the open one striped like the console's cover art.
+        Shot("library-views", tw, th, td, activity { platformLibrary(); LibraryActivity() }),
+        Shot("library-views-grid", tw, th, td, activity { platformLibrary(); LibraryActivity() }) {
+            onNodeWithContentDescription("Toggle view").performClick()
+        },
+        Shot("library-views-favorites", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.FAVORITES); LibraryActivity() }),
+        Shot("library-views-recent", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.RECENT); LibraryActivity() }),
+        Shot("library-views-gb", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.GB); LibraryActivity() }),
+        Shot("library-views-gbc", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.GBC); LibraryActivity() }),
+        Shot("library-views-gba", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.GBA); LibraryActivity() }),
+        Shot("library-views-ds", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.DS); LibraryActivity() }),
+        Shot("library-views-hacks", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.HACKS); LibraryActivity() }),
+        Shot("library-views-phone", 1080, 2400, 2.625f, activity { platformLibrary(com.pokedaisy.app.LibraryView.GBA); LibraryActivity() }) {
+            mainClock.advanceTimeBy(500)   // the open pill scrolled into view
+        },
         // A game with no cover art: its kind (CategoryArt), at a list row's size and a grid tile's.
         Shot("library-category-art", 2000, 560, 2.625f, {
             {

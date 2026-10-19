@@ -110,3 +110,46 @@ private fun sorted(context: Context, prefs: Prefs, roms: List<File>, sort: Libra
     }
     LibrarySort.DATE_ADDED -> roms.sortedByDescending { RomAdded.addedAt(context, it) ?: 0L }
 }
+
+/**
+ * The library's quick views (the pills over the games, [Prefs.libraryView]). [id] is what Prefs keeps (stable, never
+ * renamed); [platform]: the console a platform view shows ([GameTitles.platform], so a hack shows under its base game's
+ * too); [category]: the kind a view shows ([GameTitles.category]: HACKS).
+ */
+enum class LibraryView(val id: Int, val label: String, val platform: RomCategory? = null, val category: RomCategory? = null) {
+    ALL(0, "ALL"),
+    FAVORITES(1, "FAVORITES"),
+    RECENT(2, "RECENT"),
+    GB(3, "GB", platform = RomCategory.GB),
+    GBC(4, "GBC", platform = RomCategory.GBC),
+    GBA(5, "GBA", platform = RomCategory.GBA),
+    DS(6, "DS", platform = RomCategory.NDS),
+    HACKS(7, "HACKS", category = RomCategory.HACK);
+
+    /** A view of some games by what they are (a console, the hacks): shown only while the library has one. */
+    val byKind get() = platform != null || category != null
+
+    companion object {
+        fun of(id: Int) = entries.firstOrNull { it.id == id } ?: ALL
+    }
+}
+
+/**
+ * [sorted] (the library in its order, [sortLibrary]) narrowed to [view]. RECENT is every game ever started,
+ * the last played first whatever the order (favorites not first: it's a history). [platform] / [category]: a game's
+ * console and kind, null until the background title pass has looked at it (then it's in no such view yet).
+ */
+fun libraryViewOf(
+    context: Context, prefs: Prefs, sorted: List<File>, view: LibraryView,
+    platform: (File) -> RomCategory?, category: (File) -> RomCategory?,
+): List<File> = when (view) {
+    LibraryView.ALL -> sorted
+    LibraryView.FAVORITES -> prefs.favoriteRoms.let { fav -> sorted.filter { it.absolutePath in fav } }
+    LibraryView.RECENT -> {
+        val recent = prefs.recentRomPaths()
+        sorted(context, prefs, sorted, LibrarySort.LAST_PLAYED)
+            .filter { prefs.romLastPlayed(it.absolutePath) > 0 || it.absolutePath in recent }
+    }
+    LibraryView.HACKS -> sorted.filter { category(it) == RomCategory.HACK }
+    else -> sorted.filter { platform(it) == view.platform }
+}
