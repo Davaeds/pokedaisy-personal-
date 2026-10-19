@@ -32,6 +32,8 @@ HERE is about the place you're standing in right now, and it changes as you walk
 - **Wild Pokémon**, one section per way of finding them: grass and caves, surfing, smashing rocks, each fishing rod and, in Polished Crystal, the trees you can shake Pokémon out of (the common list and the one rarer trees use). Every row shows the level range and the odds, like `LV 3-5  20%`. A Pokémon you haven't seen yet shows as `???` until you tap it, the same way your Pokédex hides it.
 
 In Polished Crystal the grass list follows your game's clock (morning, day or night, and the evening uses the night's), and the line under `GRASS / CAVE` says which time it's for. Some of its side areas set their Pokémon's levels by how many badges you have, and HERE already shows the levels for yours.
+
+In Lazarus many outdoor areas have different Pokémon by day and at night. Its night runs from 8 in the evening to 7 in the morning on your game's clock. HERE lists the ones out right now, says under `GRASS / CAVE` whether that's `DAY` or `NIGHT`, and adds an `AT NIGHT` (or `BY DAY`) section for the ones that only show up at the other time. The line at the top that counts how many you've caught here counts both.
 - **PEOPLE**: anyone in the area who gives you an item, a Pokémon or an egg, and in-game trades (what they offer and what they want for it). Some of them want something done first.
 - **ITEMS**: items lying on the ground and hidden ones. A hidden item shows as `HIDDEN ITEM` until you tap it: the hint says roughly where it's buried, the answer names it.
 

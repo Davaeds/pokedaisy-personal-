@@ -437,6 +437,29 @@ class HackGuidesTest {
         assertEquals(g.fixture, if (g === tmt2) 99 else 100, here!!.grass.sumOf { it.percent })
     }
 
+    /** Lazarus takes a map's second wild header at night (GetCurrentMapWildMonHeaderId's clock check): Acrisia City
+     * (0.57) has HOOTHOOT only then, PIKIPEK only by day. Its caves (group 24) never switch. */
+    @Test fun `Lazarus night wild sets`() {
+        load(lazarus) ?: return
+        val t = lazarus.t
+        fun at(hour: Int) = SaveProgress(ByteArray(0x12C), ByteArray(0x200), varBanks = listOf(SaveBank(GBA_VAR_HOUR, 0, 1) to byteArrayOf(hour.toByte(), 0)))
+        val fixture = readSaveProgress(FixtureMemoryReader.load(lazarus.fixture), lazarus.cfg, t)!!
+        assertEquals(10, fixture.variable(GBA_VAR_HOUR)) // the capture's clock: 10:58
+        assertEquals(0, t.wildSetOf(0, 57, fixture))
+        assertEquals(1, t.otherTimeSetOf(0, 57, fixture))
+        for (h in listOf(0, 6, 20, 23)) assertEquals("$h:00", 1, t.wildSetOf(0, 57, at(h)))
+        for (h in listOf(7, 12, 19)) assertEquals("$h:00", 0, t.wildSetOf(0, 57, at(h)))
+        assertEquals(0, t.wildSetOf(24, 112, at(22)))
+        assertEquals(null, t.otherTimeSetOf(24, 112, at(22)))
+        val day = GuideRomSource.encounters(t, 0, 57, 0)!!.grass.map { it.species }
+        val night = GuideRomSource.encounters(t, 0, 57, 1)!!.grass.map { it.species }
+        assertTrue(731 in day && 731 !in night) // PIKIPEK
+        assertTrue(163 in night && 163 !in day) // HOOTHOOT
+        assertEquals(100, GuideRomSource.encounters(t, 0, 57, 1)!!.grass.sumOf { it.percent })
+        assertEquals(2, GuideRomSource.encounterSets(t, 0, 57).size) // the DEX's AREA sees both
+        assertEquals(1, GuideRomSource.encounterSets(t, 24, 112).size)
+    }
+
     @Test fun `generated WHERE IS`() = all.forEach { g ->
         select(g)
         val page = generatedWhereIs(g.t.guide, { "AREA $it" }) { false }

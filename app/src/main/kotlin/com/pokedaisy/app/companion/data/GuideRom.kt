@@ -75,11 +75,33 @@ data class GuideTables(
     /** Maps (group << 8 | num) with more than one wild header back to back, and the var whose value picks one:
      * GetCurrentMapWildMonHeaderId's `i += VarGet(VAR_*_WILD_SET)` after the map's first header (Emerald Legacy). */
     val wildSetVars: Map<Int, Int> = emptyMap(),
+    /** A map's second wild header, right after its first, is its night set, picked by the game's clock (Lazarus). */
+    val nightWild: NightWild? = null,
 )
 
-/** Which of map [group].[num]'s back-to-back wild headers the game reads now ([GuideTables.wildSetVars]); 0 = the first. */
-fun GuideTables.wildSetOf(group: Int, num: Int, p: SaveProgress?): Int =
-    wildSetVars[group shl 8 or num]?.let { p?.variable(it) } ?: 0
+/** GetCurrentMapWildMonHeaderId's `i++` at night: the next header when it's the same map, while gLocalTime's hour
+ * ([hourAddr]) is outside [day]. Maps of [skipGroup] (caves) and any map numbered [skipNum] never switch - the game
+ * tests the two apart, so a cave's second header (Lazarus's 24.112) is never read. */
+data class NightWild(val hourAddr: Long, val day: IntRange = 7..19, val skipGroup: Int = -1, val skipNum: Int = -1) {
+    fun applies(group: Int, num: Int) = group != skipGroup && num != skipNum
+    /** Night by the game's clock; false while the hour isn't known (no save read yet). */
+    fun isNight(p: SaveProgress?): Boolean = p?.variable(GBA_VAR_HOUR)?.takeIf { it in 0..23 }?.let { it !in day } ?: false
+}
+
+/** The game's clock hour (gLocalTime.hours, 0-23) as a var past the save's own, like the DS games' [GEN4_VAR_HOUR]. */
+const val GBA_VAR_HOUR = 0x10000
+
+/** Which of map [group].[num]'s back-to-back wild headers the game reads now ([GuideTables.wildSetVars], else
+ * [GuideTables.nightWild]'s clock); 0 = the first. */
+fun GuideTables.wildSetOf(group: Int, num: Int, p: SaveProgress?): Int {
+    wildSetVars[group shl 8 or num]?.let { return p?.variable(it) ?: 0 }
+    val night = nightWild?.takeIf { it.applies(group, num) } ?: return 0
+    return if (night.isNight(p)) 1 else 0
+}
+
+/** The other time of day's set for map [group].[num] ([GuideTables.nightWild]), or null where the clock picks none. */
+fun GuideTables.otherTimeSetOf(group: Int, num: Int, p: SaveProgress?): Int? =
+    nightWild?.takeIf { (group shl 8 or num) !in wildSetVars && it.applies(group, num) }?.let { if (it.isNight(p)) 0 else 1 }
 
 /** A WildPokemonHeader's size and the pointer slot (after the 4-byte map id) of each method. */
 data class WildLayout(val stride: Int, val land: Int = 0, val water: Int = 1, val rockSmash: Int = 2, val fishing: Int = 3)
@@ -240,7 +262,8 @@ fun readSaveProgress(c: MemoryReader, cfg: NativeConfig, t: GuideTables): SavePr
     return SaveProgress(
         c.readCoreMemory(sb1 + t.sb1FlagsOff, t.flagBytes), c.readCoreMemory(sb1 + t.sb1VarsOff, t.varCount * 2),
         t.flagBanks.map { it to c.readCoreMemory(sb1 + it.sb1Off, (it.count + 7) / 8) },
-        t.varBanks.map { it to c.readCoreMemory(sb1 + it.sb1Off, it.count * 2) },
+        t.varBanks.map { it to c.readCoreMemory(sb1 + it.sb1Off, it.count * 2) } +
+            listOfNotNull(t.nightWild?.let { SaveBank(GBA_VAR_HOUR, 0, 1) to byteArrayOf(c.readCoreMemory(it.hourAddr, 1).getOrElse(0) { -1 }, 0) }),
     )
 }
 
@@ -339,9 +362,9 @@ object GuideRomSource {
         return if (rd(alt, 2).contentEquals(id)) alt else first
     }
 
-    /** How many headers in a row map [group].[num] has (1 but for [GuideTables.wildSetVars]' maps). */
+    /** How many headers in a row map [group].[num] has (1 but for [GuideTables.wildSetVars]' and night maps). */
     private fun headerRun(t: GuideTables, group: Int, num: Int): Int {
-        if ((group shl 8 or num) !in t.wildSetVars) return 1
+        if ((group shl 8 or num) !in t.wildSetVars && t.nightWild?.applies(group, num) != true) return 1
         val first = headerIndex(t)[group shl 8 or num] ?: return 1
         var n = 1
         while (n < 8 && alternateHeader(t, first, n) != first) n++
@@ -819,7 +842,10 @@ val GUIDE_TABLES_QUETZAL_MOEMON_V084_ES = GUIDE_TABLES_QUETZAL_V084_ES.copy(
 // until a wild battle - every foe the game sent (species and level) is in the table read here.
 
 /** Pokémon Lazarus v2.0: gTrainers 0x085DA84C (0x24-byte records; 8 = Polymnia), 0x24-byte TrainerMons,
- * gWildMonHeaders 0x08E67010 (21 refs, 210 headers of 24 bytes: land, water, rock smash, unused, fishing). */
+ * gWildMonHeaders 0x08E67010 (21 refs, 210 headers of 24 bytes: land, water, rock smash, unused, fishing).
+ * Its GetCurrentMapWildMonHeaderId (0x0824A8CC) calls RtcCalcLocalTime and takes the map's next header at night
+ * (gLocalTime 0x030039A8's hour outside 7..19; 37 outdoor maps have one), except in map group 24 or a map
+ * numbered 106; then ALTERING CAVE (24.106) adds VAR_ALTERING_CAVE_WILD_SET (0x403E), as Emerald does. */
 val GUIDE_TABLES_LAZARUS = GuideTables(
     trainers = 0x085DA84CL, learnsets = 0, wildHeaders = 0x08E67010L,
     sb1FlagsOff = 0x12E8, sb1VarsOff = 0x1414, flagBytes = 0x12C,
@@ -828,6 +854,8 @@ val GUIDE_TABLES_LAZARUS = GuideTables(
     trainerMon = TrainerMonLayout(stride = 0x24, movesOff = 0x0C, speciesOff = 0x14, itemOff = 0x16, levelOff = 0x1A),
     wildLayout = WildLayout(stride = 24, fishing = 4),
     mapGroups = 0x08FAF098L,
+    wildSetVars = mapOf((24 shl 8 or 106) to 0x403E),
+    nightWild = NightWild(hourAddr = 0x030039AAL, skipGroup = 24, skipNum = 106),
 )
 
 /** Emerald Seaglass v3.0: gTrainers 0x0851C8CC (34 refs, Emerald's ids: 265 = ROXANNE), 0x20-byte

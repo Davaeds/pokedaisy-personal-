@@ -270,7 +270,10 @@ tables. The expansion hacks without source (Lazarus, Seaglass, TMT2, SoulGold, G
 BOSS + HERE only (`Guide<Hack>.kt`, tables found in their ROMs, HERE checked by walking grass headless
 until a wild battle): no area data, since the ROM reader only knows the FireRed engine's maps and script
 commands. TMT2 lists 11 land slots, so its last 1% reads past the table (in the game too); `merge` drops
-slots whose levels can't be real.
+slots whose levels can't be real. Lazarus picks a map's wild header by its clock (a player's report, 2026-10-20: night Pokémon missing from
+HERE): 37 outdoor maps have a night header right after the day one, read from 20:00 to 6:59 by gLocalTime's hour
+(`GuideTables.nightWild`, `GBA_VAR_HOUR` in `SaveProgress`); HERE follows the clock and lists the other time's
+extras (AT NIGHT / BY DAY), the DEX's AREA both.
 **HERE covers the whole area, for every game with a guide (the user's standing rule)**: not just
 the wild Pokémon but TO DO (hand-written entries tagged `areas = listOf("ROUTE 104", …)`, matched
 to the current map section's name via `areaKey()`), PEOPLE (gifts, gift Pokémon/eggs, in-game

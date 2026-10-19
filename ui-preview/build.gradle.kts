@@ -71,6 +71,7 @@ tasks.register<JavaExec>("render") {
     // Optional: a ROM the GUIDE's live pages (HERE, NEXT BOSS) read from, with the
     // repo's save fixture for that game - see Main.kt's liveGuide().
     systemProperty("rom", (project.findProperty("rom") as String?) ?: "")
+    systemProperty("hour", (project.findProperty("hour") as String?) ?: "")
     // FireRed / Emerald art is rebuilt from ROMs (see Main.kt's romArt()).
     systemProperty("artRoms", (project.findProperty("artRoms") as String?) ?: "")
     // -PndsRom=<.nds> -PndsFixture=heartgold: a DS game's real-data shots ($game-real-*): its art rebuilt from the cart

@@ -540,13 +540,20 @@ fun liveGuide(): ((SnapshotView) -> SnapshotView)? {
         GameKind.EMERALD -> if (com.pokedaisy.app.companion.data.emeraldLegacy) com.pokedaisy.app.companion.data.NATIVE_EMERALD_LEGACY to "emerald_legacy"
             else NATIVE_EMERALD_RETAIL to "emerald_vanilla"
         GameKind.FIRERED -> NATIVE_FIRERED_REV1 to "firered_vanilla"
+        GameKind.LAZARUS -> com.pokedaisy.app.companion.data.NATIVE_LAZARUS to "lazarus"
         else -> return null
     }
     if (path.isBlank()) return null
     val tables = cfg.guideTables!!
     PokedexSource.reader = RomFile(File(path).readBytes())
-    // The render task runs in app/src/main/assets.
-    val ram = RamFixture(File("../../test/resources/fixtures/$fixture"))
+    // The render task runs in app/src/main/assets. -Phour=22: the game's clock at that hour (Lazarus's night lists).
+    val fixtureRam = RamFixture(File("../../test/resources/fixtures/$fixture"))
+    val hour = System.getProperty("hour").orEmpty().toIntOrNull()
+    val hourAddr = tables.nightWild?.hourAddr
+    val ram = if (hour == null || hourAddr == null) fixtureRam else object : MemoryReader {
+        override fun readCoreMemory(addr: Long, size: Int) =
+            fixtureRam.readCoreMemory(addr, size).also { if (addr <= hourAddr && hourAddr < addr + size) it[(hourAddr - addr).toInt()] = hour.toByte() }
+    }
     val progress = readSaveProgress(ram, cfg, tables)
     val sb1 = ram.readCoreMemory(cfg.saveBlock1Ptr, 4).let { (it[0].toLong() and 0xFF) or (it[1].toLong() and 0xFF shl 8) or (it[2].toLong() and 0xFF shl 16) or (it[3].toLong() and 0xFF shl 24) }
     val pos = ram.readCoreMemory(sb1, 6)
@@ -558,6 +565,13 @@ fun liveGuide(): ((SnapshotView) -> SnapshotView)? {
             location = lookupLocation(mapsec), regionMapSectionId = mapsec,
         )
     }
+}
+
+/** The town the guide-town shots stand in: Emerald's RUSTBORO CITY, Lazarus's ACRISIA CITY (its day / night wild lists), FireRed's CELADON CITY. */
+fun guideTown(game: GameKind) = when (game) {
+    GameKind.EMERALD -> Triple(0, 3, 10)
+    GameKind.LAZARUS -> Triple(0, 57, 0x5A)
+    else -> Triple(3, 6, 94)
 }
 
 /**
@@ -1440,17 +1454,18 @@ fun main(args: Array<String>) {
         },
         *dexShots(game, live, bw, bh, bd).toTypedArray(),
         Shot("$g-guide", bw, bh, bd, companion("GUIDE") { live?.invoke(snapshot()) ?: snapshot() }),
-        // HERE in a town (FireRed: CELADON CITY, Emerald: RUSTBORO CITY), with the save's flags.
+        // HERE in a town (guideTown), with the save's flags.
         Shot("$g-guide-town", bw, bh, bd, companion("GUIDE") {
             val s = live?.invoke(snapshot()) ?: snapshot()
-            val (group, num, sec) = if (game == GameKind.EMERALD) Triple(0, 3, 10) else Triple(3, 6, 94)
+            val (group, num, sec) = guideTown(game)
             s.copy(mapGroup = group, mapNum = num, regionMapSectionId = sec, location = lookupLocation(sec))
         }),
         // The same, scrolled down to PEOPLE / ITEMS (the harness can't scroll a lazy list by touch).
-        *listOf(7, 14).map { first ->
+        // Lazarus also to its end: the other time of day's section (AT NIGHT / BY DAY, -Phour).
+        *(if (game == GameKind.LAZARUS) listOf(7, 14, 40) else listOf(7, 14)).map { first ->
             Shot("$g-guide-town-$first", bw, bh, bd, {
                 val s = (live?.invoke(snapshot()) ?: snapshot()).let {
-                    val (group, num, sec) = if (game == GameKind.EMERALD) Triple(0, 3, 10) else Triple(3, 6, 94)
+                    val (group, num, sec) = guideTown(game)
                     it.copy(mapGroup = group, mapNum = num, regionMapSectionId = sec, location = lookupLocation(sec))
                 }
                 val content: @Composable () -> Unit = {

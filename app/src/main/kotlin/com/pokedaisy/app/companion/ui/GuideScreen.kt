@@ -52,6 +52,7 @@ import com.pokedaisy.app.companion.data.GuideContext
 import com.pokedaisy.app.companion.data.GuideEntry
 import com.pokedaisy.app.companion.data.GuidePage
 import com.pokedaisy.app.companion.data.GuideRomSource
+import com.pokedaisy.app.companion.data.otherTimeSetOf
 import com.pokedaisy.app.companion.data.wildSetOf
 import com.pokedaisy.app.companion.data.GuideSection
 import com.pokedaisy.app.companion.data.GuideTables
@@ -165,7 +166,7 @@ fun GuideScreen(source: GuideSource, ui: GuideUiState, snapshot: SnapshotView, m
         if (value == null && t != null) value = withContext(Dispatchers.IO) { EvolutionSource.table(t) }
     }
     val live = source.live
-    // The map's wild set the save picks (Emerald Legacy's per-map vars); 0 everywhere else.
+    // The map's wild set the save picks (Emerald Legacy's per-map vars, Lazarus's clock); 0 everywhere else.
     val wildSet = live?.wildSetOf(snapshot.mapGroup, snapshot.mapNum, snapshot.progress) ?: 0
     val here by produceState(
         live?.let { GuideRomSource.cachedEncounters(it, snapshot.mapGroup, snapshot.mapNum, wildSet) },
@@ -175,6 +176,16 @@ fun GuideScreen(source: GuideSource, ui: GuideUiState, snapshot: SnapshotView, m
             dex?.let { PokedexSource.nationalOf(it.tables, 1) } // warm the species -> dex number map
             GuideRomSource.encounters(live, snapshot.mapGroup, snapshot.mapNum, wildSet)
         }
+    }
+    // The other time of day's set, where the game's clock picks one (Lazarus): its extra Pokémon get a section of their own.
+    val otherSet = live?.otherTimeSetOf(snapshot.mapGroup, snapshot.mapNum, snapshot.progress)
+    val otherTime by produceState(
+        if (live != null && otherSet != null) GuideRomSource.cachedEncounters(live, snapshot.mapGroup, snapshot.mapNum, otherSet) else null,
+        live, snapshot.mapGroup, snapshot.mapNum, otherSet,
+    ) {
+        value = if (live != null && otherSet != null) withContext(Dispatchers.IO) {
+            GuideRomSource.encounters(live, snapshot.mapGroup, snapshot.mapNum, otherSet)
+        } else null
     }
     // A game with tables of its own (a Game Boy game): its wild Pokémon and boss teams for the save, at once.
     val world = source.text?.world
@@ -202,7 +213,12 @@ fun GuideScreen(source: GuideSource, ui: GuideUiState, snapshot: SnapshotView, m
 
     val pages = buildList {
         if (live != null || world != null || hasAreaGuide(source.id)) {
-            add(herePage(snapshot, worldHere ?: here, dex, live != null || world != null, source.text, source.id, ctx, world?.clockNote(snapshot.progress)))
+            val night = otherSet?.let { wildSet == 1 }
+            add(herePage(
+                snapshot, worldHere ?: here, dex, live != null || world != null, source.text, source.id, ctx,
+                world?.clockNote(snapshot.progress) ?: night?.let { if (it) "NIGHT" else "DAY" },
+                otherTime = otherTime?.takeIf { night != null }, otherIsNight = night == false,
+            ))
         }
         val teams = worldParties ?: parties
         snapshot.progress?.takeIf { bosses.isNotEmpty() && teams.isNotEmpty() }?.let { add(bossPage(bosses, it, teams, snapshot.party)) }
@@ -375,6 +391,9 @@ private fun herePage(
     ctx: GuideContext,
     /** The time of day the lists are for ([com.pokedaisy.app.companion.data.GuideWorld.clockNote]), an English word. */
     clock: String? = null,
+    /** The map's other time-of-day set ([com.pokedaisy.app.companion.data.otherTimeSetOf]): what only it has is listed too. */
+    otherTime: MapEncounters? = null,
+    otherIsNight: Boolean = false,
 ): GuidePage {
     val place = snapshot.location.mapSecName.ifEmpty { tk("THIS MAP") }.uppercase()
     fun national(species: Int) = dex?.let { PokedexSource.nationalOf(it.tables, guideDexSpecies(species)) } ?: 0
@@ -396,6 +415,12 @@ private fun herePage(
             tk("OLD ROD") to it.oldRod, tk("GOOD ROD") to it.goodRod, tk("SUPER ROD") to it.superRod,
             tk("HEADBUTT") to it.headbutt, tk("HEADBUTT (RARE TREES)") to it.headbuttRare,
         ).filter { (_, l) -> l.isNotEmpty() }
+    }.orEmpty()
+    // The other time of day's Pokémon that the lists above don't have, each once (its first method's odds).
+    val onlyThen = otherTime?.let { o ->
+        val now = methods.flatMap { (_, l) -> l.map { it.species } }.toSet()
+        listOf(o.grass, o.water, o.rockSmash, o.oldRod, o.goodRod, o.superRod, o.headbutt, o.headbuttRare)
+            .flatten().filter { it.species !in now }.distinctBy { it.species }
     }.orEmpty()
 
     // The hand-written guide's entries about this area (not TIPS - they're about the whole game).
@@ -440,7 +465,7 @@ private fun herePage(
                 if (hasWild && methods.isEmpty()) add(tr("No wild POKéMON on this map."))
                 // The area's DexNav (GitHub #85): how many of its wild POKéMON are caught, every method counted once.
                 if (dex != null && methods.isNotEmpty()) {
-                    val here = methods.flatMap { (_, l) -> l.map { national(it.species) } }.filter { it > 0 }.toSet()
+                    val here = (methods.flatMap { (_, l) -> l } + onlyThen).map { national(it.species) }.filter { it > 0 }.toSet()
                     if (here.isNotEmpty()) add(tr("{0} of {1} caught here.", here.count { it in dex.caught }, here.size))
                 }
                 if (items.isNotEmpty() || people.isNotEmpty()) add(tr("Its buildings included."))
@@ -457,6 +482,10 @@ private fun herePage(
             // Grass follows the game's clock (Polished Crystal's morning / day / night): which list this is.
             GuideSection(name, rows(l), note = if (clock != null && l === enc?.grass) tr("For your game's clock: {0}.", tr(clock)) else null)
         } + listOfNotNull(
+            onlyThen.takeIf { it.isNotEmpty() }?.let {
+                if (otherIsNight) GuideSection(tk("AT NIGHT"), rows(it), note = tr("Only out at night."))
+                else GuideSection(tk("BY DAY"), rows(it), note = tr("Only out by day."))
+            },
             people.takeIf { it.isNotEmpty() }?.let { GuideSection(tk("PEOPLE"), it, note = tr("Some want something done first.")) },
             items.takeIf { it.isNotEmpty() }?.let { GuideSection(tk("ITEMS"), it) },
         ),
