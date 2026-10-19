@@ -26,36 +26,51 @@
 PokeDaisy is a Game Boy, Game Boy Color and GBA player for Android handhelds with two screens or one,
 made for Pokemon FireRed, LeafGreen, Emerald, Ruby, Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal
 and popular ROM hacks of every generation. Next to the game runs a live companion that reads it as you
-play: your party, your bag, the map, battle matchups, your Pokedex, and a spoiler-free guide. On a
-dual-screen handheld it gets the bottom screen to itself; on one screen it slides in beside the game, or
-sits under it on a phone held upright. Everything is drawn in the game's own menu style.
+play: your party, your bag, the map, battle matchups, your Pokedex, and a spoiler-free guide.
+Everything is drawn in the game's own menu style.
+
+- **Two screens** (AYN Thor, Retroid Pocket Duo, ...): the game on the top screen, the companion gets the bottom one to itself.
+- **One screen** (Retroid Pocket 6, phones, ...): the companion opens as a window over the game or a panel
+  beside it (under it on a phone held upright), and a **HUD** keeps your party, a minimap and your bag on the
+  game screen. The **quick menu**, one button away, opens your PC, flies, rides your bike or fishes, and
+  **battle buttons** fight, switch or run right beside the battle.
+- **A phone and a TV**: cast or plug in a TV and the game goes on the big screen, the companion stays in your hand.
 
 ## Devices
 
-| Device                    | Status                                                         |
-| ------------------------- | -------------------------------------------------------------- |
-| AYN Thor                  | Tested, made for it                                            |
-| Retroid Pocket Duo Lite   | Supported: its 4:3 bottom screen (1280x960) has its own layout |
-| Retroid Pocket Duo        | Should work, not yet tested on real hardware                   |
-| Anbernic RG DS            | Should work, not yet tested on real hardware                   |
-| Retroid Pocket 6          | Single screen: tested                                          |
-| Android phones (portrait) | Should work, checked in screenshots only                       |
+| Device                     | Status                                                         |
+| -------------------------- | -------------------------------------------------------------- |
+| AYN Thor                   | Tested, made for it                                            |
+| Retroid Pocket Duo Lite    | Supported: its 4:3 bottom screen (1280x960) has its own layout |
+| Retroid Pocket Duo         | Should work, not yet tested on real hardware                   |
+| Anbernic RG DS             | Should work, not yet tested on real hardware                   |
+| Retroid Pocket 6           | Single screen: tested                                          |
+| Other one-screen handhelds | Should work, held sideways like the Pocket 6                   |
+| Android phones (portrait)  | Should work, checked in screenshots only                       |
+| A phone cast to a TV       | Should work: the game on the TV, the companion on the phone    |
 
 Any Android 8.0+ device runs the games.
 
 <details>
 <summary><strong>Single-screen devices and phones</strong></summary>
 
-On a device with one screen the
-companion is a panel beside the game: press BACK to slide it in over the game,
-tap the padlock on its edge to lock it beside the game (the game moves over),
-and drag that tab sideways to resize it. BACK closes an unlocked panel; hold
-BACK to leave the game.
+On a device with one screen, Settings > COMPANION VIEW picks how the companion shares it:
+
+- **WINDOW** (the default): press BACK and the companion opens in the middle of the screen, over the
+  game, which keeps running underneath. Your buttons work it like the game's own menus: the D-pad and
+  A pick, L / R change tabs, B goes back, START closes it.
+- **SIDE PANEL**: BACK slides it in beside the game; tap the padlock on its edge to lock it there (the
+  game moves over), and drag that tab sideways to resize it.
+
+Hold BACK to leave the game.
 
 Hold a phone upright and the game sits across the top with the companion docked
 under it. Drag the grip on the companion's top edge to pick its height, or tap the
 grip to step through small, normal and full. Without a controller, the touch
 controls fill the space between the game and the companion.
+
+On a dual-screen device, **SINGLE SCREEN** (Settings > SCREEN) plays it the one-screen way and hands the
+second screen back to Android, for a video or a chat app while you play.
 
 </details>
 
@@ -120,6 +135,25 @@ it. You can also check from **Settings > VERSION**.
 
 Pick which tabs sit in the tab bar in the companion's Settings; the rest wait as app icons in the MORE tab, left of the gear.
 
+### On the game screen
+
+Made for one screen, handy on two:
+
+- **HUD** (Settings > HUD, on by default): your party (levels, HP, status), a minimap, your Poké Balls, the
+  steps a keep-away spray has left, and PC / BAG / WILD buttons on the game screen while you walk around,
+  like a modern Pokémon game. A tap opens a Pokémon's summary, the whole map (with FLY), your game's own PC, a
+  compact bag with USE, or the area's wild Pokémon; the game keeps running under them. Four layouts (two kinds
+  of corners, side rails, a bottom dock), three looks (dark or white see-through glass, or the app's windows),
+  three sizes, and each part can be hidden. It steps aside for battles and menus.
+- **Quick menu** (L3, the left stick's click; Settings > QUICK MENU): PC, FLY, the keep-away spray, BIKE, ROD,
+  WILD encounters on / off, SAVE STATE, LOAD STATE, fast-forward and the companion, as a ring you aim with the
+  left stick (or rows of tiles). Pick which actions show; each one shows in the games it works in, and
+  anything that can't be used right now is greyed out and says why.
+- **Battle buttons** (one screen, Settings > BATTLE BUTTONS, on by default): FIGHT, POKéMON and RUN at the top
+  right, beside the battle. FIGHT lists your moves with how well each one hits, POKéMON your party with the
+  best pick tagged, sliding in from the screen's edge.
+- **EXPAND** (Settings > ASPECT): the map drawn past the GBA's edges to fill a wide screen; see below.
+
 <details>
 <summary><strong>Languages</strong></summary>
 
@@ -144,13 +178,6 @@ under LANGUAGE in either Settings screen. Species, move and item names and the G
 - **Rewind** (optional, Settings > REWIND): hold the REWIND HOLD hotkey (R on a keyboard; pick a pad button in
   HOTKEYS) to play the last ~20 seconds backwards. It never touches your save file.
 - **Status bar** (optional): game, location, money, clock and battery above the game.
-- **HUD** (Settings > HUD, on by default): your party (levels, HP, status), a minimap, your Poké Balls and
-  BAG / WILD buttons on the game screen while you walk around, like a modern Pokémon game. A tap opens a Pokémon's
-  summary, the whole map (with FLY), a compact bag with USE, or the area's wild Pokémon; the game keeps running under
-  them. Three layouts (corners, side rails, a bottom dock), two looks (see-through glass or the app's windows), three
-  sizes, and each part can be hidden. It steps aside for battles, menus and (with EXPAND) conversations.
-- **Battle buttons** (one screen, Settings > BATTLE BUTTONS, on by default): FIGHT, POKéMON and RUN at the top right,
-  beside the battle. FIGHT opens your moves and POKéMON your party in a window, as on the BATTLE tab.
 - **Aspect**: the game's own shape (the GBA's 3:2, the Game Boy's 10:9), stretched to fill a 16:9 top screen, or **EXPAND**: the overworld drawn past the
   GBA's edges - beside the game on a wide screen, above and below it on a phone held upright - so the screen shows
   more of the map with the pixels kept square (FireRed, LeafGreen, Emerald, Ruby and

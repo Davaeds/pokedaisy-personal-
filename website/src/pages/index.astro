@@ -37,20 +37,29 @@ const player = [
   ['dpad', 'CONTROLS', 'Remap every button and hotkey. Touch controls when no pad is connected.'],
   ['star', 'ACHIEVEMENTS', 'RetroAchievements while you play, with the game\'s own level-up fanfare.'],
 ];
+const oneScreen = [
+  ['orb', 'HUD', 'Your party, a minimap, your Poké Balls and BAG / WILD buttons on the game screen as you walk, like a modern Pokémon game. Tap any of it.'],
+  ['ring', 'QUICK MENU', 'One button opens a ring of shortcuts: your PC, FLY, BIKE, ROD, save states, fast-forward. Aim with the stick.'],
+  ['battle', 'BATTLE BUTTONS', 'FIGHT, POKéMON and RUN beside the battle. Your moves rated against the foe, the best switch tagged.'],
+  ['single', 'COMPANION WINDOW', 'Every tab in a window over the game, or a panel locked beside it. The D-pad and A work it like the game\'s menus.'],
+  ['tv', 'EXPAND', 'The map drawn past the GBA\'s edges to fill a wide screen, rebuilt every frame from the game itself.'],
+  ['phone', 'PHONES, UPRIGHT', 'The game across the top, the companion docked under it. Drag its edge to pick the size.'],
+];
 const deviceList = [
   ['dual', 'AYN THOR', 'Made for it, tested daily.', 'TESTED', 'f-pillGreen'],
   ['dual', 'RETROID POCKET DUO LITE', 'Its 4:3 bottom screen gets a layout of its own. The original Duo should work too.', 'SUPPORTED', 'f-pillGreen'],
   ['dual', 'ANBERNIC RG DS', 'SWAP SCREENS puts the game on its top display.', 'SHOULD WORK', 'f-pillYellow'],
-  ['single', 'ONE SCREEN', 'The companion slides in beside the game. Tested on the Retroid Pocket 6.', 'TESTED', 'f-pillBlue'],
+  ['single', 'ONE SCREEN', 'The companion opens as a window over the game or a panel beside it, with the HUD and quick menu on the game. Tested on the Retroid Pocket 6.', 'TESTED', 'f-pillBlue'],
   ['phone', 'PHONES, UPRIGHT', 'Hold an Android phone upright: the game on top, the companion under it. New: so far checked in screenshots only.', 'NEW', 'f-pillRed'],
+  ['tv', 'A PHONE AND A TV', 'Cast your phone to a TV or plug one in: the game on the big screen, the companion in your hand.', 'SHOULD WORK', 'f-pillYellow'],
   ['moreDevice', 'COMING SOON', 'More handhelds, tablets and foldables. Want yours supported? Ask for it below.', 'SOON', 'f-pillGrey'],
 ];
-const ticker = ['GB · GBC · GBA', 'PARTY', 'BAG', 'BATTLE', 'MAP', 'DEX', 'GUIDE', 'TRAINER CARD', 'SAVE STATES', 'FAST-FORWARD', 'SHADERS', 'ACHIEVEMENTS', `${gameCount} GAMES`];
+const ticker = ['GB · GBC · GBA', 'TWO SCREENS OR ONE', 'PARTY', 'BAG', 'BATTLE', 'MAP', 'DEX', 'GUIDE', 'TRAINER CARD', 'SAVE STATES', 'HUD', 'QUICK MENU', 'FAST-FORWARD', 'SHADERS', 'ACHIEVEMENTS', `${gameCount} GAMES`];
 const title = 'POKEDAISY'.split('');
 ---
 <Base
   title="PokeDaisy: Game Boy Pokémon with a live companion"
-  description="A free player for Game Boy, Game Boy Color and Game Boy Advance Pokémon games on Android handhelds with two screens or one: the game, and a live companion with your party, battles, map, dex and guide on the second screen or right beside it."
+  description="A free player for Game Boy, Game Boy Color and Game Boy Advance Pokémon games on Android handhelds with two screens or one: the game, and a live companion with your party, battles, map, dex and guide on the second screen or right beside it, plus a HUD and a quick menu on the game screen."
 >
   <!-- Hero -->
   <section class="hero container">
@@ -110,7 +119,7 @@ const title = 'POKEDAISY'.split('');
     <div class="section-head center">
       <span class="eyebrow">THE COMPANION</span>
       <h2 class="heading">A live companion that reads your game</h2>
-      <p class="lead">Everything is read straight from the game as you play, and drawn in its own menu style. No typing, no alt-tabbing to a wiki.</p>
+      <p class="lead">On the bottom screen, or in a window over the game on one. Everything is read straight from the game as you play, and drawn in its own menu style. No typing, no alt-tabbing to a wiki.</p>
     </div>
     <div class="feature-grid">
       {companion.map(([icon, name, text], i) => (
@@ -165,12 +174,32 @@ const title = 'POKEDAISY'.split('');
     </div>
   </section>
 
+  <!-- One screen -->
+  <section class="block container">
+    <div class="section-head center">
+      <span class="eyebrow">ONE SCREEN</span>
+      <h2 class="heading">Everything at hand on a single screen</h2>
+      <p class="lead">No second screen? Your team, the map and your bag sit on the game as you walk, and every shortcut is one button away. Handy on two screens as well.</p>
+    </div>
+    <div class="player-grid">
+      {oneScreen.map(([icon, name, text], i) => (
+        <article class="player-item" data-reveal style={`--i:${i % 3}`}>
+          <span class="player-icon f-card"><Pixel name={icon} scale={1} /></span>
+          <div>
+            <h3 class="player-name">{name}</h3>
+            <p class="small muted">{text}</p>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
   <!-- Devices -->
   <section class="block container">
     <div class="section-head">
       <span class="eyebrow">DEVICES</span>
       <h2 class="heading">Two screens or one</h2>
-      <p class="lead">On a dual-screen handheld the companion gets a screen of its own. On one screen it sits right beside the game, or under it on a phone held upright.</p>
+      <p class="lead">On a dual-screen handheld the companion gets a screen of its own. On one screen it sits right beside the game, or under it on a phone held upright. On a dual-screen handheld, SINGLE SCREEN plays it that way and frees the second screen for other apps.</p>
     </div>
     <div class="device-grid">
       {deviceList.map(([icon, name, text, status, frame], i) => (

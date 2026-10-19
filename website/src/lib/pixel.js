@@ -384,6 +384,28 @@ SPRITES.dual = {
     '.KKKKKKKKKKKK.',
   ],
 };
+// The quick menu's ring of action tiles.
+SPRITES.ring = {
+  pal: { K: INK, R: '#e83028', B: '#3d6fe0', G: '#58c058', Y: '#f8d030', P: '#9058d8', O: '#f08030', S: '#909098' },
+  rows: [
+    '.....KKKK.....',
+    '.....KRRK.....',
+    '.....KRRK.....',
+    'KKKK.KKKK.KKKK',
+    'KOOK......KBBK',
+    'KOOK......KBBK',
+    'KKKK......KKKK',
+    '......SS......',
+    '......SS......',
+    'KKKK......KKKK',
+    'KPPK......KGGK',
+    'KPPK......KGGK',
+    'KKKK.KKKK.KKKK',
+    '.....KYYK.....',
+    '.....KYYK.....',
+    '.....KKKK.....',
+  ],
+};
 SPRITES.single = {
   pal: { K: INK, U: '#58a0f0', W: '#d8f0ff', L: '#c8c8d0' },
   rows: [

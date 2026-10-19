@@ -6,7 +6,7 @@ order: 1
 keywords: [about, intro, introduction, overview, what is, getting started, manual, help, faq, emulator, gba]
 ---
 
-PokeDaisy is a Game Boy, Game Boy Color and Game Boy Advance player for Android, made for Pokémon games. Beside your game runs a live **companion** that reads it while you play: your party, your bag, the map you're on, how the current battle is going, your Pokédex and a guide that hints before it tells. On a dual-screen handheld like the AYN Thor, the companion gets the bottom screen to itself. On a handheld with one screen it slides in beside the game, and on a phone held upright it sits under it.
+PokeDaisy is a Game Boy, Game Boy Color and Game Boy Advance player for Android, made for Pokémon games. Beside your game runs a live **companion** that reads it while you play: your party, your bag, the map you're on, how the current battle is going, your Pokédex and a guide that hints before it tells. On a dual-screen handheld like the AYN Thor, the companion gets the bottom screen to itself. On a handheld with one screen it opens as a window over the game or a panel beside it, and on a phone held upright it sits under it.
 
 You never have to pause and open a menu to check a Pokémon's moves or look up what an attack does against a type. One glance, and it's there, drawn in the game's own menu style.
 
@@ -24,7 +24,7 @@ Ready? [Install and first setup](install.md) walks you through the first five mi
 
 PokeDaisy was built on the **AYN Thor**, and the companion is laid out for its bottom screen. The **Retroid Pocket Duo Lite** gets its own layout for its squarer bottom screen. Other dual-screen devices should work, and `SWAP SCREENS` handles one whose main display is the bottom screen.
 
-With one screen, the companion becomes a panel you slide in beside the game, or, on a phone held upright, a strip docked under it. [Screens and devices](devices.md) covers all of it.
+With one screen, the companion opens as a window over the game (or a panel beside it), or, on a phone held upright, a strip docked under it. The [HUD](hud.md) keeps your party, a minimap and your bag on the game screen while you walk, and the [quick menu](controls.md#the-quick-menu) puts your PC, `FLY`, your bike, your rod and save states one button away. [Screens and devices](devices.md) covers all of it.
 
 ## A quick tour
 
