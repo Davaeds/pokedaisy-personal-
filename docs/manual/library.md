@@ -3,12 +3,12 @@ title: Your game library
 summary: Add games, sort and favorite them, set covers, and use each game's menu for saves, info, cheats and more.
 section: start
 order: 4
-keywords: [games list, add rom, import, folder, zip, 7z, archive, cover, box art, artwork, icon, steamgriddb, rename, delete, hide, favourite, star, sort, grid, list view, frontend, es-de, esde, iisu, cocoon, launcher]
+keywords: [games list, add rom, import, folder, zip, 7z, archive, cover, box art, artwork, icon, steamgriddb, rename, delete, hide, favourite, star, sort, grid, list view, frontend, es-de, esde, iisu, cocoon, launcher, filter, tabs, recently played, history, hacks, game boy, gbc, gba, console, platform]
 ---
 
-The library is the first thing you see when you open PokeDaisy: every game you've added, with the ones you played last at the top. Tap a game to play it.
+The library is the first thing you see when you open PokeDaisy: every game you've added, in the order you pick. Tap a game to play it.
 
-![The library in list view: a RECENTLY PLAYED row of three games above ALL GAMES, with the header's sort, view, add, refresh, help and settings buttons](shots/library-list.png "The library in list view")
+![The library in list view: the header's sort, view, add, refresh, help and settings buttons, a row of coloured quick views (ALL, FAVORITES, RECENT, GB, GBC, GBA, HACKS) and the games under them](shots/library-list.png "The library in list view")
 
 The buttons in the header, from left to right:
 
@@ -21,7 +21,27 @@ The buttons in the header, from left to right:
 | `?` | Opens this manual. |
 | Gear | Opens Settings. |
 
-The `RECENTLY PLAYED` row shows the last few games you played, and `ALL GAMES` lists everything. The game you have open says `PLAYING`, and a small save icon next to a name means it has a save file.
+The game you have open says `PLAYING`, and a small save icon next to a name means it has a save file.
+
+## Quick views
+
+The row of coloured buttons under the header narrows the library down to one kind of game. Tap one to see only those games; the open one is filled with its colour. The number on each says how many games it holds.
+
+| View | What it shows |
+| --- | --- |
+| `ALL` | Every game. |
+| `FAVORITES` | The games you starred (see [Sorting and favorites](#sorting-and-favorites)). |
+| `RECENT` | Every game you've played, the one you played last first, whatever the sort order. |
+| `GB` | Game Boy games. |
+| `GBC` | Game Boy Color only games. |
+| `GBA` | Game Boy Advance games. |
+| `HACKS` | ROM hacks. |
+
+The console views and `HACKS` use the same colours as the covers of games without art (see [Cover art](#cover-art)), and each one only shows while your library has such a game. A hack is in `HACKS` and in its console's view too, so a FireRed hack shows under `GBA` as well.
+
+![The GBC quick view open: its button filled in yellow stripes, and only the Game Boy Color games listed](shots/library-views.png "A quick view")
+
+The library remembers the view you picked, also after you close the app. A view that has nothing yet tells you how to fill it.
 
 ## Adding games
 
@@ -73,7 +93,7 @@ A game that appeared in the last 24 hours wears a green `NEW` tag. Games that we
 
 ## The game menu
 
-Long-press a game, in the list, the grid or `RECENTLY PLAYED`, to open its menu. In list view, the three dots at the end of a row open it too.
+Long-press a game, in the list or the grid, to open its menu. In list view, the three dots at the end of a row open it too.
 
 ![A game's menu open over the library: UNFAVORITE, INFO, RENAME, REPLACE COVER, SET COVER, LOAD SAVE, RESTORE BACKUP, SAVE FOLDER, CHEATS, HIDE and DELETE](shots/library-menu.png "A game's menu")
 
@@ -124,9 +144,9 @@ To use your own image instead, tap `SET COVER` in the menu and pick a picture fr
 
 ## The dual-screen launcher
 
-On a device with two screens, the library is made for buttons. It's the same library: `RECENTLY PLAYED` at the top, then all your games as a list or a grid (the view button in the header switches), each row with where its file is.
+On a device with two screens, the library is made for buttons. It's the same library: the [quick views](#quick-views) at the top, then the open view's games as a list or a grid (the view button in the header switches), each row with where its file is.
 
-The D-pad moves a cursor through it: up and down a row, left and right along `RECENTLY PLAYED` or a row of the grid. Up from the top of the list reaches the header's buttons (sort, view, import and the rest); A presses one, down or B goes back. L and R jump a page. A small legend in the corner reminds you of the rest:
+The D-pad moves a cursor through it: up and down a row, left and right along a row of the grid. Up from the top of the list reaches the quick views: left and right open the next view, and down, A or B go back to the games. Up once more reaches the header's buttons (sort, view, import and the rest); A presses one, down or B goes back. L and R jump a page. A small legend in the corner reminds you of the rest:
 
 - **A** opens the game.
 - **B** opens the game's menu (the same entries as a long press). Whatever an entry opens, like `INFO`, B takes you back to the menu.
@@ -159,7 +179,7 @@ From a linked folder, the library lists the supported games plus any unsupported
 
 ## Using a D-pad or controller
 
-The library works without touching the screen. Move with the D-pad; the selected game or button gets an orange outline. Press up from the top row of games to reach the header's buttons.
+The library works without touching the screen. Move with the D-pad; the selected game or button gets an orange outline. Press up from the top row of games to reach the quick views, and up again for the header's buttons.
 
 ## Launching from a frontend
 

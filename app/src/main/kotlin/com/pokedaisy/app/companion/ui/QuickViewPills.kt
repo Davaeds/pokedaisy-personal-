@@ -150,12 +150,21 @@ private fun QuickViewPill(
             Spacer(Modifier.width(u * 3))
         }
         // The list's smaller text (the paths'): the rows' size made the row too loud on a big screen.
-        GbaText(tr(view.label), text, shadow, small)
+        GbaText(quickViewLabel(view), text, shadow, small)
         if (count != null) {
             Spacer(Modifier.width(u * 3))
             GbaText(count.toString(), text.copy(alpha = 0.7f), Color.Transparent, small)
         }
     }
+}
+
+/** [view]'s name in the app's language (literal keys, for the translation check); the consoles' stay as they are. */
+fun quickViewLabel(view: LibraryView): String = when (view) {
+    LibraryView.ALL -> tr("ALL")
+    LibraryView.FAVORITES -> tr("FAVORITES")
+    LibraryView.RECENT -> tr("RECENT")
+    LibraryView.HACKS -> tr("HACKS")
+    else -> view.label
 }
 
 /** A pill's corner, in GBA pixels: a rounded box rather than a full pill. */

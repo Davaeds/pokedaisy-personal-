@@ -720,13 +720,14 @@ fun favoriteLibrary() {
 
 /**
  * [favoriteLibrary] with a game on every console (Yellow, Crystal, a Crystal hack, Platinum - DS turned on), so every quick
- * view has a pill, and a play history (Emerald last, then Crystal, Unbound, Yellow) for RECENTLY PLAYED; [view] open.
+ * view has a pill, and a play history (Emerald last, then Crystal, Unbound, Yellow) for RECENT; [view] open.
  */
-fun platformLibrary(view: com.pokedaisy.app.LibraryView = com.pokedaisy.app.LibraryView.ALL) {
+fun platformLibrary(view: com.pokedaisy.app.LibraryView = com.pokedaisy.app.LibraryView.ALL, ds: Boolean = true) {
     favoriteLibrary()
     val ctx = android.content.Context()
     val prefs = Prefs(ctx)
-    for (dir in listOfNotNull(ctx.filesDir, ctx.getExternalFilesDir(null))) File(dir, "features").apply { mkdirs() }.resolve("nds").writeText("")
+    // DS games behind their flag (FeatureFlags.nds): the manual's shots leave them out while it's off for players.
+    if (ds) for (dir in listOfNotNull(ctx.filesDir, ctx.getExternalFilesDir(null))) File(dir, "features").apply { mkdirs() }.resolve("nds").writeText("")
     val roms = File(ctx.filesDir, "roms")
     val extra = mapOf(
         "Pokemon - Yellow Version (USA, Europe).gb" to Triple("Pokémon Yellow", "GB", "GB"),
@@ -741,10 +742,8 @@ fun platformLibrary(view: com.pokedaisy.app.LibraryView = com.pokedaisy.app.Libr
     com.pokedaisy.app.RomAdded.reload()
     // Every game's title, category and console (GameTitles' cache): the activity()'s six are GBA.
     val titles = File(ctx.filesDir, "rom-titles.tsv")
-    // "#categories" as GameTitles writes it: without it every category reads as stale (asked again, never here).
-    // And "#known" (GameTitles.KNOWN), else the nameless games' rows read as stale too.
-    val known = com.pokedaisy.app.GameTitles::class.java.getDeclaredField("KNOWN").apply { isAccessible = true }.get(null) as String
-    val lines = listOf(known, "#categories\t2") + titles.readLines().filter { it.isNotBlank() && !it.startsWith("#") }.map { "$it\tGBA" } + extra.map { (n, t) ->
+    // activity()'s rows (its headers and six GBA carts) and these.
+    val lines = titles.readLines().filter { it.isNotBlank() } + extra.map { (n, t) ->
         val f = File(roms, n)
         "${f.absolutePath}\t${f.length()}\t${f.lastModified()}\t${t.first}\t${t.second}\t${t.third}"
     }
@@ -796,11 +795,14 @@ fun activity(expandIntro: Boolean = false, start: Boolean = false, make: () -> a
     // What GameTitles.identify would have cached for the real ROMs (the fakes don't hash to them).
     val titles = mapOf(names[1] to "Pokémon Unbound", names[2] to "Pokémon Emerald", names[3] to "Pokémon Radical Red", names[4] to "Pokémon Gaia")
     // ... and what kind each is (the cover when a game has no art): Emerald retail GBA, the rest hacks.
-    File(ctx.filesDir, "rom-titles.tsv").writeText(names.joinToString("") { n ->
+    // Headed like GameTitles writes it (#known, #categories), else every row reads as stale; all GBA carts.
+    val known = com.pokedaisy.app.GameTitles::class.java.getDeclaredField("KNOWN").apply { isAccessible = true }.get(null) as String
+    File(ctx.filesDir, "rom-titles.tsv").writeText("$known\n#categories\t2\n" + names.joinToString("") { n ->
         val f = File(roms, n)
         val kind = if (n == names[2]) "GBA" else "HACK"
-        "${f.absolutePath}\t${f.length()}\t${f.lastModified()}\t${titles[n].orEmpty()}\t$kind\n"
+        "${f.absolutePath}\t${f.length()}\t${f.lastModified()}\t${titles[n].orEmpty()}\t$kind\tGBA\n"
     })
+    com.pokedaisy.app.GameTitles.reload()
     File(ctx.filesDir, "saves").mkdirs()
     File(ctx.filesDir, "saves/firered-hack.sav").writeText("x")
     val prefs = Prefs(ctx)
@@ -1499,7 +1501,7 @@ fun main(args: Array<String>) {
             }
         }),
         Shot("library-list", tw, th, td, activity { LibraryActivity() }),
-        // The quick views (pills over the games): ALL, FAVORITES, RECENTLY PLAYED and one per console the library holds,
+        // The quick views (pills over the games): ALL, FAVORITES, RECENT, one per console the library holds and HACKS,
         // each in its colour; the open one striped like the console's cover art.
         Shot("library-views", tw, th, td, activity { platformLibrary(); LibraryActivity() }),
         Shot("library-views-grid", tw, th, td, activity { platformLibrary(); LibraryActivity() }) {
@@ -1512,6 +1514,9 @@ fun main(args: Array<String>) {
         Shot("library-views-gba", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.GBA); LibraryActivity() }),
         Shot("library-views-ds", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.DS); LibraryActivity() }),
         Shot("library-views-hacks", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.HACKS); LibraryActivity() }),
+        // The manual's (DocsShots): no DS game, as players have it while DS is behind its flag.
+        Shot("library-views-nods", tw, th, td, activity { platformLibrary(ds = false); LibraryActivity() }),
+        Shot("library-views-gbc-nods", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.GBC, ds = false); LibraryActivity() }),
         Shot("library-views-phone", 1080, 2400, 2.625f, activity { platformLibrary(com.pokedaisy.app.LibraryView.GBA); LibraryActivity() }) {
             mainClock.advanceTimeBy(500)   // the open pill scrolled into view
         },
@@ -1546,11 +1551,22 @@ fun main(args: Array<String>) {
             pressKey(android.view.KeyEvent.KEYCODE_DPAD_DOWN)
         },
         // After X: the media on the top screen (its wide layout), the list on the bottom.
-        // RECENTLY PLAYED and the grid view, as the classic library has them; DOWN takes the cursor off the strip.
+        // The quick views and the grid view, as the classic library has them; DOWN moves the cursor a game down.
         Shot("launcher-main-down", tw, th, td, launcher()) { pressKey(android.view.KeyEvent.KEYCODE_DPAD_DOWN) },
-        // UP off RECENTLY PLAYED: the header's sort button; RIGHT walks the header.
-        Shot("launcher-header", tw, th, td, launcher()) { pressKey(android.view.KeyEvent.KEYCODE_DPAD_UP) },
+        // UP off the top game: the open quick view's pill; RIGHT opens the next view (FAVORITES, then RECENT).
+        Shot("launcher-views", tw, th, td, launcher()) { pressKey(android.view.KeyEvent.KEYCODE_DPAD_UP) },
+        Shot("launcher-views-right", tw, th, td, launcher()) {
+            pressKey(android.view.KeyEvent.KEYCODE_DPAD_UP)
+            pressKey(android.view.KeyEvent.KEYCODE_DPAD_RIGHT)
+            pressKey(android.view.KeyEvent.KEYCODE_DPAD_RIGHT)
+        },
+        // UP again: the header's sort button; RIGHT walks the header.
+        Shot("launcher-header", tw, th, td, launcher()) {
+            pressKey(android.view.KeyEvent.KEYCODE_DPAD_UP)
+            pressKey(android.view.KeyEvent.KEYCODE_DPAD_UP)
+        },
         Shot("launcher-header-right", tw, th, td, launcher()) {
+            pressKey(android.view.KeyEvent.KEYCODE_DPAD_UP)
             pressKey(android.view.KeyEvent.KEYCODE_DPAD_UP)
             pressKey(android.view.KeyEvent.KEYCODE_DPAD_RIGHT)
         },
@@ -1744,10 +1760,6 @@ fun main(args: Array<String>) {
             mainClock.advanceTimeBy(500)
             onAllNodesWithText("Pokémon Radical Red")[0].performSemanticsAction(SemanticsActions.RequestFocus)
         },
-        // The RECENTLY PLAYED row scrolled to its end: the last tile meets the screen's edge, not an inner box's.
-        Shot("library-list-phone-recent-end", 1080, 2400, 2.625f, activity { LibraryActivity() }) {
-            onAllNodesWithText("Pokémon Emerald")[0].performScrollTo()
-        },
         // A phone held upright (1080x2400 @ 2.625, a Pixel 6): the library before a game opens.
         Shot("library-list-phone", 1080, 2400, 2.625f, activity { LibraryActivity() }),
         Shot("library-grid-phone", 1080, 2400, 2.625f, activity { LibraryActivity() }) {
@@ -1762,12 +1774,11 @@ fun main(args: Array<String>) {
         Shot("library-grid", tw, th, td, activity { LibraryActivity() }) {
             onNodeWithContentDescription("Toggle view").performClick()
         },
-        // Long-pressing a library tile (not the RECENTLY PLAYED copy) opens its
-        // options. Taller than the screen so the first row of tiles is whole.
+        // Long-pressing a library tile opens its options. Taller than the screen so the first row of tiles is whole.
         Shot("library-grid-menu", tw, th * 2, td, activity { LibraryActivity() }) {
             onNodeWithContentDescription("Toggle view").performClick()
             mainClock.advanceTimeBy(500) // lay the grid out before looking for its tiles
-            onAllNodesWithText("Pokémon Emerald")[1].performSemanticsAction(SemanticsActions.OnLongClick)
+            onAllNodesWithText("Pokémon Emerald")[0].performSemanticsAction(SemanticsActions.OnLongClick)
         },
         // INFO on a game (hashes and all), and LOAD SAVE's confirm over a game that has a save.
         Shot("library-info", tw, th, td, activity {
