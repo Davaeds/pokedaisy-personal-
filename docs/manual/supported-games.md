@@ -29,7 +29,8 @@ Any GBA, Game Boy or DS game plays in PokeDaisy. "Supported" is about the compan
 **Nintendo DS:**
 
 - Pokémon Platinum: the USA release, revision 1.
-- Pokémon HeartGold and SoulSilver: the USA releases.
+- Pokémon HeartGold: the USA release.
+- Pokémon SoulSilver: the USA release.
 
 The companion reads their party, bag, map, Pokédex and guide, with pictures, Pokédex pages and the map read from your cart. Platinum's battles show in the `BATTLE` tab; HeartGold's and SoulSilver's don't yet. [Screens and devices](devices.md#ds-games) has how a DS game uses your screens.
 
