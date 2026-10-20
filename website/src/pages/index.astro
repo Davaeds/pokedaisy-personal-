@@ -37,12 +37,12 @@ const player = [
   ['dpad', 'CONTROLS', 'Remap every button and hotkey. Touch controls when no pad is connected.'],
   ['star', 'ACHIEVEMENTS', 'RetroAchievements while you play, with the game\'s own level-up fanfare.'],
 ];
-const oneScreen = [
+const onGame = [
   ['orb', 'HUD', 'Your party, a minimap, your Poké Balls, the spray\'s steps left and PC / BAG / WILD buttons on the game screen as you walk, like a modern Pokémon game. Tap any of it.'],
-  ['ring', 'QUICK MENU', 'One button opens a ring of shortcuts: your PC, FLY, the keep-away spray, BIKE, ROD, wild encounters on and off, save states, fast-forward. Aim with the stick.'],
-  ['battle', 'BATTLE BUTTONS', 'FIGHT, POKéMON and RUN beside the battle. Your moves rated against the foe, the best switch tagged.'],
-  ['single', 'COMPANION WINDOW', 'Every tab in a window over the game, or a panel locked beside it. The D-pad and A work it like the game\'s menus.'],
   ['zoom', 'EXPAND, ZOOM, LOOK AROUND', 'The map drawn past the game\'s edges to fill a wide screen, rebuilt every frame from the game itself. ZOOM steps out to see more of the area, and the right stick looks around.'],
+  ['ring', 'QUICK MENU', 'One button opens a ring of shortcuts: your PC, FLY, the keep-away spray, BIKE, ROD, wild encounters on and off, save states, fast-forward. Aim with the stick.'],
+  ['battle', 'BATTLE BUTTONS', 'On one screen, FIGHT, POKéMON and RUN beside the battle. Your moves rated against the foe, the best switch tagged.'],
+  ['single', 'COMPANION WINDOW', 'On one screen, every tab in a window over the game, or a panel locked beside it. The D-pad and A work it like the game\'s menus.'],
   ['phone', 'PHONES, UPRIGHT', 'The game across the top, the companion docked under it. Drag its edge to pick the size.'],
 ];
 const qol = [
@@ -122,6 +122,26 @@ const title = 'POKEDAISY'.split('');
     </div>
   </div>
 
+  <!-- On the game screen: on two screens or one -->
+  <section class="block container">
+    <div class="section-head center">
+      <span class="eyebrow">ON THE GAME SCREEN</span>
+      <h2 class="heading">Everything at hand, right on the game</h2>
+      <p class="lead">Your team, a minimap and your bag on the game as you walk, the map drawn past the screen's edges, and every shortcut one button away. On two screens or one.</p>
+    </div>
+    <div class="player-grid">
+      {onGame.map(([icon, name, text], i) => (
+        <article class="player-item" data-reveal style={`--i:${i % 3}`}>
+          <span class="player-icon f-card"><Pixel name={icon} scale={1} /></span>
+          <div>
+            <h3 class="player-name">{name}</h3>
+            <p class="small muted">{text}</p>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
   <!-- Companion -->
   <section class="block container" id="features">
     <div class="section-head center">
@@ -171,26 +191,6 @@ const title = 'POKEDAISY'.split('');
     </div>
     <div class="player-grid">
       {player.map(([icon, name, text], i) => (
-        <article class="player-item" data-reveal style={`--i:${i % 3}`}>
-          <span class="player-icon f-card"><Pixel name={icon} scale={1} /></span>
-          <div>
-            <h3 class="player-name">{name}</h3>
-            <p class="small muted">{text}</p>
-          </div>
-        </article>
-      ))}
-    </div>
-  </section>
-
-  <!-- One screen -->
-  <section class="block container">
-    <div class="section-head center">
-      <span class="eyebrow">ONE SCREEN</span>
-      <h2 class="heading">Everything at hand on a single screen</h2>
-      <p class="lead">No second screen? Your team, the map and your bag sit on the game as you walk, and every shortcut is one button away. Handy on two screens as well.</p>
-    </div>
-    <div class="player-grid">
-      {oneScreen.map(([icon, name, text], i) => (
         <article class="player-item" data-reveal style={`--i:${i % 3}`}>
           <span class="player-icon f-card"><Pixel name={icon} scale={1} /></span>
           <div>
