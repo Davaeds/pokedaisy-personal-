@@ -86,6 +86,10 @@ void pk_nds_wide_enable(bool on);
 // unseen frame skips the screens' conversion and EXPAND's composing, and EXPAND's slices are drawn only before a seen
 // one. Both true by default. Emu thread, before pk_nds_run_frame.
 void pk_nds_set_draw(bool draw, bool drawNext);
+// Whether the last pk_nds_run_frame drew its frame: not when pk_nds_set_draw said so, nor when the frame before it
+// promised it wouldn't be seen (drawNext false) - its 3D was never rendered. An undrawn frame leaves the screens and
+// EXPAND's frame as the last drawn one left them. Emu thread.
+bool pk_nds_frame_drawn(void);
 // After pk_nds_run_frame: the window [x, x + w) x [y, y + h) of the last frame into out (w x h RGBA words) - the
 // margins black off the overworld. Returns false when EXPAND is off. Emu thread.
 bool pk_nds_wide_draw(uint32_t* out, int x, int y, int w, int h);

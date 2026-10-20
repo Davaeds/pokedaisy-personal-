@@ -1769,8 +1769,11 @@ HP boxes, the text box and the field menu's bar to the edges, from the nearest s
 a flicker in the intro doesn't reach the margins).
 
 **Fast-forward.** A shown frame of an FF group draws; the others skip drawing (above), which took 4x from ~200 to 240
-DS frames a second on the Thor. SMART's battle wait reads HG/SS's `BattleContext.command` (5 =
-SELECTION_SCREEN_INPUT) and reports it as `MgbaCore.FIELD_BATTLE_INPUT`. STEADY music is a second melonDS loaded from
+DS frames a second on the Thor. Whether the next frame is seen is decided a frame ahead (its 3D starts at line 215,
+EXPAND's slices are drawn after the frame before), and FF can end a group part-way (SMART's 1x for a menu, FF off, the
+refresh pacing dropping out): `pk_nds_run_frame` then skips that frame too and shows the next, whole - drawn, it came
+up with an older frame's 3D and EXPAND's margins black, a flash each time (nds_dump's `ffmode` / `ffgroup` / `ffguard`).
+SMART's battle wait reads HG/SS's `BattleContext.command` (5 = SELECTION_SCREEN_INPUT) and reports it as `MgbaCore.FIELD_BATTLE_INPUT`. STEADY music is a second melonDS loaded from
 the game's own state with its ARM9 stopped: the sound driver runs on the ARM7 from data already in RAM, so it plays on
 from that moment by itself, loops and tempo included. Its ARM7 FIFO must be drained every frame as the ARM9 would (a
 full FIFO stalls the driver into a buzz); a new song id starts a new copy, a song fading out in the game fades the copy.

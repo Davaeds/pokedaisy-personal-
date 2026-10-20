@@ -67,6 +67,7 @@ struct Ds {
     const PkNdsFieldGame* field = nullptr;   // the field read's table entry for this cart, if any
     bool wide = false;                       // EXPAND on (pk_nds_wide_enable)
     bool draw = true, drawNext = true;       // this frame / the next one is shown (pk_nds_set_draw: fast-forward's skips)
+    bool drawn = true;                       // the last frame was drawn (pk_nds_frame_drawn)
     int fieldBits = 0;                       // the field read after the last frame
     bool wildOff = false;                    // WILD ENCOUNTERS OFF (pk_nds_field.cpp holds the map's rates at 0)
 };
@@ -261,11 +262,19 @@ void pk_nds_run_frame(void)
     if (t & 0x80000000u) nds->TouchScreen((u16) ((t >> 8) & 0xFF), (u16) (t & 0xFF));
     else nds->ReleaseScreen();
     // A frame no one will see (fast-forward shows one of each group) isn't drawn at all: no 2D lines, no 3D.
-    nds->GPU.SkipDraw = !ds->draw;
-    nds->GPU.SkipDrawNext = !ds->drawNext;
+    // drawNext is a promise made a frame ahead (the 3D for this frame was started, or not, at the last one's line 215;
+    // EXPAND's slices for it were drawn, or not, after the last one), and fast-forward can break it: SMART's 1x for a
+    // menu, FF off, the refresh pacing dropping out all end a group part-way. A frame whose 3D was skipped can't be
+    // shown - its 3D would be an older frame's and EXPAND's margins black (a flash) - so it's skipped too, and the
+    // next one, drawn whole, is shown in its place.
+    bool draw = ds->draw && !nds->GPU.SkippingFrame;
+    bool drawNext = ds->drawNext || (ds->draw && !draw);
+    ds->drawn = draw;
+    nds->GPU.SkipDraw = !draw;
+    nds->GPU.SkipDrawNext = !drawNext;
     nds->RunFrame();
     int fb = nds->GPU.FrontBuffer;
-    if (ds->draw) {
+    if (draw) {
         convert(nds->GPU.Framebuffer[fb][0].get(), ds->top);
         convert(nds->GPU.Framebuffer[fb][1].get(), ds->bottom);
     }
@@ -275,7 +284,7 @@ void pk_nds_run_frame(void)
     if (ds->wide) {
         // The overworld only: the field map on screen with nothing over it (a text box keeps it).
         bool overworld = (ds->fieldBits & PK_NDS_FIELD_SCREEN) && !(ds->fieldBits & (PK_NDS_FIELD_MENU | PK_NDS_FIELD_BATTLE));
-        pk_nds_wide_frame(nds, nds->GPU.Framebuffer[fb][0].get(), ds->draw, overworld, ds->drawNext,
+        pk_nds_wide_frame(nds, nds->GPU.Framebuffer[fb][0].get(), draw, overworld, drawNext,
             (ds->fieldBits & PK_NDS_FIELD_BATTLE) != 0);
     }
     if (ds->saveDirty && ++ds->saveQuiet >= SAVE_QUIET_FRAMES) pk_nds_flush_save();
@@ -490,6 +499,8 @@ void pk_nds_set_draw(bool draw, bool drawNext)
     ds->draw = draw;
     ds->drawNext = drawNext;
 }
+
+bool pk_nds_frame_drawn(void) { return ds && ds->drawn; }
 
 void pk_nds_wide_enable(bool on)
 {

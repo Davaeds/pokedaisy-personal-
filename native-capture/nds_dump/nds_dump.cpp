@@ -11,6 +11,7 @@
 #include <GPU.h>
 #include <Savestate.h>
 #include <Args.h>
+#include <GPU3D_Soft.h>
 
 #include "pk_nds_platform.h"
 #include "pk_nds_field.h"
@@ -159,12 +160,34 @@ static u32 parseKeys(const char* s)
 // skipdraw N: as fast-forward at Nx does, only every Nth frame is drawn (GPU::SkipDraw on the others); 0 = all
 static int skipDraw = 0;
 
+// ffmode / ffgroup: the app's fast-forward pattern (EmulatorEngine's pkNdsSetDraw: GROUP frames a refresh, counted
+// down, the last one shown); drawn frames written out (recordShown) to compare two runs of one script.
+static int appGroup = 0, appPerTick = 0;
+static bool drawGuard = true;   // ffguard 0: pk_nds_run_frame's guard off (a frame drawn though its 3D was skipped)
+static int musicPerFrame = 0;   // musicon N: the STEADY copy's frames after each game frame
+static std::string recordPrefix;
+static u64 recordStart = 0;
+static void recordShown();
+
 static void runFrames(int n, u32 keys)
 {
     for (int i = 0; i < n; i++) {
         // The frames the caller looks at (the last of each run) are always drawn.
         bool draw = !skipDraw || i == n - 1 || (frameCount + 1) % skipDraw == 0;
         bool drawNext = !skipDraw || i + 1 >= n - 1 || (frameCount + 2) % skipDraw == 0;
+        if (appPerTick > 0) {
+            // EmulatorEngine's pkNdsSetDraw, as written there
+            draw = appGroup <= 1;
+            drawNext = appGroup > 1 ? appGroup <= 2 : appPerTick <= 1;
+            if (--appGroup <= 0) appGroup = appPerTick;
+        }
+        if (drawGuard) {
+            // As pk_nds_run_frame: a frame whose 3D the last one skipped (drawNext false) isn't drawn either, the next
+            // one is instead
+            bool want = draw;
+            draw = draw && !nds->GPU.SkippingFrame;
+            drawNext = drawNext || (want && !draw);
+        }
         nds->GPU.SkipDraw = !draw;
         nds->GPU.SkipDrawNext = !drawNext;
         nds->SetKeyMask(~keys & 0xFFF);
@@ -185,7 +208,46 @@ static void runFrames(int n, u32 keys)
         }
         // As the app: a battle's margins are its background, everything else the overworld's 3D.
         if (wideMargin)
-            wideDrawn = pk_nds_wide_frame(nds, nds->GPU.Framebuffer[nds->GPU.FrontBuffer][0].get(), draw, !battle, true, battle) || wideDrawn;
+            wideDrawn = pk_nds_wide_frame(nds, nds->GPU.Framebuffer[nds->GPU.FrontBuffer][0].get(), draw, !battle,
+                appPerTick > 0 ? drawNext : true, battle) || wideDrawn;
+        if (!recordPrefix.empty() && draw) recordShown();
+        if (musicPerFrame > 0) {
+            static s16 musicBuf[4096];
+            for (int k = 0; k < musicPerFrame; k++) pk_nds_music_frame(musicBuf, 2048);
+        }
+    }
+}
+
+// ffmode: a frame as shown - both screens (256x384) and, with wide on, the wide frame's window.
+struct Shown { std::vector<u32> screens, wide; int ww = 0, wh = 0; };
+
+static Shown grabShown()
+{
+    Shown s;
+    s.screens.resize(256 * 384);
+    int fb = nds->GPU.FrontBuffer;
+    for (int k = 0; k < 2; k++)
+        memcpy(s.screens.data() + k * 256 * 192, nds->GPU.Framebuffer[fb][k].get(), 256 * 192 * 4);
+    if (wideMargin && wideDrawn) {
+        int x, y;
+        pk_nds_wide_rect(&x, &y, &s.ww, &s.wh);
+        s.wide.resize((size_t) s.ww * s.wh);
+        pk_nds_wide_view(s.wide.data(), x, y, s.ww, s.wh);
+        for (u32& p : s.wide) p = 0xFF000000u | ((p & 0xFF) << 16) | (p & 0xFF00) | ((p >> 16) & 0xFF);
+    }
+    return s;
+}
+
+static void recordShown()
+{
+    Shown got = grabShown();
+    char path[600];
+    int f = (int) (frameCount - recordStart - 1);
+    snprintf(path, sizeof(path), "%s_%05d.png", recordPrefix.c_str(), f);
+    writePng(path, got.screens.data(), 256, 384);
+    if (!got.wide.empty()) {
+        snprintf(path, sizeof(path), "%s_%05d_wide.png", recordPrefix.c_str(), f);
+        writePng(path, got.wide.data(), got.ww, got.wh);
     }
 }
 
@@ -419,6 +481,33 @@ int main(int argc, char** argv)
             }
             printf("widecheck %d frames: %d overlap pixels compared, %d differ (%d by more than a texel), %d frames with those\n",
                 frames, cmpTotal, diffTotal, farTotal, badFrames);
+            fflush(stdout);
+        } else if (!strcmp(cmd, "threaded")) {
+            // threaded 1 / 0: the 3D renderer on its own thread, as the app runs it (pk_nds.cpp)
+            static_cast<SoftRenderer&>(nds->GPU.GetRenderer3D()).SetThreaded(num(a) != 0, nds->GPU);
+        } else if (!strcmp(cmd, "ffmode")) {
+            // ffmode GROUP PREFIX: from here on every command's frames run in the app's fast-forward pattern at GROUP
+            // frames a refresh (0: every frame drawn), each frame drawn written as PREFIX_<frame>.png (both screens;
+            // with wide on also PREFIX_<frame>_wide.png); ffmode off stops. Two runs of one script compared.
+            if (!strcmp(a, "off")) { appPerTick = 0; recordPrefix.clear(); continue; }
+            appPerTick = (int) num(a);
+            appGroup = appPerTick;
+            recordPrefix = b;
+            recordStart = frameCount;
+        } else if (!strcmp(cmd, "ffguard")) {
+            // ffguard 0 / 1: pk_nds_run_frame's guard (a frame whose 3D was skipped isn't shown) off / on (default)
+            drawGuard = num(a) != 0;
+        } else if (!strcmp(cmd, "ffgroup")) {
+            // ffgroup N: ffmode's frames a refresh changed to N from the next frame on (0: every frame drawn), still
+            // recording - what EmulatorEngine does when ffPerTick changes (SMART's 1x, FF off, the refresh estimate)
+            appPerTick = (int) num(a);
+            appGroup = appPerTick;
+        } else if (!strcmp(cmd, "musicon")) {
+            // musicon N: STEADY's copy begun now and run N frames after each game frame from here on, as the app runs it
+            // between its frames (0: stopped)
+            musicPerFrame = (int) num(a);
+            if (musicPerFrame > 0) printf("musicon: %s\n", pk_nds_music_begin(nds, 48000) ? "playing" : "failed");
+            else pk_nds_music_end();
             fflush(stdout);
         } else if (!strcmp(cmd, "skipdraw")) {
             skipDraw = (int) num(a);

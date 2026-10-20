@@ -43,6 +43,11 @@ X Y`, joined with commas (`A,UP`), or `NONE`.
 | `widecount` | Polygons in each slice this frame. |
 | `bgdump BG FILE` | Engine A's text BG whole, as the hardware reads it (clear = magenta). |
 | `skipdraw N` | Fast-forward's frame skip: N = 1 skips drawing, as the app does on a frame nobody sees. |
+| `threaded 1/0` | The 3D renderer on its own thread, as the app runs it (off by default here). |
+| `ffmode G PREFIX` / `ffmode off` | From here on, the app's fast-forward pattern at G frames a refresh (EmulatorEngine's `pkNdsSetDraw`; 0 = every frame drawn), each frame drawn written as `PREFIX_<frame>.png` (and `_wide.png` with `wide` on). Run one script with `ffmode 0` and `ffmode 3` in two processes and compare the files frame by frame: they must be equal. |
+| `ffgroup G` | Changes ffmode's G mid-run, as the app does when its frames a refresh change (SMART's 1x, FF off, the refresh pacing). |
+| `ffguard 1/0` | `pk_nds_run_frame`'s guard on (default) / off: a frame whose 3D the one before skipped isn't drawn. Off shows the flash it prevents. |
+| `musicon N` | STEADY's copy begun now and N of its frames run after each game frame, as the app runs it (0 stops it). |
 | `bench N` | N frames flat out, then ms a frame. |
 | `call FN [A0..A3]` | The game's function FN (Thumb: odd) from the field's main loop next frame; prints r0. |
 | `action N [A0..A3]` | One of `pk_nds_call`'s jobs (1 = PC, 2 = FLY's checks, 3 = FLY) and its results. |

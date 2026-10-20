@@ -461,7 +461,8 @@ Java_com_pokedaisy_app_MgbaCore_pkRunFrame(JNIEnv* env, jobject thiz) {
         g.audioAvail = 2 * pk_nds_read_audio(g.audio, PK_AUDIO_SCRATCH_SAMPLES);
         // EXPAND: the camera's window around the frame (the margins drawn on the overworld only)
         g.wideSkipped = false;
-        if (g.wide && g.wideCrc && g.viewW > 0 && g.viewH > 0 && g.wideSkipNext) {
+        // Not drawn (fast-forward's unseen frames, or one whose 3D the frame before skipped): nothing new to show.
+        if (g.wide && g.wideCrc && g.viewW > 0 && g.viewH > 0 && (g.wideSkipNext || !pk_nds_frame_drawn())) {
             g.wideSkipped = true;
         } else if (g.wide && g.wideCrc && g.viewW > 0 && g.viewH > 0 &&
                    pk_nds_wide_draw(g.wide, g.viewX, g.viewY, g.viewW, g.viewH)) {
