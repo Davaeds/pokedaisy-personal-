@@ -588,6 +588,31 @@ SPRITES.walker = {
     '.KYYYYYYK.', 'KSKYYYYKSK', 'KSKYYYYKSK', '.KKYYYYKK.', '..KNNNNK..', '..KNKKNK..', '..KK..KK..'],
 };
 SPRITES.bird = { pal: { K: '#3a3a48' }, rows: ['K...K', '.K.K.', '..K..'] };
+// The homepage's quality-of-life cards: a PC, the keep-away spray, grass with no encounters, a TM, running, zoom.
+SPRITES.pc = {
+  pal: { K: INK, S: '#909098', U: '#58a0f0', W: '#d8f0ff', R: '#e83028' },
+  rows: ['KKKKKKKKKKKK', 'KSSSSSSSSSSK', 'KSUUUUUUUUSK', 'KSUWWUUUUUSK', 'KSUWUUUUUUSK', 'KSUUUUUUUUSK', 'KSSSSSSSSRSK', 'KKKKKKKKKKKK', '....KSSK....', '..KKKKKKKK..', '.KSSSSSSSSK.', '.KKKKKKKKKK.'],
+};
+SPRITES.spray = {
+  pal: { K: INK, W: '#ffffff', P: '#9058d8', L: '#c8a8f8' },
+  rows: ['....KKK.....', '...KWWK.K...', '...KKKK..K..', '..KPPPPK..K.', '..KPLPPK....', '..KPLPPK....', '..KPPPPK....', '..KWWWWK....', '..KPPPPK....', '..KPLPPK....', '..KPPPPK....', '..KKKKKK....'],
+};
+SPRITES.grassOff = {
+  pal: { D: '#2f8a3a', G: '#4cb04c', L: '#78d068', R: '#e83028' },
+  rows: ['RR........RR', '.RR......RR.', '.DRR.D..RR..', 'DGDRRGDRRGD.', 'DLGDRRRRGLGD', '.DGGGRRGGGD.', 'DGLGRRRRDGLD', 'DGGRRGGRRGGD', '.DRRGGGGRRD.', 'DRRLGGGGLRRD', 'RRGGGGGGGGRR', 'RDDDDDDDDDDR'],
+};
+SPRITES.tmDisc = {
+  pal: { K: INK, B: '#58a0f0', L: '#d8f0ff', W: '#ffffff' },
+  rows: ['....KKKK....', '..KKBBBBKK..', '.KBBLBBBBBK.', '.KBLBBBBBBK.', 'KBBBBKKBBBBK', 'KBBBKWWKBBBK', 'KBBBKWWKBBBK', 'KBBBBKKBBBBK', '.KBBBBBBBBK.', '.KBBBBBBBBK.', '..KKBBBBKK..', '....KKKK....'],
+};
+SPRITES.run = {
+  pal: { K: INK, R: '#e83028', W: '#ffffff' },
+  rows: ['.....KKKK...', '.....KRRK...', '.....KRRK...', 'K....KRRKK..', '.....KRRRRK.', 'KK..KRRRRRRK', '...KRRWRRRRK', 'K.KRRRWRRRRK', '.KWWWWWWWWWK', '.KKKKKKKKKKK'],
+};
+SPRITES.zoom = {
+  pal: { K: INK, U: '#58a0f0', W: '#d8f0ff', S: '#909098' },
+  rows: ['..KKKK......', '.KUUUUK.....', 'KUWUUUUK....', 'KUWUUUUK....', 'KUUUUUUK....', 'KUUUUUUK....', '.KUUUUK.....', '..KKKKKK....', '......KSK...', '.......KSK..', '........KSK.', '.........KK.'],
+};
 SPRITES.tallgrass = {
   pal: { D: '#2f8a3a', G: '#4cb04c', L: '#78d068' },
   rows: ['.D...D..', 'DGD.DGD.', 'DLGDGLGD', '.DGGGGD.', 'DGLGDGLD', 'DGGGGGGD', '.DGGGGD.', 'DDDDDDDD'],
