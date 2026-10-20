@@ -236,88 +236,93 @@ fun CompanionSettingsScreen(
                     Page.HELP -> emptyList()
                 }
             }
-            // HELP: the manual, read from the docs API (no search box: the bottom screen can't host a keyboard).
-            if (page == Page.HELP) {
-                val context = androidx.compose.ui.platform.LocalContext.current
-                val source = remember { DocsSources.of(context) }
-                DocsReader(ui.docs, m, source, Modifier.fillMaxWidth().weight(1f), searchable = false)
-            } else if (page == Page.TOUCH && settings != null) {
-                // The preview beside / above the rows; it follows each change (tick).
-                @Suppress("UNUSED_EXPRESSION") tick
-                @Suppress("UNUSED_EXPRESSION") touchRevision
-                val style = settings.touchStyle
-                val density = androidx.compose.ui.platform.LocalDensity.current.density
-                val stage = settings.touchStage ?: remember(density) { simulateTouchStage(2400f, 1080f, density.coerceAtLeast(2f)) }
-                val shot = remember(settings) { settings.touchPreviewShot() }
-                TouchControlsPage(
-                    stage, style, shot, m, Modifier.fillMaxWidth().weight(1f), underGame = settings.uprightUnderGame == true,
-                    expand = settings.gameAspect == GameAspect.WIDE && settings.wideSupported, touchShown = settings.touchControlsShown,
-                ) { mod ->
-                    OptionListWindow(m, mod) {
-                        GroupedRows(rows, m, cursor, onClick = { i -> moveCursor(i); rows[i].onClick() }, onFocused = ::moveCursor)
-                    }
-                }
-            } else OptionListWindow(m, Modifier.fillMaxWidth().weight(1f)) {
-                // Rows share out the window's height (big touch targets) down
-                // to a floor, past which the list scrolls instead.
-                // SHADERS too: OptionRows shares the window out, so its 4 rows came out taller than SETTINGS'.
-                // TWEAKS: OptionRows has no subtitle line for each tweak's description.
-                if (rows.any { it.header } || page == Page.SHADERS || page == Page.DISPLAY || page == Page.TWEAKS) {
-                    // The row the page was opened for (SWAP SCREENS after the swap): the cursor onto it, scrolled to.
-                    val reveal = if (page == Page.HOME) ui.revealRow?.let { r -> rows.indexOfFirst { !it.header && it.label == r } } ?: -1 else -1
-                    if (reveal >= 0 && homeCursor != reveal) SideEffect { homeCursor = reveal }
-                    GroupedRows(rows, m, cursor, onClick = { i -> moveCursor(i); rows[i].onClick() }, scroll = if (page == Page.HOME) homeScroll else rememberScrollState(),
-                        labelWeight = if (page == Page.TWEAKS) 0.8f else 0.58f, reveal = reveal, onRevealed = { ui.revealRow = null },
-                        onFocused = ::moveCursor) {
-                        // Actions, not settings: the list's last line, out of the way of the options.
-                        if (page == Page.HOME && settings != null) {
-                            // A summary-window line sets them apart from the last group.
-                            Separator(m, Modifier.fillMaxWidth().padding(start = m.u * 4, end = m.u * 4, top = m.u * 8))
-                            // Room around them, so they don't read as one more row of the list.
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(m.u * 8),
-                                modifier = Modifier.padding(start = m.u * 10, end = m.u * 10, top = m.u * 10, bottom = if (settings.canCloseCompanion) m.u * 8 else m.u * 10),
-                            ) {
-                                OptionButton(tk("CLOSE GAME"), m, modifier = Modifier.weight(1f), onClick = {
-                                    confirm = Confirm(
-                                        tk("CLOSE GAME?"),
-                                        if (settings.autoResume) tr("Returns to the ROM list. Progress is saved automatically.")
-                                        else tr("Returns to the ROM list. RESUME GAMES is off: progress since your last in-game save will be lost."),
-                                        tk("CLOSE"), settings::closeGame,
-                                    )
-                                })
-                                OptionButton(tk("RESTART GAME"), m, emphasis = true, modifier = Modifier.weight(1f), onClick = {
-                                    confirm = Confirm(
-                                        tk("RESTART GAME?"),
-                                        if (settings.autoResume) tr("Reboots the game and reloads its save from disk. Unsaved progress is lost.")
-                                        else tr("Reboots the game and reloads its save from disk. Progress since your last in-game save will be lost."),
-                                        tk("RESTART"), settings::restartGame,
-                                    )
-                                })
-                            }
-                            // Its screen for other apps while the game keeps running; BACK on the game reopens it. Closed while
-                            // swapped, this companion is the one over the game: OPEN COMPANION puts it back on its own screen.
-                            if (settings.canCloseCompanion) {
-                                val closed = settings.companionClosed
-                                OptionButton(
-                                    tk(if (closed) "OPEN COMPANION" else "CLOSE COMPANION"), m,
-                                    modifier = Modifier.fillMaxWidth().padding(start = m.u * 10, end = m.u * 10, bottom = m.u * 10),
-                                    onClick = if (closed) settings::openCompanion else settings::closeCompanion,
-                                )
-                            }
+            // A page of its own each time: the rows sit in slots by position, so the row the D-pad had focused on HOME
+            // (HUD) kept the focus in the next page's row at the same place - near the bottom of SETTINGS > HUD - while the
+            // white cursor showed its top row: DOWN went nowhere, UP walked up from the bottom.
+            androidx.compose.runtime.key(page) {
+                // HELP: the manual, read from the docs API (no search box: the bottom screen can't host a keyboard).
+                if (page == Page.HELP) {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val source = remember { DocsSources.of(context) }
+                    DocsReader(ui.docs, m, source, Modifier.fillMaxWidth().weight(1f), searchable = false)
+                } else if (page == Page.TOUCH && settings != null) {
+                    // The preview beside / above the rows; it follows each change (tick).
+                    @Suppress("UNUSED_EXPRESSION") tick
+                    @Suppress("UNUSED_EXPRESSION") touchRevision
+                    val style = settings.touchStyle
+                    val density = androidx.compose.ui.platform.LocalDensity.current.density
+                    val stage = settings.touchStage ?: remember(density) { simulateTouchStage(2400f, 1080f, density.coerceAtLeast(2f)) }
+                    val shot = remember(settings) { settings.touchPreviewShot() }
+                    TouchControlsPage(
+                        stage, style, shot, m, Modifier.fillMaxWidth().weight(1f), underGame = settings.uprightUnderGame == true,
+                        expand = settings.gameAspect == GameAspect.WIDE && settings.wideSupported, touchShown = settings.touchControlsShown,
+                    ) { mod ->
+                        OptionListWindow(m, mod) {
+                            GroupedRows(rows, m, cursor, onClick = { i -> moveCursor(i); rows[i].onClick() }, onFocused = ::moveCursor)
                         }
                     }
-                } else {
-                    OptionRows(
-                        rows.mapIndexed { i, row -> Triple(row.label, row.value) { moveCursor(i); row.onClick() } },
-                        m, Modifier.fillMaxSize(), selected = cursor, minRow = m.rowHeight * 1.2f,
-                        // Cheat names are the player's own, often long: more room before ON / OFF.
-                        labelWeight = if (page == Page.CHEATS) 0.75f else 0.58f,
-                        valueBadge = { rows[it].badge },
-                        enabled = { rows[it].enabled },
-                        labelBadge = { rows[it].labelBadge },
-                        onFocused = ::moveCursor,
-                    )
+                } else OptionListWindow(m, Modifier.fillMaxWidth().weight(1f)) {
+                    // Rows share out the window's height (big touch targets) down
+                    // to a floor, past which the list scrolls instead.
+                    // SHADERS too: OptionRows shares the window out, so its 4 rows came out taller than SETTINGS'.
+                    // TWEAKS: OptionRows has no subtitle line for each tweak's description.
+                    if (rows.any { it.header } || page == Page.SHADERS || page == Page.DISPLAY || page == Page.TWEAKS) {
+                        // The row the page was opened for (SWAP SCREENS after the swap): the cursor onto it, scrolled to.
+                        val reveal = if (page == Page.HOME) ui.revealRow?.let { r -> rows.indexOfFirst { !it.header && it.label == r } } ?: -1 else -1
+                        if (reveal >= 0 && homeCursor != reveal) SideEffect { homeCursor = reveal }
+                        GroupedRows(rows, m, cursor, onClick = { i -> moveCursor(i); rows[i].onClick() }, scroll = if (page == Page.HOME) homeScroll else rememberScrollState(),
+                            labelWeight = if (page == Page.TWEAKS) 0.8f else 0.58f, reveal = reveal, onRevealed = { ui.revealRow = null },
+                            onFocused = ::moveCursor) {
+                            // Actions, not settings: the list's last line, out of the way of the options.
+                            if (page == Page.HOME && settings != null) {
+                                // A summary-window line sets them apart from the last group.
+                                Separator(m, Modifier.fillMaxWidth().padding(start = m.u * 4, end = m.u * 4, top = m.u * 8))
+                                // Room around them, so they don't read as one more row of the list.
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(m.u * 8),
+                                    modifier = Modifier.padding(start = m.u * 10, end = m.u * 10, top = m.u * 10, bottom = if (settings.canCloseCompanion) m.u * 8 else m.u * 10),
+                                ) {
+                                    OptionButton(tk("CLOSE GAME"), m, modifier = Modifier.weight(1f), onClick = {
+                                        confirm = Confirm(
+                                            tk("CLOSE GAME?"),
+                                            if (settings.autoResume) tr("Returns to the ROM list. Progress is saved automatically.")
+                                            else tr("Returns to the ROM list. RESUME GAMES is off: progress since your last in-game save will be lost."),
+                                            tk("CLOSE"), settings::closeGame,
+                                        )
+                                    })
+                                    OptionButton(tk("RESTART GAME"), m, emphasis = true, modifier = Modifier.weight(1f), onClick = {
+                                        confirm = Confirm(
+                                            tk("RESTART GAME?"),
+                                            if (settings.autoResume) tr("Reboots the game and reloads its save from disk. Unsaved progress is lost.")
+                                            else tr("Reboots the game and reloads its save from disk. Progress since your last in-game save will be lost."),
+                                            tk("RESTART"), settings::restartGame,
+                                        )
+                                    })
+                                }
+                                // Its screen for other apps while the game keeps running; BACK on the game reopens it. Closed while
+                                // swapped, this companion is the one over the game: OPEN COMPANION puts it back on its own screen.
+                                if (settings.canCloseCompanion) {
+                                    val closed = settings.companionClosed
+                                    OptionButton(
+                                        tk(if (closed) "OPEN COMPANION" else "CLOSE COMPANION"), m,
+                                        modifier = Modifier.fillMaxWidth().padding(start = m.u * 10, end = m.u * 10, bottom = m.u * 10),
+                                        onClick = if (closed) settings::openCompanion else settings::closeCompanion,
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        OptionRows(
+                            rows.mapIndexed { i, row -> Triple(row.label, row.value) { moveCursor(i); row.onClick() } },
+                            m, Modifier.fillMaxSize(), selected = cursor, minRow = m.rowHeight * 1.2f,
+                            // Cheat names are the player's own, often long: more room before ON / OFF.
+                            labelWeight = if (page == Page.CHEATS) 0.75f else 0.58f,
+                            valueBadge = { rows[it].badge },
+                            enabled = { rows[it].enabled },
+                            labelBadge = { rows[it].labelBadge },
+                            onFocused = ::moveCursor,
+                        )
+                    }
                 }
             }
         }
