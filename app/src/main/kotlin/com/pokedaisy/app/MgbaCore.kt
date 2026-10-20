@@ -66,7 +66,7 @@ object MgbaCore {
     /** SCENE SPEEDS / AUTO-RUN / RUN INDOORS / WILD ENCOUNTERS: read the field with WIDE's tables for the ROM with
      * this CRC32, WIDE on or off (0 = none), and its wild-encounter switch at [wildFlag] ([WildEncounters.find]; 0 =
      * none). Emu thread. */
-    external fun pkFieldConfigure(crc: Int, wildFlag: Int)
+    external fun pkFieldConfigure(crc: Int, wildFlag: Int, wildOff: Boolean)
     /** Whether the field reads know the ROM with this CRC32 (WIDE's table, or a hack WIDE doesn't draw yet). Any thread. */
     external fun pkFieldKnows(crc: Int): Boolean
     /** This frame's [FIELD_KNOWN] ... [FIELD_WILD_HELD] bits (0 = a game it doesn't know); [runIndoors] also lets the
@@ -167,6 +167,9 @@ object MgbaCore {
     /** Whether a DS game's coming frame / the one after are shown (fast-forward shows one of each group): unseen ones
      * skip their drawing. Emu thread, before [pkRunFrame]. */
     external fun pkNdsSetDraw(draw: Boolean, drawNext: Boolean)
+    /** The cart's wild encounter rates by map header id, [map, grass, surf] triples (Gen4World.wildRates): WILD ENCOUNTERS
+     *  back on restores a map's from here. Emu thread, once the DS core is up. */
+    external fun pkNdsWildRates(triples: IntArray)
 
     /** STEADY FF music for a DS game (nds/pk_nds_music.h): the song the game plays (its BGM id; 0 = none or fading to the
      * next, -1 = this cart's sound system isn't mapped), a copy of the game that plays on from now at 1x by itself, one

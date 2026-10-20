@@ -1299,7 +1299,7 @@ int main(int argc, char** argv) {
             unsigned addr = 0;
             int keep = 100;
             sscanf(line, "%*s %x %d", &addr, &keep);
-            pk_field_wild(addr);
+            pk_field_wild(addr, false);
             wildKeep = keep;
             printf("wild: switch %08x keep %d\n", addr, keep);
         } else if (!strcmp(cmd, "wideghosts")) {

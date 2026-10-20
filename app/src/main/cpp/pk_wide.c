@@ -1986,9 +1986,11 @@ static void allowRunning(void) {
     if (p && !(*p & bit)) *p |= bit;
 }
 
-void pk_field_wild(uint32_t addr) {
+void pk_field_wild(uint32_t addr, bool wasOff) {
     F.wild = addr;
-    wildOwned = false;
+    // Configured with WILD ENCOUNTERS already OFF (the game resumed from a state taken while it was): a switch already on
+    // is ours from before the app restarted, so ON puts it back. It used to stay on, and no wild Pokémon came again.
+    wildOwned = wasOff;
 }
 
 /** WILD ENCOUNTERS: the game's own switch (StandardWildEncounter returns at once while it's 1; fishing, Sweet Scent and

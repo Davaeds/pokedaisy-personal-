@@ -883,7 +883,7 @@ class EmulatorEngine(
                 // pending hack's), every frame on a game they know - a few bytes, and SETTINGS learns from it whether
                 // BIKE / SURF SPEED can work here.
                 if (fieldGame != fieldApplied || wildFlag != wildApplied) {
-                    MgbaCore.pkFieldConfigure(if (gba) fieldGame else WideScreen.OFF, wildFlag.toInt())
+                    MgbaCore.pkFieldConfigure(if (gba) fieldGame else WideScreen.OFF, wildFlag.toInt(), wildEncounters < 100)
                     fieldApplied = fieldGame
                     wildApplied = wildFlag
                     fieldMovesKnown = false

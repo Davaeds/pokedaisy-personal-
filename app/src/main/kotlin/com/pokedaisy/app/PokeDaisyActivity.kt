@@ -814,6 +814,8 @@ class PokeDaisyActivity : Activity() {
     @Volatile private var romIsGameBoy = false
     /** The game running is a DS cart (melonDS): two screens, touch, X / Y ([loadRom]). */
     @Volatile private var romIsNds = false
+    /** The DS game's generated world (its wild rates for WILD ENCOUNTERS), or null. */
+    @Volatile private var dsWorld: com.pokedaisy.app.companion.data.Gen4World? = null
 
     /** The loaded ROM's header code / revision byte, for [switchAddrsFor]. */
     @Volatile private var romCode = ""
@@ -1468,6 +1470,12 @@ class PokeDaisyActivity : Activity() {
         // A DS cart (melonDS, nds/pk_nds.cpp): none of the GBA scans either, and no Game Boy ones.
         val nds = RomIdentity.isNds(r)
         romIsNds = nds
+        dsWorld = if (!nds) null else when (RomIdentity.ndsGameCode(r)) {
+            "CPUE" -> com.pokedaisy.app.companion.data.PLATINUM_WORLD
+            "IPKE" -> com.pokedaisy.app.companion.data.HEARTGOLD_WORLD
+            "IPGE" -> com.pokedaisy.app.companion.data.SOULSILVER_WORLD
+            else -> null
+        }
         input.ds = nds
         val gba = !gameBoy && !nds
         // EXPAND: the GBA games pk_wide.c knows, and Game Boy ones pk_wide_gb.c does (Yellow, Crystal); the field reads are GBA only.
@@ -1549,6 +1557,8 @@ class PokeDaisyActivity : Activity() {
             onCoreReady = { w, h ->
                 // A DS game's bottom screen goes to the bottom display (NdsBottomFrame).
                 NdsBottomFrame.bind(if (romIsNds) MgbaCore.pkNdsBottomBuffer() else null)
+                // WILD ENCOUNTERS back on: the cart's own rates, whatever a resume state left in RAM.
+                if (romIsNds) dsWorld?.let { MgbaCore.pkNdsWildRates(it.wildRates()) }
                 MgbaCore.pkVideoBuffer()?.let { buf ->
                     // Here on the emu thread, before the first frame (see EmulatorView.bindCore).
                     view.bindCore(buf, MgbaCore.pkWideBuffer(), w, h)

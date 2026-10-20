@@ -6,6 +6,9 @@
 
 #include <string.h>
 
+#include <unordered_map>
+#include <utility>
+
 #include <NDS.h>
 
 static const PkNdsFieldGame PLATINUM_US_REV1 = {
@@ -51,6 +54,19 @@ static const PkNdsFieldGame HEARTGOLD_US = {
 // WILD ENCOUNTERS OFF's hold: the MapHeaderData whose rates it zeroed, for which map, and their values before.
 static uint32_t heldData, heldMap, heldGrass, heldSurf;
 static int holding;
+
+// The cart's rates by map header id (pk_nds_field_set_rates), and the map ON last checked against them.
+static std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> cartRates;
+static uint32_t checkedData, checkedMap;
+static int checked;
+
+void pk_nds_field_set_rates(const int32_t* triples, int n)
+{
+    cartRates.clear();
+    for (int i = 0; i < n; i++)
+        cartRates[(uint32_t) triples[3 * i]] = { (uint32_t) triples[3 * i + 1], (uint32_t) triples[3 * i + 2] };
+    checked = 0;
+}
 
 // PLAYER_AVATAR_* (constants/player_avatar.h)
 enum { AVATAR_WALKING = 0, AVATAR_CYCLING = 1, AVATAR_SURFING = 2 };
@@ -148,10 +164,26 @@ int pk_nds_field_state(const PkNdsFieldGame* g, uint32_t (*read32)(uint32_t), vo
                 heldSurf = surf;
                 holding = 1;
             }
+            checked = 0;
             if (grass) rateWrite(g, read32, write32, data + g->offGrassRate, 0);
             if (surf) rateWrite(g, read32, write32, data + g->offSurfRate, 0);
-        } else if (holding) {
-            releaseWild(g, read32, write32, data, map);
+        } else {
+            if (holding) releaseWild(g, read32, write32, data, map);
+            // Once a map, back on: rates still at 0 where the cart has some are a hold this process doesn't remember (a
+            // resume state taken while OFF, which the app restarted from): the cart's own go back. Its rates came from the
+            // ROM, and nothing in the game zeroes them.
+            if (!checked || data != checkedData || map != checkedMap) {
+                auto it = cartRates.find(map);
+                if (it != cartRates.end()) {
+                    if (it->second.first && rateRead(g, read32, data + g->offGrassRate) == 0)
+                        rateWrite(g, read32, write32, data + g->offGrassRate, it->second.first);
+                    if (it->second.second && rateRead(g, read32, data + g->offSurfRate) == 0)
+                        rateWrite(g, read32, write32, data + g->offSurfRate, it->second.second);
+                }
+                checked = 1;
+                checkedData = data;
+                checkedMap = map;
+            }
         }
         if (holding) bits |= PK_NDS_FIELD_WILD_HELD;
     }

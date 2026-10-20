@@ -532,6 +532,24 @@ int main(int argc, char** argv)
             // wildoff 1 / 0: WILD ENCOUNTERS OFF / back on; battles counts the battles started since
             wildOff = (int) num(a);
             battlesSeen = 0;
+        } else if (!strcmp(cmd, "wildrates")) {
+            // wildrates FILE: the cart's rates by map ([map grass surf] triples, whitespace apart), as the app hands them over
+            std::vector<int32_t> t;
+            if (FILE* f = fopen(a, "r")) { int v; while (fscanf(f, "%d", &v) == 1) t.push_back(v); fclose(f); }
+            pk_nds_field_set_rates(t.data(), (int) t.size() / 3);
+            printf("wildrates %d maps\n", (int) t.size() / 3);
+            fflush(stdout);
+        } else if (!strcmp(cmd, "wildrate")) {
+            // wildrate: the current map's grass / surf rates as the field holds them now
+            auto* cart = nds->NDSCartSlot.GetCart();
+            const PkNdsFieldGame* g = cart ? pk_nds_field_game(cart->GetHeader().GameCode, cart->GetHeader().ROMVersion) : nullptr;
+            if (g) {
+                u32 fs = read32(g->fieldSystemPtr), data = read32(fs + g->offMapHeaderData), map = read32(read32(fs + g->offLocation));
+                auto rate = [&](u32 at) { return g->rateBytes ? (read32(at & ~3u) >> ((at & 3) * 8)) & 0xFF : read32(at); };
+                printf("wildrate frame %llu: map %u grass %u surf %u\n", (unsigned long long) frameCount, map,
+                       rate(data + g->offGrassRate), rate(data + g->offSurfRate));
+                fflush(stdout);
+            }
         } else if (!strcmp(cmd, "battles")) {
             printf("battles %d\n", battlesSeen);
             fflush(stdout);

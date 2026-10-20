@@ -1,6 +1,7 @@
 // PokeDaisy — WIDE: the overworld past the GBA's 240 px, rebuilt from the game's memory (pk_wide.c).
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 struct mCore;
@@ -121,8 +122,9 @@ enum {
 };
 
 /** WILD ENCOUNTERS: the game's sWildEncountersDisabled (EWRAM, found in the ROM by WildEncounters.kt; 0 = none). Call
- * after [pk_field_configure], which forgets it. */
-void pk_field_wild(uint32_t addr);
+ * after [pk_field_configure], which forgets it. [wasOff]: WILD ENCOUNTERS is OFF already, so a switch found on is ours
+ * (a resume state taken while OFF) and ON puts it back. */
+void pk_field_wild(uint32_t addr, bool wasOff);
 
 /** This frame's PK_FIELD_* bits; with [runIndoors], also lets the player run on the current map (gMapHeader); with
  * [wildKeep] < 100, leaves about that share of wild encounters (0 = none). */

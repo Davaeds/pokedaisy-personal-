@@ -497,6 +497,8 @@ void pk_nds_set_wild_off(bool off)
     if (ds) ds->wildOff = off;
 }
 
+void pk_nds_set_wild_rates(const int32_t* triples, int n) { pk_nds_field_set_rates(triples, n); }
+
 void pk_nds_set_draw(bool draw, bool drawNext)
 {
     if (!ds) return;

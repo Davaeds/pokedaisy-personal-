@@ -65,6 +65,8 @@ int pk_nds_action_status(int seq);
 bool pk_nds_action_results(int seq, uint32_t* out);
 // WILD ENCOUNTERS OFF: no random encounters (the field read holds the map's grass / surf rates at 0). Emu thread.
 void pk_nds_set_wild_off(bool off);
+// The cart's grass / surf rates by map header id, [map, grass, surf] x n (pk_nds_field_set_rates). Emu thread.
+void pk_nds_set_wild_rates(const int32_t* triples, int n);
 
 // STEADY FF music (pk_nds_music.h). The song the game is playing (its sound system's current BGM id; 0 = none or a fade
 // to the next), -1 for a cart whose sound system isn't mapped. Emu thread.

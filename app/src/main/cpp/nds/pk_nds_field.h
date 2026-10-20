@@ -68,6 +68,11 @@ int pk_nds_battle_command(const PkNdsFieldGame* game, uint32_t (*read32)(uint32_
  * move, a target - and the bag or party opened from there). */
 #define PK_NDS_BATTLE_SELECTING 5
 
+/** The cart's own grass / surf rates by map header id: [map, grass, surf] triples (n triples; the app's generated tables,
+ * Gen4World.wildRates). WILD ENCOUNTERS back on puts a map's rates back from here when they're still 0 - a hold this
+ * process no longer remembers, from a resume state taken while it was off. Emu thread. */
+void pk_nds_field_set_rates(const int32_t* triples, int n);
+
 /** This frame's bits for [game], reading main RAM through [read32] (0 = unreadable). With [wildOff], WILD ENCOUNTERS
  * OFF: while the field is free, the current map's grass and surf encounter rates are held at 0 through [write32] (the
  * game never rolls a random encounter; fishing and scripted battles are untouched) - PK_NDS_FIELD_WILD_HELD while

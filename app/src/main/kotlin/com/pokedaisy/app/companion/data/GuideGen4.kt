@@ -80,6 +80,13 @@ class Gen4World(
         teams to keys
     }
 
+    /** Every map's grass and surf rates as the cart has them, [map header id, grass, surf] triples: WILD ENCOUNTERS back on
+     *  puts a map's back from here (MgbaCore.pkNdsWildRates). */
+    fun wildRates(): IntArray = wild.maps.flatMap { (map, set) ->
+        val s = wild.sets[set] ?: return@flatMap emptyList()
+        listOf(map, s.grassRate, s.surfRate)
+    }.toIntArray()
+
     /** NEXT BOSS's trainer id for boss [key] (the generator's: ROARK, WILL, ...). */
     fun trainer(key: String): Int = bosses.second[key] ?: error("no boss $key")
 

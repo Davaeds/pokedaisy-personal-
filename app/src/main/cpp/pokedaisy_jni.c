@@ -536,10 +536,10 @@ Java_com_pokedaisy_app_MgbaCore_pkWideConfigure(JNIEnv* env, jobject thiz, jint 
 // SCENE SPEEDS / AUTO-RUN / RUN INDOORS / WILD ENCOUNTERS: read the field with the tables of the game whose ROM has
 // this CRC32 (0 = none), and its wild-encounter switch at wildFlag (0 = not found). Emu thread.
 JNIEXPORT void JNICALL
-Java_com_pokedaisy_app_MgbaCore_pkFieldConfigure(JNIEnv* env, jobject thiz, jint crc, jint wildFlag) {
+Java_com_pokedaisy_app_MgbaCore_pkFieldConfigure(JNIEnv* env, jobject thiz, jint crc, jint wildFlag, jboolean wildOff) {
     bool gba = g.core && pk_is_gba(g.core);
     pk_field_configure(gba ? (uint32_t) crc : 0);
-    pk_field_wild(gba ? (uint32_t) wildFlag : 0);
+    pk_field_wild(gba ? (uint32_t) wildFlag : 0, wildOff == JNI_TRUE);
 }
 
 // This frame's PK_FIELD_* bits (pk_field_state; 0 = not a game it knows); runIndoors lets the player run indoors,
@@ -1383,6 +1383,16 @@ Java_com_pokedaisy_app_MgbaCore_pkNdsBottomBuffer(JNIEnv* env, jobject thiz) {
 }
 
 // A DS game's frames no one will see (fast-forward's): this one / the next skip their drawing (pk_nds_set_draw).
+// The cart's wild encounter rates by map header id ([map, grass, surf] triples), for WILD ENCOUNTERS back on. Emu thread.
+JNIEXPORT void JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsWildRates(JNIEnv* env, jobject thiz, jintArray triples) {
+    if (!pk_nds_active() || !triples) return;
+    jsize len = (*env)->GetArrayLength(env, triples);
+    jint* t = (*env)->GetIntArrayElements(env, triples, NULL);
+    pk_nds_set_wild_rates((const int32_t*) t, len / 3);
+    (*env)->ReleaseIntArrayElements(env, triples, t, JNI_ABORT);
+}
+
 JNIEXPORT void JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkNdsSetDraw(JNIEnv* env, jobject thiz, jboolean draw, jboolean drawNext) {
     if (pk_nds_active()) pk_nds_set_draw(draw == JNI_TRUE, drawNext == JNI_TRUE);

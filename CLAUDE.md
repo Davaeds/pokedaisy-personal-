@@ -528,7 +528,10 @@ byte compared with 1, a call, 0xFFFF loaded - unique per ROM; SoulGold, Lazarus,
 TMT2, Heart and Soul, R.O.W.E., Mariomon); Rogue and Quetzal aren't found (row N/A). Headless walks on the gcc hacks: warp
 onto grass with `warp` (0x39 g n 0xFF x y; newer expansion asserts unless a `waitstate` follows, and Lazarus froze after
 a cross-map warp - its own map worked), the grass found from the layout's metatile attributes. `pk_field_state`'s `wildRoll` sets it each frame the field is free (not locked / battle / FireRed's quest log
-replay, which sets it itself) with probability 1 - keep; NORMAL puts it back once, only if we set it. Walked headless
+replay, which sets it itself) with probability 1 - keep; NORMAL puts it back once, only if we set it (or it was OFF when the game was configured:
+`pk_field_wild(addr, wasOff)` - a resume state taken while OFF carries the switch on). The DS games zero the map's rates
+instead and put the cart's own back from `Gen4World.wildRates` (`MgbaCore.pkNdsWildRates`): a remembered value didn't
+survive a restart, and a resumed game stayed without wild Pokémon until a map change. Walked headless
 (mgba_dump `wild ADDR KEEP`, warp into Route 101 / Route 1 grass): OFF 360 steps, none; 50% about twice NORMAL's steps.
 **REUSABLE TMS** (GitHub #135, GAMEPLAY on the companion, `Prefs.reusableTms` OFF, NEW tag; `ReusableTms.kt`): a ROM patch, the
 TM-number check before each `RemoveBagItem` (`cmp item, #ITEM_HM01-1; bhi`) turned into a `b`. The sites are found by their code
