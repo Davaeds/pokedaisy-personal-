@@ -211,7 +211,11 @@ bool pk_nds_init(const char* romPath, const char* savePath, int sampleRate)
     ds->nds->SetNDSCart(std::move(cart));
     ds->nds->Reset();
     ds->nds->SetupDirectBoot("rom.nds");
-    static_cast<SoftRenderer&>(ds->nds->GPU.GetRenderer3D()).SetThreaded(true, ds->nds->GPU);
+    // The 3D on the emulation thread, not melonDS's render thread: with fast-forward's frame skip the threaded renderer
+    // let a shown frame's 2D read 3D lines it hadn't drawn yet on the Thor (black from a row down, sometimes the whole
+    // picture; never headless on the Mac, whose render thread kept up). Rendered here only for the frames shown, 3x
+    // still holds (~180 frames a second, HeartGold's overworld and menus, 2026-10-20).
+    static_cast<SoftRenderer&>(ds->nds->GPU.GetRenderer3D()).SetThreaded(false, ds->nds->GPU);
     setClock();
     ds->nds->Start();
     if (const u8* mem = ds->nds->GetNDSSave()) ds->saveCopy.assign(mem, mem + ds->nds->GetNDSSaveLength());

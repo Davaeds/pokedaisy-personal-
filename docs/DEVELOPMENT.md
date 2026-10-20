@@ -1714,7 +1714,8 @@ Platinum (USA rev 1, `CPUE`) and HeartGold / SoulSilver (USA, `IPKE` / `IPGE`) r
 EXPAND and STEADY music.
 
 **The core.** `third_party/melonds` (a submodule pinned to upstream 1.1) builds its core library only, with the
-software 3D renderer (no OpenGL) and the JIT without fast memory. Our changes are one patch,
+software 3D renderer (no OpenGL, unthreaded: on the emulation thread, since melonDS's render thread raced fast-forward's
+frame skip on the Thor and showed frames with black rows) and the JIT without fast memory. Our changes are one patch,
 `third_party/patches/melonds-pokedaisy.patch`, applied to the submodule's working tree at configure time by
 `apply_melonds_patch.cmake` (once; a tree that has it is left alone): EXPAND's GPU3D hooks (every polygon past culling,
 the lists' swap at VBlank, the clipper), the software renderer's column range, fast-forward's frame skip
