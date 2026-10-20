@@ -2,7 +2,6 @@ package com.pokedaisy.app.companion.ui
 
 import com.pokedaisy.app.companion.NewFeatures
 
-import com.pokedaisy.app.companion.ui.theme.DarkModeSetting
 import com.pokedaisy.app.companion.ui.theme.DarkMode
 import com.pokedaisy.app.companion.i18n.L10n
 import com.pokedaisy.app.companion.i18n.tk
@@ -470,7 +469,7 @@ private fun homeRows(
         // The white tab at the screen's right edge that opens it (BACK and the HUD's COMPANION still do).
         s.companionTab?.let { tab ->
             SettingRow(
-                tk("COMPANION TAB"), onOff(tab),
+                tk("COMPANION BUTTON"), onOff(tab),
                 labelBadge = NewFeatures.badge(NewFeatures.COMPANION_TAB), subtitle = "The tab at the right edge that opens it",
             ) { s.setCompanionTab(!tab); changed() }
         },
@@ -482,14 +481,11 @@ private fun homeRows(
             tk("SINGLE SCREEN"), onOff(s.singleScreen), subtitle = "Second screen free; companion over the game",
             labelBadge = NewFeatures.badge(NewFeatures.SINGLE_SCREEN),
         ) { s.setSingleScreen(!s.singleScreen); changed() }.takeIf { s.hasSecondScreen },
-        // OFF / ON / AUTO (the device's): both screens switch at once.
+        // OFF / ON / AUTO (the device's), cycled on a tap so each look shows at once: both screens switch together.
         SettingRow(tk("DARK MODE"), DarkMode.setting.label) {
-            val modes = DarkModeSetting.entries
-            select(Selector(tk("DARK MODE"), modes.map { it.label }, DarkMode.setting.label) { l ->
-                val pick = modes.first { it.label == l }
-                DarkMode.setting = pick
-                s.setDarkMode(pick.ordinal)
-            })
+            val pick = DarkMode.setting.next()
+            DarkMode.setting = pick
+            s.setDarkMode(pick.ordinal)
         },
         // The game's frames per second and the app's CPU share, in the game's corner.
         SettingRow(tk("FPS / CPU"), onOff(s.showPerformance), subtitle = "Speed and CPU use in the game's corner") { s.setShowPerformance(!s.showPerformance); changed() },

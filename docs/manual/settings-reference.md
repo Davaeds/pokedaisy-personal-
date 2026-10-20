@@ -40,7 +40,7 @@ The `SPEED OPTIONS` page:
 | `BATTLE BUTTONS` | **`ON`**, `OFF` | Only on a device with one screen (or with `SINGLE SCREEN` on): `FIGHT`, `POKéMON` and `RUN` at the top right, beside the battle. | [Battle](battle.md) |
 | `DISPLAY OPTIONS` | a page | `STATUS BAR`, `SHADERS`, `OVERLAY`, `LIGHT COMPANION` and, on a phone, `COMPANION`; see the next table. | [Screen](screen.md) |
 | `COMPANION VIEW` | **`WINDOW`**, `SIDE PANEL` | Only on a device with one screen (or with `SINGLE SCREEN` on): the companion as a window in the middle, over the game, or as a panel on the right, when you hold it sideways. | [Devices](devices.md) |
-| `COMPANION TAB` | **`ON`**, `OFF` | Where `COMPANION VIEW` shows: the small tab at the bottom of the screen's right edge that opens the companion. Off, `BACK` and the HUD's `COMPANION` button still do. | [Devices](devices.md) |
+| `COMPANION BUTTON` | **`ON`**, `OFF` | Where `COMPANION VIEW` shows: the small button at the bottom of the screen's right edge that opens the companion. Off, `BACK` and the HUD's `COMPANION` button still do. | [Devices](devices.md) |
 | `SWAP SCREENS` | `ON`, **`OFF`** | Only on a device with two screens: the game on the second screen and the companion on the main one. With a TV as the second screen it starts `ON`: the game on the TV. | [Devices](devices.md) |
 | `SINGLE SCREEN` | `ON`, **`OFF`** | Only on a device with two screens: play on one, the second screen free for other apps and the companion as a window over the game. | [Devices](devices.md#single-screen) |
 | `THEME` | **`POKéDAISY`**, `FIRERED`, `LEAFGREEN`, `EMERALD`, `RUBY`, `SAPPHIRE`, `PLATINUM`, `HEARTGOLD`, `SOULSILVER` | The backdrop of the library, Settings and setup. Nothing changes in game. | [Screen](screen.md) |
@@ -153,7 +153,7 @@ The `SPEED OPTIONS` page:
 | `BATTLE BUTTONS` | as on the top screen | Only on a device with one screen (or with `SINGLE SCREEN` on): `FIGHT`, `POKéMON` and `RUN` beside the battle. | [Battle](battle.md) |
 | `DISPLAY OPTIONS` | a page | As on the top screen. | [Screen](screen.md) |
 | `COMPANION VIEW` | as on the top screen | Only on one screen held sideways (or with `SINGLE SCREEN` on). Switches right away. | [Devices](devices.md) |
-| `COMPANION TAB` | as on the top screen | With `COMPANION VIEW`. Switches right away. | [Devices](devices.md) |
+| `COMPANION BUTTON` | as on the top screen | With `COMPANION VIEW`. Switches right away. | [Devices](devices.md) |
 | `SWAP SCREENS` | as on the top screen | Only with two screens. | [Devices](devices.md) |
 | `SINGLE SCREEN` | as on the top screen | Only with two screens. Switches right away, and the companion opens over the game. | [Devices](devices.md#single-screen) |
 | `DARK MODE` | as on the top screen | Dark windows on both screens. | [Screen](screen.md) |

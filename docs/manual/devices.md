@@ -37,7 +37,7 @@ Want the companion's screen for something else while you play, like a video or a
 
 With `SWAP SCREENS` on, the companion has the main screen, so that's the one you get back: the game stays on its screen, and you can keep playing it there, touch included, while you use another app on the main one. Your buttons go to whichever screen you touched last, so tap the game before you press a button for it.
 
-Meanwhile the companion lives on the game's screen: tap `BACK`, the small tab at the bottom of the right edge, or the HUD's `COMPANION` button and it opens over the game, filling that screen. `B`, `START` and the X close it again, as with the window on a one-screen handheld (see below). To put it back on the main screen, tap `OPEN COMPANION` at the bottom of its `SETTINGS`, where `CLOSE COMPANION` was.
+Meanwhile the companion lives on the game's screen: tap `BACK`, the small button at the bottom of the right edge, or the HUD's `COMPANION` button and it opens over the game, filling that screen. `B`, `START` and the X close it again, as with the window on a one-screen handheld (see below). To put it back on the main screen, tap `OPEN COMPANION` at the bottom of its `SETTINGS`, where `CLOSE COMPANION` was.
 
 > [!TIP]
 > On the AYN Thor, set the Thor's own controller focus mode to Auto-Lock. Then the buttons follow whichever screen you touch: tap the game to play it, tap the other app to use it. With the focus locked to the top screen, the buttons keep going to the top screen's app even while you touch the game.
@@ -59,7 +59,7 @@ The companion is still there:
 - **On the bottom screen:** tap `COMPANION` in the bar under the touch screen and the companion takes the touch screen's place. Tap `GAME SCREEN` in the same spot to bring the touch screen back. `BACK` with nothing left to go back from also returns to the touch screen. PokeDaisy remembers which of the two you had.
 - **Over the game:** tap `BACK` and the companion opens over the top screen, as on a one-screen handheld (see [The window](#the-window)).
 
-A DS game keeps its screens where a DS has them, so `SWAP SCREENS` doesn't move them, and the touch screen stays up whatever `CLOSE COMPANION` says. `REWIND` isn't available in DS games.
+`SWAP SCREENS` trades a DS game's two screens too: the top screen goes on your bottom screen, and the touch screen, with its `COMPANION` button, on the top one. The touch screen stays up whatever `CLOSE COMPANION` says. `REWIND` isn't available in DS games.
 
 On a handheld or phone with one screen, a DS game shows its top screen only, for now: the touch screen needs a second screen. The game plays with your buttons, but anything that has to be tapped on the touch screen can't be done there yet.
 
@@ -72,13 +72,13 @@ On a handheld with one screen, like the Retroid Pocket 6, the companion shares t
 
 Flipped from the companion, it switches right away.
 
-Rather not see the small tab at the bottom of the screen's right edge? Turn off `COMPANION TAB`, right under `COMPANION VIEW`. `BACK` and the HUD's `COMPANION` button still open the companion.
+Rather not see the small button at the bottom of the screen's right edge? Turn off `COMPANION BUTTON`, right under `COMPANION VIEW`. `BACK` and the HUD's `COMPANION` button still open the companion.
 
 On a tall screen, about 2.5 inches high or more like the Retroid Pocket 6, the companion's text is a little smaller in the window, so more fits on each page.
 
 ### The window
 
-- **Open it:** tap `BACK`, or tap the small tab at the bottom of the screen's right edge.
+- **Open it:** tap `BACK`, or tap the small button at the bottom of the screen's right edge.
 - **Use your buttons:** while the window is open, your controls work the companion instead of the game. The D-pad moves the cursor and `A` picks what it's on, the way the game's own menus work. `L` and `R` move between the tabs, and `B` goes back. When there's nothing left to go back from, `B` closes the window. `START` closes it from anywhere. Your buttons follow your `GAME BUTTONS` settings, so if you moved `A` and `B`, the window follows.
 - **Close it:** press `B` or `BACK` until it closes, press `START`, tap the X at its top right, or tap anywhere outside it.
 
@@ -92,7 +92,7 @@ Small `L` and `R` keys at both ends of the tab bar remind you which buttons chan
 
 ### The side panel
 
-- **Open it:** tap `BACK`, or tap the small tab at the bottom of the screen's right edge. The panel slides in over the game.
+- **Open it:** tap `BACK`, or tap the small button at the bottom of the screen's right edge. The panel slides in over the game.
 - **Close it:** with the panel open, `BACK` works as the companion's back. Once there's nothing left to go back from, the next `BACK` closes the panel. There's also a close tab right outside the panel's bottom-left corner.
 - **Lock it beside the game:** tap the padlock tab on the panel's left edge. The game moves over to make room, and both stay on screen as you play. Tap the padlock again and the panel goes back to sliding over the game. A locked panel stays open when you press `BACK` with nothing to go back from, and it comes back the next time you start a game.
 - **Resize it:** drag the padlock tab sideways. The panel starts at half the screen, which shows the game at exactly 4x on a 1080p screen. While you drag, it snaps when the game lands close to a whole-number size, so the pixels stay even.

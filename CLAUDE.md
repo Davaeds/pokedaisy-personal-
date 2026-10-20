@@ -165,7 +165,8 @@ a game backdrop (`GameBackdrop` on the companion, `AppBackdrop` — FireRed's pa
 stripes — on the top screen); ITEMS (`ItemsScreen.kt`) is the per-game bag screen in the
 same idiom. PARTY uses the game's own slot (`GbaPartySlot`, generated `PartySlotStyle`s) where one exists; every other game gets a FireRed-like slot drawn from a `PartyPalette` (`PartyScreen.kt`, `partyPaletteFor`) — restyle a game by adding a palette there, like ITEMS' `BagPalette`. Rogue, Gaia, Lazarus, Seaglass and R.O.W.E. have palettes sampled from their party menus (headless: the save's first mon copied into slots 2-3, slot 3 at 0 HP, so normal / selected / fainted all show; `PartySlotColors.band` / per-state `text`, `PartyPalette.empty` cover flat and white-box slots); their bags have `BagPalette`s (TMT2's is `EmeraldBag`; Celia and Gaia match FireRed's). Their backdrop is FireRed's party backdrop recoloured (`backdropColors` in `theme/Theme.kt`: its 3 colours mapped to the game's), or plain stripes until a FireRed ROM has supplied the art. Multi-choice settings open an `OptionSelector` pick-list — never make a row
 cycle through more than two values (exceptions, the user's call: SHADERS > FILTER, GRID and SMOOTHING, and HUD > LAYOUT, LOOK and SIZE
-cycle on tap, so each look shows on the game at once; and every TOUCH CONTROLS row, so each shows in its preview). **The PokéDaisy theme** (the default, `DAISY_THEME_ID` 8 in `theme/Theme.kt`; Settings > THEME, `Prefs.appTheme` by
+cycle on tap, so each look shows on the game at once; every TOUCH CONTROLS row, so each shows in its preview; and DARK MODE,
+OFF / ON / AUTO). **The PokéDaisy theme** (the default, `DAISY_THEME_ID` 8 in `theme/Theme.kt`; Settings > THEME, `Prefs.appTheme` by
 id - FireRed is 0, the old default) only changes the top screen's backdrop (Library, Settings, setup): `AppBackdrop`
 -> `DaisyBackdrop`, the website's (blobs, dot grid and, on the Library, its floating logos). The windows and text
 stay the OPTION look; only text drawn straight on the backdrop (`OptionColors.onBackdrop`) turns the windows' grey
@@ -494,7 +495,7 @@ applied at configure time - edit the submodule, then `git -C third_party/melonds
 `app/src/main/cpp/nds/` (core, field read, function caller, EXPAND from the game's own polygons, STEADY = a second melonDS
 from the game's state with its ARM9 stopped, its ARM7 FIFO drained every frame), `Gen4*.kt` / `NdsArt.kt` (reads from the
 SaveData in RAM; art, DEX pages from the player's cart, never bundled), the DS bottom screen on the bottom display
-(`NdsBottomScreen.kt`). Addresses from pret's pokeplatinum / pokeheartgold `.xMAP`s; headless with
+(`NdsBottomScreen.kt`; SWAP SCREENS trades the two: the stage to the second display, `NdsBottomHost` as the activity's content). Addresses from pret's pokeplatinum / pokeheartgold `.xMAP`s; headless with
 `native-capture/nds_dump` (its README); docs/DEVELOPMENT.md's "Nintendo DS". DEX on both (`POKEDEX_PLATINUM` /
 `_HEARTGOLD`, pages from the cart); GUIDE on both (`GuidePlatinum.kt`, `GuideHeartGold.kt` over `Gen4World`:
 `scripts/gen_gen4_guide.py` writes the wild sets, boss teams and HERE's items from the decomps; gym leaders go by badge -
@@ -1054,7 +1055,7 @@ activities resumed); meanwhile the companion opens over the game there as on one
 (`CompanionSettings.companionClosed` / `openCompanion`), which moves the activity back. The new intent's pause / resume
 around a move is skipped (`movePause`), so the game doesn't reload. The Thor's input dispatcher can drop the window's focus on a move (it
 asks while the window's input info still names the old display, then never again: no buttons reached the game after OPEN
-COMPANION), so `followDisplay` checks 600 ms later and flips FLAG_NOT_FOCUSABLE off and on to make it ask again (`refocus`). SETTINGS > COMPANION TAB (`Prefs.companionTab`, NEW
+COMPANION), so `followDisplay` checks 600 ms later and flips FLAG_NOT_FOCUSABLE off and on to make it ask again (`refocus`). SETTINGS > COMPANION BUTTON (`Prefs.companionTab`, NEW
 tag) hides that white edge tab (`SidePanel.openTabShown`); BACK and the HUD's COMPANION still open the companion. Over the
 game there the companion fills the screen (`SidePanel.setFullScreen` -> `SidePanelHost(fullScreen)`: window keys, no frame),
 whatever COMPANION VIEW says. The Thor's own controller focus mode decides where its pad goes: locked to the top screen

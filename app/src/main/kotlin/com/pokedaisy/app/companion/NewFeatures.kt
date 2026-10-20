@@ -40,7 +40,7 @@ object NewFeatures {
     /** SETTINGS > TOUCH CONTROLS: layouts, size, opacity, extra buttons and EDIT LAYOUT (companion.ui.TouchControls). */
     const val TOUCH_CONTROLS = "touch_controls"
 
-    /** SETTINGS > COMPANION TAB: hide the edge tab that opens the companion on one screen (SidePanel). */
+    /** SETTINGS > COMPANION BUTTON: hide the edge button that opens the companion on one screen (SidePanel). */
     const val COMPANION_TAB = "companion_tab"
 
     /** SETTINGS > REUSABLE TMS: a TM stays in the bag after it teaches a move (companion.data.ReusableTms). */

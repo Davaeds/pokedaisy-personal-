@@ -64,7 +64,7 @@ internal val trSettings: Map<String, Tr> = mapOf(
     "AT BOTTOM" to Tr(ja = "したはし", fr = "EN BAS", de = "UNTEN", it = "IN BASSO", es = "ABAJO", br = "EMBAIXO", pt = "EM BAIXO"),
     // SETTINGS > COMPANION VIEW, one screen held sideways (companionViewLabel).
     "COMPANION VIEW" to Tr(ja = "コンパニオンの ひょうじ", fr = "VUE COMPAGNON", de = "BEGLEITER-ANSICHT", it = "VISTA COMPAGNO", es = "VISTA COMPAÑERO", br = "VISTA COMPANHEIRO", pt = "VISTA COMPANHEIRO"),
-    "COMPANION TAB" to Tr(ja = "コンパニオンの タブ", fr = "ONGLET COMPAGNON", de = "BEGLEITER-REITER", it = "LINGUETTA COMPAGNO", es = "PESTAÑA COMPAÑERO", br = "ABA DO COMPANHEIRO", pt = "SEPARADOR COMPANHEIRO"),
+    "COMPANION BUTTON" to Tr(ja = "コンパニオンの ボタン", fr = "BOUTON COMPAGNON", de = "BEGLEITER-TASTE", it = "PULSANTE COMPAGNO", es = "BOTÓN COMPAÑERO", br = "BOTÃO DO COMPANHEIRO", pt = "BOTÃO COMPANHEIRO"),
     "SIDE PANEL" to Tr(ja = "サイドパネル", fr = "PANNEAU LATÉRAL", de = "SEITENLEISTE", it = "PANNELLO LATERALE", es = "PANEL LATERAL", br = "PAINEL LATERAL", pt = "PAINEL LATERAL"),
     "UNDER GAME" to Tr(ja = "ゲームの した", fr = "SOUS LE JEU", de = "UNTER SPIEL", it = "SOTTO IL GIOCO", es = "BAJO EL JUEGO", br = "SOB O JOGO", pt = "SOB O JOGO"),
     "SCREEN" to Tr(ja = "がめん", fr = "ÉCRAN", de = "BILDSCHIRM", it = "SCHERMO", es = "PANTALLA", br = "TELA", pt = "ECRÃ"),

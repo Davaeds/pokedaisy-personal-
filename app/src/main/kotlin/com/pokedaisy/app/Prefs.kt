@@ -451,7 +451,7 @@ class Prefs(context: Context) {
         set(v) = p.edit().putBoolean("companion_window", v).apply()
 
     /** One screen held sideways: the white tab at the bottom of the screen's right edge that opens the companion (SETTINGS >
-     * COMPANION TAB). Off, BACK and the HUD's COMPANION button still open it. */
+     * COMPANION BUTTON). Off, BACK and the HUD's COMPANION button still open it. */
     var companionTab: Boolean
         get() = p.getBoolean("companion_tab", true)
         set(v) = p.edit().putBoolean("companion_tab", v).apply()

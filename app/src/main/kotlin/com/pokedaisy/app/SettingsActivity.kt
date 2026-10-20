@@ -1,6 +1,5 @@
 package com.pokedaisy.app
 
-import com.pokedaisy.app.companion.ui.theme.DarkModeSetting
 import com.pokedaisy.app.companion.ui.theme.DarkMode
 import com.pokedaisy.app.companion.i18n.L10n
 import com.pokedaisy.app.companion.i18n.tk
@@ -620,7 +619,7 @@ class SettingsActivity : ComponentActivity() {
             }.takeIf { !usesSecondScreen },
             // The white tab at the screen's right edge that opens it (BACK and the HUD's COMPANION still do).
             SettingRow(
-                tk("COMPANION TAB"), onOff(prefs.companionTab),
+                tk("COMPANION BUTTON"), onOff(prefs.companionTab),
                 labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.COMPANION_TAB),
                 subtitle = "The tab at the right edge that opens it",
             ) {
@@ -648,12 +647,9 @@ class SettingsActivity : ComponentActivity() {
                     AppColors.applyTheme(spec)
                 }
             },
-            // OFF / ON / AUTO (the device's): both screens switch at once.
+            // OFF / ON / AUTO (the device's), cycled on a tap so each look shows at once: both screens switch together.
             SettingRow(tk("DARK MODE"), DarkMode.setting.label) {
-                val modes = DarkModeSetting.entries
-                selector = Selector(tk("DARK MODE"), modes.map { it.label }, DarkMode.setting.label) { l ->
-                    DarkMode.set(this@SettingsActivity, modes.first { it.label == l })
-                }
+                DarkMode.set(this@SettingsActivity, DarkMode.setting.next())
             },
             // The game's frames per second and the app's CPU share, in the game's corner.
             SettingRow(tk("FPS / CPU"), onOff(prefs.showPerformance), subtitle = "Speed and CPU use in the game's corner") {

@@ -1944,9 +1944,10 @@ class PokeDaisyActivity : Activity() {
     private fun syncPresentation() {
         if (!::engine.isInitialized) return
         val target: Display? = secondScreen()
-        // A DS game keeps both its screens where a DS has them (no SWAP SCREENS), and its touch screen stays up
-        // whatever CLOSE COMPANION says: the companion is on the game's screen, as on one-screen devices.
-        val swap = target != null && Screens.swapped(this, Prefs(this), target) && !debugMirror && !romIsNds
+        // A DS game's touch screen stays up whatever CLOSE COMPANION says: the companion is on the game's screen, as on
+        // one-screen devices. SWAP SCREENS trades its two screens like a GBA game's: the top one (the stage) goes to
+        // the second display, the touch screen with its COMPANION toggle (NdsBottomHost) to this one.
+        val swap = target != null && Screens.swapped(this, Prefs(this), target) && !debugMirror
         shownOnDisplay = Screens.displayOf(this)
         // The companion closed, or this activity off the main screen (the companion closed while swapped, or on its
         // way back from there): the game alone, here. A Presentation can't share this activity's display.
@@ -2091,14 +2092,30 @@ class PokeDaisyActivity : Activity() {
         setContentView(stage)
     }
 
-    /** The companion as this activity's content (the stage then goes to the second screen). */
+    /** The companion as this activity's content (the stage then goes to the second screen); for a DS game its touch
+     *  screen with the companion behind the COMPANION toggle ([NdsBottomHost]), as on the bottom display unswapped. */
     private fun showMainCompanion() {
-        if (mainCompanion != null) return
+        val shown = mainCompanion
+        if (shown != null && (shown is NdsBottomHost) == romIsNds) {
+            dsBottom = shown as? NdsBottomHost
+            return
+        }
+        if (shown != null) {
+            mainCompanionOwner?.destroy()
+            mainCompanionOwner = null
+            mainCompanion = null
+        }
         val owner = ComposeHostOwner().apply { create(); resume() }
-        val view = DualScreenPresentation.companionView(
-            this, telemetry, stateSlots, companionSettings, battleInput, companionBack, playClick, RetroAchievements,
-            initialTab = companionStartTab, initialSettingsRow = companionStartRow, statusBar = companionStatusBar, itemUse = itemUse, fly = flyAction, askForSupport = askForSupport, gamePick = gamePick, shareBestEffort = shareBestEffort,
-        ).apply {
+        val companion = {
+            DualScreenPresentation.companionView(
+                this, telemetry, stateSlots, companionSettings, battleInput, companionBack, playClick, RetroAchievements,
+                initialTab = companionStartTab, initialSettingsRow = companionStartRow, statusBar = companionStatusBar, itemUse = itemUse, fly = flyAction, askForSupport = askForSupport, gamePick = gamePick, shareBestEffort = shareBestEffort,
+            )
+        }
+        val view = if (romIsNds) {
+            NdsBottomHost(this, companion, Prefs(this).dsBottomCompanion) { on -> Prefs(this).dsBottomCompanion = on }.also { dsBottom = it }
+        } else companion()
+        view.apply {
             setViewTreeLifecycleOwner(owner)
             setViewTreeSavedStateRegistryOwner(owner)
             setViewTreeViewModelStoreOwner(owner)

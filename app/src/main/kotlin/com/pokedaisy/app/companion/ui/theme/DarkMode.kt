@@ -7,7 +7,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 /** SETTINGS > DARK MODE, stored by [ordinal] (Prefs.darkMode). AUTO follows the device's own setting. */
-enum class DarkModeSetting(val label: String) { OFF("OFF"), ON("ON"), AUTO("AUTO") }
+enum class DarkModeSetting(val label: String) {
+    OFF("OFF"), ON("ON"), AUTO("AUTO");
+
+    /** The row's next value on a tap (DARK MODE cycles: OFF, ON, AUTO, OFF...). */
+    fun next(): DarkModeSetting = entries[(ordinal + 1) % entries.size]
+}
 
 /**
  * Dark mode, for both screens at once: the OPTION windows ([com.pokedaisy.app.companion.ui.OptionColors]),

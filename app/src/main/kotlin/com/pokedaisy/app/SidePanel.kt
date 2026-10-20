@@ -107,7 +107,7 @@ class SidePanel(
     var windowOpen = false
         private set
 
-    /** SETTINGS > COMPANION TAB: the edge tab that opens it shows at all ([Prefs.companionTab]). */
+    /** SETTINGS > COMPANION BUTTON: the edge tab that opens it shows at all ([Prefs.companionTab]). */
     var openTabShown = prefs.companionTab
         set(v) {
             if (field == v) return

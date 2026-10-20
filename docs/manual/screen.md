@@ -138,7 +138,7 @@ Overlays are switched off on a phone held upright, where the game sits across th
 
 ## Dark mode
 
-`DARK MODE` turns the app's white and grey windows into dark slate ones with light text, on both screens at once. Nice at night or in a dim room.
+`DARK MODE` turns the app's white and grey windows into dark slate ones with light text, on both screens at once. Nice at night or in a dim room. Each tap on the row moves to the next choice, so you see each one right away:
 
 - `OFF`: the light windows (the default).
 - `ON`: always dark.

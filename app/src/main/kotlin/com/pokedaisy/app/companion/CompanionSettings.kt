@@ -306,7 +306,7 @@ interface CompanionSettings {
     val companionWindow: Boolean? get() = null
     fun setCompanionWindow(on: Boolean) {}
 
-    /** SETTINGS > COMPANION TAB: the edge tab that opens the companion ([com.pokedaisy.app.Prefs.companionTab]). Null
+    /** SETTINGS > COMPANION BUTTON: the edge tab that opens the companion ([com.pokedaisy.app.Prefs.companionTab]). Null
      * where [companionWindow] is (no row). */
     val companionTab: Boolean? get() = null
     fun setCompanionTab(on: Boolean) {}
