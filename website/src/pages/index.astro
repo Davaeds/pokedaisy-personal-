@@ -160,6 +160,26 @@ const title = 'POKEDAISY'.split('');
     </div>
   </section>
 
+  <!-- Quality of life -->
+  <section class="block container">
+    <div class="section-head center">
+      <span class="eyebrow">QUALITY OF LIFE</span>
+      <h2 class="heading">Less walking back, more playing</h2>
+      <p class="lead">The chores of a long playthrough, one press away, each the game's own way of doing it. The switches are in the companion's SETTINGS, and the manual lists the games each one works in.</p>
+    </div>
+    <div class="player-grid">
+      {qol.map(([icon, name, text], i) => (
+        <article class="player-item" data-reveal style={`--i:${i % 3}`}>
+          <span class="player-icon f-card"><Pixel name={icon} scale={1} /></span>
+          <div>
+            <h3 class="player-name">{name}</h3>
+            <p class="small muted">{text}</p>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
   <!-- Party -->
   <section class="block container demo-block">
     <div class="demo-art" data-reveal="fade"><PartyDemo /></div>
@@ -191,26 +211,6 @@ const title = 'POKEDAISY'.split('');
     </div>
     <div class="player-grid">
       {player.map(([icon, name, text], i) => (
-        <article class="player-item" data-reveal style={`--i:${i % 3}`}>
-          <span class="player-icon f-card"><Pixel name={icon} scale={1} /></span>
-          <div>
-            <h3 class="player-name">{name}</h3>
-            <p class="small muted">{text}</p>
-          </div>
-        </article>
-      ))}
-    </div>
-  </section>
-
-  <!-- Quality of life -->
-  <section class="block container">
-    <div class="section-head center">
-      <span class="eyebrow">QUALITY OF LIFE</span>
-      <h2 class="heading">Less walking back, more playing</h2>
-      <p class="lead">The chores of a long playthrough, one press away, each the game's own way of doing it. The switches are in the companion's SETTINGS, and the manual lists the games each one works in.</p>
-    </div>
-    <div class="player-grid">
-      {qol.map(([icon, name, text], i) => (
         <article class="player-item" data-reveal style={`--i:${i % 3}`}>
           <span class="player-icon f-card"><Pixel name={icon} scale={1} /></span>
           <div>
