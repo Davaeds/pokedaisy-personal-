@@ -736,15 +736,13 @@ fun favoriteLibrary() {
 }
 
 /**
- * [favoriteLibrary] with a game on every console (Yellow, Crystal, a Crystal hack, Platinum - DS turned on), so every quick
+ * [favoriteLibrary] with a game on every console (Yellow, Crystal, a Crystal hack, Platinum), so every quick
  * view has a pill, and a play history (Emerald last, then Crystal, Unbound, Yellow) for RECENT; [view] open.
  */
-fun platformLibrary(view: com.pokedaisy.app.LibraryView = com.pokedaisy.app.LibraryView.ALL, ds: Boolean = true) {
+fun platformLibrary(view: com.pokedaisy.app.LibraryView = com.pokedaisy.app.LibraryView.ALL) {
     favoriteLibrary()
     val ctx = android.content.Context()
     val prefs = Prefs(ctx)
-    // DS games behind their flag (FeatureFlags.nds): the manual's shots leave them out while it's off for players.
-    if (ds) for (dir in listOfNotNull(ctx.filesDir, ctx.getExternalFilesDir(null))) File(dir, "features").apply { mkdirs() }.resolve("nds").writeText("")
     val roms = File(ctx.filesDir, "roms")
     val extra = mapOf(
         "Pokemon - Yellow Version (USA, Europe).gb" to Triple("Pokémon Yellow", "GB", "GB"),
@@ -849,7 +847,6 @@ fun activity(expandIntro: Boolean = false, start: Boolean = false, make: () -> a
     prefs.cheatsEnabled = false
     prefs.touchControlsStyle = com.pokedaisy.app.companion.TouchControlsStyle()
     prefs.portraitCompanionUnderGame = false
-    for (dir in listOfNotNull(ctx.filesDir, ctx.getExternalFilesDir(null))) File(dir, "features/nds").delete()
     prefs.libraryView = com.pokedaisy.app.LibraryView.ALL.id
     prefs.lastRomPath = File(roms, names[0]).absolutePath
     names.take(3).reversed().forEach { prefs.pushRecentRom(File(roms, it).absolutePath) }
@@ -1537,9 +1534,6 @@ fun main(args: Array<String>) {
         Shot("library-views-gba", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.GBA); LibraryActivity() }),
         Shot("library-views-ds", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.DS); LibraryActivity() }),
         Shot("library-views-hacks", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.HACKS); LibraryActivity() }),
-        // The manual's (DocsShots): no DS game, as players have it while DS is behind its flag.
-        Shot("library-views-nods", tw, th, td, activity { platformLibrary(ds = false); LibraryActivity() }),
-        Shot("library-views-gbc-nods", tw, th, td, activity { platformLibrary(com.pokedaisy.app.LibraryView.GBC, ds = false); LibraryActivity() }),
         Shot("library-views-phone", 1080, 2400, 2.625f, activity { platformLibrary(com.pokedaisy.app.LibraryView.GBA); LibraryActivity() }) {
             mainClock.advanceTimeBy(500)   // the open pill scrolled into view
         },

@@ -48,6 +48,7 @@ const retail = [...Object.entries(data.baseCodes).map(([code, title]) => ({ code
         <p class="small muted">Retail dumps.</p>
         <ul class="vlist">
           {data.gameBoy.map((g) => <li><span>{g.title}</span><span class="vval">GAME BOY</span></li>)}
+          {data.ds.map((g) => <li><span>{g.title}</span><span class="vval">DS · {g.code} · REV {g.rev}</span></li>)}
           {retail.map((r) => (
             <li><span>{r.title}</span><span class="vval">{r.code}{r.revs && ` · REV ${r.revs.join('/')}`}</span></li>
           ))}

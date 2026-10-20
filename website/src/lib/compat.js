@@ -5,12 +5,18 @@
 // Pure functions over bytes: the page reads the file, nothing is uploaded.
 
 const GB_LOGO_START = [0xce, 0xed, 0x66, 0x66];
-export const ROM_EXTENSIONS = ['.gba', '.gb', '.gbc'];
+export const ROM_EXTENSIONS = ['.gba', '.gb', '.gbc', '.nds'];
 
-/** What the cart header says: platform, game code (0xAC) and revision (0xBC) for a GBA ROM. */
+/**
+ * What the cart header says: platform, game code (0xAC) and revision (0xBC) for a GBA ROM, game code (0x0C) and
+ * revision (0x1E) for a DS one (its logo's checksum 0xCF56 at 0x15C: RomIdentity.isNds). Checked in the app's order.
+ */
 export function readHeader(bytes) {
   if (bytes.length >= 0x108 && GB_LOGO_START.every((b, i) => bytes[0x104 + i] === b)) {
     return { platform: 'gb' };
+  }
+  if (bytes.length >= 0x160 && bytes[0x15c] === 0x56 && bytes[0x15d] === 0xcf) {
+    return { platform: 'nds', code: String.fromCharCode(...bytes.subarray(0x0c, 0x10)), rev: bytes[0x1e] };
   }
   if (bytes.length < 0xc0) return { platform: null };
   const code = String.fromCharCode(...bytes.subarray(0xac, 0xb0));
@@ -47,6 +53,14 @@ export function verdict(data, { platform, code, rev, size, sha1, retailOf }) {
       ? { status: 'supported', title: hit.title, family: 'Game Boy' }
       : { status: 'unsupported', reason: 'gb' };
   }
+  if (platform === 'nds') {
+    // By the header's code and revision, as the app takes a DS cart (CompanionSupport.isSupported).
+    const hit = (data.ds ?? []).find((g) => g.code === code);
+    if (!hit) return { status: 'unsupported', reason: 'ds' };
+    return hit.rev === rev
+      ? { status: 'supported', title: hit.title, family: 'Nintendo DS' }
+      : { status: 'unsupported', reason: 'revision', base: hit.title };
+  }
   if (platform !== 'gba') return { status: 'unsupported', reason: 'not-a-rom' };
 
   const retail = data.retail.find((r) => r.code === code);
@@ -73,7 +87,7 @@ export function verdict(data, { platform, code, rev, size, sha1, retailOf }) {
 }
 
 /**
- * The ROM inside a .zip (the first .gba / .gb / .gbc entry), unpacked with the browser's
+ * The ROM inside a .zip (the first .gba / .gb / .gbc / .nds entry), unpacked with the browser's
  * own DecompressionStream. Returns { name, bytes } or null when there's none.
  */
 export async function unzipRom(zip) {

@@ -72,8 +72,6 @@ android {
         // ScreenScraper (game media, its setup step and the update's popup): off until the app has its developer login
         // (FeatureFlags.screenScraper).
         buildConfigField("boolean", "FEATURE_SCREENSCRAPER", featureFlag("screenScraper").toString())
-        // Nintendo DS games (melonDS, Platinum first): off until they're ready for players (FeatureFlags.nds).
-        buildConfigField("boolean", "FEATURE_NDS", featureFlag("nds").toString())
 
         ndk {
             // Thor is arm64; add armeabi-v7a later only if a target device needs it.

@@ -6,7 +6,7 @@ order: 1
 keywords: [about, intro, introduction, overview, what is, getting started, manual, help, faq, emulator, gba]
 ---
 
-PokeDaisy is a Game Boy, Game Boy Color and Game Boy Advance player for Android, made for Pokémon games. Beside your game runs a live **companion** that reads it while you play: your party, your bag, the map you're on, how the current battle is going, your Pokédex and a guide that hints before it tells. On a dual-screen handheld like the AYN Thor, the companion gets the bottom screen to itself. On a handheld with one screen it opens as a window over the game or a panel beside it, and on a phone held upright it sits under it.
+PokeDaisy is a Game Boy, Game Boy Color, Game Boy Advance and Nintendo DS player for Android, made for Pokémon games. Beside your game runs a live **companion** that reads it while you play: your party, your bag, the map you're on, how the current battle is going, your Pokédex and a guide that hints before it tells. On a dual-screen handheld like the AYN Thor, the companion gets the bottom screen to itself. On a handheld with one screen it opens as a window over the game or a panel beside it, and on a phone held upright it sits under it.
 
 You never have to pause and open a menu to check a Pokémon's moves or look up what an attack does against a type. One glance, and it's there, drawn in the game's own menu style.
 
@@ -15,8 +15,8 @@ You never have to pause and open a menu to check a Pokémon's moves or look up w
 ## What you need
 
 - **An Android device running Android 8.0 or newer.** A handheld with two screens or one, or a phone.
-- **Your own games.** PokeDaisy comes with no games at all. Use ROMs you dumped yourself from cartridges you own: `.gba` files (Game Boy and Game Boy Color `.gb` / `.gbc` work too), loose or inside a `.zip` or `.7z`.
-- **A supported game for the companion.** Any Game Boy, Game Boy Color or GBA game plays, but the companion only reads the games it knows: FireRed, LeafGreen, Emerald, Ruby, Sapphire, Yellow and a long list of ROM hacks. [Supported games](supported-games.md) has the full list and the exact versions.
+- **Your own games.** PokeDaisy comes with no games at all. Use ROMs you dumped yourself from cartridges you own: `.gba` files (Game Boy and Game Boy Color `.gb` / `.gbc` and DS `.nds` work too), loose or inside a `.zip` or `.7z`.
+- **A supported game for the companion.** Any Game Boy, Game Boy Color, GBA or DS game plays, but the companion only reads the games it knows: FireRed, LeafGreen, Emerald, Ruby, Sapphire, Red to Crystal on the Game Boy, Platinum, HeartGold and SoulSilver on the DS, and a long list of ROM hacks. [Supported games](supported-games.md) has the full list and the exact versions.
 
 Ready? [Install and first setup](install.md) walks you through the first five minutes.
 

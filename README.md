@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://pokedaisy.com/og.png" alt="PokeDaisy: Game Boy, Game Boy Color and GBA player with a live companion, on two screens or one, for Pokemon games and ROM hacks, free and open source" width="100%">
+<img src="https://pokedaisy.com/og.png" alt="PokeDaisy: Game Boy, Game Boy Color, GBA and DS player with a live companion, on two screens or one, for Pokemon games and ROM hacks, free and open source" width="100%">
 
 <h3>Play your Pokemon games. See everything about them on your second screen, or right beside the game.</h3>
 
@@ -23,9 +23,9 @@
 
 </div>
 
-PokeDaisy is a Game Boy, Game Boy Color and GBA player for Android handhelds with two screens or one,
-made for Pokemon FireRed, LeafGreen, Emerald, Ruby, Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal
-and popular ROM hacks of every generation. Next to the game runs a live companion that reads it as you
+PokeDaisy is a Game Boy, Game Boy Color, GBA and Nintendo DS player for Android handhelds with two screens or one,
+made for Pokemon FireRed, LeafGreen, Emerald, Ruby, Sapphire, Red, Blue, Yellow, Gold, Silver, Crystal, Platinum,
+HeartGold, SoulSilver and popular ROM hacks of every generation. Next to the game runs a live companion that reads it as you
 play: your party, your bag, the map, battle matchups, your Pokedex, and a spoiler-free guide.
 Everything is drawn in the game's own menu style.
 
@@ -35,6 +35,8 @@ Everything is drawn in the game's own menu style.
   game screen. The **quick menu**, one button away, opens your PC, flies, rides your bike or fishes, and
   **battle buttons** fight, switch or run right beside the battle.
 - **A phone and a TV**: cast or plug in a TV and the game goes on the big screen, the companion stays in your hand.
+- **DS games** (Platinum, HeartGold, SoulSilver): on a two-screen handheld the DS's touch screen goes on the bottom
+  screen, and one tap there swaps it for the companion and back. The companion also opens over the game, like on one screen.
 
 ## Devices
 
@@ -184,7 +186,8 @@ under LANGUAGE in either Settings screen. Species, move and item names and the G
   Sapphire, every language and revision, plus Unbound, Radical Red, Lazarus, SoulGold, Heart and Soul, Gaia, Odyssey,
   Amethyst 1.3.0, Glazed, Seaglass, Emerald Imperium, Emerald Rogue, Too Many Types 2, Recharged Yellow, Super Mariomon,
   Ultra Violet, FireRed Rocket Edition, Ash Gray, Ghost Grey, Elite Redux, Sword and Shield Ultimate Plus, GS Chronicles and
-  Celia's hack; on the Game Boy, Pokémon Yellow, English, and Crystal, their field only).
+  Celia's hack; on the Game Boy, Pokémon Yellow, English, and Crystal, their field only; on the DS, Platinum, HeartGold
+  and SoulSilver, their 3D overworld drawn past the screen's edges and their battles too).
   The extra strips are rebuilt every frame from the game's own map, tiles and sprites. Battles are wide too: their
   scenery runs on past the edges and the battlers, trainers and healthboxes slide in from off screen. Fog, ash and rain
   reach the screen's edges, and dark caves stay dark around Flash's light. On the title
@@ -224,7 +227,7 @@ under LANGUAGE in either Settings screen. Species, move and item names and the G
   when you last played it and whether it has a save. **X** swaps
   the screens (animated), **A** opens the game, **B** its options, **Y** Settings - a legend in the corner shows them.
   Settings > DUAL-SCREEN LAUNCHER turns it off.
-- ROMs can be plain `.gba`, `.gb` or `.gbc` files or zipped (`.zip` / `.7z`), in your ROMs folder or imported with **+**.
+- ROMs can be plain `.gba`, `.gb`, `.gbc` or `.nds` files or zipped (`.zip` / `.7z`), in your ROMs folder or imported with **+**.
 - **Refresh** rescans your ROMs folder and tells you what it found.
 - Long-press a game to:
   - **Rename** or **hide** it.
@@ -266,7 +269,7 @@ is left alone.
 
 ## Supported games
 
-Any Game Boy, Game Boy Color or GBA game plays. The companion needs one of the games below, **in the exact
+Any Game Boy, Game Boy Color, GBA or DS game plays. The companion needs one of the games below, **in the exact
 version listed** (ROM hacks are recognized by their file, so another version
 shows a "not supported" notice).
 
@@ -292,6 +295,8 @@ shows a "not supported" notice).
 | Ruby                           | ES/DE/FR/IT/JP, rev 0-1    |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |
 | Sapphire                       | USA, rev 0, 1 and 2        |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |
 | Sapphire                       | ES/DE/FR/IT/JP, rev 0-1    |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |
+| Platinum (DS)                  | USA rev 1                  |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |
+| HeartGold / SoulSilver (DS)    | USA                        |  ✅   | ✅  |   —    | ✅  |   ✅    |  ✅   |
 | Unbound                        | 2.1.1.1                    |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |
 | Unbound                        | 2.1.1.1 French             |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |
 | Radical Red                    | 4.1                        |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |
@@ -336,6 +341,10 @@ French, Italian and Spanish Yellows show their own names, Pokédex pages and bat
 shows its own Pokémon, moves, types, six town maps and its own Pokédex (its 253 in the game's order). Polished
 Crystal shows its own Pokémon (regional forms included), moves, types, items, its Johto, Kanto and Orange Islands maps and
 its 289 in National order; its faithful builds keep the original games' types and moves, as the game does.
+Platinum, HeartGold and SoulSilver are the DS games the companion reads, in the USA release listed (Platinum's
+revision 1); their pictures, Pokédex pages and maps come from your cart. Platinum's battles show in the BATTLE tab,
+HeartGold's and SoulSilver's not yet, and on the DS the battle buttons don't press the game's menus yet. On a
+one-screen device a DS game shows its top screen; the touch screen needs a second screen for now.
 Map ◐ means place names
 only, without the map picture. Guide ◐ means the live pages only (the wild encounters here and the next
 boss), without the area lists. Battle ◐ means the battle panes work but haven't
@@ -394,14 +403,24 @@ runs and ask questions on [r/PokeDaisy](https://www.reddit.com/r/PokeDaisy/).
 ## Credits
 
 <details>
-<summary>mGBA, rcheevos, fonts, the pret decomps, cover art sources</summary>
+<summary>mGBA, melonDS, rcheevos, fonts, shaders, the pret decomps, cover art sources</summary>
 
-- [mGBA](https://mgba.io) by Vicki Pfau (endrift) and contributors runs the games (MPL 2.0;
+- [mGBA](https://mgba.io) by Vicki Pfau (endrift) and contributors runs the Game Boy, Game Boy Color and GBA games (MPL 2.0;
   source in [`third_party/mgba`](https://github.com/mgba-emu/mgba)), with its bundled blip_buf (LGPL 2.1) and inih (BSD).
+- [melonDS](https://melonds.kuribo64.net) by the melonDS team runs the DS games (GPL 3.0; source in
+  [`third_party/melonds`](https://github.com/melonDS-emu/melonDS), PokeDaisy's changes in
+  [`third_party/patches`](third_party/patches)), with its bundled FatFs, Teakra (MIT), xxHash (BSD 2-Clause),
+  tiny-AES-c (Unlicense), blip_buf (LGPL 2.1) and Dolphin's ARM64 emitter (GPL 2.0+).
 - [rcheevos](https://github.com/RetroAchievements/rcheevos) by RetroAchievements.org (MIT) for achievements.
-- [Pixel Operator](https://www.dafont.com/pixel-operator.font) font by Jayvee Enaguas (CC0).
+- [Pixel Operator](https://www.dafont.com/pixel-operator.font) font by Jayvee Enaguas (CC0), and
+  [Atkinson Hyperlegible](https://www.brailleinstitute.org/freefont/) by the Braille Institute (OFL 1.1) for the manual's text.
 - [PixelMplus](https://github.com/itouhiro/PixelMplus) (M+ FONT LICENSE, M+ FONTS PROJECT) for Japanese text, converted to Pixel Operator's pixel grid by `scripts/gen_jp_font.py`.
-- The [pret](https://github.com/pret) decompilation projects and [pokeemerald-expansion](https://github.com/rh-hideout/pokeemerald-expansion), which the game data and guides were checked against.
+- The [pret](https://github.com/pret) decompilation projects (pokered, pokeyellow, pokegold, pokecrystal, pokefirered,
+  pokeemerald, pokeruby, pokeplatinum, pokeheartgold), [pokeemerald-expansion](https://github.com/rh-hideout/pokeemerald-expansion)
+  and [Polished Crystal](https://github.com/Rangi42/polishedcrystal)'s source, which the game data and guides were checked against.
+- Screen shaders: LCD and scanlines from mGBA's (MIT), the GBA colours by Pokefan531 and hunterk, LCD PAPER after
+  RetroArch's simpletex_lcd and zfast_lcd (GPL 2.0+), and libretro's xBR, xBRZ and ScaleFX for edge smoothing
+  (MIT, xBRZ GPL 3.0).
 - [PokeAPI](https://pokeapi.co) (BSD 3-Clause) for the National Dex species list.
 - AndroidX, Jetpack Compose, Kotlin and Apache Commons Compress (Apache 2.0), XZ for Java (0BSD).
 

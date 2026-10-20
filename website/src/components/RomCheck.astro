@@ -5,10 +5,10 @@ import Pixel from './Pixel.astro';
 ---
 <div class="romcheck">
   <label class="drop f-card" data-drop>
-    <input type="file" accept=".gba,.gb,.gbc,.zip,.7z" hidden data-file />
+    <input type="file" accept=".gba,.gb,.gbc,.nds,.zip,.7z" hidden data-file />
     <span class="drop-art"><Pixel name="logo" scale={2} /></span>
     <span class="drop-title" data-drop-text>DROP A ROM HERE</span>
-    <span class="drop-sub small muted">or tap to pick one: .gba, .gb, .gbc or a .zip of one</span>
+    <span class="drop-sub small muted">or tap to pick one: .gba, .gb, .gbc, .nds or a .zip of one</span>
     <span class="drop-lock small"><Pixel name="states" scale={0.667} /> Checked right here in your browser. Never uploaded.</span>
   </label>
 
@@ -74,9 +74,10 @@ import Pixel from './Pixel.astro';
     revision: (v, r) => `${v.base} revision ${r.rev} isn't supported yet.`,
     'other-game': (_, r) => `Not a game the companion reads (game code ${r.code}). PokeDaisy still plays it, without the companion.`,
     gb: () => 'A Game Boy game the companion doesn\'t read yet. It reads Pokémon Red, Blue, Yellow, Gold, Silver, Crystal, Crystal Clear, Prism and Polished Crystal so far.',
+    ds: () => 'A DS game the companion doesn\'t read yet. It reads Pokémon Platinum, HeartGold and SoulSilver so far.',
     '7z': () => 'Unpack the .7z first, then drop the ROM (or a .zip of it).',
-    'empty-zip': () => 'There\'s no .gba, .gb or .gbc file in that zip.',
-    'not-a-rom': () => 'This doesn\'t look like a GBA or Game Boy ROM.',
+    'empty-zip': () => 'There\'s no .gba, .gb, .gbc or .nds file in that zip.',
+    'not-a-rom': () => 'This doesn\'t look like a Game Boy, GBA or DS ROM.',
   };
   const STAMPS: Record<string, [string, string]> = {
     supported: ['SUPPORTED', 'f-pillGreen'],
@@ -107,7 +108,7 @@ import Pixel from './Pixel.astro';
     const formLink = (r: any) => {
       const params = new URLSearchParams({
         game: r.name.replace(/\.[^.]+$/, ''),
-        game_code: r.code ? `${r.code} (rev ${r.rev})` : 'Game Boy',
+        game_code: r.code ? `${r.code} (rev ${r.rev})${r.platform === 'nds' ? ' DS' : ''}` : 'Game Boy',
         size: String(r.size),
         sha1: r.sha1,
       });
@@ -142,7 +143,7 @@ import Pixel from './Pixel.astro';
         if (r.size) row('SIZE', `${(r.size / 1048576).toFixed(r.size % 1048576 ? 1 : 0)} MB`);
         if (r.sha1) row('SHA-1', r.sha1, true);
         message.textContent = MESSAGES[v.status === 'unsupported' ? v.reason : v.status](v, r);
-        if (r.sha1 && (['unknown-hack', 'retail-hack', 'revision', 'other-game', 'gb'].includes(v.reason))) {
+        if (r.sha1 && (['unknown-hack', 'retail-hack', 'revision', 'other-game', 'gb', 'ds'].includes(v.reason))) {
           actions.append(formLink(r));
         }
       } catch (e) {

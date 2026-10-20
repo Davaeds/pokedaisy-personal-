@@ -1003,17 +1003,19 @@ class TelemetrySampler {
         const val GAME_BOY_SUPPORT = true
 
         /**
-         * Nintendo DS (Platinum first, on melonDS): the library, folder scan, frontend launch and archives take .nds
-         * and a known cart is read by the Gen 4 reader. Set from [com.pokedaisy.app.FeatureFlags.nds] at process and
-         * library start; off, a DS cart is never listed.
+         * Nintendo DS (on melonDS): the library, folder scan, frontend launch and archives take .nds and a known cart
+         * ([NDS_GAMES]) is read by the Gen 4 reader. False turns all of it off again (then drop the manifest's .nds
+         * VIEW pattern too): a DS cart is then never listed.
          */
-        @Volatile var NDS_SUPPORT = false
+        const val NDS_SUPPORT = true
 
-        /** A DS cart the companion reads, by its header's game code and revision (0x0C / 0x1E): Platinum USA rev 1,
-         * HeartGold / SoulSilver USA (rev 0, their only one). [detectDs] and the library's
-         * [com.pokedaisy.app.CompanionSupport] both ask this. */
-        fun ndsSupported(code: String?, revision: Int?): Boolean = NDS_SUPPORT &&
-            (code == "CPUE" && revision == 1 || (code == "IPKE" || code == "IPGE") && revision == 0)
+        /** The DS carts the companion reads, by their header's game code (0x0C) and revision (0x1E): Platinum USA rev 1,
+         * HeartGold / SoulSilver USA (rev 0, their only one). The website's ROM check gets them through compat.json. */
+        val NDS_GAMES = mapOf("CPUE" to 1, "IPKE" to 0, "IPGE" to 0)
+
+        /** [detectDs] and the library's [com.pokedaisy.app.CompanionSupport] both ask this. */
+        fun ndsSupported(code: String?, revision: Int?): Boolean =
+            NDS_SUPPORT && revision != null && NDS_GAMES[code] == revision
 
         /** Every hack detect() has RAM addresses for - the >16 MB ones it
          * hashes, plus Seaglass, Emerald Kaizo, Emerald Legacy, Orange Islands, Recharged Yellow / Emerald and Ultra Violet (16 MB). [CompanionSupport] checks imports against it. */

@@ -51,6 +51,24 @@ test('other retail games: revisions and size', () => {
   assert.equal(v('AGBJ', 0, 4 * MB).reason, 'other-game');
 });
 
+function nds(code, rev = 0) {
+  const b = new Uint8Array(0x200);
+  b.set([...code].map((c) => c.charCodeAt(0)), 0x0c);
+  b[0x1e] = rev;
+  b.set([0x56, 0xcf], 0x15c);
+  return b;
+}
+
+test('DS: Platinum rev 1, HeartGold / SoulSilver, by the header', () => {
+  assert.deepEqual(readHeader(nds('CPUE', 1)), { platform: 'nds', code: 'CPUE', rev: 1 });
+  const ds = (code, rev) => verdict(data, { ...readHeader(nds(code, rev)), size: 128 * MB, sha1: '0'.repeat(40) });
+  assert.deepEqual(ds('CPUE', 1), { status: 'supported', title: 'Pokémon Platinum', family: 'Nintendo DS' });
+  assert.deepEqual(ds('CPUE', 0), { status: 'unsupported', reason: 'revision', base: 'Pokémon Platinum' });
+  assert.equal(ds('IPKE', 0).title, 'Pokémon HeartGold');
+  assert.equal(ds('IPGE', 0).title, 'Pokémon SoulSilver');
+  assert.equal(ds('ADAE', 0).reason, 'ds');
+});
+
 test('Game Boy: Yellow only', () => {
   assert.equal(verdict(data, { platform: 'gb', sha1: 'cc7d03262ebfaf2f06772c1a480c7d9d5f4a38e1' }).title, 'Pokémon Yellow');
   assert.equal(verdict(data, { platform: 'gb', sha1: '0'.repeat(40) }).reason, 'gb');

@@ -3,10 +3,10 @@ title: Supported games
 summary: Which games the companion can read, how to check your ROM, and what happens with a hack or version PokeDaisy doesn't know.
 section: help
 order: 1
-keywords: [compatibility, compatible, rom hack, hacks, version, sha1, sha-1, checksum, unsupported, best effort, partially supported, request]
+keywords: [nds, nintendo ds, platinum, heartgold, soulsilver, compatibility, compatible, rom hack, hacks, version, sha1, sha-1, checksum, unsupported, best effort, partially supported, request]
 ---
 
-Any GBA or Game Boy game plays in PokeDaisy. "Supported" is about the companion on the bottom screen: to show your party, bag, map and battles, it has to know exactly which game you're running and where that game keeps its data. A game it doesn't know still plays fine on the top screen; the companion shows a notice instead of your party.
+Any GBA, Game Boy or DS game plays in PokeDaisy. "Supported" is about the companion on the bottom screen: to show your party, bag, map and battles, it has to know exactly which game you're running and where that game keeps its data. A game it doesn't know still plays fine on the top screen; the companion shows a notice instead of your party.
 
 ## What's supported
 
@@ -25,6 +25,13 @@ Any GBA or Game Boy game plays in PokeDaisy. "Supported" is about the companion 
 - Pokémon Crystal Clear, the open world hack of Crystal: versions 2.5.11 and 2.6.0, each in its Standard Colors and its Color Filter build, drawn in the game's own look.
 - Pokémon Prism, built on Crystal with regions of its own: version 0.95 build 254 (Hotfix 5), drawn in the game's own look, with its own Pokédex.
 - Polished Crystal: versions 3.2.0 to 3.2.3, each in its normal and its faithful build (and their debug builds), drawn in the game's own look, with its own Pokédex. The faithful builds keep the original types and moves, and the companion shows them that way.
+
+**Nintendo DS:**
+
+- Pokémon Platinum: the USA release, revision 1.
+- Pokémon HeartGold and SoulSilver: the USA releases.
+
+The companion reads their party, bag, map, Pokédex and guide, with pictures, Pokédex pages and the map read from your cart. Platinum's battles show in the `BATTLE` tab; HeartGold's and SoulSilver's don't yet. [Screens and devices](devices.md#ds-games) has how a DS game uses your screens.
 
 **ROM hacks**, each in the versions listed:
 

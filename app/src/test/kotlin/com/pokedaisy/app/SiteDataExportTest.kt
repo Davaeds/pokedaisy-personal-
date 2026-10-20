@@ -33,6 +33,9 @@ class SiteDataExportTest {
         "BPEJ" to "ポケットモンスター エメラルド",
     )
 
+    /** The DS carts' titles by game code ([TelemetrySampler.NDS_GAMES]). */
+    private val dsTitles = mapOf("CPUE" to "Pokémon Platinum", "IPKE" to "Pokémon HeartGold", "IPGE" to "Pokémon SoulSilver")
+
     /** The base game of each hack that has a game code of its own ([TelemetrySampler.HACK_GAME_CODES]). */
     private val hackCodeBases = mapOf(TelemetrySampler.ULTRA_VIOLET_CODE to "BPRE")
 
@@ -84,7 +87,8 @@ class SiteDataExportTest {
             .sortedWith(compareBy({ it.second }, { it.third }))
             .partition { it.second in inProgressGames }
         val gameBoy = if (TelemetrySampler.GAME_BOY_SUPPORT) TelemetrySampler.SUPPORTED_GB_SHA1S.sorted() else emptyList()
-        // DS carts stay off the site while DS is behind its feature flag (the site lists only what the APK plays).
+        val ds = if (TelemetrySampler.NDS_SUPPORT) TelemetrySampler.NDS_GAMES.toSortedMap().toList() else emptyList()
+        // DS carts go by their header's code and revision (`ds`), as the app takes them, not by hash.
         val titles = GameTitles.BY_SHA1.filterKeys { it !in hackSha1s && it !in gameBoy && it !in GameTitles.NDS_SHA1S }.toSortedMap()
 
         return buildString {
@@ -117,6 +121,9 @@ class SiteDataExportTest {
             append("  \"gameBoy\": [\n")
             append(gameBoy.joinToString(",\n") { "    {\"sha1\": ${q(it)}, \"title\": ${q(GameTitles.BY_SHA1.getValue(it))}}" })
             append("\n  ],\n")
+            append("  \"ds\": [\n")
+            append(ds.joinToString(",\n") { (code, rev) -> "    {\"code\": ${q(code)}, \"rev\": $rev, \"title\": ${q(dsTitles.getValue(code))}}" })
+            append("\n  ],\n")
             append("  \"titles\": {\n")
             append(titles.entries.joinToString(",\n") { (sha1, title) -> "    ${q(sha1)}: ${q(title)}" })
             append("\n  },\n")
@@ -147,6 +154,11 @@ class SiteDataExportTest {
         assertTrue("no *_V<version>_SHA1 constant for $missing", missing.isEmpty())
         assertEquals("v2.2.1-EX", hackVersions[TelemetrySampler.EMERALD_ROGUE_V2_2_1_EX_SHA1])
         assertEquals("v1.2b", hackVersions[TelemetrySampler.SOULGOLD_V1_2B_SHA1])
+    }
+
+    @Test
+    fun `every DS cart has a title`() {
+        assertEquals(TelemetrySampler.NDS_GAMES.keys, dsTitles.keys)
     }
 
     @Test

@@ -7,15 +7,16 @@ import data from '../data/compat.json';
 const ICONS: Record<string, string> = { Party: 'orb', Bag: 'bag', Battle: 'battle', Map: 'map', Dex: 'dex', Guide: 'guide' };
 const LABELS: Record<string, string> = { Party: 'PARTY', Bag: 'BAG', Battle: 'BATTLE', Map: 'MAP', Dex: 'DEX', Guide: 'GUIDE' };
 const RETAIL = ['FireRed', 'LeafGreen', 'Emerald', 'Ruby', 'Sapphire'];
+// README's rows name their console in brackets: (GB) / (GBC) for the Game Boy games, (DS) for the DS ones.
 const kind = (game: string) =>
-  /\(GB\)/.test(game) ? 'gb' : RETAIL.includes(game) ? 'retail' : 'hack';
-// Game Boy first (Yellow), then README's order.
-const rows = data.matrix.rows.map((r) => ({ ...r, kind: kind(r.game), name: r.game.replace(' (GB)', '') }))
+  /\((GB|GBC)\)/.test(game) ? 'gb' : /\(DS\)/.test(game) ? 'ds' : RETAIL.includes(game) ? 'retail' : 'hack';
+// Game Boy first, then README's order.
+const rows = data.matrix.rows.map((r) => ({ ...r, kind: kind(r.game), name: r.game.replace(/ \((GB|GBC|DS)\)$/, '') }))
   .sort((a, b) => Number(b.kind === 'gb') - Number(a.kind === 'gb'));
-const counts = { all: rows.length, retail: 0, hack: 0, gb: 0 } as Record<string, number>;
+const counts = { all: rows.length, retail: 0, hack: 0, gb: 0, ds: 0 } as Record<string, number>;
 rows.forEach((r) => counts[r.kind]++);
-const filters = [['all', 'ALL'], ['retail', 'ORIGINALS'], ['hack', 'ROM HACKS'], ['gb', 'GAME BOY']];
-const KIND_LABEL: Record<string, string> = { retail: 'ORIGINAL', hack: 'ROM HACK', gb: 'GAME BOY' };
+const filters = [['all', 'ALL'], ['retail', 'ORIGINALS'], ['hack', 'ROM HACKS'], ['gb', 'GAME BOY'], ['ds', 'DS']];
+const KIND_LABEL: Record<string, string> = { retail: 'ORIGINAL', hack: 'ROM HACK', gb: 'GAME BOY', ds: 'NINTENDO DS' };
 ---
 <div class="matrix">
   <div class="filters" role="tablist" aria-label="Filter games">
@@ -57,7 +58,7 @@ const KIND_LABEL: Record<string, string> = { retail: 'ORIGINAL', hack: 'ROM HACK
     <span><Pixel name="no" scale={0.667} /> NOT YET</span>
   </div>
   <p class="small muted notes">
-    Any Game Boy, Color or Advance game plays; the companion needs one of these, in the exact version listed. MAP partly = place names
+    Any Game Boy, Color, Advance or DS game plays; the companion needs one of these, in the exact version listed. MAP partly = place names
     without the map picture. BATTLE partly = the battle panes work but haven't been checked in every kind of battle.
   </p>
 </div>
@@ -87,6 +88,7 @@ const KIND_LABEL: Record<string, string> = { retail: 'ORIGINAL', hack: 'ROM HACK
   .k-retail { color: var(--blue); }
   .k-hack { color: var(--red); }
   .k-gb { color: var(--green); }
+  .k-ds { color: var(--ink-2); }
   .legend { display: flex; flex-wrap: wrap; gap: 24px; }
   .legend span { display: inline-flex; align-items: center; gap: 8px; }
   .notes { max-width: 90ch; }

@@ -54,12 +54,12 @@ const deviceList = [
   ['tv', 'A PHONE AND A TV', 'Cast your phone to a TV or plug one in: the game on the big screen, the companion in your hand.', 'SHOULD WORK', 'f-pillYellow'],
   ['moreDevice', 'COMING SOON', 'More handhelds, tablets and foldables. Want yours supported? Ask for it below.', 'SOON', 'f-pillGrey'],
 ];
-const ticker = ['GB · GBC · GBA', 'TWO SCREENS OR ONE', 'PARTY', 'BAG', 'BATTLE', 'MAP', 'DEX', 'GUIDE', 'TRAINER CARD', 'SAVE STATES', 'HUD', 'QUICK MENU', 'FAST-FORWARD', 'SHADERS', 'ACHIEVEMENTS', `${gameCount} GAMES`];
+const ticker = ['GB · GBC · GBA · DS', 'TWO SCREENS OR ONE', 'PARTY', 'BAG', 'BATTLE', 'MAP', 'DEX', 'GUIDE', 'TRAINER CARD', 'SAVE STATES', 'HUD', 'QUICK MENU', 'FAST-FORWARD', 'SHADERS', 'ACHIEVEMENTS', `${gameCount} GAMES`];
 const title = 'POKEDAISY'.split('');
 ---
 <Base
   title="PokeDaisy: Game Boy Pokémon with a live companion"
-  description="A free player for Game Boy, Game Boy Color and Game Boy Advance Pokémon games on Android handhelds with two screens or one: the game, and a live companion with your party, battles, map, dex and guide on the second screen or right beside it, plus a HUD and a quick menu on the game screen."
+  description="A free player for Game Boy, Game Boy Color, Game Boy Advance and Nintendo DS Pokémon games on Android handhelds with two screens or one: the game, and a live companion with your party, battles, map, dex and guide on the second screen or right beside it, plus a HUD and a quick menu on the game screen."
 >
   <!-- Hero -->
   <section class="hero container">
@@ -73,7 +73,7 @@ const title = 'POKEDAISY'.split('');
           {title.map((ch, i) => <span class:list={['drop-letter', i < 4 && 'red']} style={`--d:${i}`} aria-hidden="true">{ch}</span>)}
         </h1>
       </div>
-      <p class="hero-kicker">Game Boy, Color and Advance Pokémon, for handhelds with two screens or one</p>
+      <p class="hero-kicker">Game Boy, Advance and DS Pokémon, for handhelds with two screens or one</p>
       <div class="dialog f-dialog" data-type>
         <p data-type-text>Play your Pokémon games. See everything about them on your second screen, or right beside the game.</p>
         <span class="more"><Pixel name="more" scale={1} /></span>
@@ -159,7 +159,7 @@ const title = 'POKEDAISY'.split('');
     <div class="section-head center">
       <span class="eyebrow">THE PLAYER</span>
       <h2 class="heading">A Game Boy player built for Pokémon</h2>
-      <p class="lead">mGBA under the hood plays Game Boy, Color and Advance, tuned for the long grind: fast where it's dull, normal where it matters.</p>
+      <p class="lead">mGBA and melonDS under the hood play Game Boy, Color, Advance and DS, tuned for the long grind: fast where it's dull, normal where it matters.</p>
     </div>
     <div class="player-grid">
       {player.map(([icon, name, text], i) => (
@@ -219,7 +219,7 @@ const title = 'POKEDAISY'.split('');
     <div class="section-head">
       <span class="eyebrow">SUPPORTED GAMES</span>
       <h2 class="heading">{gameCount} games and counting</h2>
-      <p class="lead">FireRed, LeafGreen, Emerald, Ruby and Sapphire in six languages, {hackCount} ROM hacks, and Pokémon Yellow - the first Game Boy game, with more on the way.</p>
+      <p class="lead">Red to Crystal on the Game Boy, FireRed, LeafGreen, Emerald, Ruby and Sapphire in six languages, Platinum, HeartGold and SoulSilver on the DS, and {hackCount} ROM hacks, with more on the way.</p>
     </div>
     <div data-reveal="fade"><Matrix /></div>
   </section>

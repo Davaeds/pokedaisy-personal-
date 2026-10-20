@@ -10,6 +10,4 @@ object BuildConfig {
     const val FEATURE_SAVE_EDITOR = false
     /** Off as in a default build; the ScreenScraper shots turn it on (`withScreenScraper`). */
     @JvmField var FEATURE_SCREENSCRAPER = false
-    /** DS games (melonDS): off, as in a default build. */
-    const val FEATURE_NDS = false
 }

@@ -300,7 +300,6 @@ class LibraryActivity : ComponentActivity() {
 
         // The device's marker can change between visits (FeatureFlags): read before setup builds its steps.
         ScreenScraperClient.enabled = FeatureFlags.screenScraper(this)
-        com.pokedaisy.app.companion.data.TelemetrySampler.NDS_SUPPORT = FeatureFlags.nds(this)
         sort = LibrarySort.of(prefs.librarySort)
         quickView = LibraryView.of(prefs.libraryView)
         // The second screen (and so SWAP) is the game's media page: ScreenScraper's, off until its flag is on.

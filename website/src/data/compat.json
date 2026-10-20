@@ -136,6 +136,11 @@
     {"sha1": "f2f52230b536214ef7c9924f483392993e226cfb", "title": "Pokémon Crystal"},
     {"sha1": "f4cd194bdee0d04ca4eac29e09b8e4e9d818c133", "title": "Pokémon Crystal"}
   ],
+  "ds": [
+    {"code": "CPUE", "rev": 1, "title": "Pokémon Platinum"},
+    {"code": "IPGE", "rev": 0, "title": "Pokémon SoulSilver"},
+    {"code": "IPKE", "rev": 0, "title": "Pokémon HeartGold"}
+  ],
   "titles": {
     "015a5d380afe316a2a6fcc561798ebff9dfb3009": "Pokémon Versione Rubino",
     "01f509671445965236ac4c6b5a354fe2f1e69f13": "ポケットモンスター サファイア",
@@ -207,6 +212,8 @@
       {"game": "Ruby", "version": "ES/DE/FR/IT/JP, rev 0-1", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "Sapphire", "version": "USA, rev 0, 1 and 2", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "Sapphire", "version": "ES/DE/FR/IT/JP, rev 0-1", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
+      {"game": "Platinum (DS)", "version": "USA rev 1", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
+      {"game": "HeartGold / SoulSilver (DS)", "version": "USA", "cells": ["yes", "yes", "no", "yes", "yes", "yes"]},
       {"game": "Unbound", "version": "2.1.1.1", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "Unbound", "version": "2.1.1.1 French", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "Radical Red", "version": "4.1", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},

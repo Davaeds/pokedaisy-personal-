@@ -8,7 +8,7 @@ keywords: [games list, add rom, import, folder, zip, 7z, archive, cover, box art
 
 The library is the first thing you see when you open PokeDaisy: every game you've added, in the order you pick. Tap a game to play it.
 
-![The library in list view: the header's sort, view, add, refresh, help and settings buttons, a row of coloured quick views (ALL, FAVORITES, RECENT, GB, GBC, GBA, HACKS) and the games under them](shots/library-list.png "The library in list view")
+![The library in list view: the header's sort, view, add, refresh, help and settings buttons, a row of coloured quick views (ALL, FAVORITES, RECENT, GB, GBC, GBA, DS, HACKS) and the games under them](shots/library-list.png "The library in list view")
 
 The buttons in the header, from left to right:
 
@@ -35,6 +35,7 @@ The row of coloured buttons under the header narrows the library down to one kin
 | `GB` | Game Boy games. |
 | `GBC` | Game Boy Color only games. |
 | `GBA` | Game Boy Advance games. |
+| `DS` | Nintendo DS games. |
 | `HACKS` | ROM hacks. |
 
 The console views and `HACKS` use the same colours as the covers of games without art (see [Cover art](#cover-art)), and each one only shows while your library has such a game. A hack is in `HACKS` and in its console's view too, so a FireRed hack shows under `GBA` as well.
@@ -132,7 +133,7 @@ Covers come from two free services, and you need your own free key for each one 
 
 Tap `GET KEY` next to either one to open the page where your key is, copy it, paste it in the box and tap `SAVE`. PokeDaisy fetches a cover for each game once and keeps it on the device. `REPLACE ALL` fetches fresh covers for every game, replacing the ones you have (including ones you picked yourself). `CLEAR` removes the keys.
 
-A game with no cover shows what kind of game it is instead, in pixel letters on its own colour: `GB` (grey) for a Game Boy game, `GBC` (yellow) for a Game Boy Color only one, `GBA` (purple) for a Game Boy Advance game, or `HACK` (red) for a ROM hack.
+A game with no cover shows what kind of game it is instead, in pixel letters on its own colour: `GB` (grey) for a Game Boy game, `GBC` (yellow) for a Game Boy Color only one, `GBA` (purple) for a Game Boy Advance game, `NDS` (teal) for a DS game, or `HACK` (red) for a ROM hack.
 
 ### Pick another cover
 

@@ -253,7 +253,7 @@ fun docsShots(all: List<Shot>, bw: Int, bh: Int, bd: Float, tw: Int, th: Int, td
     val help = installDocsSource()
     // Main.kt's top-screen shots the docs reuse: its name -> the docs' name.
     val reuse = linkedMapOf(
-        "library-views-nods" to "library-list", "library-views-gbc-nods" to "library-views", "library-grid" to "library-grid", "library-list-menu" to "library-menu",
+        "library-views" to "library-list", "library-views-gbc" to "library-views", "library-grid" to "library-grid", "library-list-menu" to "library-menu",
         "library-info" to "library-info", "library-sort" to "library-sort", "library-cover-picker" to "library-cover-picker",
         "library-update" to "library-update", "library-list-phone" to "phone-library",
         "setup-roms" to "setup-roms", "setup-saves" to "setup-saves", "setup-buttons" to "setup-buttons", "setup-covers" to "setup-covers",

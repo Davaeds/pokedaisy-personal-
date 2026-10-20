@@ -74,6 +74,8 @@
                 <!-- Game Boy / Color, with TelemetrySampler.GAME_BOY_SUPPORT. -->
                 <data android:mimeType="*/*" android:pathPattern=".*\\.gb" />
                 <data android:mimeType="*/*" android:pathPattern=".*\\.gbc" />
+                <!-- Nintendo DS, with TelemetrySampler.NDS_SUPPORT. -->
+                <data android:mimeType="*/*" android:pathPattern=".*\\.nds" />
             </intent-filter>
         </activity>
 

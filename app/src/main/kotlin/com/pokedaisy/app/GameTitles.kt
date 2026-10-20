@@ -25,7 +25,7 @@ object GameTitles {
     val BY_SHA1: Map<String, String> by lazy { RETAIL + HACKS + RETAIL_PORT_TITLES }
 
     /** Retail carts (the library's GBA / GB / GBC tag when a game has no cover: [RomCategory]). */
-    /** The DS carts [BY_SHA1] names (behind FeatureFlags.nds: the website leaves them out until DS ships). */
+    /** The DS carts [BY_SHA1] names (the website's ROM check reads DS carts by their header: compat.json's `ds`). */
     internal val NDS_SHA1S = setOf(
         "0862ec35b24de5c7e2dcb88c9eea0873110d755c", "4fcded0e2713dc03929845de631d0932ea2b5a37", "f8dc38ea20c17541a43b58c5e6d18c1732c7e582",
     )

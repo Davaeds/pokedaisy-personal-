@@ -3,7 +3,7 @@ title: Screens and devices
 summary: How PokeDaisy uses two screens, one screen or a phone held upright, and the settings that move the game and companion around.
 section: start
 order: 3
-keywords: [dual screen, two screens, thor, ayn, retroid, duo, anbernic, rg ds, single screen, pocket 6, phone, portrait, landscape, rotate, rotation, tablet, side panel, window, modal, popup, companion view, display, bottom screen, top screen]
+keywords: [nds, nintendo ds, touch screen, stylus, platinum, heartgold, soulsilver, dual screen, two screens, thor, ayn, retroid, duo, anbernic, rg ds, single screen, pocket 6, phone, portrait, landscape, rotate, rotation, tablet, side panel, window, modal, popup, companion view, display, bottom screen, top screen]
 ---
 
 PokeDaisy works with two screens or one. With two, the game is on top and the companion below. With one, the companion slides in beside the game, and on a phone held upright it sits under it. This page covers each setup and the settings that go with it.
@@ -49,6 +49,19 @@ It's there on every two-screen device.
 Rather play on one screen, so the other is free for good? Turn on `SINGLE SCREEN` (in the `SCREEN` group of Settings on the top screen and of the companion's `SETTINGS`; it only shows on a device with a second screen). The game stays on its screen, the second screen goes back to Android for any app you like, and the companion opens as a window over the game, the way it does on a one-screen handheld (see below). Tap `BACK` to open or close it.
 
 Flipped from the companion, it switches right away and the window opens so you can see where it went. Turn it off and the companion goes back to the second screen. While it's on, `SWAP SCREENS` and `CLOSE COMPANION` step aside, and `COMPANION VIEW` and `BATTLE BUTTONS` show up, as on a one-screen device.
+
+## DS games
+
+A DS has two screens, and so does a dual-screen handheld, so a DS game uses both the way the DS does: its top screen on your top screen, its touch screen on the bottom one. Tap the bottom screen with your finger wherever the game wants the stylus.
+
+The companion is still there:
+
+- **On the bottom screen:** tap `COMPANION` in the bar under the touch screen and the companion takes the touch screen's place. Tap `GAME SCREEN` in the same spot to bring the touch screen back. `BACK` with nothing left to go back from also returns to the touch screen. PokeDaisy remembers which of the two you had.
+- **Over the game:** tap `BACK` and the companion opens over the top screen, as on a one-screen handheld (see [The window](#the-window)).
+
+A DS game keeps its screens where a DS has them, so `SWAP SCREENS` doesn't move them, and the touch screen stays up whatever `CLOSE COMPANION` says. `REWIND` isn't available in DS games.
+
+On a handheld or phone with one screen, a DS game shows its top screen only, for now: the touch screen needs a second screen. The game plays with your buttons, but anything that has to be tapped on the touch screen can't be done there yet.
 
 ## Single-screen handhelds
 

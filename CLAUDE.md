@@ -15,7 +15,7 @@ anything committed (fixture READMEs: `capture_fixture_headless.sh` does). **Comm
 Anthropic attribution** (no `Co-Authored-By`, no "Generated with" lines, never authored as Claude) - the
 user's firm rule; a local `commit-msg` hook rejects them, never bypass it.
 **Exposed surfaces**: `LaunchActivity` is exported - it refuses the app's own files / provider, copies at
-most 40 MB (512 MB while DS games are on: `RomIntake.maxCopyBytes`) and plays only what has a cart header (`RomIdentity.looksLikeRom`); the updater installs only
+most 40 MB (512 MB with DS games on: `RomIntake.maxCopyBytes`) and plays only what has a cart header (`RomIdentity.looksLikeRom`); the updater installs only
 this package, same signer, newer version (`AppUpdateFlow.isOurUpdate`); the website's release notes are
 escaped (`website/src/lib/releases.js`, `website/test/releases.test.js`); workflow actions are pinned to
 commit SHAs. New bundled code / fonts / data go into NOTICE and the LICENSES page (`licensesAsset`).
@@ -487,8 +487,9 @@ data, `gen_polished_crystal_guide.py`, every build checked; `readGen2Telemetry` 
 trade flags as banks 0x10000+ / 0x20000+ and the clock as var 0x10000). Its controls were run through the real controller headless:
 the Game Boy battle menus drop presses as they open and after a cursor move, so every Game Boy pick (FIGHT / BAG / RUN / a move) now
 steers on the menu read each frame (`driveGbPickLocked`, `GbPartySwitch.battleMenu`) - docs/DEVELOPMENT.md's Polished section.
-**Nintendo DS (2026-10-19)**: Platinum (USA rev 1) and HeartGold / SoulSilver
-(USA) on melonDS (`third_party/melonds` at 1.1; our changes are one patch, `third_party/patches/melonds-pokedaisy.patch`,
+**Nintendo DS (2026-10-19; on for players from 1.3.0, `TelemetrySampler.NDS_SUPPORT = true` like the Game Boy's switch,
+the cart list `NDS_GAMES`, which the website's ROM check reads by header through compat.json's `ds`)**: Platinum (USA rev 1)
+and HeartGold / SoulSilver (USA) on melonDS (`third_party/melonds` at 1.1; our changes are one patch, `third_party/patches/melonds-pokedaisy.patch`,
 applied at configure time - edit the submodule, then `git -C third_party/melonds diff >` it). App code in
 `app/src/main/cpp/nds/` (core, field read, function caller, EXPAND from the game's own polygons, STEADY = a second melonDS
 from the game's state with its ARM9 stopped, its ARM7 FIFO drained every frame), `Gen4*.kt` / `NdsArt.kt` (reads from the
