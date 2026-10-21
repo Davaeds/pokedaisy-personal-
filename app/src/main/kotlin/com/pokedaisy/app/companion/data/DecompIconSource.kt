@@ -62,6 +62,12 @@ object DecompIconSource {
 
     fun get(species: Int): Bitmap? = cached(monCache, species, tables.monPresent) { fetchMon(species) }
 
+    /** [species]' icon in its shiny palette (SoulGold keeps one per species, beside the normal one); null where the
+     * tables have no per-species palettes. */
+    fun getShiny(species: Int): Bitmap? = if (tables.monIconPalettes == 0L) null
+        else cached(monCache, SHINY_KEY + species, tables.monPresent) { decodeMonIcon(tables, species, shiny = true, rd = ::rd) }
+    fun peekShiny(species: Int): Bitmap? = if (tables.monPresent) monCache[SHINY_KEY + species] else null
+
     /** An already-decoded item icon (no ROM read), or null. */
     fun peekItem(itemId: Int): Bitmap? = if (tables.itemPresent) itemCache[1_000_000 + itemId] else null
     fun getItem(itemId: Int): Bitmap? = cached(itemCache, 1_000_000 + itemId, tables.itemPresent) { fetchItem(itemId) }
@@ -98,7 +104,7 @@ object DecompIconSource {
         return out
     }
 
-    private fun fetchMon(species: Int): Bitmap? = decodeMonIcon(tables, species, ::rd)
+    private fun fetchMon(species: Int): Bitmap? = decodeMonIcon(tables, species, rd = ::rd)
 
     private fun fetchItem(itemId: Int): Bitmap? {
         val t = tables
@@ -124,14 +130,15 @@ object DecompIconSource {
  * Species [species]' party icon (32x64, both frames) from [t]'s tables, read through [rd] - the running core
  * ([DecompIconSource]) or a ROM file (`RomMonIcons`, the save editor's). Null if a pointer leaves the ROM.
  */
-internal fun decodeMonIcon(t: IconTables, species: Int, rd: (Long, Int) -> ByteArray): Bitmap? {
+internal fun decodeMonIcon(t: IconTables, species: Int, shiny: Boolean = false, rd: (Long, Int) -> ByteArray): Bitmap? {
     val tilesPtr = Gfx.u32(rd(t.monIconTable + species.toLong() * t.monIconStride, 4), 0)
     if (!Gfx.inRom(tilesPtr)) {
         android.util.Log.w("pokedaisy", "DecompIcon mon $species: tilesPtr %08x not in ROM".format(tilesPtr)); return null
     }
     val palIdx = rd(t.monIconPaletteIndices + species.toLong() * t.monPalIdxStride, 1)[0].toInt() and t.monPalIdxMask
     val palDataPtr = if (t.monIconPalettes != 0L) {
-        Gfx.u32(rd(t.monIconPalettes + species.toLong() * t.monIconStride, 4), 0)
+        // The shiny palette's pointer follows the normal one's (+0x94 / +0x98 in SoulGold's gSpeciesInfo).
+        Gfx.u32(rd(t.monIconPalettes + species.toLong() * t.monIconStride + (if (shiny) 4 else 0), 4), 0)
     } else {
         Gfx.u32(rd(t.monIconPaletteTable + palIdx.toLong() * MON_PAL_ENTRY_BYTES, MON_PAL_ENTRY_BYTES), 0)
     }
@@ -145,5 +152,7 @@ internal fun decodeMonIcon(t: IconTables, species: Int, rd: (Long, Int) -> ByteA
 }
 
 private const val MON_TILE_BYTES = 1024
+/** [DecompIconSource]'s cache key offset for shiny icons (species ids stay under it; items are 1_000_000+). */
+private const val SHINY_KEY = 500_000
 private const val PAL_BYTES = 32
 private const val MON_PAL_ENTRY_BYTES = 8

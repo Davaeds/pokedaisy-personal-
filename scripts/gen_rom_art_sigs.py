@@ -90,6 +90,10 @@ def first_rom(*names):
 
 
 UNBOUND_ROM = first_rom("Pokemon Unbound (v2.1.1.1).gba", "Pokemon Unbound (v2.1.1.1).gba")
+# Its French build redrew three pieces of the party menu in place (GitHub #227: "PV" / "N.", French status
+# icons): the slot background tiles, the status icons and FONT_SMALL (0x1EAF00 in both; its widths are FireRed's).
+# RomArt writes them to partycfru_fr/; everything else is English Unbound's bytes.
+UNBOUND_FR_ROM = first_rom("Pokemon Unbound (v2.1.1.1) (French).gba")
 UNBOUND_PIC_TABLE = 0x23957C
 UNBOUND_PAL_TABLE = 0x239A1C
 
@@ -119,6 +123,10 @@ AMETHYST_ROM = GBA_DIR + "Pokemon Amethyst (v1.3.0).gba"  # v1.4.1's status icon
 # Sword and Shield Ultimate Plus kept CFRU's party tiles, backdrop tilemap and slot tilemaps byte for
 # byte; only its palette (Galar red / charcoal) is its own (its status icons are Odyssey's).
 SWORD_SHIELD_ROM = GBA_DIR + "Pokemon Sword and Shield Ultimate Plus (v1.2.1.2).gba"
+
+
+def unbound_fr_symbols(rom):
+    return {**cfru_symbols(rom), "FontSmall": (0x1EAF00, 0x4000)}
 
 
 def cfru_symbols(rom):
@@ -433,6 +441,11 @@ GAMES = {
         ("CFRU_SLOT_EMPTY", "SlotEmpty", False),
         ("UB_STATUS_GFX", "StatusGfx", True),
     ]),
+    "UBFR": (UNBOUND_FR_ROM, None, [
+        ("UBFR_PARTY_BG_GFX", "PartyBgGfx", True),
+        ("UBFR_STATUS_GFX", "StatusGfx", True),
+        ("UBFR_FONT_SMALL", "FontSmall", False),
+    ]),
     "RR": (RADICAL_RED_ROM, None, [("RR_STATUS_GFX", "StatusGfx", True)]),
     "OD": (ODYSSEY_ROM, None, [("OD_STATUS_GFX", "StatusGfx", True)]),
     "AM": (AMETHYST_ROM, None, [("AM_STATUS_GFX", "StatusGfx", True)]),
@@ -613,7 +626,7 @@ def fireRed_symbols(p):
 
 
 # The binary hacks' made-up symbols (no ELF).
-ROM_SYMBOLS = {"RY": recharged_yellow_symbols, "UB": unbound_symbols, "RR": cfru_symbols, "OD": cfru_symbols, "AM": cfru_symbols, "SS": cfru_symbols, "LZ": lazarus_symbols, "SGL": seaglass_symbols, "SG": soulgold_symbols,
+ROM_SYMBOLS = {"RY": recharged_yellow_symbols, "UB": unbound_symbols, "UBFR": unbound_fr_symbols, "RR": cfru_symbols, "OD": cfru_symbols, "AM": cfru_symbols, "SS": cfru_symbols, "LZ": lazarus_symbols, "SGL": seaglass_symbols, "SG": soulgold_symbols,
                "GZ": glazed_symbols, "IMP": imperium_symbols, "QTZ": quetzal_symbols, "HNS": hns_symbols, "RW": rowe_symbols, "MM": mariomon_symbols, "RE": recharged_emerald_symbols,
                **{"EM" + lang: emerald_eu_symbols(lang) for lang in EMERALD_EU_ROMS},
                **{"FR" + lang: fireRed_symbols(p) for lang, p in fireRed_ports().items()}}

@@ -190,7 +190,7 @@ class FakeSettings(showHintsInitially: Boolean = true, initialTabs: List<String>
     override val reusableTmsSupported get() = true
     override val reusableTmsBuiltIn get() = com.pokedaisy.app.companion.data.activeGame in com.pokedaisy.app.companion.data.ReusableTms.BUILT_IN
     override fun gbaControlBindings() = GbaControls.Btn.entries.associateWith {
-        listOf(when (it) { GbaControls.Btn.START2 -> "BUTTON_X"; GbaControls.Btn.SELECT2 -> "BUTTON_Y"; else -> "BUTTON_${it.name}" })
+        listOf(when (it) { GbaControls.Btn.X -> "BUTTON_X"; GbaControls.Btn.Y -> "BUTTON_Y"; else -> "BUTTON_${it.name}" })
     }
     override fun setGbaControlBinding(btn: GbaControls.Btn, keyName: String) {}
     override val keyCapture get() = previewCapture
@@ -603,7 +603,8 @@ fun dexShots(game: GameKind, live: ((SnapshotView) -> SnapshotView)?, w: Int, h:
                     val ui = androidx.compose.runtime.remember {
                         com.pokedaisy.app.companion.ui.DexUiState(androidx.compose.foundation.lazy.LazyListState()).apply { open = entry; this.section = section }
                     }
-                    com.pokedaisy.app.companion.ui.PokedexEntryScreen(dex, ui, entry, guide = s.guideTables)
+                    // As CompanionScreen sets it up (a short screen: the RG DS's -PcompanionH=480).
+                    com.pokedaisy.app.companion.ui.CompanionScreenSize { com.pokedaisy.app.companion.ui.PokedexEntryScreen(dex, ui, entry, guide = s.guideTables) }
                 }
             }
             content
@@ -1061,7 +1062,10 @@ fun main(args: Array<String>) {
     val panelW = System.getProperty("companionW").orEmpty().toIntOrNull()
     val bh = System.getProperty("companionH").orEmpty().toIntOrNull() ?: 1080
     val bw = panelW ?: 1240
-    val bd = if (panelW != null) com.pokedaisy.app.companion.ui.sidePanelDensity(bw, bh) else 2.625f
+    // -PcompanionDensity: a second screen of its own size at the device's density (the RG DS: -PcompanionW=640
+    // -PcompanionH=480 -PcompanionDensity=1.5), not a side panel's.
+    val bd = System.getProperty("companionDensity").orEmpty().toFloatOrNull()
+        ?: if (panelW != null) com.pokedaisy.app.companion.ui.sidePanelDensity(bw, bh) else 2.625f
     val tw = 1920; val th = 1080; val td = 2.5f
     val real = if (System.getProperty("ndsFixture").orEmpty().isNotBlank()) listOf(
         Shot("$g-real-party", bw, bh, bd, companion("PARTY", snap = ::ndsSnapshot)),
@@ -1124,6 +1128,13 @@ fun main(args: Array<String>) {
         // The lead holds a Potion, the second a QUICK CLAW: the tag in each slot's corner and the game's marker by the icon.
         Shot("$g-party-held", bw, bh, bd, companion("PARTY") {
             snapshot().let { s -> s.copy(party = s.party.mapIndexed { i, m -> m.copy(heldItemId = listOf(13, 183).getOrElse(i) { 0 }) }) }
+        }),
+        // The second Pokémon nicknamed (GitHub #228): the slot shows the nickname, the summary adds the species.
+        Shot("$g-party-nickname", bw, bh, bd, companion("PARTY") {
+            snapshot().let { s -> s.copy(party = s.party.mapIndexed { i, m -> if (i == 1) m.copy(nickname = "Skyler") else m }) }
+        }),
+        Shot("$g-party-detail-nickname", bw, bh, bd, companion("PARTY", mon = 1) {
+            snapshot().let { s -> s.copy(party = s.party.mapIndexed { i, m -> if (i == 1) m.copy(nickname = "Skyler") else m }) }
         }),
         // The second Pokémon's summary with its QUICK CLAW: TAKE, or BAG FULL where the bag has no room for it.
         Shot("$g-party-detail-take", bw, bh, bd, companion("PARTY", mon = 1, items = true)),
@@ -2209,7 +2220,7 @@ val PREVIEW_BUTTONS: Map<GbaControls.Btn, List<String>> = GbaControls.Btn.entrie
         GbaControls.Btn.A -> listOf("BUTTON_A", "Z"); GbaControls.Btn.B -> listOf("BUTTON_B", "X")
         GbaControls.Btn.L -> listOf("BUTTON_L1", "A"); GbaControls.Btn.R -> listOf("BUTTON_R1", "S")
         GbaControls.Btn.START -> listOf("BUTTON_START", "ENTER"); GbaControls.Btn.SELECT -> listOf("BUTTON_SELECT")
-        GbaControls.Btn.START2 -> listOf("BUTTON_X"); GbaControls.Btn.SELECT2 -> listOf("BUTTON_Y")
+        GbaControls.Btn.X -> listOf("BUTTON_X"); GbaControls.Btn.Y -> listOf("BUTTON_Y")
         GbaControls.Btn.TURBO_A, GbaControls.Btn.TURBO_B -> emptyList()
     }
 }

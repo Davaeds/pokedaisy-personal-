@@ -74,6 +74,7 @@ internal val trCompanion: Map<String, Tr> = mapOf(
     // The side panel's tab on a single-screen device (SidePanelHandle).
     "Lock the companion beside the game" to Tr(ja = "コンパニオンを ゲームの よこに こてい", fr = "Fixer le compagnon à côté du jeu", de = "Begleiter neben dem Spiel fixieren", it = "Fissa il compagno accanto al gioco", es = "Fijar el compañero junto al juego", br = "Fixar o companheiro ao lado do jogo", pt = "Fixar o companheiro ao lado do jogo"),
     "Open the companion" to Tr(ja = "コンパニオンを ひらく", fr = "Ouvrir le compagnon", de = "Begleiter öffnen", it = "Apri il compagno", es = "Abrir el compañero", br = "Abrir o companheiro", pt = "Abrir o companheiro"),
+    "Back to the game" to Tr(ja = "ゲームに もどる", fr = "Retour au jeu", de = "Zurück zum Spiel", it = "Torna al gioco", es = "Volver al juego", br = "Voltar ao jogo", pt = "Voltar ao jogo"),
     "Close the companion" to Tr(ja = "コンパニオンを とじる", fr = "Fermer le compagnon", de = "Begleiter schließen", it = "Chiudi il compagno", es = "Cerrar el compañero", br = "Fechar o companheiro", pt = "Fechar o companheiro"),
     "Unlock the companion" to Tr(ja = "コンパニオンの こていを かいじょ", fr = "Libérer le compagnon", de = "Begleiter lösen", it = "Sblocca il compagno", es = "Soltar el compañero", br = "Soltar o companheiro", pt = "Soltar o companheiro"),
     // The grip on the companion's top edge with a phone held upright (PortraitGrip).

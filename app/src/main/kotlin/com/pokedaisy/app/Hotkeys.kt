@@ -80,7 +80,7 @@ class Hotkeys private constructor(
 
     companion object {
         private val DEFAULTS = linkedMapOf(
-            // X / Y are START 2 / SELECT 2 now ([GbaControls.Btn.START2]).
+            // X / Y are GAME BUTTONS now ([GbaControls.Btn.X]).
             "save_state" to "BUTTON_SELECT+BUTTON_R1, F1",
             "load_state" to "BUTTON_SELECT+BUTTON_L1, F2",
             "undo_save" to "F3",
@@ -123,7 +123,7 @@ class Hotkeys private constructor(
                     .onFailure { Log.w("pokedaisy", "hotkeys.properties unreadable, using defaults", it) }
             }
             var changed = false
-            // X / Y left the state hotkeys for START 2 / SELECT 2: only where nobody changed them.
+            // X / Y left the state hotkeys for GAME BUTTONS' X / Y: only where nobody changed them.
             for ((k, old) in OLD_DEFAULTS) if (props.getProperty(k) == old) { props.setProperty(k, DEFAULTS.getValue(k)); changed = true }
             for ((k, v) in DEFAULTS) if (!props.containsKey(k)) { props.setProperty(k, v); changed = true }
             if (changed) writeProps(filesDir, props)

@@ -155,6 +155,17 @@ class FieldItemsTest {
     }
 
     @Test
+    fun `SoulGold's Lure bit doesn't count as a Repel`() {
+        val fns = FIELD_ITEMS_SOULGOLD_V1_2
+        assertEquals(0, fns.repelSteps(0))
+        assertEquals(87, fns.repelSteps(87))
+        // A Lure working (bit 15 over its steps): no Repel steps, and a Repel may go on (its ItemUseOutOfBattle_Repel).
+        assertEquals(0, fns.repelSteps(0x8000 or 120))
+        // The other games keep the whole value.
+        assertEquals(0x8000 or 120, FAKE_FNS.repelSteps(0x8000 or 120))
+    }
+
+    @Test
     fun `never while the game is busy`() {
         val g = FakeGame(FAKE_FNS).apply { locked = true }
         assertEquals(ItemUseResult.NOT_NOW, useFieldItem(g.fns, 86, false, g).result)

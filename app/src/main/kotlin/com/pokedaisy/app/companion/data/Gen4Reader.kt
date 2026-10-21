@@ -34,8 +34,10 @@ data class Gen4Config(
     /** Its National Dex byte (Pokedex.nationalDexObtained) and the game's dex tables. */
     val nationalDexOff: Int = 0,
     val pokedexTables: PokedexTables? = null,
-    /** Each map header's place name (its map label). */
+    /** Each map header's place name (its map label) - the English one: [placeName] reads the cart's own. */
     val mapPlaces: Map<Int, String>,
+    /** Each map header's place as a line of the cart's location names ([NdsArt.Names.places]). */
+    val mapPlaceIds: Map<Int, Int> = emptyMap(),
     /** The companion's pocket for an item (the game's own; the rest under ITEMS). */
     val itemPockets: Map<Int, Int>,
     /** FLY's spots by spawn id - 1 (the town map's destinations; nds/pk_nds_call.cpp checks and flies to them). */
@@ -173,7 +175,11 @@ fun gen4FlyResult(error: Int): FlyResult = when (error) {
 }
 
 /** The fly spot [spawnId]'s place name, or null. */
-fun Gen4Config.flySpotName(spawnId: Int): String? = flySpots.getOrNull(spawnId - 1)?.let { mapPlaces[it.nameMap] }
+fun Gen4Config.flySpotName(spawnId: Int): String? = flySpots.getOrNull(spawnId - 1)?.let { placeName(it.nameMap) }
+
+/** Map header [header]'s place name in the cart's own words (a translated cart's: GitHub #230), else the US game's. */
+fun Gen4Config.placeName(header: Int): String? =
+    mapPlaceIds[header]?.let { NdsArt.names?.place(it) } ?: mapPlaces[header]
 
 /** Pokegear_RegionFromCoords: 0 Johto, 1 Kanto, 2 Indigo Plateau / Victory Road (either). */
 fun pokegearRegion(x: Int, y: Int): Int = when {
@@ -235,6 +241,7 @@ val GEN4_PLATINUM_US = Gen4Config(
     varsFlagsOff = 0xDAC,
     numVars = 288,
     mapPlaces = mapPlacesPlatinum,
+    mapPlaceIds = mapPlaceIdsPlatinum,
     itemPockets = itemPocketsPlatinum,
     flySpots = flySpotsPlatinum,
     battle = Gen4Battle(fieldSystemPtr = 0x021C07DC, battleTemplate = 0x020EA358),
@@ -267,6 +274,7 @@ private fun gen4HeartGoldFamily(saveDataPtr: Long) = Gen4Config(
         POCKET_ITEMS, POCKET_KEY_ITEMS, POCKET_TM_HM, POCKET_MAIL, POCKET_MEDICINE, POCKET_BERRIES, POCKET_POKE_BALLS, POCKET_BATTLE_ITEMS,
     ),
     mapPlaces = mapPlacesHeartGold,
+    mapPlaceIds = mapPlaceIdsHeartGold,
     // SAVE_POKEDEX's chunk (found by its magic in the player's save, checked live)
     pokedexOff = 0x12B8,
     nationalDexOff = 0x337,
@@ -579,7 +587,7 @@ fun readGen4Telemetry(r: MemoryReader, cfg: Gen4Config): Telemetry {
         items = items,
         money = u32(trainer, 0x14).takeIf { it <= 999_999 },
         playerGender = u8(trainer, 0x18).takeIf { it <= 1 } ?: -1,
-        mapSecName = cfg.mapPlaces[mapHeader],
+        mapSecName = cfg.placeName(mapHeader),
         repelSteps = cfg.repelStepsOff?.let { u8(r.readCoreMemory(body + it, 1), 0) },
         enemyParty = if (battle?.trainer == true) battle.foes else emptyList(),
         battleFoes = battle?.foes ?: emptyList(),

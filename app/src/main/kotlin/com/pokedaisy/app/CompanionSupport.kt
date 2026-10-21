@@ -28,8 +28,10 @@ object CompanionSupport {
      */
     fun verdict(rom: File): Verdict {
         if (isSupported(rom)) return Verdict.SUPPORTED
-        val e = BestEffortStore.load(RomIdentity.sha1(rom))
-            ?: return if (RomIdentity.gameCode(rom)?.let(com.pokedaisy.app.companion.data.BestEffort::canTry) == true) Verdict.TRYABLE else Verdict.UNSUPPORTED
+        // Best effort only ever matches a Gen 3 base game's code: anything else (another console's ROM in a frontend's
+        // folder) is turned away without hashing the whole file.
+        if (RomIdentity.gameCode(rom)?.let(com.pokedaisy.app.companion.data.BestEffort::canTry) != true) return Verdict.UNSUPPORTED
+        val e = BestEffortStore.load(RomIdentity.sha1(rom)) ?: return Verdict.TRYABLE
         return if (e.full) Verdict.MATCHED else Verdict.PARTIAL
     }
 

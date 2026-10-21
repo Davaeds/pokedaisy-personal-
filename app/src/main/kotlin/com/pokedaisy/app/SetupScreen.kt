@@ -93,7 +93,7 @@ internal fun SetupScreen(
     onBack: () -> Unit,
     onNext: () -> Unit,
     /** GAME BUTTONS: what binding [GbaControls.Btn] does once its button is pressed (the step's rows bind in place). */
-    buttonRequest: (GbaControls.Btn) -> KeyCapture.Request = { KeyCapture.Request("GBA ${it.label}", chord = false, onDone = {}) },
+    buttonRequest: (GbaControls.Btn) -> KeyCapture.Request = { KeyCapture.Request(it.title, chord = false, onDone = {}) },
     onScreenScraperSignIn: () -> Unit = {},
     onScreenScraperSignOut: () -> Unit = {},
 ) {
@@ -257,7 +257,7 @@ private fun ButtonsStep(s: SetupState, m: GbaTextMetrics, small: GbaTextMetrics,
     val btns = GbaControls.Btn.entries
     btns.forEachIndexed { i, btn ->
         KeyBindRow(
-            "GBA ${btn.label}", s.buttons[btn], s.capture, m, small, divider = i < btns.lastIndex,
+            btn.title, s.buttons[btn], s.capture, m, small, divider = i < btns.lastIndex, subtitle = btn.subtitle,
         ) { request(btn) }
     }
     Spacer(Modifier.height(m.u * 4))

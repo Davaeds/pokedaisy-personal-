@@ -3,6 +3,10 @@ package com.pokedaisy.app.companion.ui
 import com.pokedaisy.app.companion.i18n.tk
 import com.pokedaisy.app.companion.i18n.tr
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.EnterTransition
@@ -151,6 +155,7 @@ fun CompanionScreen(
     // WHICH GAME IS THIS? over the tabs (WRONG GAME?, PICK AGAIN, SETTINGS > GAME, PICK A GAME).
     var pickerOpen by remember { mutableStateOf(false) }
     val gameSilent = remember(battleInput) { { battleInput?.gameSilent == true } }
+    CompanionScreenSize {
     CompositionLocalProvider(
         LocalHgssBag provides remember { HgssBagState() },
         LocalCompanionBack provides back, LocalCompanionKeys provides keys, LocalClickSound provides clickSound, LocalGameSilent provides gameSilent,
@@ -332,8 +337,11 @@ fun CompanionScreen(
             stepTab(if (key == MenuKey.R) 1 else -1)
             true
         }
-        // The window over the game: L / R at the bar's ends, the buttons that step it.
-        val shoulderHints = LocalCompanionWindow.current
+        // The window over the game, or the buttons brought down here by X: L / R at the bar's ends, the buttons that
+        // step it - slid in from the screen's sides as the buttons arrive, out as they leave.
+        val shoulderHints by androidx.compose.animation.core.animateFloatAsState(
+            if (LocalCompanionWindow.current || LocalShoulderHints.current) 1f else 0f, tween(SHOULDER_HINT_MS), label = "shoulderHints",
+        )
 
         Box(modifier = Modifier.fillMaxSize().background(AppColors.bgBottom)) {
             // Per-game party-menu background, pixel-scaled to fill - behind
@@ -362,7 +370,7 @@ fun CompanionScreen(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (shoulderHints) ShoulderHint("L") { stepTab(-1) }
+                    if (shoulderHints > 0f) ShoulderHint("L", shoulderHints) { stepTab(-1) }
                     tabs.forEachIndexed { i, title ->
                         val open = { openTab(title) }
                         if (title == "SETTINGS") {
@@ -374,12 +382,13 @@ fun CompanionScreen(
                             TabChip(companionTabLabel(title), selectedIdx == i && usable, Modifier.weight(1f).testTag("tab-$title"), enabled = usable, open)
                         }
                     }
-                    if (shoulderHints) ShoulderHint("R") { stepTab(1) }
+                    if (shoulderHints > 0f) ShoulderHint("R", shoulderHints) { stepTab(1) }
                 }
             }
             // A phone upright with no room above the companion: its grip sits in here, over the backdrop.
             val topInset = with(LocalDensity.current) { LocalCompanionTopInset.current.toDp() }
-            Column(modifier = Modifier.fillMaxSize().padding(top = topInset).padding(12.dp)) {
+            // A short screen: less margin round the tabs, every pixel of its height counts.
+            Column(modifier = Modifier.fillMaxSize().padding(top = topInset).padding(if (LocalShortCompanion.current) 8.dp else 12.dp)) {
                 if (topStrip != null) {
                     topStrip()
                     Spacer(Modifier.height(8.dp))
@@ -640,7 +649,7 @@ fun CompanionScreen(
                 }
             }
         }
-    } } }
+    } } } }
 }
 
 /**
@@ -705,8 +714,9 @@ private fun rememberTabMetrics(): GbaTextMetrics {
     return rememberGbaTextMetrics(if (wide) 1f else 1.15f, wholePixels = wide)
 }
 
-/** The gear and MORE chips' fixed width. */
-internal val SETTINGS_CHIP_WIDTH = 52.dp
+/** The gear and MORE chips' fixed width (narrower on a short screen, which is narrow too: the text tabs keep their words). */
+internal val SETTINGS_CHIP_WIDTH: androidx.compose.ui.unit.Dp
+    @Composable get() = if (LocalShortCompanion.current) 40.dp else 52.dp
 
 /** Tab switches closer together than this cut instead of sliding (see the tab AnimatedContent). */
 private const val RAPID_SWITCH_NANOS = 300_000_000L
@@ -720,8 +730,50 @@ internal val TAB_GAP = 4.dp
  */
 val LocalCompanionWindow = androidx.compose.runtime.staticCompositionLocalOf { false }
 
+/**
+ * The companion on the other screen of a two-screen device has the game's buttons (X on the field, PokeDaisyActivity's
+ * bottom focus): L / R hints at the tab bar's ends, as in [LocalCompanionWindow], but BATTLE keeps its controls.
+ */
+val LocalShoulderHints = androidx.compose.runtime.staticCompositionLocalOf { false }
+
+/** The companion's height in GBA pixels (rememberGbaTextMetrics' unit) below which its main text goes a step smaller: the
+ * RG DS's 480 px are 240, the Thor's 1080 px 360, the Duo Lite's 960 px 320. */
+private const val SHORT_COMPANION_UNITS = 280
+
+/** The companion is on a short screen ([isShortCompanion]): its text a step smaller, its fixed-size buttons smaller too
+ * ([NavButtonSize], [SETTINGS_CHIP_WIDTH]). */
+val LocalShortCompanion = androidx.compose.runtime.staticCompositionLocalOf { false }
+
+/**
+ * The companion's size class around [content]: on a short screen (the RG DS's 640x480, [isShortCompanion]) the main text
+ * a step smaller ([LocalTextStep]), as the one-screen window does on a tall one - its pixel font can't go below two
+ * screen pixels a GBA pixel, so at its usual size it was as large for the screen as on a GBA, and words, rows and the
+ * battle panes didn't fit - and [LocalShortCompanion] for the layouts that squeeze. [CompanionScreen] runs in it; so do
+ * the screenshot tests' panes drawn on their own.
+ */
+@Composable
+fun CompanionScreenSize(content: @Composable () -> Unit) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val short = isShortCompanion(constraints.maxHeight, LocalDensity.current.density)
+        CompositionLocalProvider(
+            LocalTextStep provides if (short) -1 else LocalTextStep.current,
+            LocalShortCompanion provides short,
+            content = content,
+        )
+    }
+}
+
+/** [heightPx] tall at [density] is short ([SHORT_COMPANION_UNITS]). */
+fun isShortCompanion(heightPx: Int, density: Float): Boolean {
+    val unit = kotlin.math.floor(20f * density / 16f + 0.5f).toInt().coerceAtLeast(2)
+    return heightPx in 1 until SHORT_COMPANION_UNITS * unit
+}
+
 /** A [ShoulderHint]'s width. */
 internal val SHOULDER_HINT_WIDTH = 30.dp
+
+/** How long the L / R hints take to slide in / out. */
+private const val SHOULDER_HINT_MS = 220
 
 /**
  * L or R at an end of the tab bar while the companion is the window: the shoulder button that steps the tabs, drawn
@@ -729,23 +781,27 @@ internal val SHOULDER_HINT_WIDTH = 30.dp
  * steps the tabs too; not a D-pad stop (the buttons do it).
  */
 @Composable
-private fun ShoulderHint(letter: String, onClick: () -> Unit) {
+private fun ShoulderHint(letter: String, shown: Float, onClick: () -> Unit) {
     val m = rememberGbaTextMetrics(1f)
     val u = m.u
     val left = letter == "L"
     val noRipple = remember { MutableInteractionSource() }
+    // [shown] < 1: on its way in or out - the room for it opens from the screen's side, the key sliding in from there.
     Box(
-        contentAlignment = Alignment.Center,
+        contentAlignment = if (left) Alignment.CenterEnd else Alignment.CenterStart,
         modifier = Modifier
-            .width(SHOULDER_HINT_WIDTH)
+            .width(SHOULDER_HINT_WIDTH * shown)
             .fillMaxHeight()
+            .clipToBounds()
+            .graphicsLayer { alpha = shown }
             .focusProperties { canFocus = false }
             .soundClickable(interactionSource = noRipple, indication = null, onClick = onClick),
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(SHOULDER_HINT_WIDTH, m.lineHeight + u * 6)
+                .wrapContentWidth(if (left) Alignment.End else Alignment.Start, unbounded = true)
+                .requiredSize(SHOULDER_HINT_WIDTH, m.lineHeight + u * 6)
                 .drawBehind {
                     val px = u.toPx()
                     // As round as the key allows (half its narrower side), like a shoulder button's top.

@@ -66,6 +66,12 @@ data class PartyMonLayout(
     val hasStats: Boolean = size == MON_STRUCT_SIZE,
     /** The egg bit in the [flags] byte (vanilla's isEgg is 0x04). */
     val eggMask: Int = 0x04,
+    /** Shiny when (OT ID's halves ^ PID's halves) is below this; 0 = not read. Only where the party menu draws shiny icons:
+     * SoulGold (256 - its odds are 1 in 256, checked headless on v1.1.4 and v1.2: 255 shiny, 256 not). */
+    val shinyBelow: Int = 0,
+    /** The nickname's length at +8 and where the language byte is (SoulGold: 12 letters, language +0x14). */
+    val nicknameLen: Int = 10,
+    val language: Int = 0x12,
     /** R.O.W.E.'s bit-packed struct ([ROWE_PARTY_MON], [decodeRoweMon]) rather than a box of substructs. */
     val rowe: Boolean = false,
     /** Elite Redux's bit-packed struct ([ELITE_REDUX_PARTY_MON], [decodeEliteReduxMon]). */
@@ -177,6 +183,7 @@ val QUETZAL_PARTY_MON = PartyMonLayout(
 )
 val SOULGOLD_PARTY_MON = PartyMonLayout(
     size = 96, status = 0x4C, level = 0x50, hp = 0x52, maxHp = 0x54, flags = 0x15, plainSpeciesMask = 0x07FF,
+    nicknameLen = 12, language = 0x14, shinyBelow = 256,
     plainItemMask = 0x03FF,   // heldItem:10 - Cyndaquil's 0x0400 read as an "Item#1024" tag on its party slot
 )
 
@@ -234,7 +241,25 @@ fun decodePartyMon(raw: ByteArray, off: Int, layout: PartyMonLayout = VANILLA_PA
         personality = u32(raw, off),
         stats = if (layout.hasStats) monStats(raw, off, layout, evs, ivWord) else null,
         heldItem = heldItem,
+        nickname = gen3Nickname(raw, off, layout),
+        shiny = layout.shinyBelow > 0 && shinyValue(u32(raw, off), u32(raw, off + 4)) < layout.shinyBelow,
     )
+}
+
+/** Gen 3's shiny value: the OT ID's and the personality's halves XORed together. */
+internal fun shinyValue(personality: Long, otId: Long): Int =
+    ((otId ushr 16) xor (otId and 0xFFFF) xor (personality ushr 16) xor (personality and 0xFFFF)).toInt()
+
+/**
+ * The nickname at +8, as the party menu prints it; null when it can't be read as the game's text: a
+ * Japanese Pokémon (language 1) in a Western game or the other way round (kana and letters share bytes),
+ * or a byte the table doesn't know.
+ */
+internal fun gen3Nickname(raw: ByteArray, off: Int, layout: PartyMonLayout): String? {
+    val japanese = (raw[off + layout.language].toInt() and 0xFF) == 1
+    if (japanese != (romLanguage == 'J')) return null
+    val s = Gen3Text.decode(raw, off + 8, layout.nicknameLen).trim()
+    return s.takeIf { it.isNotEmpty() && Gen3Text.UNKNOWN !in it }
 }
 
 /**

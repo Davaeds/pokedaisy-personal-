@@ -171,7 +171,7 @@ private val platinumTownMap: RegionMapModel by lazy {
     val crop = NdsArt.PLATINUM_MAP_CROP
     RegionMapModel(
         images = arrayOf(NdsArt.PLATINUM_MAP),
-        sections = placeNamesPlatinum.mapValues { (_, name) -> MapSecInfo(name, 0, 0, 0, 0, 0) },
+        sections = placeNamesPlatinum.mapValues { (id, name) -> MapSecInfo(NdsArt.names?.place(id) ?: name, 0, 0, 0, 0, 0) },
         layouts = listOf(RegionLayout(0, 0, 30, 30, 0xFFFF, listOf(hexBytes(TOWN_MAP_GRID_PLATINUM)), cellBytes = 2)),
         tile = 7,
         originX = 22 - crop[0],

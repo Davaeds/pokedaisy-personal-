@@ -47,9 +47,17 @@ data class FieldItemFns(
     /** PC anywhere from the BAG tab (Pc.kt); null = none. */
     val pc: PcFns? = null,
     /** USE / GIVE / TAKE from the bag; false = the table is there for FLY and the PC only (a game whose items the app
-     * doesn't know the ids / gItems layout of: the expansion hacks). */
+     * doesn't know the ids / gItems layout of: the expansion hacks) - and the Repels, where [checkBagHasItem],
+     * [removeBagItem] and [items] are mapped (SoulGold). */
     val bagActions: Boolean = true,
+    /** The Repels' item ids (REPEL, SUPER, MAX: [REPEL_ITEMS] in every Gen 3 game; SoulGold's own 114..116). */
+    val repelItems: Set<Int> = REPEL_ITEMS,
+    /** The [repelVar] bit a Lure sets (newer expansion: 0x8000, its steps below it); a Repel can go on while a Lure
+     * works, as the game's own ItemUseOutOfBattle_Repel allows. 0 = no Lures. */
+    val repelLureBit: Int = 0,
 ) {
+    /** The steps of the Repel working now in [repelVar]'s value [v] (0 = none, or a Lure's). */
+    fun repelSteps(v: Int): Int = if (repelLureBit != 0 && v and repelLureBit != 0) 0 else v and (if (repelLureBit != 0) repelLureBit - 1 else 0xFFFF)
     /** The functions the code CRCs check, in order; a 0 is one the table doesn't use (the expansion hacks' bag). */
     val functions get() = listOf(varGet, varSet, checkBagHasItem, removeBagItem, fieldControlsLocked).filter { it != 0L }
     val itemSize get() = itemNameLen + 30
@@ -138,6 +146,9 @@ fun fieldItemCodeMatches(fns: FieldItemFns, readRom: (addr: Long, len: Int) -> B
 
 /** REPEL / SUPER REPEL / MAX REPEL: the same ids in both games. */
 val REPEL_ITEMS = setOf(86, 83, 84)
+
+/** SoulGold's REPEL / SUPER REPEL / MAX REPEL (100 / 200 / 250 steps in its gItemsInfo). */
+val SOULGOLD_REPEL_ITEMS = setOf(114, 115, 116)
 
 /** USE on one Pokémon (FieldUseFunc_Medicine in pokefirered's items.json, FireRed / Emerald ids): Potion ...
  * Revival Herb, Lava Cookie, Berry Juice, the vitamins, the status / HP Berries. Not the Flutes. */
@@ -394,9 +405,10 @@ val FIELD_ITEMS_LAZARUS = FieldItemFns(
  * Cherrygrove; v1.1.4 Goldenrod too), the PC opened on each. [fieldItemsCandidatesForGame] lets the CRCs pick the build.
  */
 val FIELD_ITEMS_SOULGOLD = FieldItemFns(
-    varGet = 0x08133F38L, varSet = 0x08133FCCL, checkBagHasItem = 0, removeBagItem = 0,
-    fieldControlsLocked = 0x082363D8L, repelVar = 0x4021, items = 0,
-    codeCrcs = listOf(0xAEDB0050L, 0xC6FC58DDL, 0x41C9CB9EL),
+    varGet = 0x08133F38L, varSet = 0x08133FCCL, checkBagHasItem = 0x08189F88L, removeBagItem = 0x0818AADCL,
+    fieldControlsLocked = 0x082363D8L, repelVar = 0x4021, items = 0x087520A0L,
+    codeCrcs = listOf(0xAEDB0050L, 0xC6FC58DDL, 0x3DAF3E13L, 0xF947826AL, 0x41C9CB9EL),
+    repelItems = SOULGOLD_REPEL_ITEMS, repelLureBit = 0x8000, itemParamOffset = 9, lastRepelVar = 0x40BD,
     party = PartyItemFns(
         getMonData = 0x081ED710L, setMonData = 0x081EDD68L, itemNoEffect = null, itemEffect = 0, addBagItem = 0,
         party = 0x0203901CL, partyCount = 0x02038DD5L, scratch = 0x0203FFF0L, itemCount = 0, unholdablePockets = emptySet(),
@@ -418,9 +430,10 @@ val FIELD_ITEMS_SOULGOLD = FieldItemFns(
     ),
 )
 val FIELD_ITEMS_SOULGOLD_V1_2 = FieldItemFns(
-    varGet = 0x0813466CL, varSet = 0x08134700L, checkBagHasItem = 0, removeBagItem = 0,
-    fieldControlsLocked = 0x08236CB8L, repelVar = 0x4021, items = 0,
-    codeCrcs = listOf(0xAEDB0050L, 0xC6FC58DDL, 0x41C9CB9EL),
+    varGet = 0x0813466CL, varSet = 0x08134700L, checkBagHasItem = 0x0818A694L, removeBagItem = 0x0818B1E8L,
+    fieldControlsLocked = 0x08236CB8L, repelVar = 0x4021, items = 0x08753834L,
+    codeCrcs = listOf(0xAEDB0050L, 0xC6FC58DDL, 0x3DAF3E13L, 0xF947826AL, 0x41C9CB9EL),
+    repelItems = SOULGOLD_REPEL_ITEMS, repelLureBit = 0x8000, itemParamOffset = 9, lastRepelVar = 0x40BD,
     party = PartyItemFns(
         getMonData = 0x081EE340L, setMonData = 0x081EE998L, itemNoEffect = null, itemEffect = 0, addBagItem = 0,
         party = 0x02039024L, partyCount = 0x02038DDDL, scratch = 0x0203FFF0L, itemCount = 0, unholdablePockets = emptySet(),
@@ -442,9 +455,10 @@ val FIELD_ITEMS_SOULGOLD_V1_2 = FieldItemFns(
     ),
 )
 val FIELD_ITEMS_SOULGOLD_V1_2B = FieldItemFns(
-    varGet = 0x0813465CL, varSet = 0x081346F0L, checkBagHasItem = 0, removeBagItem = 0,
-    fieldControlsLocked = 0x08236C20L, repelVar = 0x4021, items = 0,
-    codeCrcs = listOf(0xAEDB0050L, 0xC6FC58DDL, 0x41C9CB9EL),
+    varGet = 0x0813465CL, varSet = 0x081346F0L, checkBagHasItem = 0x0818A684L, removeBagItem = 0x0818B1D8L,
+    fieldControlsLocked = 0x08236C20L, repelVar = 0x4021, items = 0x0875379CL,
+    codeCrcs = listOf(0xAEDB0050L, 0xC6FC58DDL, 0x3DAF3E13L, 0xF947826AL, 0x41C9CB9EL),
+    repelItems = SOULGOLD_REPEL_ITEMS, repelLureBit = 0x8000, itemParamOffset = 9, lastRepelVar = 0x40BD,
     party = PartyItemFns(
         getMonData = 0x081EE2D4L, setMonData = 0x081EE92CL, itemNoEffect = null, itemEffect = 0, addBagItem = 0,
         party = 0x02039024L, partyCount = 0x02038DDDL, scratch = 0x0203FFF0L, itemCount = 0, unholdablePockets = emptySet(),
@@ -466,9 +480,10 @@ val FIELD_ITEMS_SOULGOLD_V1_2B = FieldItemFns(
     ),
 )
 val FIELD_ITEMS_SOULGOLD_V1_2C = FieldItemFns(
-    varGet = 0x081346C8L, varSet = 0x0813475CL, checkBagHasItem = 0, removeBagItem = 0,
-    fieldControlsLocked = 0x08236D18L, repelVar = 0x4021, items = 0,
-    codeCrcs = listOf(0xAEDB0050L, 0xC6FC58DDL, 0x41C9CB9EL),
+    varGet = 0x081346C8L, varSet = 0x0813475CL, checkBagHasItem = 0x0818A6F0L, removeBagItem = 0x0818B244L,
+    fieldControlsLocked = 0x08236D18L, repelVar = 0x4021, items = 0x08753928L,
+    codeCrcs = listOf(0xAEDB0050L, 0xC6FC58DDL, 0x3DAF3E13L, 0xF947826AL, 0x41C9CB9EL),
+    repelItems = SOULGOLD_REPEL_ITEMS, repelLureBit = 0x8000, itemParamOffset = 9, lastRepelVar = 0x40BD,
     party = PartyItemFns(
         getMonData = 0x081EE3A0L, setMonData = 0x081EE9F8L, itemNoEffect = null, itemEffect = 0, addBagItem = 0,
         party = 0x02039024L, partyCount = 0x02038DDDL, scratch = 0x0203FFF0L, itemCount = 0, unholdablePockets = emptySet(),
@@ -592,7 +607,7 @@ class FieldItemSupport(
     val fns: FieldItemFns,
     private val holdable: Set<Int>,
     /** What USE works on here: [PartyItemFns.usable] as the ROM's gItems has it ([PartyItemFns.useFuncs]), plus the Repels. */
-    private val usable: Set<Int> = fns.party?.usable.orEmpty() + REPEL_ITEMS,
+    private val usable: Set<Int> = fns.party?.usable.orEmpty() + fns.repelItems,
     /** FLY's code is where [FieldItemFns.fly] says. */
     val canFly: Boolean = false,
     /** PC anywhere's code is where [FieldItemFns.pc] says. */
@@ -600,10 +615,10 @@ class FieldItemSupport(
 ) {
     private val party = fns.party
     /** USE: a Repel on the spot, or medicine / a PP item on a picked Pokémon. */
-    fun canUse(itemId: Int): Boolean = itemId in usable && (itemId in REPEL_ITEMS || party != null)
+    fun canUse(itemId: Int): Boolean = itemId in usable && (itemId in fns.repelItems || party != null)
     fun canGive(itemId: Int): Boolean = party != null && itemId in holdable
     /** USE opens the party pick (everything but the Repels). */
-    fun picksMon(itemId: Int): Boolean = party != null && itemId in usable && itemId !in REPEL_ITEMS
+    fun picksMon(itemId: Int): Boolean = party != null && itemId in usable && itemId !in fns.repelItems
     /** ... and then one of the Pokémon's moves. */
     fun picksMove(itemId: Int): Boolean = party != null && itemId in party.ppOneMove
     /** The bag row's mark: something to do with it here. */
@@ -619,7 +634,12 @@ fun fieldItemSupport(fns: FieldItemFns, read: (addr: Long, len: Int) -> ByteArra
     val party = fns.party ?: return FieldItemSupport(fns, emptySet())
     val fly = fns.fly?.let { flyCodeMatches(it, read) } == true
     val pc = fns.pc?.let { pcCodeMatches(it, read) } == true
-    if (!fns.bagActions) return FieldItemSupport(fns, emptySet(), emptySet(), canFly = fly, canPc = pc)
+    if (!fns.bagActions) {
+        // FLY and the PC; the Repels too where the table names its own (the expansion renumbered items) and their
+        // functions are mapped (SoulGold, GitHub #242).
+        val repels = if (fns.repelItems != REPEL_ITEMS && fns.checkBagHasItem != 0L && fns.removeBagItem != 0L && fns.items != 0L) fns.repelItems else emptySet()
+        return FieldItemSupport(fns, emptySet(), repels, canFly = fly, canPc = pc)
+    }
     val items = read(fns.items, party.itemCount * fns.itemSize)
     return FieldItemSupport(fns, holdableItems(fns, items), usableItems(fns, items), canFly = fly, canPc = pc)
 }
@@ -638,8 +658,8 @@ fun holdableItems(fns: FieldItemFns, items: ByteArray): Set<Int> {
 /** USE's items (the party's and the Repels) whose gItems entry runs one of [PartyItemFns.useFuncs]; all of them
  * when the table lists none. */
 fun usableItems(fns: FieldItemFns, items: ByteArray): Set<Int> {
-    val p = fns.party ?: return REPEL_ITEMS
-    val all = p.usable + REPEL_ITEMS
+    val p = fns.party ?: return fns.repelItems
+    val all = p.usable + fns.repelItems
     if (p.useFuncs.isEmpty()) return all
     return all.filter { id ->
         val o = id * fns.itemSize + fns.itemFieldUseOff
@@ -673,9 +693,9 @@ private const val MON_DATA_IS_EGG = 45
 
 /** Uses [itemId] on the field - a Repel. [busy] is whether a battle or a menu screen is up. Emu thread. */
 fun useFieldItem(fns: FieldItemFns, itemId: Int, busy: Boolean, g: GameCalls): ItemUseOutcome {
-    if (itemId !in REPEL_ITEMS || !fieldItemCodeMatches(fns, g::read)) return ItemUseOutcome(ItemUseResult.FAILED)
+    if (itemId !in fns.repelItems || !fieldItemCodeMatches(fns, g::read)) return ItemUseOutcome(ItemUseResult.FAILED)
     if (busy || g.call(fns.fieldControlsLocked) != 0L) return ItemUseOutcome(ItemUseResult.NOT_NOW)
-    if (g.call(fns.varGet, fns.repelVar) != 0L) return ItemUseOutcome(ItemUseResult.STILL_ACTIVE)
+    if (fns.repelSteps(g.call(fns.varGet, fns.repelVar).toInt()) != 0) return ItemUseOutcome(ItemUseResult.STILL_ACTIVE)
     if (g.call(fns.checkBagHasItem, itemId, 1) != 1L) return ItemUseOutcome(ItemUseResult.NONE_LEFT)
     val steps = g.read(fns.items + itemId.toLong() * fns.itemSize + fns.itemParamOff, 1)[0].toInt() and 0xFF
     if (steps == 0) return ItemUseOutcome(ItemUseResult.FAILED)

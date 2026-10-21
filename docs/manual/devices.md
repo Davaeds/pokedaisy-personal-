@@ -15,11 +15,13 @@ PokeDaisy works with two screens or one. With two, the game is on top and the co
 | AYN Thor | What PokeDaisy was made on. The companion is laid out for its bottom screen. |
 | Retroid Pocket Duo Lite | Its bottom screen is squarer (4:3), so a few screens rearrange to fit: the Pokémon summary puts its types beside the icon, and `STATES` uses flatter screenshots. |
 | Retroid Pocket Duo | Should work the same way; not yet tried on real hardware. |
-| Anbernic RG DS | Should work with `SWAP SCREENS` on (see below); not yet tried on real hardware. |
+| Anbernic RG DS | Should work with `SWAP SCREENS` on (see below); not yet tried on real hardware. Its screens are small (640 by 480), so the companion's text is a size smaller there, and a few screens squeeze: a move's power and PP sit beside its name, and `DEX` puts height and weight on two lines. |
 
 The game always opens on the device's main display, with the companion on the other one, even if you start it from the bottom screen.
 
 Taps on the bottom screen go to the companion, and the device's `BACK` button works as the companion's back (tap it to close whatever's open there). Hold `BACK` to leave the game.
+
+Rather use your buttons down there? Press `X` while you walk around and they move to the companion, like a DS game's menu, until you press `X` again. See [X takes your buttons to the companion](controls.md#x-takes-your-buttons-to-the-companion).
 
 ### SWAP SCREENS
 
@@ -61,7 +63,7 @@ The companion is still there:
 
 `SWAP SCREENS` trades a DS game's two screens too: the top screen goes on your bottom screen, and the touch screen, with its `COMPANION` button, on the top one. The touch screen stays up whatever `CLOSE COMPANION` says. `REWIND` isn't available in DS games.
 
-On a handheld or phone with one screen, a DS game shows its top screen only, for now: the touch screen needs a second screen. The game plays with your buttons, but anything that has to be tapped on the touch screen can't be done there yet.
+On a handheld or phone with one screen, a DS game shows both of its screens on it. Held sideways, the touch screen sits beside the game, the two side by side like an open DS; held upright, it sits under the game, where the companion would be. Its `COMPANION` button swaps it for the companion (and `GAME SCREEN` brings the touch screen back), the same switch as on a dual-screen device.
 
 ## Single-screen handhelds
 

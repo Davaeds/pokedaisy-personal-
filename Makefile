@@ -58,6 +58,7 @@ check: ## Everything a PR must pass: unit tests, translations, ui-preview stress
 	./gradlew :app:testDebugUnitTest :app:assembleDebug
 	./gradlew -p ui-preview stress
 	./gradlew -p ui-preview docsSearchCheck
+	./gradlew -p ui-preview keyedStateCheck
 	cd website && npm ci && node --test test/docs.test.js test/docsearch.test.js && npm run build
 
 docs-shots: ## Re-render the manual's screenshots (docs/manual/shots) with the invented save

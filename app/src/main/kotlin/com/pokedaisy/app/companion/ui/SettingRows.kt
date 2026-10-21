@@ -1,6 +1,14 @@
 package com.pokedaisy.app.companion.ui
 
 import androidx.compose.foundation.layout.Column
+import kotlinx.coroutines.launch
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.onGloballyPositioned
 import com.pokedaisy.app.companion.i18n.tk
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -167,7 +175,128 @@ fun GroupedRows(
     firstRowFocus: androidx.compose.ui.focus.FocusRequester? = null,
     /** Row i took the D-pad's focus: the cursor follows it, so only one row is white. */
     onFocused: ((Int) -> Unit)? = null,
+    /** A column of the group titles on the right ([GroupTabs]) where the window is wide enough: a tap scrolls the list
+     * to that group. For a long list (SETTINGS' home pages); it's still one list. */
+    groupTabs: Boolean = false,
     footer: @Composable () -> Unit = {},
+) {
+    val groups = if (groupTabs) rows.indices.filter { rows[it].header } else emptyList()
+    if (groups.size < MIN_GROUP_TABS) {
+        GroupedRowsList(rows, m, cursor, onClick, scroll, labelWeight, reveal, onRevealed, firstRowFocus, onFocused, null, footer)
+        return
+    }
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        if (maxWidth < GROUP_TABS_MIN_WIDTH || maxWidth < maxHeight) {
+            GroupedRowsList(rows, m, cursor, onClick, scroll, labelWeight, reveal, onRevealed, firstRowFocus, onFocused, null, footer)
+            return@BoxWithConstraints
+        }
+        // Each group title's top in the list (content pixels), as laid out.
+        val tops = remember { androidx.compose.runtime.mutableStateMapOf<Int, Int>() }
+        androidx.compose.foundation.layout.Row(Modifier.fillMaxSize()) {
+            androidx.compose.foundation.layout.Box(Modifier.weight(1f).fillMaxSize()) {
+                GroupedRowsList(rows, m, cursor, onClick, scroll, labelWeight, reveal, onRevealed, firstRowFocus, onFocused, tops, footer)
+            }
+            GroupTabs(rows, groups, tops, scroll, m)
+        }
+    }
+}
+
+/** [GroupedRows]' tabs need this many groups, and a window this wide (and wider than tall). */
+private const val MIN_GROUP_TABS = 3
+private val GROUP_TABS_MIN_WIDTH = 400.dp
+
+/**
+ * [GroupedRows]' group tabs: the group titles down the window's right edge, the one the list is showing lit like a
+ * selected tab; a tap scrolls the list to that group. Touch only (the D-pad walks the rows). Near the list's end, where
+ * the last groups can't reach the top, the one tapped stays lit (else the last).
+ */
+@Composable
+private fun GroupTabs(
+    rows: List<SettingRow>,
+    groups: List<Int>,
+    tops: Map<Int, Int>,
+    scroll: ScrollState,
+    m: GbaTextMetrics,
+) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var picked by remember { mutableStateOf(-1) }
+    val atEnd = scroll.maxValue > 0 && scroll.value >= scroll.maxValue - 1
+    val slack = with(androidx.compose.ui.platform.LocalDensity.current) { (m.u * 4).roundToPx() }
+    val shown = groups.lastOrNull { (tops[it] ?: Int.MAX_VALUE) <= scroll.value + slack } ?: groups.first()
+    // A tap the list can't scroll far enough for (its last groups) keeps its tab lit; scrolling back lets go of it.
+    // At the very end the last group is on screen whatever reached the top.
+    val current = if (atEnd) picked.takeIf { it >= 0 } ?: groups.last() else shown
+    val small = rememberGbaTextMetrics(1f)
+    androidx.compose.foundation.layout.Column(
+        Modifier
+            .width(androidx.compose.foundation.layout.IntrinsicSize.Max)
+            .fillMaxHeight()
+            .drawBehind {
+                // A dashed rule between the list and its tabs, like the rows' dividers.
+                val px = m.u.toPx()
+                var y = 4 * px
+                while (y < size.height - 4 * px) {
+                    drawRect(OptionColors.divider, androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Size(px, 2 * px))
+                    y += 4 * px
+                }
+            }
+            .verticalScroll(rememberScrollState())
+            .padding(start = m.u * 6, end = m.u * 4, top = m.u * 4, bottom = m.u * 4),
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(m.u * 2),
+    ) {
+        for (g in groups) {
+            GroupTab(tr(rows[g].label), g == current, small) {
+                picked = g
+                val top = tops[g] ?: return@GroupTab
+                scope.launch { scroll.animateScrollTo(top.coerceAtMost(scroll.maxValue)) }
+            }
+        }
+    }
+    // Scrolled by hand past where the tap left it: the list decides again.
+    LaunchedEffect(shown, atEnd) { if (!atEnd && !scroll.isScrollInProgress) picked = -1 }
+}
+
+/** One of [GroupTabs]: a tab chip's frame (white with a red label when [selected], like the tab bar's) at the list's
+ * smaller text. */
+@Composable
+private fun GroupTab(label: String, selected: Boolean, m: GbaTextMetrics, onClick: () -> Unit) {
+    val u = m.u
+    androidx.compose.foundation.layout.Box(
+        contentAlignment = androidx.compose.ui.Alignment.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                val px = u.toPx()
+                drawLayeredBox(OptionColors.chipLayers.inPx(px), if (selected) OptionColors.tabSelectedFill else OptionColors.tabIdleFill, radius = 3 * px)
+            }
+            .focusProperties { canFocus = false }
+            .soundClickable(onClick = onClick)
+            .padding(horizontal = u * 6, vertical = u * 4),
+    ) {
+        GbaText(
+            label,
+            if (selected) OptionColors.value else OptionColors.label,
+            if (selected) OptionColors.valueShadow else OptionColors.labelShadow,
+            m, bold = gameBoldLabels(),
+        )
+    }
+}
+
+@Composable
+private fun GroupedRowsList(
+    rows: List<SettingRow>,
+    m: GbaTextMetrics,
+    cursor: Int,
+    onClick: (Int) -> Unit,
+    scroll: ScrollState,
+    labelWeight: Float,
+    reveal: Int,
+    onRevealed: () -> Unit,
+    firstRowFocus: androidx.compose.ui.focus.FocusRequester?,
+    onFocused: ((Int) -> Unit)?,
+    /** Each group title's top in the list, for [GroupTabs]. */
+    tops: MutableMap<Int, Int>?,
+    footer: @Composable () -> Unit,
 ) {
     val firstRow = rows.indexOfFirst { !it.header }
     // A game font is set larger to match Pixel Operator's letters (Gen 1's 7px capitals): its line is taller for the same
@@ -179,17 +308,18 @@ fun GroupedRows(
     Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
         rows.forEachIndexed { i, row ->
             if (row.header) {
+                val track = if (tops == null) Modifier else Modifier.onGloballyPositioned { tops[i] = it.positionInParent().y.toInt() }
                 val band = OptionColors.groupTitleFill
                 if (band == null) {
                     GbaText(
                         tr(row.label), OptionColors.value, OptionColors.valueShadow, m,
-                        modifier = Modifier.padding(start = m.u * 8, top = m.u * (if (i == 0) 1 else 6), bottom = m.u),
+                        modifier = track.padding(start = m.u * 8, top = m.u * (if (i == 0) 1 else 6), bottom = m.u),
                     )
                 } else {
                     // Black text on white rows (Gen 1): the title is a black band, so it can't pass for a row.
                     GbaText(
                         tr(row.label), OptionColors.groupTitleText, OptionColors.groupTitleShadow, m,
-                        modifier = Modifier
+                        modifier = track
                             .padding(start = m.u * 2, end = m.u * 2, top = m.u * (if (i == 0) 1 else 6), bottom = m.u * 2)
                             .fillMaxWidth()
                             .drawBehind { drawPixelRoundRect(band, radius = m.u.toPx() * 2, step = m.u.toPx()) }

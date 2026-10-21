@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -55,11 +54,11 @@ private val cardArtGeneration = HashMap<CardStyle, Int>()
 fun rememberTrainerCardArt(style: CardStyle?): TrainerCardArt.Art? {
     val context = LocalContext.current
     val generation = rememberArtGeneration()
-    return produceState(style?.let(TrainerCardArt::cached), style, generation) {
+    return produceKeyedState(style?.let(TrainerCardArt::cached), style, generation) {
         // Every CompanionScreen composition used to re-read every blob, and the new Art
         // (another identity) re-rendered the card: load only what this generation hasn't.
-        val s = style ?: run { value = null; return@produceState }
-        if (value != null && cardArtGeneration[s] == generation) return@produceState
+        val s = style ?: run { value = null; return@produceKeyedState }
+        if (value != null && cardArtGeneration[s] == generation) return@produceKeyedState
         value = withContext(Dispatchers.IO) { runCatching { TrainerCardArt.load(RomArt.dir(context.filesDir), s) }.getOrNull() }
         if (value != null) cardArtGeneration[s] = generation
     }.value

@@ -55,6 +55,9 @@ internal object ScreenShaders {
         uniform vec2 uTexSize;
         uniform vec2 uGrid;
         uniform float uSmoothed;
+        vec2 texelCentre(vec2 uv) {
+            return (floor(uv * uTexSize + 0.005) + 0.5) / uTexSize;
+        }
     """
 
     /** The texture as is. */
@@ -62,6 +65,21 @@ internal object ScreenShaders {
         $HEADER
         void main() {
             gl_FragColor = vec4(texture2D(uTex, vUv).rgb, 1.0);
+        }
+    """.trimIndent()
+
+    /**
+     * The game's pixels onto the view, each read at its centre ([texelCentre]). Plain nearest sampling
+     * at `vUv` left the choice to the UV's interpolation wherever a row / column edge falls exactly on a
+     * view pixel's centre - every other edge of a Game Boy picture at the Thor's 7.5x (1080 / 144), every
+     * fourth of the GBA's at 6.75x - and Adreno rounds that differently pixel by pixel, so the edges of
+     * lines and letters came out as sawtooth (a 1.3.0 report on Yellow; a GBA and Linkboy showed it too).
+     * The 0.005-pixel nudge settles every such tie the same way and is far below any real pixel's distance.
+     */
+    val PIXELS = """
+        $HEADER
+        void main() {
+            gl_FragColor = vec4(texture2D(uTex, texelCentre(vUv)).rgb, 1.0);
         }
     """.trimIndent()
 
@@ -122,7 +140,7 @@ internal object ScreenShaders {
         }
         void main() {
             vec2 pos = vUv * uTexSize;
-            vec3 c = texture2D(uTex, uSmoothed > 0.5 ? vUv : (floor(pos) + 0.5) / uTexSize).rgb;
+            vec3 c = texture2D(uTex, uSmoothed > 0.5 ? vUv : texelCentre(vUv)).rgb;
             vec2 s = pos - shadowOffset;
             float t = 0.25 * (through(s + vec2(-shadowSoft, -shadowSoft)) + through(s + vec2(shadowSoft, -shadowSoft))
                             + through(s + vec2(-shadowSoft, shadowSoft)) + through(s + vec2(shadowSoft, shadowSoft)));
@@ -210,7 +228,7 @@ internal object ScreenShaders {
             float x2 = max(d.x, d.y);
             x2 *= x2;
             float w = 48.0 * (x2 * x2 - 8.0 / 3.0 * x2 * x2 * x2);
-            vec3 c = texture2D(uTex, uSmoothed > 0.5 ? vUv : (floor(pos) + 0.5) / uTexSize).rgb;
+            vec3 c = texture2D(uTex, uSmoothed > 0.5 ? vUv : texelCentre(vUv)).rgb;
             c = mix(c, vec3(dot(c, luma709)), desaturate);
             c *= 1.0 - uGrid.x * clamp(mix(w * w, w, uGrid.y) * gridIntensity, 0.0, 1.0);
             c = mix(c, paper(gl_FragCoord.xy) * c, dot(c, luma709));

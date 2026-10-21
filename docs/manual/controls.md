@@ -19,10 +19,10 @@ The button settings live in the `CONTROLS` group, on both screens: the top scree
 | `GBA A` and `GBA B` | A and B |
 | `GBA L` and `GBA R` | L1 and R1 |
 | `GBA START` and `GBA SELECT` | START and SELECT |
-| `GBA START 2` and `GBA SELECT 2` | X and Y |
+| `X` and `Y` | X and Y |
 | `GBA TURBO A` and `GBA TURBO B` | Nothing |
 
-`START 2` and `SELECT 2` are a second START and SELECT, so X opens the menu and Y uses your registered item, like in the DS games. Each GBA button also has a keyboard key (Z, X, A, S, Enter and so on) for when you play with one.
+`X` and `Y` are the DS games' own X and Y. In the other games they're a second START and SELECT, so X opens the menu and Y uses your registered item, like in the DS games. On a handheld with two screens, X does one more thing on the field: see [X takes your buttons to the companion](#x-takes-your-buttons-to-the-companion). Each GBA button also has a keyboard key (Z, X, A, S, Enter and so on) for when you play with one.
 
 To change one, tap its row (it says `PRESS A BUTTON…`) and press the button you want on your device. That works the same on the top screen and on the companion: there, while a row waits, the game's screen shows a window asking for the button and the keys you hold. `CANCEL`, or `BACK`, leaves the button as it was. `TURBO A` and `TURBO B` also get `CLEAR`, which takes them off every button again.
 
@@ -34,6 +34,21 @@ The new button replaces everything that GBA button had, keyboard key included. A
 The D-pad and the analog stick always move; they can't be remapped. First-time setup has a page listing these buttons too, and you change them right there the same way.
 
 ![The top screen's GAME BUTTONS page, a row for each GBA button with the keys it's on](shots/settings-buttons.png "GAME BUTTONS on the top screen")
+
+## X takes your buttons to the companion
+
+On a handheld with two screens, press `X` while you walk around in a GBA or Game Boy game and your buttons move down to the companion, like the menu on a DS game's touch screen. A silver strip slides up along the bottom of the game with an arrow pointing down at the companion, and `L` and `R` slide in at the ends of the companion's tab bar.
+
+While your buttons are down there, the game keeps running but doesn't see them:
+
+- The D-pad moves the cursor and `A` picks what it's on.
+- `L` and `R` move between the tabs.
+- `B` goes back, and when there's nothing left to go back from, it gives your buttons back to the game.
+- `X` or `START` give them back from anywhere. So does a tap on the silver strip.
+
+They also come back by themselves when the game needs them: a battle starts, or something you picked on the companion opens on the game, like the PC or a flight.
+
+`X` only does this on the field with nothing else going on. In a text box, a menu or a battle it's still `START`. DS games keep their own X.
 
 ## Turbo A and B
 
@@ -116,7 +131,7 @@ The quick menu puts the things you'd otherwise dig through menus for under one b
 
 Press L3 and the menu stays open: move with the D-pad or the left stick (on the ring, point the stick at an action), press `A` to use it, and `B` (or L3 again) closes it. You can also tap an action on the screen. While the menu is open your buttons work it, not the game, and the game keeps running underneath.
 
-An action you can't use right now is greyed out and says why, like a battle going on or nothing for it in your bag. `BIKE` and `ROD` use the game's own way of using a registered item, so the game decides the rest: where you can't ride or fish, it tells you so. They work in FireRed, LeafGreen, Ruby, Sapphire and Emerald, and in Emerald Kaizo and Ultra Violet, which run on those games. `PC`, `FLY` and the spray show only in games where the [bag](bag.md) and [map](map.md) offer them.
+An action you can't use right now is greyed out and says why, like a battle going on or nothing for it in your bag. `BIKE` and `ROD` use the game's own way of using a registered item, so the game decides the rest: where you can't ride or fish, it tells you so. They work in FireRed, LeafGreen, Ruby, Sapphire and Emerald, in Emerald Kaizo and Ultra Violet, which run on those games, and in SoulGold, through its own `SELECT` wheel (it borrows the wheel's bottom slot for a moment, then puts back what you had there). `PC`, `FLY` and the spray show only in games where the [bag](bag.md) and [map](map.md) offer them.
 
 Pick which actions show, and turn the rest off, in `QUICK MENU` (in the `CONTROLS` group of Settings on either screen). Its `STYLE` picks how they're laid out (tap it to switch):
 

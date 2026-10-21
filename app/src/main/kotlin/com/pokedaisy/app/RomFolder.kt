@@ -19,8 +19,8 @@ object RomFolder {
     private const val MAX_ROM_BYTES = 32L shl 20
     /** A DS cart: 512 MB at most (Platinum and HeartGold are 128, Black 256). */
     private const val MAX_DS_ROM_BYTES = 512L shl 20
-    /** The folder itself plus a couple of levels (e.g. `roms/gba/hacks/`). */
-    private const val MAX_DEPTH = 3
+    /** The folder itself plus a few levels: a frontend's tree nests (`ROMs/gba/Pokemon/Retail/`, GitHub #233). */
+    private const val MAX_DEPTH = 6
 
     /** [partial]: read through a PARTIAL best-effort match ([CompanionSupport.Verdict.PARTIAL]) - listed, tagged. */
     /** [tryable]: unsupported but a Gen 3 Pokémon base game - listed, tagged NOT SUPPORTED, so TRY BEST EFFORT is reachable. */
@@ -47,11 +47,12 @@ object RomFolder {
      * file name an imported ROM already has (covers and names are keyed by file
      * name). Cheap: reads the cache, never a ROM. */
     fun libraryRoms(context: Context, prefs: Prefs): List<File> {
-        val imported = importedRoms(context)
+        val hidden = prefs.hiddenRoms
+        val imported = importedRoms(context).filter { it.absolutePath !in hidden }
+        // Only a listed copy stands in for the linked file: a hidden one used to hide that file too.
         val names = imported.mapTo(HashSet()) { it.name }
         val linked = found(context, prefs).filter { it.name !in names }
-        val hidden = prefs.hiddenRoms
-        return (imported.filter { it.absolutePath !in hidden } + linked)
+        return (imported + linked)
             .sortedWith(byLabel(context, prefs))
     }
 

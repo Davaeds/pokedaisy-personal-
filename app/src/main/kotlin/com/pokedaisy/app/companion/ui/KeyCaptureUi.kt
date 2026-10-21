@@ -55,13 +55,15 @@ fun KeyBindRow(
     labelWeight: Float = 0.5f,
     /** An [OptionBadge] after the label (a hotkey's NEW). */
     labelBadge: String? = null,
+    /** A grey line under the label: what the button does (English; OptionLine translates it). */
+    subtitle: String? = null,
     request: () -> KeyCapture.Request,
 ) {
     val r = capture.request?.takeIf { capture.isFor(label) }
     OptionLine(
         tr(label), if (r != null) keyCaptureValue(capture, r) else KeyCapture.labels(keys),
-        selected = r != null, m, height = m.rowHeight * 1.2f, labelWeight = labelWeight,
-        divider = divider && r == null, enabled = enabled, labelBadge = labelBadge,
+        selected = r != null, m, height = m.rowHeight * 1.2f + (if (subtitle != null) m.lineHeight else 0.dp), labelWeight = labelWeight,
+        divider = divider && r == null, enabled = enabled, labelBadge = labelBadge, subtitle = subtitle,
     ) { if (r != null) capture.cancel() else capture.start(request()) }
     if (r != null) {
         // A row low in the list: its line scrolls up into view, or CANCEL would open below the fold.

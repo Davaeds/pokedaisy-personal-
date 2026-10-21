@@ -1269,7 +1269,9 @@ only keeps a 256x256 ring of tiles in VRAM (`field_camera.c`), so the rest would
   SoulGold's forest), BG3 that doesn't continue past that edge (`battleEdgeBroken`: the colour step across the edge,
   summed over the scene rows, well past the steps between the columns inside - SoulGold's Route 29, trees to the
   edge and bare sky past it) or scenery on BG1 / BG2 at the edges (`battleSceneOffBg3`: retail's intro dust and
-  rocks too, which used to stop 44 px in). Otherwise BG3 is drawn as VRAM has it: retail's message / menu / RUN
+  rocks too, which used to stop 44 px in). A window against the edge is never scenery (`findBattleBgScenery`: BG1 / BG2 with
+  tiles in the last column and an empty map just past it on every such line - Unbound's level-up box on BG1 and its banner
+  on BG2, GitHub #245): it neither turns mirroring on nor gets mirrored in. Otherwise BG3 is drawn as VRAM has it: retail's message / menu / RUN
   frames are byte-identical to before, and mirrored, its foe platform ending at the edge grew a second one.
   Checked headless on FireRed / Emerald (11 points each against the old code) and SoulGold, and on the Thor.
   Per-scanline registers: games rewrite scroll / windows between lines (the intro's sliding

@@ -298,14 +298,15 @@ object RetroAchievements : CompanionAchievements {
     /** Unlock counts for one of the player's games: [total] achievements, [unlocked] softcore. */
     data class GameProgress(val total: Int, val unlocked: Int, val unlockedHardcore: Int)
 
-    @Volatile private var progressCache: Pair<Long, Map<Int, GameProgress>>? = null
+    private val progressCache = java.util.concurrent.ConcurrentHashMap<Int, Pair<Long, Map<Int, GameProgress>>>()
     private val progressWaiters = java.util.concurrent.ConcurrentHashMap<Int, (Map<Int, GameProgress>?) -> Unit>()
     private val progressTokens = java.util.concurrent.atomic.AtomicInteger()
 
-    /** The signed-in player's progress in every GBA game they've played, by game id (a minute's cache); null = signed out / offline. */
-    fun gbaProgress(): Map<Int, GameProgress>? {
+    /** The signed-in player's progress in every game of [console] (an RA console id, [RomIdentity.raConsole]) they've
+     * played, by game id (a minute's cache per console); null = signed out / offline. */
+    fun progress(console: Int): Map<Int, GameProgress>? {
         if (!ready || !accountSaved) return null
-        progressCache?.let { (at, map) -> if (System.currentTimeMillis() - at < 60_000) return map }
+        progressCache[console]?.let { (at, map) -> if (System.currentTimeMillis() - at < 60_000) return map }
         // Just opened: the saved account's token login may still be on its way.
         val deadline = System.currentTimeMillis() + 10_000
         while (_user.value == null && !_state.value.offline && System.currentTimeMillis() < deadline) Thread.sleep(100)
@@ -314,10 +315,10 @@ object RetroAchievements : CompanionAchievements {
         var out: Map<Int, GameProgress>? = null
         val token = progressTokens.incrementAndGet()
         progressWaiters[token] = { out = it; latch.countDown() }
-        RaNative.raFetchAllProgress(token)
+        RaNative.raFetchAllProgress(token, console)
         latch.await(20, TimeUnit.SECONDS)
         progressWaiters.remove(token)
-        out?.let { progressCache = System.currentTimeMillis() to it }
+        out?.let { progressCache[console] = System.currentTimeMillis() to it }
         return out
     }
 
@@ -358,8 +359,10 @@ object RetroAchievements : CompanionAchievements {
 
     // --- emu thread ---
 
-    /** [resumedFrom]: the suspend state the core just loaded, if any (its progress file is used up here). */
-    fun onCoreStarted(resumedFrom: File? = null) {
+    /** [rom]: the file the core loaded (its hash names the game). [resumedFrom]: the suspend state the core just
+     * loaded, if any (its progress file is used up here). */
+    fun onCoreStarted(rom: File?, resumedFrom: File? = null) {
+        romFile = rom
         resumeProgress = resumedFrom?.let { progressFile(it) }?.let { f ->
             runCatching { f.readBytes() }.getOrNull().also { f.delete() }
         }
@@ -373,8 +376,23 @@ object RetroAchievements : CompanionAchievements {
         if (prefs?.raToken != null) beginLoad()
     }
 
+    /** The game the core runs, for [beginLoad]'s hash. */
+    @Volatile private var romFile: File? = null
+    /** [romHash]'s last answer: a file is hashed once, not again on every resume or sign-in. */
+    @Volatile private var hashed: Triple<String, Long, String?>? = null
+
+    /** RetroAchievements' hash of [rom]'s file, cached by path, size and time. */
+    private fun romHash(rom: File): String? {
+        val key = "${rom.absolutePath}|${rom.lastModified()}"
+        hashed?.let { (k, size, h) -> if (k == key && size == rom.length()) return h }
+        return com.pokedaisy.app.RomIdentity.raHash(rom).also { hashed = Triple(key, rom.length(), it) }
+    }
+
     private fun beginLoad() {
-        loadInFlight = RaNative.raLoadGame()
+        // The file's hash, never the ROM in the core (a resume writes the cart's GPIO registers into it: GitHub #197).
+        loadInFlight = RaNative.raLoadGame(romFile?.let(::romHash))
+        // Nothing the native side can hash (no core it knows): say so rather than LOOKING UP THIS ROM for ever.
+        if (!loadInFlight) _state.update { it.copy(game = AchievementGame(0, null, null, 0, 0, 0, 0)) }
     }
 
     fun onFrame() {

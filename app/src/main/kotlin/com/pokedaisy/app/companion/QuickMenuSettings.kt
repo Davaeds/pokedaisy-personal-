@@ -38,6 +38,12 @@ enum class QuickMenuStyle(val label: String) {
 /** REPEL's kinds, weakest first: item id and the steps one lasts (the games' holdEffectParam, the same in every Gen 3 game;
  * a DS game's own ids, [com.pokedaisy.app.companion.data.GEN4_REPEL_KINDS]). */
 val REPEL_KINDS: List<Pair<Int, Int>>
-    get() = if (com.pokedaisy.app.companion.data.activeGame.isDsGame) com.pokedaisy.app.companion.data.GEN4_REPEL_KINDS else GBA_REPEL_KINDS
+    get() = when {
+        com.pokedaisy.app.companion.data.activeGame.isDsGame -> com.pokedaisy.app.companion.data.GEN4_REPEL_KINDS
+        // SoulGold renumbered its items (expansion): its own 114..116 (GitHub #242).
+        com.pokedaisy.app.companion.data.activeGame == com.pokedaisy.app.companion.data.GameKind.SOULGOLD -> SOULGOLD_REPEL_KINDS
+        else -> GBA_REPEL_KINDS
+    }
 
 private val GBA_REPEL_KINDS = listOf(86 to 100, 83 to 200, 84 to 250)
+private val SOULGOLD_REPEL_KINDS = listOf(114 to 100, 115 to 200, 116 to 250)

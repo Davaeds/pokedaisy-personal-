@@ -499,17 +499,20 @@ internal fun MoveCard(
                 fontFamily = pixelFontFamily(), lineHeight = 1.em, fontWeight = FontWeight.Bold,
                 shadow = Shadow(MoveTextShadow, Offset(shadowPx, shadowPx), 0f),
             )
-            if (compact) Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceEvenly) {
+            // A short screen (the RG DS): the two lines, smaller - its cards are too short for three.
+            val short = LocalShortCompanion.current
+            val k = if (short) SHORT_MOVE_TEXT else 1f
+            if (compact || short) Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceEvenly) {
                 // Name and PP, then type, power and the multipliers.
                 Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth()) {
                     // A long name (METAL CLAW) steps its size down to fit beside PP rather than being cut.
-                    FittedText(mv.name, AppColors.text, tight, maxSize = 32, minSize = 20, modifier = Modifier.weight(1f).padding(end = 10.dp))
-                    Text(tr("PP {0}", mv.pp), color = AppColors.text, fontSize = 20.sp, style = tight, maxLines = 1)
+                    FittedText(mv.name, AppColors.text, tight, maxSize = (32 * k).toInt(), minSize = (20 * k).toInt(), modifier = Modifier.weight(1f).padding(end = 10.dp * k))
+                    Text(tr("PP {0}", mv.pp), color = AppColors.text, fontSize = 20.sp * k, style = tight, maxLines = 1)
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TypeBadge(mv.type, fontSize = 16.sp)
-                    Text(tr("PWR {0}", powerLabel(mv.power)), color = AppColors.muted, fontSize = 22.sp, style = tight, maxLines = 1)
-                    if (showHints) mv.vs.forEach { v -> MultiplierChip(v.label, v.pct, fontSize = 16.sp) }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp * k)) {
+                    TypeBadge(mv.type, fontSize = 16.sp * k)
+                    Text(tr("PWR {0}", powerLabel(mv.power)), color = AppColors.muted, fontSize = 22.sp * k, style = tight, maxLines = 1)
+                    if (showHints) mv.vs.forEach { v -> MultiplierChip(v.label, v.pct, fontSize = 16.sp * k) }
                 }
             } else Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
                 Text(
@@ -528,6 +531,9 @@ internal fun MoveCard(
         }
     }
 }
+
+/** [MoveCard]'s text on a short screen ([LocalShortCompanion]), against its usual sizes. */
+private const val SHORT_MOVE_TEXT = 0.7f
 
 /** A beveled, colored button in Platinum's battle-menu style (rather than
  * this app's FR/LG chrome - this screen is a distinct "touch controls" mode):
@@ -689,6 +695,9 @@ private fun Gen1MoveList(
 ) {
     val m = rememberGbaTextMetrics()
     val small = rememberGbaTextMetrics(1f)
+    // A short screen (the RG DS): tighter boxes and smaller pills, or the type line was cut off.
+    val short = LocalShortCompanion.current
+    val pill = if (short) 12.sp else 16.sp
     Column(modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (row in 0..1) {
             Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -699,7 +708,7 @@ private fun Gen1MoveList(
                         fill = Color.White, frame = Color.White,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         enabled = mv != null && mv.pp > 0 && battleInput != null && !busy,
-                        contentPadding = PaddingValues(horizontal = m.u * 8, vertical = m.u * 4),
+                        contentPadding = PaddingValues(horizontal = m.u * 8, vertical = if (short) m.u else m.u * 4),
                         pressesGame = true, onClick = { battleInput?.selectMove(i) },
                     ) {
                         Column(
@@ -710,10 +719,10 @@ private fun Gen1MoveList(
                             GbaText(mv?.name ?: "-", buttonContent, Color.Transparent, m, bold = true)
                             if (mv != null) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    TypeBadge(mv.type, fontSize = 16.sp)
+                                    TypeBadge(mv.type, fontSize = pill)
                                     if (showHints && mv.power > 0) mv.vs.firstOrNull()?.let { v ->   // status moves ignore the chart
                                         Spacer(Modifier.width(m.u * 4))
-                                        MultiplierChip(v.label, v.pct, fontSize = 16.sp)
+                                        MultiplierChip(v.label, v.pct, fontSize = pill)
                                     }
                                     Spacer(Modifier.width(m.u * 8))
                                     GbaText(tr("PP {0}", mv.pp), buttonContent, Color.Transparent, small)

@@ -4,6 +4,7 @@ import com.pokedaisy.app.companion.i18n.tk
 import android.util.Log
 import com.pokedaisy.app.companion.data.DecompIconSource
 import com.pokedaisy.app.companion.data.InProcessReader
+import com.pokedaisy.app.companion.data.MemoryReader
 import com.pokedaisy.app.companion.data.SnapshotView
 import com.pokedaisy.app.companion.data.TelemetrySampler
 import com.pokedaisy.app.companion.data.activeGame
@@ -13,8 +14,9 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Holds the latest [SnapshotView] for the bottom-screen UI to observe.
- * [refresh] is driven by the emulator thread (EmulatorEngine.onSample) ~1×/sec,
- * so every core memory read happens between frames.
+ * [refresh] runs ~1×/sec (EmulatorEngine.onSample): on a sampler thread over the RAM the emu thread copied at a
+ * frame's end ([com.pokedaisy.app.companion.data.RamSnapshot]), or on the emu thread itself (a Game Boy game, a
+ * savestate's copy), one at a time.
  */
 class TelemetryStore {
     // The sampler remembers the game it detected, so a new ROM gets a new one (see [reset]).
@@ -34,6 +36,7 @@ class TelemetryStore {
     /** A different ROM is about to run in this activity: forget the detected
      * game. Call while the emulator is stopped. */
     fun reset() {
+        generation++
         sampler = TelemetrySampler()
         cached = null
         _snapshot.value = SnapshotView(connected = false, error = tk("starting…"))
@@ -50,6 +53,9 @@ class TelemetryStore {
         // The per-game look reads activeGame; another game's icon tables would read this ROM wrong.
         if (game != activeGame) DecompIconSource.tables = com.pokedaisy.app.companion.data.IconTables()
         activeGame = game
+        // And its names' language: the item tags look names up as they draw (GitHub #227).
+        com.pokedaisy.app.companion.data.romGameCode = v.textCode
+        com.pokedaisy.app.companion.data.romLanguage = v.textLanguage
         cachedSamples = 0
         cached = v
         _snapshot.value = v
@@ -61,6 +67,9 @@ class TelemetryStore {
         cached = null
         _snapshot.value = SnapshotView(connected = false, error = tk("starting…"))
     }
+
+    /** Bumped by [reset]: a sample of the last ROM that finishes after it isn't shown. */
+    @Volatile private var generation = 0
 
     private var logCount = 0
     private var lastPublishNanos = 0L
@@ -88,9 +97,12 @@ class TelemetryStore {
     @Volatile var battleChecksTaken = 0L
         private set
 
-    fun refresh(): SnapshotView {
+    @Synchronized
+    fun refresh(reader: MemoryReader = InProcessReader): SnapshotView {
+        val gen = generation
         samplesTaken++
-        val s = sampler.sample(InProcessReader)
+        val s = sampler.sample(reader)
+        if (gen != generation) return s   // a new ROM started while this one was read: it's the last game's
         val c = cached
         if (c != null) {
             // Live replaces the saved copy once it has data (or won't get any); until then the copy stays.

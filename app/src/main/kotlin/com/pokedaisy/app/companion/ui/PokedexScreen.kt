@@ -35,7 +35,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -123,7 +122,7 @@ class DexOrder(val nationals: List<Int>, private val regional: Boolean) {
 @Composable
 fun rememberDexOrder(dex: PokedexState, national: Boolean): DexOrder {
     val t = dex.tables
-    val regional by produceState(PokedexSource.cachedRegionalOrder(t), t) {
+    val regional by produceKeyedState(PokedexSource.cachedRegionalOrder(t), t) {
         if (value == null) value = withContext(Dispatchers.IO) { PokedexSource.regionalOrder(t) }
     }
     val species = rememberSpeciesMap(t)
@@ -140,7 +139,7 @@ fun rememberDexOrder(dex: PokedexState, national: Boolean): DexOrder {
 /** Dex number -> species id, read from the ROM once (off the main thread). */
 @Composable
 private fun rememberSpeciesMap(t: PokedexTables): IntArray? =
-    produceState(PokedexSource.cachedSpeciesMap(t), t) {
+    produceKeyedState(PokedexSource.cachedSpeciesMap(t), t) {
         if (value == null) {
             value = withContext(Dispatchers.IO) { PokedexSource.speciesFor(t, 1); PokedexSource.cachedSpeciesMap(t) }
         }
@@ -344,7 +343,7 @@ fun PokedexEntryScreen(dex: PokedexState, ui: DexUiState, current: Int, modifier
             modifier = Modifier.fillMaxSize(),
             label = "dex-entry",
         ) { n ->
-            val entry by produceState(PokedexSource.cachedEntry(dex.tables, n), dex.tables, n) {
+            val entry by produceKeyedState(PokedexSource.cachedEntry(dex.tables, n), dex.tables, n) {
                 if (value == null) value = withContext(Dispatchers.IO) { PokedexSource.entry(dex.tables, n) }
             }
             EntryPage(n, order.number(n), entry, dex.tables, guide, n in dex.caught, n in dex.seen, m, small, ui)
@@ -387,13 +386,20 @@ private fun EntryPage(
                     PixelImage(print, 16, Modifier.size(u * 16))
                     Spacer(Modifier.width(u * 5))
                 }
-                GbaText(e?.let { dexCategoryLine(t, it.category) } ?: "", OptionColors.label, OptionColors.labelShadow, small)
+                // A narrow column (a short screen's, the RG DS): the category takes a second line rather than being cut.
+                GbaText(e?.let { dexCategoryLine(t, it.category) } ?: "", OptionColors.label, OptionColors.labelShadow, small, maxLines = 2)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) { e?.types?.forEach { TypeBadge(it) } }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Stat(tr("HT"), e?.let { formatDexHeight(t, it) } ?: "", small)
+            val height = @Composable { Stat(tr("HT"), e?.let { formatDexHeight(t, it) } ?: "", small) }
+            val weight = @Composable { Stat(tr("WT"), e?.let { formatDexWeight(t, it) } ?: "", small) }
+            // A short screen: HT over WT (side by side, the weight's unit was cut off), the sprite a line smaller.
+            if (LocalShortCompanion.current) {
+                height()
+                weight()
+            } else Row(verticalAlignment = Alignment.CenterVertically) {
+                height()
                 Spacer(Modifier.width(u * 10))
-                Stat(tr("WT"), e?.let { formatDexWeight(t, it) } ?: "", small)
+                weight()
             }
         }
         Separator(m, Modifier.fillMaxHeight(), vertical = true)
@@ -526,7 +532,7 @@ private fun rememberRomBitmap(
     t: PokedexTables, species: Int,
     cached: (PokedexTables, Int) -> Bitmap?, load: (PokedexTables, Int) -> Bitmap?,
 ): Bitmap? =
-    produceState(cached(t, species), t, species) {
+    produceKeyedState(cached(t, species), t, species) {
         if (value == null && species > 0) value = withContext(Dispatchers.IO) { load(t, species) }
     }.value
 

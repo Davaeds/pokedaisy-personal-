@@ -212,6 +212,13 @@ class FlyTest {
             val support = fieldItemSupport(t, r)!!
             assertTrue(support.canFly && support.canPc)
             assertFalse(support.canTake || support.canUse(86) || support.canGive(13))
+            // SoulGold: its Repels on the spot (GitHub #242), 100 / 200 / 250 steps from its own gItemsInfo.
+            if (kind == GameKind.SOULGOLD) {
+                assertEquals(name, listOf(100, 200, 250), SOULGOLD_REPEL_ITEMS.sorted().map {
+                    r(t.items + it * t.itemSize + t.itemParamOff, 1)[0].toInt() and 0xFF
+                })
+                assertTrue(name, SOULGOLD_REPEL_ITEMS.all { support.canUse(it) && !support.picksMon(it) })
+            }
         }
         // Unbound: its own GetMapsecType / SetFlyWarpDestination (flyUnbound), and its 27 Borrius spots from Frozen Heights.
         for (name in listOf("Pokemon Unbound (v2.1.1.1).gba", "Pokemon Unbound (v2.1.1.1) (French).gba")) read(name)?.let { r ->

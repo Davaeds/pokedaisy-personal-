@@ -229,12 +229,10 @@ private inline val teamRocket get() = activeGame == GameKind.TEAM_ROCKET
 var eliteRedux265_3 = false
 
 // Odyssey reuses vanilla's unused "???" type (9) as Fairy (CLEFAIRY is 9/9).
-private val typeNamesOdyssey: Map<Int, String> by lazy { typeNames + (9 to "Fairy") }
 
-private val speciesNamesOdysseyMerged: Map<Int, String> by lazy { speciesNames + speciesNamesOdyssey }
 
 val activeSpeciesNames: Map<Int, String> get() = localText?.species ?: when {
-    gen4 -> speciesNamesPlatinum
+    gen4 -> NdsArt.names?.speciesMerged ?: speciesNamesPlatinum   // the cart's own words (GitHub #230)
     yellow -> speciesNamesYellow
     polished -> speciesNamesPolishedCrystal
     prism -> speciesNamesPrism
@@ -242,7 +240,8 @@ val activeSpeciesNames: Map<Int, String> get() = localText?.species ?: when {
     unbound -> speciesNamesUnbound
     gaia -> speciesNamesGaia
     radicalRed -> speciesNamesRadicalRed
-    odyssey -> speciesNamesOdysseyMerged
+    // Odyssey rewrote ~120 of FireRed's species slots in place (OdysseyGen.kt, gen_firered_hack_tables.py odyssey).
+    odyssey -> fireRedHackOdyssey.speciesMerged
     // Rogue's ids are National Dex numbers only up to 905 (forms, then Gen 9 from 1289): its own names.
     rogue -> speciesNamesRogue
     nationalDexSpecies -> speciesNamesNationalDex
@@ -266,7 +265,7 @@ val activeSpeciesNames: Map<Int, String> get() = localText?.species ?: when {
     else -> frHack?.speciesMerged ?: speciesNames
 }
 val activeMoveData: Map<Int, MoveInfo> get() = localText?.moveData ?: when {
-    gen4 -> moveDataPlatinum
+    gen4 -> NdsArt.names?.movesMerged ?: moveDataPlatinum
     yellow -> moveDataYellow
     polished -> if (faithful) moveDataPolishedCrystalFaithful else moveDataPolishedCrystal
     prism -> moveDataPrism
@@ -292,11 +291,12 @@ val activeMoveData: Map<Int, MoveInfo> get() = localText?.moveData ?: when {
     amethyst -> moveDataAmethyst   // both versions' (GitHub #96: past Gen 3's 354 they read "Move#N")
     eliteRedux -> if (eliteRedux265_3) moveDataEliteRedux265_3 else moveDataEliteRedux
     teamRocket -> moveDataTeamRocket
+    odyssey -> fireRedHackOdyssey.movesMerged
     else -> frHack?.movesMerged ?: moveData
 }
 val activeItemNames: Map<Int, String> get() = localText?.items ?: when {
-    heartGold -> itemNamesHeartGold
-    platinum -> itemNamesPlatinum
+    heartGold -> NdsArt.names?.itemsMerged(true) ?: itemNamesHeartGold
+    platinum -> NdsArt.names?.itemsMerged(false) ?: itemNamesPlatinum
     yellow -> itemNamesYellow
     polished -> if (faithful) itemNamesPolishedCrystalFaithful else itemNamesPolishedCrystal
     prism -> itemNamesPrism
@@ -324,6 +324,7 @@ val activeItemNames: Map<Int, String> get() = localText?.items ?: when {
     mariomon -> itemNamesMariomon
     eliteRedux -> if (eliteRedux265_3) itemNamesEliteRedux265_3 else itemNamesEliteRedux
     teamRocket -> itemNamesTeamRocket
+    odyssey -> fireRedHackOdyssey.itemsMerged
     else -> frHack?.itemsMerged ?: itemNames
 }
 val activeSpeciesTypeData: Map<Int, SpeciesTypes> get() = when {
@@ -352,6 +353,7 @@ val activeSpeciesTypeData: Map<Int, SpeciesTypes> get() = when {
     emeraldLegacy -> speciesTypeDataEmeraldLegacy
     eliteRedux -> if (eliteRedux265_3) speciesTypeDataEliteRedux265_3 else speciesTypeDataEliteRedux
     teamRocket -> speciesTypeDataTeamRocket
+    odyssey -> fireRedHackOdyssey.typesMerged   // its regional forms (GitHub #206)
     else -> frHack?.typesMerged ?: speciesTypeData
 }
 /** Emerald Legacy: retail's types (unchanged, checked against its gSpeciesInfo), plus its Deoxys forms at 412-414. */
@@ -381,6 +383,7 @@ val activeTypeEffectiveness: Map<Int, Int> get() = when {
     mariomon -> typeEffectivenessMariomon
     eliteRedux -> typeEffectivenessEliteRedux
     teamRocket -> typeEffectivenessTeamRocket
+    odyssey -> fireRedHackOdyssey.typeChart ?: typeEffectiveness
     else -> frHack?.typeChart ?: typeEffectiveness
 }
 val activeTypeNames: Map<Int, String> get() = when {
@@ -389,7 +392,7 @@ val activeTypeNames: Map<Int, String> get() = when {
     prism -> typeNamesPrism
     crystal -> typeNamesCrystal
     unbound || cfruTypes -> typeNamesUnbound
-    odyssey -> typeNamesOdyssey
+    odyssey -> fireRedHackOdyssey.typeNamesMerged   // 9 is AETHER there (GitHub #206), not FireRed's ???
     seaglass -> typeNamesHns
     tmt2 -> typeNamesTmt2
     hns -> typeNamesHns

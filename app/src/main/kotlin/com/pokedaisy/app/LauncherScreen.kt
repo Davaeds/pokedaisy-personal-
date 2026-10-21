@@ -1,5 +1,6 @@
 package com.pokedaisy.app
 
+import com.pokedaisy.app.companion.ui.produceKeyedState
 import android.graphics.BitmapFactory
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -34,7 +35,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -340,7 +340,7 @@ fun LauncherMediaPane(
             val key = remember(game, generation) {
                 "${game.absolutePath}#${GameMedia.dir(mediaRoot, game).lastModified()}#${coverFor(game).lastModified()}"
             }
-            val media by produceState(state.cached(key), key) {
+            val media by produceKeyedState(state.cached(key), key) {
                 if (value == null) {
                     value = withContext(Dispatchers.IO) {
                         LoadedMedia.load(mediaRoot, game, coverFor(game)).also { state.remember(key, it) }

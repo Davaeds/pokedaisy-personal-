@@ -1,9 +1,7 @@
 package com.pokedaisy.app
 
 import android.content.Context
-import android.os.SystemClock
 import android.view.Gravity
-import android.view.KeyEvent
 import android.view.View
 import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
@@ -94,13 +92,28 @@ class SidePanel(
      */
     private val fullScreen = mutableStateOf(false)
 
-    /** Opens as a window: COMPANION VIEW's WINDOW, or [fullScreen]. */
-    private val isWindow: Boolean get() = window.value || fullScreen.value
+    /**
+     * A DS game on one screen (GitHub #244): the panel holds its touch screen ([DsTouchPane]), so it stays open and locked
+     * at half the screen beside the game - the DS's two screens side by side - with no tabs to close, unlock or resize it.
+     */
+    private val dsScreen = mutableStateOf(false)
+
+    fun setDsScreen(on: Boolean) {
+        if (dsScreen.value == on) return
+        dsScreen.value = on
+        if (enabled) { open = on || (!isWindow && docked.value); apply() }
+    }
+
+    /** Opens as a window: COMPANION VIEW's WINDOW, or [fullScreen] - never with a DS game's touch screen in it. */
+    private val isWindow: Boolean get() = (window.value || fullScreen.value) && !dsScreen.value
+
+    /** Locked beside the game: the lock tab's, or a DS game's touch screen. */
+    private val isDocked: Boolean get() = docked.value || dsScreen.value
 
     fun setFullScreen(on: Boolean) {
         if (fullScreen.value == on) return
         fullScreen.value = on
-        if (enabled) { open = !isWindow && docked.value; apply() }
+        if (enabled) { open = !isWindow && isDocked; apply() }
     }
 
     /** The window is up: the game's buttons are the companion's ([menuKey]). */
@@ -133,7 +146,7 @@ class SidePanel(
 
     private val rootWidth get() = root.width.takeIf { it > 0 } ?: context.resources.displayMetrics.widthPixels
     private val rootHeight get() = root.height.takeIf { it > 0 } ?: context.resources.displayMetrics.heightPixels
-    private val panelWidth get() = (rootWidth * fraction).roundToInt()
+    private val panelWidth get() = (rootWidth * (if (dsScreen.value) 0.5f else fraction)).roundToInt()
 
     private val relayout = View.OnLayoutChangeListener { _, l, _, r, _, _, _, _, _ ->
         if (r - l != lastRootWidth) {
@@ -149,7 +162,7 @@ class SidePanel(
         if (on) {
             docked.value = prefs.sidePanelDocked
             window.value = prefs.companionWindow
-            open = !isWindow && docked.value
+            open = !isWindow && isDocked
             outside = View(context).apply { setOnTouchListener { _, e -> catchOutside(e) } }
                 .also { root.addView(it, root.indexOfChild(under) + 1, FrameLayout.LayoutParams(-1, -1)) }
             val at = root.indexOfChild(under) + 2
@@ -183,6 +196,9 @@ class SidePanel(
             openTab = tabView { SidePanelOpenTab(::show) }.also {
                 root.addView(it, at + 3, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END).apply { bottomMargin = bottom })
             }
+            // Laid out again at the root's next size: turned on mid-rotation (sideways after upright), the root still has
+            // the old width here, and a width remembered from an earlier time on would skip the relayout that fixes it.
+            lastRootWidth = 0
             root.addOnLayoutChangeListener(relayout)
         } else {
             root.removeOnLayoutChangeListener(relayout)
@@ -207,7 +223,7 @@ class SidePanel(
         when {
             !open -> show()
             back.back() -> Unit
-            isWindow || !docked.value -> hide()
+            isWindow || !isDocked -> hide()
         }
         return true
     }
@@ -252,28 +268,11 @@ class SidePanel(
         return false
     }
 
-    /**
-     * A D-pad direction or A that nothing in the window's companion took: the key event a D-pad sends, handed to the
-     * companion's view - focused first and out of touch mode, so its rows and buttons can take the focus ([start] then
-     * puts it on the cursor when nothing has it). Compose moves the focus (scrolling it into view) and presses what has it.
-     */
+    /** A D-pad direction or A that nothing in the window's companion took: to Compose's focus in its view
+     * ([sendFocusKey]). */
     private fun focusKey(key: MenuKey, repeat: Boolean, start: () -> Unit): Boolean {
         val view = panel ?: return false
-        val code = when (key) {
-            MenuKey.UP -> KeyEvent.KEYCODE_DPAD_UP
-            MenuKey.DOWN -> KeyEvent.KEYCODE_DPAD_DOWN
-            MenuKey.LEFT -> KeyEvent.KEYCODE_DPAD_LEFT
-            MenuKey.RIGHT -> KeyEvent.KEYCODE_DPAD_RIGHT
-            MenuKey.A -> KeyEvent.KEYCODE_DPAD_CENTER
-            else -> return false
-        }
-        if (key == MenuKey.A && repeat) return true
-        if (view.isInTouchMode) view.requestFocusFromTouch() else if (!view.hasFocus()) view.requestFocus()
-        start()
-        val now = SystemClock.uptimeMillis()
-        view.dispatchKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, code, if (repeat) 1 else 0))
-        view.dispatchKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, code, 0))
-        return true
+        return sendFocusKey(view, key, repeat, start)
     }
 
     /** Opens it (the FIELD HUD's button). */
@@ -301,7 +300,7 @@ class SidePanel(
     }
 
     private fun hide() {
-        if (!open) return
+        if (!open || dsScreen.value) return
         open = false
         if (isWindow) {
             // The buttons are the game's again now; the window fades out over it. Its focus goes: the next opening
@@ -363,7 +362,9 @@ class SidePanel(
         val win = isWindow
         // The window: the panel's view is the whole screen (its dim), the companion drawn in the middle, no tabs.
         val side = shown && !win
-        outside?.visibility = if (side && !docked.value) View.VISIBLE else View.GONE
+        // A DS game's touch screen: no lock / close / resize tabs (it stays as it is).
+        val tabs = side && !dsScreen.value
+        outside?.visibility = if (side && !isDocked) View.VISIBLE else View.GONE
         panel?.apply {
             visibility = if (shown) View.VISIBLE else View.GONE
             translationX = 0f
@@ -371,12 +372,12 @@ class SidePanel(
             layoutParams = layoutParams.apply { width = if (win) FrameLayout.LayoutParams.MATCH_PARENT else w }
         }
         handle?.apply {
-            visibility = if (side) View.VISIBLE else View.GONE
+            visibility = if (tabs) View.VISIBLE else View.GONE
             translationX = 0f
             setRightMargin(this, w)
         }
         closeTab?.apply {
-            visibility = if (side) View.VISIBLE else View.GONE
+            visibility = if (tabs) View.VISIBLE else View.GONE
             translationX = 0f
             alpha = if (docked.value) LOCKED_TAB_ALPHA else 1f
             setRightMargin(this, w)
@@ -386,7 +387,7 @@ class SidePanel(
             visibility = if (enabled && !open && !tabInHud && openTabShown) View.VISIBLE else View.GONE
             alpha = if (docked.value && !win) LOCKED_TAB_ALPHA else 1f
         }
-        setRightMargin(game, if (side && docked.value) w else 0)
+        setRightMargin(game, if (side && isDocked) w else 0)
         setRightMargin(touchControls, if (side) w else 0)
     }
 

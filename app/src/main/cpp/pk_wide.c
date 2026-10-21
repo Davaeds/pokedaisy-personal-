@@ -1385,8 +1385,9 @@ static void drawRegion(const struct Snap* s, int cx, int cy, int href, int vref,
 // repeated (its two screen blocks the same, above the text box) has no scenery past the screen, only the
 // picture's other side; BG3 past an edge that doesn't go on from it (Route 29: trees to the edge, bare sky past
 // it - battleEdgeBroken); a scene drawn partly on BG1 / BG2 (retail's intro dust and rocks too), which would
-// stop dead at the edges with only BG3 past them. Retail's BG3 is scenery all 512 px across: drawn as VRAM has
-// it (mirrored, the foe's platform ending at the edge grew a second one). The text box rows
+// stop dead at the edges with only BG3 past them - but never a BG1 / BG2 window against an edge, its map empty past
+// it (the level-up stats, GitHub #245: findBattleBgScenery). Retail's BG3 is scenery all 512 px
+// across: drawn as VRAM has it (mirrored, the foe's platform ending at the edge grew a second one). The text box rows
 // (from BATTLE_TEXT_TOP) are always holes past the edges, so the dark band goes on even where a hack's BG3 has
 // light tiles there.
 
@@ -1405,18 +1406,40 @@ static int battleMirrorX(int sx) {
     return m < PK_WIDE_W ? m : 2 * PK_WIDE_W - 1 - m;
 }
 
+/** Text BG `n`'s tilemap entry under screen (x, y), with line y's registers ([useLine] first), any size; *bx / *by
+ * get the point in the BG's own map. False past VRAM. */
+static bool bgEntry(int n, int x, int y, uint16_t* e, int* bx, int* by) {
+    uint16_t cnt = io(0x08 + 2 * n);
+    uint32_t scr = ((cnt >> 8) & 31) * 0x800u;
+    int wide = (cnt >> 14) & 1, tall = cnt >> 15;
+    *bx = (x + (io(0x10 + 4 * n) & 0x1FF)) & (wide ? 511 : 255);
+    *by = (y + (io(0x12 + 4 * n) & 0x1FF)) & (tall ? 511 : 255);
+    uint32_t at = scr + (uint32_t) ((*bx >> 8) + (*by >> 8) * (wide ? 2 : 1)) * 0x800 + 2 * (uint32_t) (((*by >> 3) & 31) * 32 + ((*bx >> 3) & 31));
+    if (at + 2 > 0x10000) return false;
+    *e = le16((const uint8_t*) G->video.vram + at);
+    return true;
+}
+
+/** Text BG `n`'s tile under screen (x, y) has a pixel drawn (line y's registers, [useLine] first). */
+static bool bgTileFilled(int n, int x, int y) {
+    const uint8_t* vram = (const uint8_t*) G->video.vram;
+    uint16_t cnt = io(0x08 + 2 * n), e;
+    int bx, by;
+    if (!bgEntry(n, x, y, &e, &bx, &by)) return false;
+    uint32_t size = cnt & 0x80 ? 64 : 32, off = ((cnt >> 2) & 3) * 0x4000u + (e & 0x3FFu) * size;
+    for (uint32_t k = 0; k < size && off + k < 0x10000; k++)
+        if (vram[off + k]) return true;
+    return false;
+}
+
 /** Text BG `n`'s colour index at screen (x, y), with line y's registers ([useLine] first): any size, 4 or 8 bpp;
  * 0 = transparent. *pal gets the palette offset to add (P index). */
 static int bgPixel(int n, int x, int y, int* pal) {
     const uint8_t* vram = (const uint8_t*) G->video.vram;
-    uint16_t cnt = io(0x08 + 2 * n);
-    uint32_t chr = ((cnt >> 2) & 3) * 0x4000u, scr = ((cnt >> 8) & 31) * 0x800u;
-    int wide = (cnt >> 14) & 1, tall = cnt >> 15;
-    int bx = (x + (io(0x10 + 4 * n) & 0x1FF)) & (wide ? 511 : 255);
-    int by = (y + (io(0x12 + 4 * n) & 0x1FF)) & (tall ? 511 : 255);
-    uint32_t at = scr + (uint32_t) ((bx >> 8) + (by >> 8) * (wide ? 2 : 1)) * 0x800 + 2 * (uint32_t) (((by >> 3) & 31) * 32 + ((bx >> 3) & 31));
-    if (at + 2 > 0x10000) return 0;
-    uint16_t e = le16(vram + at);
+    uint16_t cnt = io(0x08 + 2 * n), e;
+    uint32_t chr = ((cnt >> 2) & 3) * 0x4000u;
+    int bx, by;
+    if (!bgEntry(n, x, y, &e, &bx, &by)) return 0;
     int px = bx & 7, py = by & 7;
     if (e & 0x400) px = 7 - px;
     if (e & 0x800) py = 7 - py;
@@ -1460,7 +1483,30 @@ static bool battleEdgeBroken(int side) {
     return seam > 2 * inside + 4 * BATTLE_TEXT_TOP;
 }
 
-/** BG1 or BG2 draws part of the scene at the screen's edges (above the text box) this frame. */
+/** Whether BG1 / BG2 ([n - 1]) can be mirrored in past each edge ([side]: 0 left, 1 right) this frame: it isn't a
+ * window against that edge. A window or banner the game put there (the level-up stats and banner, GitHub #245) has
+ * tiles in the screen's last tile column, the map empty past them on every line; scenery goes on in VRAM on some line
+ * above the text box (retail's intro grass, an animation's backdrop), or stops short of the edge (the intro's rocks). */
+static bool battleBgScenery[2][2];
+
+static void findBattleBgScenery(void) {
+    bool touches[2][2] = { { false } }, goesOn[2][2] = { { false } };
+    for (int y = 0; y < BATTLE_TEXT_TOP; y++) {
+        useLine(y);
+        for (int n = 1; n <= 2; n++) {
+            if (!(io(0) & (0x100 << n))) continue;
+            for (int side = 0; side < 2; side++) {
+                if (goesOn[n - 1][side] || !bgTileFilled(n, side ? PK_WIDE_W - 1 : 0, y)) continue;
+                touches[n - 1][side] = true;
+                goesOn[n - 1][side] = bgTileFilled(n, side ? PK_WIDE_W : -1, y);
+            }
+        }
+    }
+    for (int k = 0; k < 4; k++) battleBgScenery[k / 2][k % 2] = goesOn[k / 2][k % 2] || !touches[k / 2][k % 2];
+}
+
+/** BG1 or BG2 draws part of the scene at the screen's edges (above the text box) this frame ([findBattleBgScenery]
+ * first). */
 static bool battleSceneOffBg3(void) {
     for (int y = 0; y < BATTLE_TEXT_TOP; y++) {
         useLine(y);
@@ -1469,7 +1515,7 @@ static bool battleSceneOffBg3(void) {
             if (!(disp & (0x100 << n))) continue;
             for (int x = 0; x < PK_WIDE_W; x += PK_WIDE_W - 1) {
                 int pal;
-                if ((windowLayers(x, y) & (1 << n)) && bgPixel(n, x, y, &pal)) return true;
+                if (battleBgScenery[n - 1][x > 0] && (windowLayers(x, y) & (1 << n)) && bgPixel(n, x, y, &pal)) return true;
             }
         }
     }
@@ -1492,6 +1538,7 @@ static void drawBattleRegion(int x0, int y0, int x1, int y1, bool skipFrame, uin
     int w = x1 - x0, h = y1 - y0;
     uint32_t repeatsScr = UINT32_MAX;   // the screen base [repeats] was worked out for
     bool repeats = false;
+    if (x0 < 0 || x1 > PK_WIDE_W) findBattleBgScenery();
     bool offBg3 = (x0 < 0 || x1 > PK_WIDE_W) && battleSceneOffBg3();
     bool broken[2] = { x0 < 0 && battleEdgeBroken(0), x1 > PK_WIDE_W && battleEdgeBroken(1) };
     if (x0 < 0 || x1 > PK_WIDE_W)
@@ -1530,11 +1577,13 @@ static void drawBattleRegion(int x0, int y0, int x1, int y1, bool skipFrame, uin
             int wl = windowLayers(sx, y);   // its window's layers, and whether effects apply there (0x20)
             bool outside = sx < 0 || sx >= PK_WIDE_W;
             if (outside && (repeats || offBg3 || broken[sx >= PK_WIDE_W]) && y < BATTLE_TEXT_TOP) {
-                // Mirrored in: BG1-3 at the column as far inside the screen, stacked by priority (then BG number).
-                int mxs = battleMirrorX(sx), wm = windowLayers(mxs, y), layer = 5, pr = 4, pal = 0;
+                // Mirrored in: BG1-3 at the column as far inside the screen, stacked by priority (then BG number);
+                // BG1 / BG2 only where they're scenery past that edge, not a window against it.
+                int mxs = battleMirrorX(sx), wm = windowLayers(mxs, y), layer = 5, pr = 4, pal = 0, side = sx >= PK_WIDE_W;
                 for (int p = 0; p < 4 && !ci; p++)
                     for (int n = 1; n <= 3 && !ci; n++)
-                        if ((disp & (0x100 << n)) && (wm & (1 << n)) && (io(0x08 + 2 * n) & 3) == p && (ci = bgPixel(n, mxs, y, &pal)))
+                        if ((disp & (0x100 << n)) && (wm & (1 << n)) && (io(0x08 + 2 * n) & 3) == p
+                                && (n == 3 || battleBgScenery[n - 1][side]) && (ci = bgPixel(n, mxs, y, &pal)))
                             layer = n, pr = p;
                 uint32_t c32 = color(P[ci ? pal + ci : 0], alpha);
                 dst[j * stride + x] = wm & 0x20 ? brightness(c32, layer) : c32;

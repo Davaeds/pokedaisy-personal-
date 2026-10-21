@@ -142,11 +142,12 @@ def heartgold(decomps):
     map_ids = defines("include/constants/maps.h", "MAP_")
     mapsecs = defines("include/constants/map_sections.h", "MAPSEC_")
     src = open(os.path.join(dec, "src/data/map_headers.h")).read()
-    map_places = {}
+    map_places, place_ids = {}, {}
     for sym, sec in re.findall(r"\[(MAP_\w+)\]\s*=\s*\{[^}]*?\.mapsec\s*=\s*(\w+)", src, re.S):
         name = place_names[mapsecs[sec]]
         if name:
             map_places[map_ids[sym]] = name
+            place_ids[map_ids[sym]] = mapsecs[sec]
     assert map_places[map_ids["MAP_NEW_BARK"]] == "New Bark Town", map_places.get(map_ids["MAP_NEW_BARK"])
     assert map_places[map_ids["MAP_MOUNT_SILVER_CAVE_SUMMIT"]] == "Mt. Silver Cave"
     assert map_places[map_ids["MAP_FUCHSIA_POKECENTER_1F"]] == "Fuchsia City"
@@ -280,6 +281,11 @@ def heartgold(decomps):
         f.write(")\n\n/** Each map header's place name (its map section), by map header id. */\n")
         f.write("val mapPlacesHeartGold: Map<Int, String> = mapOf(\n")
         f.writelines(f"    {i} to {kstr(n)},\n" for i, n in sorted(map_places.items()))
+        f.write(")\n")
+        # The line of the location names each header's place is: a cart's own text names it (NdsArt.names).
+        f.write("\n/** Each map header's place as a line of the location names (its own text: NdsArt.names), by map header id. */\n")
+        f.write("val mapPlaceIdsHeartGold: Map<Int, Int> = mapOf(\n")
+        f.writelines(f"    {i} to {n},\n" for i, n in sorted(place_ids.items()))
         f.write(")\n")
     print(f"wrote {out}: {len(items)} items, {len(map_places)} map headers; species / moves = Platinum's")
 

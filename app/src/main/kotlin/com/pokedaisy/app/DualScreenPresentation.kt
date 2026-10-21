@@ -128,15 +128,23 @@ class DualScreenPresentation(
             gamePick: com.pokedaisy.app.companion.GamePickActions? = null,
             shareBestEffort: ((com.pokedaisy.app.companion.data.BestEffortReport) -> Unit)? = null,
             topStrip: (@androidx.compose.runtime.Composable () -> Unit)? = null,
+            /** The game's buttons, while they steer this companion (X on the field: [focus]). */
+            keys: com.pokedaisy.app.companion.ui.CompanionKeys? = null,
+            /** True while the game's buttons are this companion's ([CompanionFocusHost]). */
+            focus: (() -> Boolean)? = null,
         ): View = CompanionColors.track(ComposeView(context)).apply {
             setContent {
                 val snap by store.snapshot.collectAsState()
-                CompanionScreen(
-                    snap, slots, settings, battleInput, initialTab = initialTab, initialSettingsRow = initialSettingsRow,
-                    back = back, clickSound = clickSound, achievements = achievements, statusBar = statusBar,
-                    itemUse = itemUse, fly = fly, askForSupport = askForSupport, gamePick = gamePick,
-                    shareBestEffort = shareBestEffort, topStrip = topStrip,
-                )
+                val screen = @androidx.compose.runtime.Composable {
+                    CompanionScreen(
+                        snap, slots, settings, battleInput, initialTab = initialTab, initialSettingsRow = initialSettingsRow,
+                        back = back, keys = keys, clickSound = clickSound, achievements = achievements, statusBar = statusBar,
+                        itemUse = itemUse, fly = fly, askForSupport = askForSupport, gamePick = gamePick,
+                        shareBestEffort = shareBestEffort, topStrip = topStrip,
+                    )
+                }
+                if (keys != null && focus != null) CompanionFocusHost(focus(), keys, screen)
+                else screen()
             }
         }
     }

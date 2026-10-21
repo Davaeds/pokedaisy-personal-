@@ -94,6 +94,11 @@ class EmulatorEngine(
     @Volatile var fieldMovesKnown = false
         private set
 
+    /** The field read has the player's controls locked (a script, a text box, the START menu); false where the game's
+     * field isn't read. X's jump to the companion waits for it to clear. */
+    val fieldLocked: Boolean
+        get() = fieldState and (MgbaCore.FIELD_KNOWN or MgbaCore.FIELD_LOCKED) == MgbaCore.FIELD_KNOWN or MgbaCore.FIELD_LOCKED
+
     /** The player is on a bike, as the field read has it ([MgbaCore.FIELD_AVATAR] games only): QUICK MENU's GET OFF. */
     @Volatile var riding = false
         private set
@@ -532,6 +537,14 @@ class EmulatorEngine(
     }
     private val fieldItemJobs = java.util.concurrent.ConcurrentLinkedQueue<FieldItemJob>()
 
+    /** Plain jobs for the emu thread, run between frames (the companion's sample results: PokeDaisyActivity.startSample). */
+    private val emuJobs = java.util.concurrent.ConcurrentLinkedQueue<() -> Unit>()
+
+    /** Runs [job] on the emu thread before the next frame; dropped if the game closes first. */
+    fun postToEmu(job: () -> Unit) {
+        emuJobs.add(job)
+    }
+
     /** Runs [run] on the emu thread between frames with the game's functions ([com.pokedaisy.app.companion.data.GameCalls])
      * and whether the game is busy - USE / GIVE on the ITEMS tab. Every request runs, in order. */
     fun requestFieldItemJob(inBattle: Boolean, delayFrames: Int = 0, run: (com.pokedaisy.app.companion.data.GameCalls, Boolean) -> Unit) {
@@ -594,6 +607,9 @@ class EmulatorEngine(
     /** Vsync pacing's refreshes per game frame (0 = timer pacing), and refreshes since the last frame. */
     @Volatile private var pacedPerFrame = 0
     @Volatile private var ticksSinceFrame = 0
+    /** This game's frames miss the GL thread's wait too often: drawn a refresh later, never waited for (as a DS
+     * game's). Latched until the core stops - flipping back and forth would skip / repeat a frame each time. */
+    @Volatile private var slowFrames = false
 
     /** GL thread: the game's screen just refreshed (EmulatorView.onVsync). Returns how long the draw may
      * wait for the frame this refresh starts (~60% of a refresh), or 0 when none is due. */
@@ -613,6 +629,12 @@ class EmulatorEngine(
         val n = pacedPerFrame
         if (vsyncTicks.availablePermits() < (if (n == 0) 1 else 2 * n)) vsyncTicks.release()
         if (n == 0) return 0L
+        // A DS frame takes 4-20 ms on the RP6 / Thor: waited for within ~60% of a refresh, every one past ~10 ms
+        // missed it and the last picture showed twice (GitHub #215: 45 of 120 frames late in HeartGold). It's drawn
+        // a refresh later instead, never waited for: a frame of latency, and a whole refresh to finish in.
+        // So does a game whose frames keep missing the wait (GitHub #63: Radical Red's frames take 5-9 ms on the
+        // RP6 with 12-14 ms ones among them; 1-9 of 120 were late, each a stutter and a 57-58 on FPS / CPU).
+        if (nds || slowFrames) { ticksSinceFrame++; return 0L }
         return if (++ticksSinceFrame >= n) (vsyncPeriodNanos * 0.6).toLong() else 0L
     }
 
@@ -632,6 +654,7 @@ class EmulatorEngine(
     private var vh = 0
 
     private fun loop(rom: File, save: File, resume: File?) {
+        emuJobs.clear()   // the last game's
         SaveBackups.snapshot(save)
         if (!MgbaCore.pkInit(rom.absolutePath, save.absolutePath)) {
             loadError = "mGBA could not load ${rom.name}"
@@ -666,7 +689,7 @@ class EmulatorEngine(
         }
         // The game's set loads after the resume (it needs the server), so the
         // resumed progress is handed over to be put back once it has.
-        runCatching { RetroAchievements.onCoreStarted(resumedFrom = resumed) }
+        runCatching { RetroAchievements.onCoreStarted(rom, resumedFrom = resumed) }
             .onFailure { Log.e("pokedaisy", "achievements start failed", it) }
         // After the resume (a state never carries cheats) and before the first frame.
         // The save was backed up above, before any cheat could touch it.
@@ -687,7 +710,17 @@ class EmulatorEngine(
         var fpsSince = System.nanoTime()
         var fpsWork = 0L
         var fpsMaxWork = 0L
+        // The companion's samples inside that work (onSample: the whole read + decode, on this thread): count, total, worst.
+        var fpsSamples = 0
+        // Audio over the same window (vsync pacing): frames the core made, frames the track took, how far it played.
+        var fpsAudioMade = 0L
+        var fpsAudioTaken = 0L
+        var fpsPlayedAt = -1L
+        var fpsSampleWork = 0L
+        var fpsMaxSample = 0L
         var fpsLate = -1L
+        var slowWindows = 0
+        slowFrames = false
         var prevSpeed = 1f
         var paused = false
         var lastSample = 0L
@@ -745,6 +778,9 @@ class EmulatorEngine(
         // window drawn every 12 ms gave the 60 Hz screen steps of 3, 3, 5 game frames: a judder RetroArch hasn't.
         var ffPerTick = 0
         var ffGroup = 0
+        // The group's size this device keeps up with (FfGroupFit: a DS walking HeartGold's 3D at 4x didn't), and when it began.
+        val ffFit = FfGroupFit()
+        var ffGroupStart = 0L
         var rewindApplied = -1   // pkInit dropped any buffer: set it again for this core
         var wideApplied = WideScreen.OFF   // pkInit starts with WIDE off
         var wideFaultReported = false
@@ -807,7 +843,7 @@ class EmulatorEngine(
                     // EXPAND's slices (drawn after a frame, for the next) only come before a shown one - drawing them for
                     // every frame was two thirds of a DS frame's cost, and at 3x the group outran the refresh (stutter).
                     val ff = ffPerTick > 0
-                    MgbaCore.pkNdsSetDraw(!ff || ffGroup <= 1, !ff || (if (ffGroup > 1) ffGroup <= 2 else ffPerTick <= 1))
+                    MgbaCore.pkNdsSetDraw(!ff || ffGroup <= 1, !ff || (if (ffGroup > 1) ffGroup <= 2 else ffFit.size <= 1))
                 }
                 MgbaCore.pkRunFrame()
                 onFrame?.invoke()
@@ -850,7 +886,12 @@ class EmulatorEngine(
                 val sampleEvery = if (battleInput.gameState != com.pokedaisy.app.companion.data.BATTLE_INPUT_NONE) 250L else 1000L
                 if (nowMs - lastSample >= sampleEvery) {
                     lastSample = nowMs
+                    val sampleStart = System.nanoTime()
                     runCatching { onSample?.invoke() }
+                    val took = System.nanoTime() - sampleStart
+                    fpsSamples++
+                    fpsSampleWork += took
+                    if (took > fpsMaxSample) fpsMaxSample = took
                 }
                 // Every frame while a switch runs flat out behind the held frame: at that speed a
                 // 66 ms gap is dozens of game frames, and the turbo would run on into the battle.
@@ -1003,6 +1044,7 @@ class EmulatorEngine(
                 val ffPer = ffFramesPerRefresh(speed, vsyncsPerFrame())
                 if (ffPer != ffPerTick) {
                     ffPerTick = ffPer
+                    ffFit.reset(ffPer)
                     ffGroup = 1   // this frame ends a group: drawn, then the next refresh's tick
                     if (ffPer > 0) vsyncTicks.drainPermits()
                 }
@@ -1030,6 +1072,7 @@ class EmulatorEngine(
 
                 queuedAfter = null
                 val n = MgbaCore.pkReadAudio(scratch)
+                fpsAudioMade += n / 2
                 if (BuildConfig.DEBUG && nds) for (i in 0 until n) gamePeak = maxOf(gamePeak, kotlin.math.abs(scratch[i].toInt()))
                 // In FF, the game's sounds for the companion's automated battle presses stay silent but the last.
                 if (n > 0 && speed > 1f && battleInput.muteGame) java.util.Arrays.fill(scratch, 0, n, 0.toShort())
@@ -1085,8 +1128,11 @@ class EmulatorEngine(
                         val fill = queued.toDouble() / bufferFrames
                         val frameHz = 1e9 / (vsyncPeriodNanos * perFrame)
                         val drc = 1.0 + DRC_MAX * (1.0 - 2.0 * fill).coerceIn(-1.0, 1.0)
-                        MgbaCore.pkSetAudioRate(sampleRate * GBA_FPS / frameHz * drc)
+                        // The core's own frame rate: a DS makes 59.83 frames a second, not the GBA's 59.73 (0.17% that DRC
+                        // otherwise spent a third of its range on, GitHub #215).
+                        MgbaCore.pkSetAudioRate(sampleRate * (if (nds) NDS_FPS else GBA_FPS) / frameHz * drc)
                         val w = track.write(scratch, 0, n, AudioTrack.WRITE_NON_BLOCKING)
+                        if (w > 0) fpsAudioTaken += w / 2
                         if (w > 0) framesWritten += w / 2
                         if (w in 0 until n) fpsDropped += (n - w) / 2   // a full buffer cut it short
                         queuedAfter = queued + maxOf(w, 0) / 2
@@ -1094,7 +1140,8 @@ class EmulatorEngine(
                     } else if (speed == 1f) {
                         track.write(scratch, 0, n)   // blocking → real-time pacing at 1x
                     } else {
-                        val factor = if (speed.isInfinite()) measuredSpeed else speed
+                        // The speed the game really runs at: a refresh-paced group the device can't fit runs fewer frames.
+                        val factor = if (speed.isInfinite()) measuredSpeed else if (ffPerTick > 0) ffFit.size * speed / ffPerTick else speed
                         var m = 0
                         for (i in 0 until n / 2) {
                             decimL += scratch[i * 2]; decimR += scratch[i * 2 + 1]; decimN++
@@ -1126,11 +1173,15 @@ class EmulatorEngine(
                     val late = lateFramesSource?.invoke() ?: -1L
                     // Then vsync pacing's audio guard: frames run at once (catchup) / held to a fresh refresh (hold),
                     // audio frames a full buffer cut off (dropped), how full the buffer is, and whether it gave up.
-                    Log.i("pokedaisy", ("fps=%.1f (%s) refresh=%.2fHz paced=%d ffPerTick=%d late=%d work=%.1f/%.1fms underruns=%d " +
-                        "catchup=%d hold=%d dropped=%d queued=%d/%d%s").format(
-                        fps, speedTag(speed), refreshHz, pacedPerFrame, ffPerTick, if (late < 0 || fpsLate < 0) -1 else late - fpsLate,
-                        fpsWork / fpsFrames / 1e6, fpsMaxWork / 1e6, audioUnderruns,
-                        fpsCatchUps, fpsHolds, fpsDropped, lastQueued, bufferFrames, if (vsyncFallback) " fallback" else "") +
+                    Log.i("pokedaisy", ("fps=%.1f (%s) refresh=%.2fHz paced=%s ffPerTick=%s late=%d work=%.1f/%.1fms sample=%d:%.1f/%.1fms underruns=%d " +
+                        "catchup=%d hold=%d dropped=%d queued=%d/%d audio=%d/%d/%d%s").format(
+                        fps, speedTag(speed), refreshHz, if (slowFrames) "$pacedPerFrame (slow: not waited for)" else "$pacedPerFrame", if (ffPerTick > 0 && ffFit.size != ffPerTick) "${ffFit.size}/$ffPerTick" else "$ffPerTick", if (late < 0 || fpsLate < 0) -1 else late - fpsLate,
+                        fpsWork / fpsFrames / 1e6, fpsMaxWork / 1e6,
+                        fpsSamples, if (fpsSamples > 0) fpsSampleWork / fpsSamples / 1e6 else 0.0, fpsMaxSample / 1e6, audioUnderruns,
+                        fpsCatchUps, fpsHolds, fpsDropped, lastQueued, bufferFrames,
+                        fpsAudioMade, fpsAudioTaken,
+                        (track?.playbackHeadPosition?.toLong()?.and(0xFFFFFFFFL) ?: 0L).let { p -> if (fpsPlayedAt < 0) -1 else p - fpsPlayedAt },
+                        if (vsyncFallback) " fallback" else "") +
                         if (nds) " dsMusic=%s/%d written=%d peak=%d gamePeak=%d track=%d".format(dsMusicOn, dsMusicBgm, dsMusicFrames, dsMusicPeak, gamePeak, track?.playState ?: -1) else "")
                     dsMusicPeak = 0
                     gamePeak = 0
@@ -1138,9 +1189,22 @@ class EmulatorEngine(
                     fpsCatchUps = 0
                     fpsHolds = 0
                     fpsDropped = 0
+                    // [slowFrames]: 3+ late draws in two windows of 1x frames (a single one can be the device's hiccup).
+                    if (!slowFrames && pacedPerFrame > 0 && speed == 1f && fpsLate >= 0 && late - fpsLate >= SLOW_LATE_FRAMES &&
+                        ++slowWindows >= SLOW_WINDOWS
+                    ) {
+                        slowFrames = true
+                        Log.i("pokedaisy", "pacing: frames keep missing the refresh; drawn a refresh later from now on")
+                    }
                     fpsLate = late
                     fpsWork = 0L
                     fpsMaxWork = 0L
+                    fpsSamples = 0
+                    fpsAudioMade = 0L
+                    fpsAudioTaken = 0L
+                    fpsPlayedAt = track?.playbackHeadPosition?.toLong()?.and(0xFFFFFFFFL) ?: -1L
+                    fpsSampleWork = 0L
+                    fpsMaxSample = 0L
                     if (speed.isInfinite()) measuredSpeed = (fps / 60.0).toFloat().coerceAtLeast(1f)
                     fpsFrames = 0
                     fpsSince = now
@@ -1175,9 +1239,14 @@ class EmulatorEngine(
                     // Fast-forward on the refresh: the group's frames run as soon as the tick comes, then the
                     // next tick (or the timer takes over if the refreshes stop).
                     if (--ffGroup <= 0) {
+                        // A group that outran its refresh left that refresh nothing new (GitHub #216: HeartGold at 4x
+                        // swung between ~2x and 4x, its SPED-UP music short): fewer frames a group until they fit.
+                        val groupDone = System.nanoTime()
+                        if (ffGroupStart > 0L) ffFit.groupDone(groupDone - ffGroupStart, vsyncPeriodNanos.toLong())
                         val wait = (vsyncPeriodNanos * 3).toLong()
                         runCatching { vsyncTicks.tryAcquire(1, wait, java.util.concurrent.TimeUnit.NANOSECONDS) }
-                        ffGroup = ffPerTick
+                        ffGroup = ffFit.size
+                        ffGroupStart = System.nanoTime()
                     }
                     next = System.nanoTime()
                     prevSpeed = speed
@@ -1260,6 +1329,7 @@ class EmulatorEngine(
     }
 
     private fun servicePending() {
+        repeat(emuJobs.size) { emuJobs.poll()?.let { job -> runCatching(job).onFailure { Log.e("pokedaisy", "emu job failed", it) } } }
         if (cheatsDirty) applyCheats()
         if (tmPatchDirty) applyTmPatch()
         // The jobs queued by now (one a job queues runs on a later frame); a delayed one waits its frames.
@@ -1456,6 +1526,11 @@ class EmulatorEngine(
 
         /** The GBA's (and Game Boy's) frame rate: 16777216 Hz / 280896 cycles per frame. */
         const val GBA_FPS = 16777216.0 / 280896.0
+        /** A DS's: its 33.51 MHz bus over 263 lines of 355 dots, 6 cycles each. */
+        const val NDS_FPS = 33513982.0 / 560190.0
+        /** Late draws in a 120-frame window, in this many windows, that make a game's frames [slowFrames]. */
+        private const val SLOW_LATE_FRAMES = 3
+        private const val SLOW_WINDOWS = 2
         /** Dynamic rate control's most the audio is stretched or squeezed (RetroArch's default). */
         const val DRC_MAX = 0.005
         /** Vsync pacing: frames run at once in a row at most, when the audio buffer runs low ([vsyncPace]). */
@@ -1499,6 +1574,78 @@ internal fun ffFramesPerRefresh(speed: Float, refreshesPerFrame: Int): Int {
     val n = speed / refreshesPerFrame
     val r = n.roundToInt()
     return if (r >= 1 && kotlin.math.abs(n - r) < 0.01f) r else 0
+}
+
+/**
+ * Fast-forward on the refresh runs a group of frames per refresh; [size] is how many this device keeps up with, up to
+ * the [reset] value asked for (GitHub #216). Decided on a running average of the groups' time ([EMA]), so one slow
+ * group (a GC, a map load) changes nothing:
+ * - over [OVER] of a refresh, a frame goes - but only while the smaller group still runs at least [KEEP] of what the
+ *   late one manages (4 frames in 17.6 ms make ~3.8 a refresh, unevenly: 3 even ones are smoother; 2 in 17 ms still
+ *   make ~2, and 1 would halve it);
+ * - under [ROOM] of a refresh for [wait] groups, a frame is tried; a try that ends up over [OVER] within [PROBE_GROUPS]
+ *   groups goes back, and the next one waits twice as long ([MAX_WAIT_GROUPS] at most).
+ * No cost per frame is modelled: a DS's skipped frames cost a fraction of its drawn one, and a group of 1 has none.
+ */
+internal class FfGroupFit {
+    var size = 0
+        private set
+    private var max = 0
+    private var avg = 0.0
+    private var roomy = 0
+    private var wait = PROBE_GROUPS
+    /** Groups since a frame was added, while it's on trial. */
+    private var trial = -1
+
+    fun reset(perTick: Int) {
+        max = perTick
+        size = perTick
+        avg = 0.0
+        roomy = 0
+        wait = PROBE_GROUPS
+        trial = -1
+    }
+
+    /** A group of [size] frames took [groupNanos] against a refresh of [periodNanos]. */
+    fun groupDone(groupNanos: Long, periodNanos: Long) {
+        if (size <= 0 || periodNanos <= 0) return
+        avg = if (avg == 0.0) groupNanos.toDouble() else avg + (groupNanos - avg) * EMA
+        val period = periodNanos.toDouble()
+        if (avg > period * OVER) {
+            roomy = 0
+            // Frames a refresh the late groups make, run back to back, against the smaller group's.
+            val making = size * period / avg
+            if (size > 1 && (size - 1) >= making * KEEP) {
+                if (trial >= 0) wait = minOf(wait * 2, MAX_WAIT_GROUPS)   // the frame just tried didn't fit
+                trial = -1
+                avg = avg * (size - 1) / size
+                size--
+            }
+            return
+        }
+        if (trial >= 0 && ++trial >= PROBE_GROUPS) {
+            trial = -1
+            wait = PROBE_GROUPS
+        }
+        if (trial < 0 && size < max && avg < period * ROOM) {
+            if (++roomy >= wait) {
+                roomy = 0
+                trial = 0
+                size++
+            }
+        } else {
+            roomy = 0
+        }
+    }
+
+    companion object {
+        const val EMA = 0.1
+        const val OVER = 0.95
+        const val KEEP = 0.75
+        const val ROOM = 0.85
+        const val PROBE_GROUPS = 60
+        const val MAX_WAIT_GROUPS = 1800
+    }
 }
 
 /** How vsync pacing runs the next 1x frame, by the audio the device still holds ([vsyncPace]). */

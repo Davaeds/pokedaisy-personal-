@@ -30,6 +30,8 @@ A short message on the game screen tells you what speed you're at whenever it ch
 
 Higher isn't always better. At 8x or 10x, text flies past before you can read it, and some devices get warm. 2x to 4x is a good everyday range.
 
+When your device can't keep up with the speed you picked (a DS game at 4x is a lot of work), fast-forward runs a step slower but evenly, rather than lurching between speeds, and goes back up by itself once it can.
+
 ## Smart or normal: FF MODE
 
 Fast-forward is great for walking around and terrible for scrolling through a menu, where the cursor flies past what you wanted. `FF MODE` picks how that's handled:

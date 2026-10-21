@@ -112,7 +112,7 @@ object PokegearMap {
         val name = image() ?: return null
         return RegionMapModel(
             images = arrayOf(name),
-            sections = placeNamesHeartGold.mapValues { (_, n) -> MapSecInfo(n, 0, 0, 0, 0, 0) },
+            sections = placeNamesHeartGold.mapValues { (id, n) -> MapSecInfo(NdsArt.names?.place(id) ?: n, 0, 0, 0, 0, 0) },
             layouts = listOf(RegionLayout(0, 0, W, H, 0xFFFF, listOf(hexBytes(POKEGEAR_GRID_HEARTGOLD)), cellBytes = 2)),
         )
     }

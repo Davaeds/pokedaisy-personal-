@@ -13,10 +13,10 @@
 // debugger #ifdef) - checked with mgba_dump's `cheat` command.
 //
 // A hook or a ROM-patch code writes into the ROM mGBA runs from, and the ROM is
-// also what identifies the game: the Poller hashes it over the bus (hack SHA1s)
-// and RetroAchievements hashes gba->memory.rom. So the original bytes under every
-// patch are kept here (sFixes): pk_cheats_overlay puts them back into a bus read,
-// pk_cheats_swap_rom swaps them in and out around RA's hash.
+// also what identifies the game: the Poller hashes it over the bus (hack SHA1s).
+// So the original bytes under every patch are kept here (sFixes): pk_cheats_overlay
+// puts them back into a bus read, pk_cheats_swap_rom swaps them in and out (mgba_dump;
+// RetroAchievements hashes the ROM file instead).
 //
 // The app's own game options that change the ROM (REUSABLE TMS: ReusableTms.kt)
 // are patches too, kept in a list of their own (sOptions) so loading cheats never
@@ -195,9 +195,9 @@ static void pk_fixes_swap(struct mCore* core, struct pk_fix* fixes, int count) {
     }
 }
 
-// Swaps the patched ROM bytes with the originals; twice is a no-op. For hashing
-// the ROM the file holds (RetroAchievements) while cheats are in, on the emu
-// thread so no frame runs in between.
+// Swaps the patched ROM bytes with the originals; twice is a no-op. For reading
+// the ROM the file holds while cheats are in, on the emu thread so no frame runs
+// in between.
 void pk_cheats_swap_rom(struct mCore* core) {
     if (!pk_cheats_is_gba(core)) {
         return;

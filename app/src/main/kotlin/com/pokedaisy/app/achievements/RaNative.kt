@@ -24,7 +24,8 @@ internal object RaNative {
     external fun raLoginWithToken(user: String, token: String)
     external fun raLogout()
 
-    external fun raLoadGame(): Boolean
+    /** Loads the set of the game whose RetroAchievements hash is [hash] ([com.pokedaisy.app.RomIdentity.raHash]). */
+    external fun raLoadGame(hash: String?): Boolean
     external fun raUnloadGame()
     external fun raDoFrame()
     external fun raIdle()
@@ -37,8 +38,8 @@ internal object RaNative {
     external fun raLeaderboardList(): ByteArray?
     /** Leaderboard [id]'s entries: [count] from rank [first], or around the player; answers in [onLeaderboardEntries]. */
     external fun raFetchLeaderboard(token: Int, id: Int, aroundUser: Boolean, first: Int, count: Int)
-    /** The player's unlock counts for every GBA game; answers in [onAllProgress]. */
-    external fun raFetchAllProgress(token: Int)
+    /** The player's unlock counts for every game of RA console [console] (5 = GBA); answers in [onAllProgress]. */
+    external fun raFetchAllProgress(token: Int, console: Int)
     /** Debug builds: one line on what rc_client sees (see the native side). */
     external fun raDebugStatus(): String
 

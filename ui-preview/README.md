@@ -18,6 +18,7 @@ gradle render -Plang=DE          # the app's text in another language (JA FR DE 
 gradle render -Pgame=EMERALD -Prom=/path/pokeemerald.gba   # + the GUIDE's live pages
 gradle render -Pgame=EMERALD -PgameText=EMERALD_LEGACY -Prom=/path/legacy.gba   # Emerald Legacy (its own save fixture)
 gradle render -PcompanionW=960 -PcompanionH=1080   # the companion as a single-screen side panel
+gradle render -PcompanionW=640 -PcompanionH=480 -PcompanionDensity=1.5   # a second screen of its own (the RG DS's)
 ```
 
 `-Prom` points the GUIDE's live pages (HERE's wild list, NEXT BOSS) at a ROM

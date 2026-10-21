@@ -121,6 +121,23 @@ class RomArtTest {
     }
 
     /**
+     * Unbound FR (GitHub #227): its own slot tiles ("PV"), status icons and FONT_SMALL (its level glyph "N.") under
+     * partycfru_fr/ - never English Unbound's into partycfru/, which it showed until an English scan supplied them. Its
+     * slots differ from CFRU's only where "HP" was; the rest of the frame is the same pixels.
+     */
+    @Test fun unboundFrSuppliesItsPartyArt() {
+        val images = composed(GBA + "Pokemon Unbound (v2.1.1.1) (French).gba")
+        val dir = RomArt.UNBOUND_FR_PARTY_DIR
+        assertEquals((listOf("normal", "selected", "fainted", "selected_fainted", "nohp_normal", "nohp_selected", "empty")
+            .map { "$dir/slot_$it.png" } + "$dir/status_icons.png" + "$dir/font_small.png").toSet(),
+            images.keys.filter { it.startsWith("$dir/") }.toSet())
+        assertEquals(emptySet<String>(), images.keys.filter { it.startsWith("partycfru/slot_") || it == "partycfru/ub/status_icons.png" }.toSet())
+        // The empty slot has no HP bar: the same as English Unbound's.
+        assertEquals(CFRU.getValue("partycfru/slot_empty.png"), pixels(images.getValue("$dir/slot_empty.png")))
+        assertTrue(CFRU.getValue("partycfru/slot_normal.png") != pixels(images.getValue("$dir/slot_normal.png")))
+    }
+
+    /**
      * Sword and Shield Ultimate Plus: CFRU's tiles and slot tilemaps in its own palette - its own
      * frames (the striped empty slot too) and grid cell, never CFRU's shared ones; its status icons
      * are Odyssey's. Pinned to scripts/gen_cfru_party_assets.py's decode of the same ROM.

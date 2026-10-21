@@ -33,7 +33,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -110,7 +109,7 @@ object AchievementBadges {
 fun AchievementBadge(url: String?, size: Dp, modifier: Modifier = Modifier, dim: Boolean = false) {
     val m = rememberGbaTextMetrics()
     val u = m.u
-    val bmp by produceState(url?.let { AchievementBadges.cached(it) }, url) {
+    val bmp by produceKeyedState(url?.let { AchievementBadges.cached(it) }, url) {
         if (value == null && url != null) value = withContext(Dispatchers.IO) { AchievementBadges.load(url) }
     }
     Box(

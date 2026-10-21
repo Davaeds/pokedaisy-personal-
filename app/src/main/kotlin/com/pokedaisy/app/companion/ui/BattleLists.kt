@@ -226,7 +226,7 @@ private fun PartyListRow(palette: PartyPalette, mon: MonView, selected: Boolean,
         }
         val textStart = with(density) { (ballW + 3 * px).toDp() }
         Column(Modifier.padding(start = textStart, top = u * 3).fillMaxWidth(0.5f), verticalArrangement = Arrangement.spacedBy(u)) {
-            GbaText(mon.name, text, shadow, m)
+            GbaText(mon.shownName, text, shadow, m)
             // Lv (or the status) and then BEST / OUT: the name's line can be full, the HP bar has the right side.
             Row(Modifier.padding(start = u * 6), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(u * 3)) {
                 if (showHp) {

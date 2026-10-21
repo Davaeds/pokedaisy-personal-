@@ -228,6 +228,8 @@ object AppColors {
         // Pokémon Prism's own types (none of the official games has them): colours of ours.
         "Gas" to Color(0xFF9C8CB4), "Sound" to Color(0xFF58A8C0), "Tri" to Color(0xFFC89878),
         "Prism" to Color(0xFFE070D8),
+        // Pokémon Odyssey's AETHER (type 9): ours too.
+        "Aether" to Color(0xFF9DB7F5),
     )
 
     /** By the game's own type name: title-cased ("Fire"), or Gen 1's capitals ("FIRE", and its unused BIRD as Flying). */

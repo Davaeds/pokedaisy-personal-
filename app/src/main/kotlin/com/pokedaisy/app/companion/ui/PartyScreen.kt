@@ -530,6 +530,11 @@ private fun localPartyStyle(base: PartySlotStyle, fireRed: Boolean): PartySlotSt
 
 private val localStyles = java.util.concurrent.ConcurrentHashMap<String, PartySlotStyle>()
 
+private val UnboundFrPartyStyle: PartySlotStyle by lazy {
+    val dir = com.pokedaisy.app.companion.data.RomArt.UNBOUND_FR_PARTY_DIR
+    UnboundPartyStyle.copy(frameDir = dir, fontAsset = "$dir/font_small.png", statusAsset = "$dir/status_icons.png")
+}
+
 /**
  * Recharged Emerald's slot: Emerald's party_menu.c with its own art (RomArt's partyre/: its slot frames, status icons and
  * FONT_SMALL; the Poké Ball Emerald's, partyem/). Its font widened glyphs 0x30-0x33 to 5 and the 0xF9 0x18 symbol to 8
@@ -568,7 +573,8 @@ fun partySlotStyleFor(game: GameKind): PartySlotStyle? = when (game) {
     // Team Rocket Edition: Dragonsden's party menu is Emerald's slots and list, as its battle party screen showed.
     GameKind.TEAM_ROCKET -> EliteReduxPartyStyle
     GameKind.HEART_AND_SOUL -> HeartAndSoulPartyStyle
-    GameKind.UNBOUND -> UnboundPartyStyle
+    // Unbound FR redrew "HP" / "Lv" as "PV" / "N." and its status icons (GitHub #227): its own art, English's layout.
+    GameKind.UNBOUND -> if (romGameCode == com.pokedaisy.app.companion.data.UNBOUND_FR_TEXT) UnboundFrPartyStyle else UnboundPartyStyle
     GameKind.RADICAL_RED -> RadicalRedPartyStyle
     GameKind.ODYSSEY -> OdysseyPartyStyle
     GameKind.AMETHYST -> AmethystPartyStyle
@@ -695,7 +701,7 @@ private fun PartySlot(palette: PartyPalette, mon: MonView?, selected: Boolean, o
         HeldItemMarker(mon.heldItemId, u, g.fx - 8 * u + 16 * u, g.fy + 22 * u)
 
         val textWidth = with(density) { (g.fx + g.fw - 4 * u - g.textX).toDp() }
-        GbaText(mon.name, text, textShadow, nameM, density.at(g.textX, g.nameMid, nameM).width(textWidth))
+        GbaText(mon.shownName, text, textShadow, nameM, density.at(g.textX, g.nameMid, nameM).width(textWidth))
         if (!showHp) return@BoxWithConstraints
 
         val status = if (mon.hp == 0) "FNT" else mon.status

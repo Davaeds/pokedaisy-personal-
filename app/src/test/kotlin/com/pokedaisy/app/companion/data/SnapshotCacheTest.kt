@@ -39,6 +39,15 @@ class SnapshotCacheTest {
     }
 
     @Test
+    fun `a localized game's names come back in its language`() {
+        // Unbound FR: the held-item tags look names up as they draw, before the game is detected (#227).
+        val v = live().copy(game = GameKind.UNBOUND, textCode = UNBOUND_FR_TEXT, textLanguage = 'F')
+        val back = SnapshotCache.decode(SnapshotCache.encode(v))!!
+        assertEquals(UNBOUND_FR_TEXT, back.textCode)
+        assertEquals('F', back.textLanguage)
+    }
+
+    @Test
     fun `beside the state, and none for a game with no data yet`() {
         val dir = Files.createTempDirectory("snapcache").toFile()
         try {

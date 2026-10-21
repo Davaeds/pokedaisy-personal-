@@ -87,6 +87,10 @@ jobs:
       - name: Docs search
         run: ./gradlew -p ui-preview docsSearchCheck --stacktrace
 
+      # produceKeyedState starts over when its keys change (GitHub #229), on the bare Compose runtime.
+      - name: Keyed state
+        run: ./gradlew -p ui-preview keyedStateCheck --stacktrace
+
   # The manual (docs/manual): every page draws in both readers, links and screenshots resolve, no dashes,
   # and every setting the app has is documented (website/test/docs.test.js) - so a PR that adds a setting
   # without its docs fails here.

@@ -40,9 +40,39 @@ object NdsArt {
     /** rom-art's folder, once [prefetch] has run (the DEX reads its pages and pictures from it: [Gen4Dex]). */
     @Volatile var dir: File? = null
 
+    /**
+     * The running cart's own names, read from its text on every start ([readNames]; null until then, or for a cart this
+     * doesn't know). A translated or renamed cart keeps the US game's header code, so it runs as that game: GitHub #230,
+     * a French Sacred Gold (an IPKE HeartGold) showed the English names the app's tables have. Lines by id, as the game's.
+     */
+    class Names(
+        val species: List<String>, val moves: List<String>, val items: List<String>, val places: List<String>,
+        /** The game's language by its type names' FIGHTING (COMBAT, KAMPF, ...); 'E' when it's none of them. */
+        val language: Char,
+    ) {
+        fun species(id: Int) = species.getOrNull(id)?.takeIf { it.isNotBlank() }
+        fun move(id: Int) = moves.getOrNull(id)?.takeIf { it.isNotBlank() }
+        fun item(id: Int) = items.getOrNull(id)?.takeIf { it.isNotBlank() }
+        fun place(id: Int) = places.getOrNull(id)?.takeIf { it.isNotBlank() }
+
+        // The app's tables with the cart's words over them (ActiveTables), built once.
+        val speciesMerged: Map<Int, String> by lazy {
+            speciesNamesPlatinum + species.indices.mapNotNull { id -> species(id)?.takeIf { id > 0 }?.let { id to it } }
+        }
+        val movesMerged: Map<Int, MoveInfo> by lazy { moveDataPlatinum.mapValues { (id, m) -> move(id)?.let { m.copy(name = it) } ?: m } }
+        private val itemsHg by lazy { itemNamesHeartGold + items.indices.mapNotNull { id -> item(id)?.takeIf { id > 0 }?.let { id to it } } }
+        private val itemsPt by lazy { itemNamesPlatinum + items.indices.mapNotNull { id -> item(id)?.takeIf { id > 0 }?.let { id to it } } }
+        fun itemsMerged(heartGold: Boolean) = if (heartGold) itemsHg else itemsPt
+    }
+    @Volatile var names: Names? = null
+
     /** In the background, once per cart build (a marker keeps its header's game code, revision and [VERSION]). */
     fun prefetch(filesDir: File, rom: File) {
+        names = null
         Thread({
+            // The names first (a few text banks): the companion's first samples use them.
+            runCatching { names = readNames(rom) }.onFailure { android.util.Log.w("pokedaisy", "NdsArt: names failed", it) }
+            names?.let { n -> if (activeGame.isDsGame) romLanguage = n.language }
             runCatching {
                 PokegearMap.dir = RomArt.dir(filesDir)
                 dir = RomArt.dir(filesDir)
@@ -301,6 +331,31 @@ object NdsArt {
             for (y in 0 until crop.height) System.arraycopy(img.argb, (t + y) * 64 + l, crop.argb, y * crop.width, crop.width)
             write(dir, "${heartGoldPocket(pocket, open)}.png", crop.png())
         }
+    }
+
+    /** The cart's name banks (pret/pokeplatinum's text_banks.h, pret/pokeheartgold's msgdata): species, moves, items,
+     * places, types. */
+    private class NameBanks(val msg: String, val species: Int, val moves: Int, val items: Int, val places: Int, val types: Int)
+    private val NAMES_PLATINUM = NameBanks("/msgdata/pl_msg.narc", 412, 647, 392, 433, 624)
+    private val NAMES_HEARTGOLD = NameBanks("/a/0/2/7", 237, 750, 222, 279, 735)
+    /** Each language's FIGHTING (the type names' line 1), as the games print it. */
+    private val FIGHTING = mapOf("FIGHTING" to 'E', "COMBAT" to 'F', "KAMPF" to 'D', "LOTTA" to 'I', "LUCHA" to 'S')
+
+    /** [rom]'s own names ([Names]), or null for a cart this doesn't read. */
+    fun readNames(rom: File): Names? = RandomAccessFile(rom, "r").use { f ->
+        val header = f.read(0, 0x200)
+        val code = String(header, 0x0C, 4, Charsets.US_ASCII)
+        val rev = header[0x1E].toInt() and 0xFF
+        val banks = when {
+            code == "CPUE" && rev == 1 -> NAMES_PLATINUM
+            (code == "IPKE" || code == "IPGE") && rev == 0 -> NAMES_HEARTGOLD
+            else -> return null
+        }
+        val msg = Narc(file(f, header, banks.msg) ?: return null)
+        fun lines(bank: Int) = msg.member(bank)?.let { Gen4Text.lines(it) }.orEmpty()
+        val types = lines(banks.types)
+        Names(lines(banks.species), lines(banks.moves), lines(banks.items), lines(banks.places),
+            FIGHTING[types.getOrNull(1)?.trim()?.uppercase()] ?: 'E')
     }
 
     /** Where one cart keeps what [dex] reads: file paths and text banks. */

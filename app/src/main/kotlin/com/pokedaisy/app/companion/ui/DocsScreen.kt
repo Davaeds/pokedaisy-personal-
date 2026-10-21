@@ -29,7 +29,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -450,7 +449,7 @@ private val imageCache = object : LinkedHashMap<String, ImageBitmap>(16, 0.75f, 
 @Composable
 private fun DocImage(b: Block.Image, manual: DocsApi.Manual, m: GbaTextMetrics, small: GbaTextMetrics, source: DocsSource) {
     val key = b.src + "@" + b.version
-    val bitmap by produceState(synchronized(imageCache) { imageCache[key] }, key) {
+    val bitmap by produceKeyedState(synchronized(imageCache) { imageCache[key] }, key) {
         if (value == null) value = withContext(Dispatchers.IO) {
             source.image(manual, b)?.asImageBitmap()?.also { synchronized(imageCache) { imageCache[key] = it } }
         }

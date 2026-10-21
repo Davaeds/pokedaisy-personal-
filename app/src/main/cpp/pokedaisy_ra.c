@@ -29,7 +29,7 @@
 #include "rc_client.h"
 #include "rc_consoles.h"
 
-#include "pk_cheats.h"
+#include "nds/pk_nds.h"
 
 #define LOG_TAG "pokedaisy/ra"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
@@ -146,7 +146,47 @@ static uint32_t raReadMemoryGb(struct mCore* core, uint32_t address, uint8_t* bu
     return done;
 }
 
+// RA's DS map (rcheevos consoleinfo.c): $0000000-$03FFFFF main RAM (0x02000000), $0400000-$0FFFFFF the DSi's
+// extra RAM (none on a DS: zeros), $1000000-$1003FFF the ARM9's data TCM.
+static uint32_t raReadMemoryNds(uint32_t address, uint8_t* buffer, uint32_t num_bytes) {
+    uint32_t done = 0;
+    while (done < num_bytes) {
+        uint32_t a = address + done;
+        uint32_t n;
+        if (a < 0x400000) {
+            n = 0x400000 - a;
+            if (n > num_bytes - done) {
+                n = num_bytes - done;
+            }
+            pk_nds_read(0x02000000u + a, buffer + done, (int) n);
+        } else if (a < 0x1000000) {
+            n = 0x1000000 - a;
+            if (n > num_bytes - done) {
+                n = num_bytes - done;
+            }
+            memset(buffer + done, 0, n);
+        } else if (a < 0x1004000) {
+            const uint8_t* dtcm = pk_nds_dtcm();
+            if (!dtcm) {
+                break;
+            }
+            n = 0x1004000 - a;
+            if (n > num_bytes - done) {
+                n = num_bytes - done;
+            }
+            memcpy(buffer + done, dtcm + (a - 0x1000000), n);
+        } else {
+            break;
+        }
+        done += n;
+    }
+    return done;
+}
+
 static uint32_t raReadMemoryImpl(uint32_t address, uint8_t* buffer, uint32_t num_bytes) {
+    if (pk_nds_active()) {
+        return raReadMemoryNds(address, buffer, num_bytes);
+    }
     struct mCore* core = pkMainCore();
     if (!core) {
         return 0;
@@ -470,36 +510,21 @@ RA_FN(raLogout)(JNIEnv* env, jobject thiz) {
     rc_client_logout(ra_client);
 }
 
-// Emu thread, after pkInit: hashes the ROM the core has loaded (for GBA, the
-// MD5 of the whole file) and asks the server which game that is.
+// Emu thread, after pkInit: asks the server which game [jHash] is - RetroAchievements' hash of the ROM *file*
+// (RomIdentity.raHash: the MD5 for GB / GBA, RA's DS method for a DS cart). Never the ROM the core runs: mGBA writes
+// the cart's GPIO registers into it (0xC4-0xC9, an RTC game's) when a state loads, and cheats patch it, so after a
+// resume its hash was one the server didn't know - NO ACHIEVEMENTS FOR THIS ROM until the game was restarted (GitHub #197).
 JNIEXPORT jboolean JNICALL
-RA_FN(raLoadGame)(JNIEnv* env, jobject thiz) {
-    struct mCore* core = pkMainCore();
-    if (!core || !ra_client) {
+RA_FN(raLoadGame)(JNIEnv* env, jobject thiz, jstring jHash) {
+    if (!ra_client || !jHash) {
         return JNI_FALSE;
     }
-    if (core->platform(core) == mPLATFORM_GB) {
-        // Hashed the same way (MD5 of the file); a Color-only cart (0x143 = 0xC0) is a
-        // GBC game to RA, a dual-mode one (Yellow, Gold/Silver: 0x80) a Game Boy one.
-        struct GB* gb = core->board;
-        if (!gb->memory.rom || gb->pristineRomSize < 0x150) {
-            return JNI_FALSE;
-        }
-        uint32_t console = gb->memory.rom[0x143] == 0xC0 ? RC_CONSOLE_GAMEBOY_COLOR : RC_CONSOLE_GAMEBOY;
-        rc_client_begin_identify_and_load_game(ra_client, console, NULL,
-            (const uint8_t*) gb->memory.rom, gb->pristineRomSize, raGameLoaded, NULL);
-        return JNI_TRUE;
-    }
-    struct GBA* gba = core->board;
-    if (!gba->memory.rom || !gba->pristineRomSize) {
+    const char* hash = (*env)->GetStringUTFChars(env, jHash, NULL);
+    if (!hash) {
         return JNI_FALSE;
     }
-    // A cheat's hook or ROM patch changes the ROM mGBA runs: hash the file's bytes
-    // (rc_client hashes right here, before returning).
-    pkRomSwapCheats();
-    rc_client_begin_identify_and_load_game(ra_client, RC_CONSOLE_GAMEBOY_ADVANCE, NULL,
-        (const uint8_t*) gba->memory.rom, gba->pristineRomSize, raGameLoaded, NULL);
-    pkRomSwapCheats();
+    rc_client_begin_load_game(ra_client, hash, raGameLoaded, NULL);
+    (*env)->ReleaseStringUTFChars(env, jHash, hash);
     return JNI_TRUE;
 }
 
@@ -766,11 +791,11 @@ static void raAllProgressFetched(int result, const char* error_message, rc_clien
     raDeleteLocal(env, bytes);
 }
 
-// The signed-in player's unlock counts for every GBA game they've played; answers in
+// The signed-in player's unlock counts for every game of [console] (an RC_CONSOLE_* id) they've played; answers in
 // RaNative.onAllProgress (the library's INFO).
 JNIEXPORT void JNICALL
-RA_FN(raFetchAllProgress)(JNIEnv* env, jobject thiz, jint token) {
+RA_FN(raFetchAllProgress)(JNIEnv* env, jobject thiz, jint token, jint console) {
     if (ra_client) {
-        rc_client_begin_fetch_all_user_progress(ra_client, RC_CONSOLE_GAMEBOY_ADVANCE, raAllProgressFetched, (void*) (intptr_t) token);
+        rc_client_begin_fetch_all_user_progress(ra_client, (uint32_t) console, raAllProgressFetched, (void*) (intptr_t) token);
     }
 }

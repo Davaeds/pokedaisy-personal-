@@ -161,7 +161,7 @@ fun GuideScreen(source: GuideSource, ui: GuideUiState, snapshot: SnapshotView, m
     val dex = snapshot.pokedex
     val ctx = GuideContext(snapshot.progress, snapshot.items.map { it.itemId }.toSet(), dex?.caught)
 
-    val table by produceState(source.evolutions?.let(EvolutionSource::cached), source.evolutions) {
+    val table by produceKeyedState(source.evolutions?.let(EvolutionSource::cached), source.evolutions) {
         val t = source.evolutions
         if (value == null && t != null) value = withContext(Dispatchers.IO) { EvolutionSource.table(t) }
     }

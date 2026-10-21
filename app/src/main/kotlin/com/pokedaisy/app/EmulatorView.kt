@@ -397,6 +397,7 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
         private var overlayOnTop = true
 
         private var plain: Program? = null
+        private var pixels: Program? = null
         private var colorProgram: Program? = null
         private var unlitProgram: Program? = null
         private var effectProgram: Program? = null
@@ -524,6 +525,7 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
             // A new context: everything made in the old one is gone with it.
             GLES20.glClearColor(0f, 0f, 0f, 1f)
             plain = Program(ScreenShaders.PLAIN)
+            pixels = Program(ScreenShaders.PIXELS)
             colorProgram = Program(ScreenShaders.GBA_COLOR)
             unlitProgram = Program(ScreenShaders.UNLIT)
             overlayProgram = Program(ScreenShaders.OVERLAY)
@@ -670,6 +672,8 @@ class EmulatorView(context: Context) : GLSurfaceView(context) {
 
             GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
             GLES20.glViewport(0, 0, surfaceW, surfaceH)
+            // The game's own pixels straight onto the view: each read at its centre (ScreenShaders.PIXELS).
+            if (last === plain && !smooth) pixels?.let { last = it }
             drawQuad(last, input, viewUv, pos, smooth, smoothed = readsPicture && !prescaled)
             if (overlayOnTop && win == null) drawOverlay()
         }

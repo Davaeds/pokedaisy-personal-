@@ -84,6 +84,9 @@ class BestEffortTest {
         "orange_islands" to GameKind.FIRERED, "odyssey" to GameKind.FIRERED, "rocket_edition" to GameKind.ORANGE_ISLANDS,
         "ash_gray" to GameKind.ORANGE_ISLANDS, "sword_shield_up" to GameKind.AMETHYST,
         "gs_chronicles" to GameKind.UNBOUND,
+        // Orange Islands is FireRed rev 0 edited in place (97% of its names); Odyssey used to tie with it on
+        // FireRed's names until its own were read (GitHub #206).
+        "firered_vanilla" to GameKind.ORANGE_ISLANDS, "leafgreen_rev1" to GameKind.ORANGE_ISLANDS,
     )
 
     private class Loaded(val reader: MemoryReader, val size: Long, val text: BestEffort.RomText)

@@ -114,7 +114,7 @@ object CoverArtSync {
 
     /** The RA box art's URL for [rom], if RA has one (blocking: hashes, network). */
     fun raBoxArtUrl(rom: File, raKey: String): String? =
-        RomIdentity.md5(rom)?.let { RetroAchievements.gameBoxArtUrl(it, raKey) }
+        RomIdentity.raHash(rom)?.let { RetroAchievements.gameBoxArtUrl(it, raKey) }
 
     private fun fetchRaBoxArt(rom: File, coverFile: File, raKey: String): Boolean {
         val url = raBoxArtUrl(rom, raKey) ?: return false

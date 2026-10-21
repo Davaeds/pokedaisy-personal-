@@ -90,7 +90,7 @@ private suspend fun loadMonIconSheet(context: Context, asset: String?): Bitmap? 
         // straight from the ROM (see IconTables.monPresent - gated
         // independently of item icons since some hacks relocate only one).
         id != null && DecompIconSource.tables.monPresent -> withContext(Dispatchers.IO) {
-            DecompIconSource.get(id) ?: GameArt.get(context, asset)
+            (if ("/shiny/" in asset) DecompIconSource.getShiny(id) else null) ?: DecompIconSource.get(id) ?: GameArt.get(context, asset)
         }
         else -> withContext(Dispatchers.IO) { GameArt.get(context, asset) }
     }
@@ -101,7 +101,11 @@ internal fun peekMonIcon(asset: String?): Bitmap? {
     if (asset == null) return null
     GameArt.peek(asset)?.let { return it }   // rom-art sheets (a Game Boy game's own icons)
     val id = asset.substringAfterLast('/').substringBefore('.').toIntOrNull() ?: return null
-    return if (asset.startsWith("pokemon-unbound/")) UnboundIconSource.peek(id) else DecompIconSource.peek(id)
+    return when {
+        asset.startsWith("pokemon-unbound/") -> UnboundIconSource.peek(id)
+        "/shiny/" in asset -> DecompIconSource.peekShiny(id)
+        else -> DecompIconSource.peek(id)
+    }
 }
 
 /** Both animation frames (for callers that animate the icon, e.g. FrPartySlot). */

@@ -352,6 +352,183 @@ inline bool near(u32 a, u32 b)
     return true;
 }
 
+// A BGR555 colour as the 2D engine widens it (c << 1 a channel), in the 3D engine's layout (r | g << 8 | b << 16).
+inline u32 widen(u16 c) { return ((c & 0x1F) << 1) | (((c >> 5) & 0x1F) << 9) | (((c >> 10) & 0x1F) << 17); }
+
+// melonDS's 2D blends (GPU2D_Soft.h), 6 bits a channel: a layer over another by EVA / EVB, and the 3D on top by its
+// own alpha.
+inline u32 blend4(u32 a, u32 b, u32 eva, u32 evb)
+{
+    u32 r = std::min<u32>(0x3F, ((a & 0x3F) * eva + (b & 0x3F) * evb + 8) >> 4);
+    u32 g = std::min<u32>(0x3F, (((a >> 8) & 0x3F) * eva + ((b >> 8) & 0x3F) * evb + 8) >> 4);
+    u32 bl = std::min<u32>(0x3F, (((a >> 16) & 0x3F) * eva + ((b >> 16) & 0x3F) * evb + 8) >> 4);
+    return r | g << 8 | bl << 16;
+}
+
+inline u32 blend5(u32 a, u32 b)
+{
+    u32 eva = ((a >> 24) & 0x1F) + 1, evb = 32 - eva;
+    if (eva == 32) return a & 0x3F3F3F;
+    u32 r = std::min<u32>(0x3F, ((a & 0x3F) * eva + (b & 0x3F) * evb + 0x10) >> 5);
+    u32 g = std::min<u32>(0x3F, (((a >> 8) & 0x3F) * eva + ((b >> 8) & 0x3F) * evb + 0x10) >> 5);
+    u32 bl = std::min<u32>(0x3F, (((a >> 16) & 0x3F) * eva + ((b >> 16) & 0x3F) * evb + 0x10) >> 5);
+    return r | g << 8 | bl << 16;
+}
+
+// How the 2D engine puts the 3D layer on the top screen, for a pixel of the wide frame: a text BG alpha-blended over
+// the 3D (BLDCNT's first target, the 3D its second) drawn on past the screen and blended the same way - Platinum's fog
+// is a white BG2 at EVA 9 / EVB 7 over the 3D's own fog (GitHub #226: the margins showed the 3D alone, or the screen's
+// edge columns streaked across them) - the 3D's alpha against the backdrop, the master brightness.
+struct Compose {
+    NDS* nds = nullptr;
+    u32 mb = 0;
+    u32 backdrop = 0;   // widened
+    u32 blendCnt = 0, eva = 0, evb = 0;
+    struct Layer {
+        int bg = 0, sx = 0, sy = 0, w = 256, h = 256;
+        // Covers the screen's whole outline: a sheet over all of it (fog), carried on as it tiles. Otherwise only the
+        // rows it reaches the screen's side on, in that edge pixel's colour (edge[side][y], 0 where it's clear).
+        bool full = false;
+        u16 edge[2][H3D] = {};
+        std::vector<u16> rows;   // the BG's pixels, w x h, filled a row at a time as the margins need them
+        std::vector<u8> rowDone;
+    };
+    Layer layers[3];
+    int count = 0;
+    u8 bright[64] = {};   // a channel through the master brightness, widened to 8 bits (shade's, per channel)
+    u32 finish(u32 c) const { return 0xFF000000u | bright[c & 0x3F] | bright[(c >> 8) & 0x3F] << 8 | bright[(c >> 16) & 0x3F] << 16; }
+};
+
+Compose compose;
+
+bool isOverlay(const Compose& k, int bg)
+{
+    for (int i = 0; i < k.count; i++) if (k.layers[i].bg == bg) return true;
+    return false;
+}
+
+// [k] for the frame on screen now; [threeD]: the 3D is what the margins show (no layers over it otherwise).
+void setupCompose(Compose& k, NDS* nds, bool threeD)
+{
+    const GPU2D::Unit& u = nds->GPU.GPU2D_A;
+    k.nds = nds;
+    k.mb = u.MasterBrightness;
+    if (!(u.DispCnt & 0x30000)) k.mb = 0;   // display off / VRAM modes: the 2D engine's call
+    for (u32 v = 0; v < 64; v++) k.bright[v] = (u8) (shade(v, k.mb) & 0xFF);
+    k.backdrop = widen((u16) (nds->GPU.Palette[0] | (nds->GPU.Palette[1] << 8)));
+    k.blendCnt = u.BlendCnt;
+    k.eva = u.EVA;
+    k.evb = u.EVB;
+    k.count = 0;
+    // The windows aren't followed (the 3D past the screen never is): the margins go on through a window's wipe as
+    // they do on any map.
+    if (!threeD || ((k.blendCnt >> 6) & 3) != 1 || !(k.blendCnt & 0x100)) return;
+    int mode = (int) (u.DispCnt & 7), basePrio = u.BGCnt[0] & 3;
+    int order[3], n = 0;
+    for (int bg = 1; bg <= 3; bg++) {
+        bool text = mode == 0 || (mode == 1 && bg < 3) || (mode == 2 && bg < 2);
+        if (!text || !(u.DispCnt & (1 << (8 + bg)))) continue;
+        if ((u.BGCnt[bg] & 3) >= basePrio || !(k.blendCnt & (1 << bg))) continue;
+        order[n++] = bg;
+    }
+    // Topmost first: the lower priority number, then the lower BG.
+    std::sort(order, order + n, [&](int a, int b) { return (u.BGCnt[a] & 3) != (u.BGCnt[b] & 3) ? (u.BGCnt[a] & 3) < (u.BGCnt[b] & 3) : a < b; });
+    for (int i = 0; i < n; i++) {
+        Compose::Layer& l = k.layers[k.count++];
+        l.bg = order[i];
+        l.sx = u.BGXPos[l.bg];
+        l.sy = u.BGYPos[l.bg];
+        int size = u.BGCnt[l.bg] >> 14;
+        l.w = (size & 1) ? 512 : 256;
+        l.h = (size & 2) ? 512 : 256;
+        l.full = true;
+        for (int y = 0; y < H3D; y++)
+            for (int side = 0; side < 2; side++) {
+                l.edge[side][y] = pk_nds_bg_pixel(nds, l.bg, (side ? W3D - 1 : 0) + l.sx, y + l.sy);
+                l.full &= l.edge[side][y] != 0;
+            }
+        for (int x = 0; x < W3D && l.full; x++)
+            l.full = pk_nds_bg_pixel(nds, l.bg, x + l.sx, l.sy) && pk_nds_bg_pixel(nds, l.bg, x + l.sx, H3D - 1 + l.sy);
+        if (l.full) {
+            l.rows.resize((size_t) l.w * l.h);
+            l.rowDone.assign(l.h, 0);
+        }
+    }
+}
+
+// BG row [by] of layer [l] whole into [out] (l.w pixels): pk_nds_bg_pixel's reads, a map entry a tile.
+void decodeRow(NDS* nds, const Compose::Layer& l, int by, u16* out)
+{
+    const GPU& gpu = nds->GPU;
+    const GPU2D::Unit& u = gpu.GPU2D_A;
+    u16 cnt = u.BGCnt[l.bg];
+    u32 disp = u.DispCnt;
+    u32 mapBase = 0x06000000u + ((disp >> 27) & 7) * 0x10000u + ((cnt >> 8) & 0x1F) * 0x800u;
+    u32 charBase = 0x06000000u + ((disp >> 24) & 7) * 0x10000u + ((cnt >> 2) & 0xF) * 0x4000u;
+    int ty = by >> 3, rowBlock = 0;
+    if (ty >= 32) { rowBlock = l.w == 512 ? 2 : 1; ty -= 32; }
+    for (int tx0 = 0; tx0 < l.w >> 3; tx0++) {
+        int tx = tx0, block = rowBlock;
+        if (tx >= 32) { block += 1; tx -= 32; }
+        u16 e = gpu.ReadVRAM_BG<u16>(mapBase + (u32) block * 0x800u + (u32) (ty * 32 + tx) * 2u);
+        int py = (e & 0x800) ? 7 - (by & 7) : by & 7;
+        u32 tile = e & 0x3FF;
+        u16* dst = out + tx0 * 8;
+        for (int i = 0; i < 8; i++) {
+            int px = (e & 0x400) ? 7 - i : i;
+            u32 ci;
+            if (cnt & 0x80) {
+                ci = gpu.ReadVRAM_BG<u8>(charBase + tile * 64u + (u32) (py * 8 + px));
+            } else {
+                u8 b = gpu.ReadVRAM_BG<u8>(charBase + tile * 32u + (u32) (py * 4 + px / 2));
+                ci = (px & 1) ? b >> 4 : b & 0xF;
+                if (ci) ci += (e >> 12) * 16u;
+            }
+            dst[i] = ci ? (u16) (0x8000 | ((gpu.Palette[ci * 2] | (gpu.Palette[ci * 2 + 1] << 8)) & 0x7FFF)) : 0;
+        }
+    }
+}
+
+// The overlays' colour at wide-frame pixel (x, y) (0: none there).
+inline u16 overlayPixel(Compose& k, int x, int y)
+{
+    bool inX = x >= 0 && x < W3D, inY = y >= 0 && y < H3D;
+    for (int i = 0; i < k.count; i++) {
+        Compose::Layer& l = k.layers[i];
+        u16 c = 0;
+        if (inX && inY) {
+            c = pk_nds_bg_pixel(k.nds, l.bg, x + l.sx, y + l.sy);
+        } else if (l.full) {
+            int by = (y + l.sy) & (l.h - 1);
+            u16* row = &l.rows[(size_t) by * l.w];
+            if (!l.rowDone[by]) {
+                decodeRow(k.nds, l, by, row);
+                l.rowDone[by] = 1;
+            }
+            c = row[(x + l.sx) & (l.w - 1)];
+        } else if (inY) {
+            c = l.edge[x < 0 ? 0 : 1][y];
+        }
+        if (c) return c;
+    }
+    return 0;
+}
+
+// Wide-frame pixel (x, y) as the screen would show it, its 3D colour [c] (NONE / alpha 0: the 3D clear there), as RGBA.
+inline u32 composed(Compose& k, int x, int y, u32 c)
+{
+    bool has3D = c != NONE && (c >> 24);
+    u32 under = has3D ? c & 0x3F3F3F : k.backdrop, out = under;
+    u16 o = k.count ? overlayPixel(k, x, y) : 0;
+    if (o) {
+        bool target2 = (k.blendCnt & (has3D ? 0x100 : 0x2000)) != 0;
+        out = target2 ? blend4(widen(o), under, k.eva, k.evb) : widen(o);
+    } else if (has3D && (k.blendCnt & 0x2000)) {
+        out = blend5(c, k.backdrop);   // the 3D on top, see-through onto the backdrop
+    }
+    return k.finish(out);
+}
+
 // Screen pixel (x, y) from slice (sx, sy)'s image: NONE where it wasn't drawn.
 inline u32 at(const Image& im, int sx, int sy, int x, int y)
 {
@@ -579,12 +756,14 @@ bool pk_nds_wide_frame(NDS* nds, const uint32_t* top, bool draw, bool margins, b
     // frame runs the screen's width), on the field any row the layer covers edge to edge: the row's margin takes the
     // screen's edge pixel.
     bool blackL[H3D] = {}, blackR[H3D] = {};
+    // A layer blended over the 3D is drawn on into the margins instead (setupCompose).
+    setupCompose(compose, nds, threeDOnTop);
     if (aOnTop && (threeDOnTop || battleBg)) {
         int mode = (int) (unitA.DispCnt & 7);
         int base = battleBg ? 3 : 0;
         int basePrio = unitA.BGCnt[base] & 3;
         for (int bg = 1; bg <= 3; bg++) {
-            if (bg == base || !(unitA.DispCnt & (1 << (8 + bg)))) continue;
+            if (bg == base || !(unitA.DispCnt & (1 << (8 + bg))) || (threeDOnTop && isOverlay(compose, bg))) continue;
             bool text = mode == 0 || (mode == 1 && bg < 3) || (mode == 2 && bg < 2);
             int prio = unitA.BGCnt[bg] & 3;
             if (!text || prio > basePrio || (prio == basePrio && bg > base)) continue;
@@ -734,8 +913,7 @@ bool pk_nds_wide_frame(NDS* nds, const uint32_t* top, bool draw, bool margins, b
                     row[x] = c ? bgColor(c) : bgColor(bd);
                     return;
                 }
-                u32 c = threeDOnTop ? marginPixel(x, y) : NONE;
-                row[x] = c != NONE && (c >> 24) ? shade(c, mb) : off;
+                row[x] = threeDOnTop ? composed(compose, x, y, marginPixel(x, y)) : off;
             };
             for (int x = wide.cx0; x < 0; x++) margin(x);
             if (y < 0 || y >= H3D)
@@ -749,11 +927,12 @@ bool pk_nds_wide_frame(NDS* nds, const uint32_t* top, bool draw, bool margins, b
             // The edge-marking colours as they come out on screen (ScanlineFinalPass's 5 -> 6 bit conversion): a frame
             // edge pixel showing one of them exactly is the outline. Where the slice shows texture a texel off, the
             // "next one in" test below fails on a busy texture, and the outline stayed as a dark dot.
+            // Raw, opaque: put through composed() at the pixel tested (a layer blended over it there).
             u32 edgeColors[8];
             for (int i = 0; i < 8; i++) {
                 u16 e = nds->GPU.GPU3D.RenderEdgeTable[i];
                 u32 r = (e << 1) & 0x3E, g = (e >> 4) & 0x3E, b = (e >> 9) & 0x3E;
-                edgeColors[i] = shade(r ? r + 1 : 0, g ? g + 1 : 0, b ? b + 1 : 0, mb);
+                edgeColors[i] = 0x1F000000u | (r ? r + 1 : 0) | (g ? g + 1 : 0) << 8 | (b ? b + 1 : 0) << 16;
             }
             bool edgeMarking = (nds->GPU.GPU3D.RenderDispCnt & (1 << 5)) != 0;
             auto fix = [&](int sx, int sy, int ex, int ey, int nx, int ny) {
@@ -762,9 +941,9 @@ bool pk_nds_wide_frame(NDS* nds, const uint32_t* top, bool draw, bool margins, b
                 u32 frame = toRgba(top[ey * W3D + ex]);
                 bool outline = false;
                 if (edgeMarking)
-                    for (u32 c : edgeColors) outline |= c == frame;
-                if (!outline && !near(shade(cn, mb), toRgba(top[ny * W3D + nx]))) return;
-                wide.out[(size_t) (ey + MY) * OW + MX + ex] = shade(ce, mb);
+                    for (u32 c : edgeColors) outline |= composed(compose, ex, ey, c) == frame;
+                if (!outline && !near(composed(compose, nx, ny, cn), toRgba(top[ny * W3D + nx]))) return;
+                wide.out[(size_t) (ey + MY) * OW + MX + ex] = composed(compose, ex, ey, ce);
             };
             for (int side = -1; side <= 1; side += 2) {
                 int ex = side < 0 ? 0 : W3D - 1, ey = side < 0 ? 0 : H3D - 1;
@@ -798,13 +977,12 @@ bool pk_nds_wide_frame(NDS* nds, const uint32_t* top, bool draw, bool margins, b
 // own pixels there - what's left far off after the outline fix.
 static void edgeReport(NDS* nds)
 {
-    u32 mb = nds->GPU.GPU2D_A.MasterBrightness;
-    if (!(nds->GPU.GPU2D_A.DispCnt & 0x30000)) mb = 0;
+    setupCompose(compose, nds, true);
     int left = 0, right = 0, topRow = 0, bottomRow = 0, printed = 0;
     auto test = [&](int sx, int sy, int x, int y, int& count) {
         u32 c = at(sliceAt(sx, sy).shown, sx, sy, x, y);
         if (c == NONE || !(c >> 24)) return;
-        u32 got = wide.out[(size_t) (y + MY) * OW + MX + x], want = shade(c, mb);
+        u32 got = wide.out[(size_t) (y + MY) * OW + MX + x], want = composed(compose, x, y, c);
         if (near(got, want)) return;
         count++;
         if (printed++ < 10) fprintf(stderr, "edge (%d, %d): shown %06X slice %06X\n", x, y, got & 0xFFFFFF, want & 0xFFFFFF);
@@ -819,12 +997,12 @@ void pk_nds_wide_check(NDS* nds, const uint32_t* top, int* compared, int* differ
     if (getenv("PK_WIDE_EDGES")) edgeReport(nds);
     *compared = *differ = *far = 0;
     if (!wide.on) return;
-    u32 mb = nds->GPU.GPU2D_A.MasterBrightness;
-    if (!(nds->GPU.GPU2D_A.DispCnt & 0x30000)) mb = 0;
+    // The frame's 3D under what the 2D engine blends onto it (a fog layer, the 3D's alpha), as the margins are drawn.
+    setupCompose(compose, nds, true);
     auto check = [&](int sx, int sy, int x, int y) {
         u32 c = at(sliceAt(sx, sy).shown, sx, sy, x, y);
         if (c == NONE || !(c >> 24)) return;
-        u32 want = shade(c, mb), got = toRgba(top[y * W3D + x]);
+        u32 want = composed(compose, x, y, c), got = toRgba(top[y * W3D + x]);
         (*compared)++;
         if (want != got) {
             bool isFar = !near(want, got);

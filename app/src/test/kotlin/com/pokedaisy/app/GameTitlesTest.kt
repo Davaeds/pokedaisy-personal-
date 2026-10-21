@@ -5,7 +5,9 @@ import com.pokedaisy.app.companion.data.RETAIL_PORT_TITLES
 import com.pokedaisy.app.companion.data.TelemetrySampler
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
+import java.io.File
 
 class GameTitlesTest {
     @Test
@@ -32,5 +34,22 @@ class GameTitlesTest {
         assertEquals("firered-hack", GameTitles.tidy("firered-hack"))
         // Nothing left: the name as it was.
         assertEquals("(Rev 1)", GameTitles.tidy("(Rev 1)"))
+    }
+
+    /** The library's GB / GBC views (GitHub #237): Polished Crystal's header says dual-mode (0x80), but it's a Color game;
+     * Yellow / Gold say the same and stay GB, Crystal says Color-only (0xC0). Skips without the ROMs. */
+    @Test
+    fun `Polished Crystal is a GBC game, Yellow a GB one`() {
+        val dir = File(File(com.pokedaisy.app.companion.data.RETAIL_ROM_DIR).parentFile, "gbc")
+        fun platform(name: String): RomCategory {
+            val rom = File(dir, name)
+            assumeTrue("no $rom", rom.isFile)
+            return GameTitles.platformOf(rom) { RomIdentity.sha1(rom) }
+        }
+        assertEquals(RomCategory.GBC, platform("Pokemon Polished Crystal (v3.2.3).gbc"))
+        assertEquals(RomCategory.GBC, platform("Pokemon Polished Crystal (v3.2.3) (Faithful).gbc"))
+        assertEquals(RomCategory.GBC, platform("Pokemon - Crystal Version (USA, Europe) (Rev 1).gbc"))
+        assertEquals(RomCategory.GB, platform("Pokemon - Yellow Version - Special Pikachu Edition (USA, Europe) (CGB+SGB Enhanced).gb"))
+        assertEquals(RomCategory.GB, platform("Pokemon - Gold Version (USA, Europe) (SGB Enhanced) (GB Compatible).gbc"))
     }
 }

@@ -77,9 +77,11 @@ class PerformanceGuardsTest {
     fun `main-core reads are guarded against teardown`() {
         // The companion's ROM readers call pkReadBytes from IO threads.
         val jni = File(src.parentFile, "cpp/pokedaisy_jni.c").readText()
-        for (fn in listOf("pkReadBytes", "pkRomRead")) {
+        val readAny = jni.substring(jni.indexOf("static bool pk_read_any(")).substringBefore("\n}\n")
+        assertTrue("pk_read_any must hold pk_coreLock", "pthread_rwlock_rdlock(&pk_coreLock)" in readAny)
+        for (fn in listOf("pkReadBytes", "pkReadInto", "pkRomRead")) {
             val body = jni.substring(jni.indexOf("MgbaCore_$fn(")).substringBefore("\n}\n")
-            assertTrue("$fn must hold pk_coreLock", "pthread_rwlock_rdlock(&pk_coreLock)" in body)
+            assertTrue("$fn must hold pk_coreLock", "pthread_rwlock_rdlock(&pk_coreLock)" in body || "pk_read_any(" in body)
         }
         val teardown = jni.substring(jni.indexOf("static void pkTeardown(void) {")).substringBefore("\n}\n")
         assertTrue("pkTeardown must take pk_coreLock for writing", "pthread_rwlock_wrlock(&pk_coreLock)" in teardown)

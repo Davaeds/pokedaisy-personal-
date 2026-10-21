@@ -115,7 +115,7 @@ PokeDaisy has no accounts of its own, no ads and no tracking. Your games and sav
 
 - **Update check.** It asks GitHub for the newest release when you open the library (and when you tap `VERSION`), and downloads it only if you say so.
 - **The manual.** `HELP` loads this manual from the PokeDaisy website and keeps a copy for reading offline.
-- **Cover art**, only if you add your own key under Settings > `COVER ART`: from SteamGridDB and RetroAchievements. To find a game's art, RetroAchievements is asked by the ROM's fingerprint (MD5), never the file.
+- **Cover art**, only if you add your own key under Settings > `COVER ART`: from SteamGridDB and RetroAchievements. To find a game's art, RetroAchievements is asked by the ROM's fingerprint (its MD5, or for a DS game the fingerprint RetroAchievements uses for DS carts), never the file.
 - **RetroAchievements**, only if you sign in. Opening a game's `INFO` in the library also asks RetroAchievements whether there's an achievement set for that ROM, by its fingerprint.
 - **Crash reports**, only if you turn `CRASH REPORTS` on (it's off until you do; the app asks once, after a few days). A report holds the device model, Android version and where the app crashed.
 - **Sharing a best effort match**, only if you tap `SHARE` when asked. The window lists every value sent: the ROM's SHA-1, size, game code and revision, the game it was read as and how well, and the app version. No file name, account or device details.

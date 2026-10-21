@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,7 +85,8 @@ internal fun DexSectionChips(sections: List<DexSection>, selected: DexSection, s
             val focused by noRipple.collectIsFocusedAsState()
             Box(
                 Modifier
-                    .weight(1f)
+                    // Shared out by the words' lengths: EVOLVE got INFO's room and was cut off on a narrow screen (the RG DS).
+                    .weight(tr(s.label).length + 2f)
                     // The D-pad's focus (the companion's window), flush inside the chip's 3u corner, like the tab bar's.
                     .gbaFocusRing(focused, PixelRoundedShape(u * 3))
                     .drawBehind {
@@ -120,7 +120,7 @@ private class FamilyRow(val link: EvoLink, val fromNo: Int, val toNo: Int)
  */
 @Composable
 internal fun DexEvolveSection(t: PokedexTables, species: Int, m: GbaTextMetrics, small: GbaTextMetrics, onOpen: (Int) -> Unit) {
-    val rows by produceState(DexDetails.cachedFamily(t, species)?.let { rowsOf(t, it) }, t, species) {
+    val rows by produceKeyedState(DexDetails.cachedFamily(t, species)?.let { rowsOf(t, it) }, t, species) {
         if (value == null && species > 0) value = withContext(Dispatchers.IO) {
             DexDetails.family(t, species).orEmpty().let { rowsOf(t, it) }
         }
@@ -263,7 +263,7 @@ private class AreaPlace(val name: String, val lines: List<Pair<String, String>>)
  */
 @Composable
 internal fun DexAreaSection(g: GuideTables, species: Int, m: GbaTextMetrics, small: GbaTextMetrics) {
-    val spots by produceState(DexDetails.cachedCatchSpots(g, species), g, species) {
+    val spots by produceKeyedState(DexDetails.cachedCatchSpots(g, species), g, species) {
         if (value == null && species > 0) value = withContext(Dispatchers.IO) { DexDetails.catchSpots(g, species).orEmpty() }
     }
     val list = spots
@@ -335,7 +335,7 @@ private class DexMoves(val levelUp: List<LevelMove>, val teach: List<TeachMove>?
 /** LEVEL UP (level, move, type), then TM / HM - or the expansion games' TM / TUTOR list, by name. */
 @Composable
 internal fun DexMovesSection(t: PokedexTables, g: GuideTables?, species: Int, m: GbaTextMetrics, small: GbaTextMetrics) {
-    val moves by produceState(
+    val moves by produceKeyedState(
         DexDetails.cachedLevelUp(t, g, species)?.let { DexMoves(it, DexDetails.cachedTeachable(t, g, species)) }
             ?.takeIf { it.teach != null || !DexDetails.hasTeachable(t) },
         t, g, species,

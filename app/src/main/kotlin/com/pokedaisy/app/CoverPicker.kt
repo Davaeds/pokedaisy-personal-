@@ -1,5 +1,6 @@
 package com.pokedaisy.app
 
+import com.pokedaisy.app.companion.ui.produceKeyedState
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -27,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -248,7 +248,7 @@ private fun IconGrid(icons: List<Icon>, source: CoverSource, m: GbaTextMetrics, 
 /** A thumbnail fetched on first sight and kept for the session. */
 @Composable
 private fun RemoteThumb(url: String, source: CoverSource, m: GbaTextMetrics) {
-    val bitmap by produceState(ThumbCache[url], url) {
+    val bitmap by produceKeyedState(ThumbCache[url], url) {
         if (value == null) {
             value = withContext(Dispatchers.IO) {
                 source.thumbBytes(url)?.let { bytes ->

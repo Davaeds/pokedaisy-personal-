@@ -411,7 +411,15 @@ void pk_nds_read(uint32_t addr, uint8_t* dst, int len)
         return;
     }
     if ((addr & 0xFF000000u) == 0x02000000u) {
-        for (int i = 0; i < len; i++) dst[i] = nds->MainRAM[(addr + (u32) i) & nds->MainRAMMask];
+        // In runs up to the mirror's end (a sample copies all 4 MB: byte by byte it took ~4 ms on the RP6).
+        u32 mask = nds->MainRAMMask;
+        int done = 0;
+        while (done < len) {
+            u32 off = (addr + (u32) done) & mask;
+            int n = (int) std::min<u32>(mask + 1 - off, (u32) (len - done));
+            memcpy(dst + done, nds->MainRAM + off, (size_t) n);
+            done += n;
+        }
         return;
     }
     for (int i = 0; i < len; i++) dst[i] = nds->ARM9Read8(addr + (u32) i);
@@ -563,6 +571,11 @@ uint32_t pk_nds_rom_size(void)
 {
     auto* cart = ds ? ds->nds->NDSCartSlot.GetCart() : nullptr;
     return cart ? cart->GetROMLength() : 0;
+}
+
+const uint8_t* pk_nds_dtcm(void)
+{
+    return ds ? ds->nds->ARM9.DTCM : nullptr;
 }
 
 } // extern "C"

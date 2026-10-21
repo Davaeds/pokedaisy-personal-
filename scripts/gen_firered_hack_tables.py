@@ -7,6 +7,7 @@ tables (ActiveTables' `fireRedHack`, a `HackText`).
     scripts/gen_firered_hack_tables.py rocket_edition <Pokemon FireRed Rocket Edition.gba> <firered-rev0.gba>
     scripts/gen_firered_hack_tables.py ash_gray <Pokemon Ash Gray (v4.5.3).gba> <Pokemon Ash Gray Fork Bug Fix (v1.0).gba> <firered-rev0.gba>
     scripts/gen_firered_hack_tables.py ghost_grey <Pokemon Ghost Grey (v1.0.1).gba> <(v1.0.2).gba> <(v1.0.4).gba> <firered-rev0.gba>
+    scripts/gen_firered_hack_tables.py odyssey <Pokemon Odyssey (v4.1.1).gba> <firered-rev0.gba>
 
 Each table is found through the literal-pool word retail rev 0 (sha1 41cb23d8...)
 loads it from, so a repointed one is followed: gSpeciesNames, gBaseStats (28 bytes,
@@ -32,6 +33,12 @@ and its story's trainer pictures past them). Mixed case (`ownCase`); GHOST on GH
 PSYCHIC neutral. Its region map's art is its own (`ownRegionMap`). v1.0.2 and v1.0.4 share every
 table; v1.0.1 differs in one move (PURIFY: PSYCHIC, later DARK), so it gets a table set of its own
 (`groups`: each group's builds must agree).
+
+Pokémon Odyssey v4.1.1 (32 MB, runs as its own GameKind.ODYSSEY, not FIRERED: ActiveTables reads
+`fireRedHackOdyssey` for it directly) keeps rev 0's gSpeciesNames / gBaseStats / gItems / gTypeNames in place
+and rewrites ~120 species slots (its regional forms and newer species: ROAR. MOON 234, TLACHTGA 404 ...);
+its moves (to 477) and gTypeEffectiveness are repointed. Type 9 (FireRed's "???") is AETHER (GitHub #206:
+its CUBONE is GROUND / AETHER, shown as Fairy before). Mixed case.
 """
 import hashlib
 import os
@@ -72,6 +79,11 @@ GAMES = {
                  "v1.0.2 and v1.0.4 (the same tables)."),
                 ("GhostGreyV101", ["20dfaea1d5317cf95fe0b493208edce7d50b865f"], "v1.0.1: PURIFY is PSYCHIC there.")],
         own_case=True, own_region_map=True, moves_count=487, type_names_app={23: "Fairy"},
+    ),
+    "odyssey": dict(
+        label="Pokemon Odyssey v4.1.1", out="OdysseyGen.kt", name="Odyssey",
+        sha1s=["8745ddbdbfadf6abaf66de4e9055923b62eb4668"], own_case=True, own_region_map=True, moves_count=478,
+        type_names_app={9: "Aether"},
     ),
 }
 CH = dict(CHARS)
@@ -252,6 +264,10 @@ def block(key, g, base, h, suffix, what):
         assert ty[1] == (12, 7) and ty[23] == (7, 23) and it[17] == "SourPatchBag" and ms[110] == "Jaspar Town"
         assert chart[707] == 120 and chart[714] == 100 and 486 not in mv
         assert mv[451] == ("Purify", 17 if suffix == "GhostGrey" else 14, 10)
+    elif key == "odyssey":
+        assert sp[104] == "Cubone" and ty[104] == (4, 9) and sp[234] == "Roar. Moon" and sp[404] == "Tlachtga"
+        assert new_types == {9: "Aether"} and mv[477] == ("Twineedle", 6, 60) and 478 not in mv and it[1] == "Master Ball"
+        assert chart[409] != 100 or chart[904] != 100
     else:
         assert gr and chart[1304] == 50 and it[349] == "Gs Ball" and ms[143] == "Valencia Island"
         assert not new_types

@@ -56,7 +56,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | Radical Red | 4.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁶ |
 | Recharged Emerald | 2.2.5, 2.2.8, Rebalanced 2.2.8 | — | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — |
 | Recharged Yellow | 1.8.0, 1.9.0, 1.9.4, 1.9.7 | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | ✅ | ✅ | ✅ | — | — |
-| SoulGold | 1.1.4, 1.2 (3 builds) | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ◐ ⁶ | — | ✅ | ✅ | ✅ ¹⁶ |
+| SoulGold | 1.1.4, 1.2 (3 builds) | ✅ | ✅ | ✅ | ✅ | ◐ ¹⁷ | ✅ | ✅ | ◐ ⁶ | — | ✅ | ✅ | ✅ ¹⁶ |
 | Super Mariomon | 1.2.1-1.3, 1.5.1, 1.5.2 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | — |
 | Sword and Shield Ultimate Plus | 1.2.1.2 + its 3 patches | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | — |
 | Team Rocket Dragonsden | 1.5 | — | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — |
@@ -182,6 +182,11 @@ change to any of the places listed under "Where it's decided" updates its rows h
     (`ReusableTms.BUILT_IN`). Radical Red, Unbound and SoulGold checked headless on their saves (a TM taught, unpatched,
     stayed in the TM Case / bag: SoulGold v1.1.4 and v1.2's third build, the others share its code); Prism and Polished
     Crystal keep a bit per TM, no count.
+17. SoulGold: the Repels only (USE on the bag, the QUICK MENU's REPEL), its own item ids 114..116 and its expansion
+    Repel rules (a Lure's bit 15 in VAR_REPEL_STEP_COUNT, VAR_LAST_REPEL_LURE_USED 0x40BD), all four builds
+    (`scripts/find_field_items_soulgold.py`); checked headless on v1.2 with a player's save (GitHub #242: the bag 5 -> 4,
+    the steps 100). Its QUICK MENU BIKE / ROD go through its SELECT wheel (`KeyItems.selectWheel`): no USE / GIVE / TAKE
+    for other items (its renumbered items and gItemsInfo aren't mapped).
 
 ## What each column is
 

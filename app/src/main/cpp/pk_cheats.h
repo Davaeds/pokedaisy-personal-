@@ -16,5 +16,3 @@ int pk_cheats_patch(struct mCore* core, uint32_t expectAddr, const uint8_t* expe
 void pk_cheats_unpatch(struct mCore* core);
 char* pk_cheats_check(const char* code, int type, const char* directive);
 
-// pokedaisy_jni.c: swaps the cheated ROM bytes with the file's, under the core lock.
-void pkRomSwapCheats(void);

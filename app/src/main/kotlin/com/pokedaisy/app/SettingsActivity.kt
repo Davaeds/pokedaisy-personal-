@@ -755,7 +755,7 @@ class SettingsActivity : ComponentActivity() {
                         modifier = Modifier.padding(horizontal = m.u * 8, vertical = m.u * 4),
                     )
                 } else if (searchQuery.isBlank()) {
-                    GroupedRows(rows, m, cursor = -1, onClick = { rows[it].onClick() }, scroll = homeScroll, firstRowFocus = firstRow)
+                    GroupedRows(rows, m, cursor = -1, onClick = { rows[it].onClick() }, scroll = homeScroll, firstRowFocus = firstRow, groupTabs = true)
                 } else {
                     GroupedRows(shown, m, cursor = -1, onClick = { shown[it].onClick() }, firstRowFocus = firstRow)
                 }
@@ -1575,8 +1575,9 @@ class SettingsActivity : ComponentActivity() {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
                     GbaControls.Btn.entries.forEachIndexed { i, btn ->
                         KeyBindRow(
-                            "GBA ${btn.label}", ctrls[btn], capture, m, small,
+                            btn.title, ctrls[btn], capture, m, small,
                             divider = i < GbaControls.Btn.entries.lastIndex,
+                            subtitle = btn.subtitle, labelBadge = btn.badge,
                         ) { controlRequest(btn) }
                     }
                 }
@@ -1585,7 +1586,7 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private fun controlRequest(btn: GbaControls.Btn) = com.pokedaisy.app.companion.KeyCapture.Request(
-        "GBA ${btn.label}", chord = false,
+        btn.title, chord = false,
         onDone = { keys -> GbaControls.setBinding(filesRoot, btn, keys.first()); revision++ },
         onClear = if (btn.canClear) ({ GbaControls.clearBinding(filesRoot, btn); revision++ }) else null,
     )

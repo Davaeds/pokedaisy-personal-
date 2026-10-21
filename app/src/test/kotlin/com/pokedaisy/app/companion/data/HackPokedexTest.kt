@@ -236,7 +236,9 @@ class HackPokedexTest {
         assertEquals(252, roserade.species)
         assertEquals("Bouquet", roserade.category)
         assertEquals(listOf("Natural Cure", "Poison Point"), roserade.abilities)
-        assertEquals(listOf("Fairy"), PokedexSource.entry(t, 35)!!.types)
+        // Type 9 is the game's own AETHER, not Fairy (GitHub #206).
+        assertEquals(listOf("Aether"), PokedexSource.entry(t, 35)!!.types)
+        assertEquals(listOf("Ground", "Aether"), PokedexSource.entry(t, 104)!!.types)
     }
 
     @Test

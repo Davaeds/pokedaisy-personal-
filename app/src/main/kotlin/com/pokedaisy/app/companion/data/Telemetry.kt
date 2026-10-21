@@ -59,6 +59,10 @@ data class Mon(
     val isEgg: Boolean = false,
     // The held item's id from the RAM struct (the party menu's held-item marker); 0 = none or unknown.
     val heldItem: Int = 0,
+    // The nickname the game's party menu shows (GitHub #228); null = not read, the species stands in.
+    val nickname: String? = null,
+    // Shiny, where the game's party menu shows it ([PartyMonLayout.shinyBelow]: SoulGold's own icon palettes).
+    val shiny: Boolean = false,
 )
 
 // What FireRed's party menu shows next to the level. UNKNOWN = a source that can't tell.

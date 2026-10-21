@@ -133,6 +133,8 @@ object MgbaCore {
 
     /** Reads [len] bytes of emulated bus memory from GBA address [addr]. */
     external fun pkReadBytes(addr: Long, len: Int): ByteArray?
+    /** [pkReadBytes] into [dst] (its whole length), no new array; false with no core up. */
+    external fun pkReadInto(addr: Long, dst: ByteArray): Boolean
 
     /** Writes [bytes] at GBA address [addr], EWRAM / IWRAM only (false otherwise); a Game Boy game's WRAM, a Color bank as
      * (bank << 16) | D000-DFFF. Emu thread, between frames. */

@@ -10,8 +10,17 @@ import android.graphics.Rect
 import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
@@ -183,5 +192,43 @@ class NdsTouchScreenView(context: Context) : View(context) {
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> MgbaCore.pkNdsTouch(false, 0, 0)
         }
         return true
+    }
+}
+
+/**
+ * A DS game's touch screen on a one-screen device (GitHub #244), in the companion's place: the side panel beside the game
+ * held sideways (SidePanel.setDsScreen: the DS's screens side by side), the dock under it held upright. The same switch as
+ * [NdsBottomHost]'s: the touch screen at its 4:3, as large as fits, or the [companion] (Prefs.dsBottomCompanion), with
+ * COMPANION / GAME SCREEN under it.
+ */
+@Composable
+fun DsTouchPane(showCompanion: Boolean, onSwitch: (Boolean) -> Unit, companion: @Composable () -> Unit) {
+    var on by remember { mutableStateOf(showCompanion) }
+    val m = rememberGbaTextMetrics()
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().then(if (on) Modifier else Modifier.background(ComposeColor.Black))) {
+        // The switch's bar; the touch screen at full width, centred on the pane's middle (level with the game beside it)
+        // as far as the bar still fits under it - at the top in the dock under an upright game.
+        val bar = androidx.compose.ui.unit.max(56.dp, m.lineHeight + m.u * 12)
+        val screenH = minOf(maxWidth * NdsBottomFrame.H / NdsBottomFrame.W, maxHeight - bar)
+        val top = minOf((maxHeight - screenH) / 2, maxHeight - bar - screenH).coerceAtLeast(0.dp)
+        val centred = top > 0.dp
+        Column(Modifier.fillMaxSize()) {
+            if (on) {
+                Box(Modifier.weight(1f).fillMaxWidth()) { companion() }
+            } else {
+                if (centred) androidx.compose.foundation.layout.Spacer(Modifier.height(top))
+                Box(Modifier.fillMaxWidth().height(screenH)) {
+                    AndroidView({ NdsTouchScreenView(it) }, Modifier.fillMaxSize())
+                }
+            }
+            Box(Modifier.fillMaxWidth().height(bar), contentAlignment = Alignment.Center) {
+                OptionButton(if (on) tr("GAME SCREEN") else tr("COMPANION"), m, onClick = {
+                    on = !on
+                    // No stylus left down on a screen that's gone.
+                    if (on) MgbaCore.pkNdsTouch(false, 0, 0)
+                    onSwitch(on)
+                })
+            }
+        }
     }
 }

@@ -12,6 +12,9 @@ interface ItemUse {
     /** The game's VAR_REPEL_STEP_COUNT (FireRed 0x4020, Emerald 0x4021): the HUD's REPEL steps; null = not known here. */
     val repelVar: Int? get() = null
 
+    /** A Repel's steps in [repelVar]'s value [v]: without a Lure's bit (SoulGold keeps one there), 0 while a Lure works. */
+    fun repelSteps(v: Int): Int = v
+
     /** Whether [itemId] gets a USE button in this game. */
     fun canUse(itemId: Int): Boolean
 

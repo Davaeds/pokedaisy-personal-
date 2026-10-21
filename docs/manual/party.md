@@ -10,7 +10,7 @@ The `PARTY` tab is your team, live. Glance down and you know who's hurt, who's p
 
 ## Your party
 
-Each Pokémon gets a slot with its icon, name, level and HP bar, plus its status if it has one (poisoned, asleep and so on). A fainted Pokémon's slot changes colour the way the game shows it.
+Each Pokémon gets a slot with its icon, name, level and HP bar, plus its status if it has one (poisoned, asleep and so on). A fainted Pokémon's slot changes colour the way the game shows it. The name is its nickname, as your game's own party screen shows it, on the Game Boy Advance games (the Game Boy and DS games show the kind of Pokémon for now). In SoulGold, whose party screen shows shiny Pokémon in their shiny colours, so does the icon here.
 
 A Pokémon holding an item gets a small tag in its slot's top right corner with the item's icon and name, so you can see who holds what without opening each summary. The game's own little held-item marker sits by its icon too.
 
@@ -24,7 +24,7 @@ The icons bounce like they do in the game. If you'd rather they stood still, tur
 
 Tap any slot to open that Pokémon's summary. It fills the tab:
 
-- **Top left**: name, gender, icon, level, status, types, the HP bar, and an EXP bar. `NEXT` is how much experience it still needs for the next level (`MAX` at level 100).
+- **Top left**: name, gender (a nicknamed Pokémon's kind comes after its name), icon, level, status, types, the HP bar, and an EXP bar. `NEXT` is how much experience it still needs for the next level (`MAX` at level 100).
 - **Bottom left**: `WEAK TO`, `RESISTS` and `IMMUNE TO`, with the multiplier on each type (2x, ½x, 0x and so on). It's the quickest way to see what to keep this Pokémon away from.
 - **Right**: its four moves, each with its type, power (`PWR`) and remaining `PP`.
 

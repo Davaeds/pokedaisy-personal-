@@ -13,18 +13,29 @@ import java.util.Properties
  */
 object GbaControls {
 
-    /** START2 / SELECT2: a second button for START / SELECT, X / Y by default, like the
-     * DS games' X (menu) and Y (registered item). TURBO A / B (issue #32, unbound by default)
-     * press A / B on and off while held - [TURBO] marks them in [load]'s map, [GbaInput] pulses them. */
+    /** X / Y: the DS games' X (menu) and Y (registered item); in the other games a second START / SELECT (they
+     * were START 2 / SELECT 2, still their names in the file: [prop]). On the field of a two-screen device X takes
+     * the buttons to the companion instead (PokeDaisyActivity's bottom focus). TURBO A / B (issue #32, unbound by
+     * default) press A / B on and off while held - [TURBO] marks them in [load]'s map, [GbaInput] pulses them. */
     enum class Btn(val bit: Int, val label: String) {
         A(MgbaCore.Key.A, "A"), B(MgbaCore.Key.B, "B"),
         L(MgbaCore.Key.L, "L"), R(MgbaCore.Key.R, "R"),
         START(MgbaCore.Key.START, "START"), SELECT(MgbaCore.Key.SELECT, "SELECT"),
         // On a DS game they're its own X / Y ([DS_X] / [DS_Y]: GbaInput swaps them in).
-        START2(MgbaCore.Key.START or DS_X, "START 2"), SELECT2(MgbaCore.Key.SELECT or DS_Y, "SELECT 2"),
+        X(MgbaCore.Key.START or DS_X, "X"), Y(MgbaCore.Key.SELECT or DS_Y, "Y"),
         TURBO_A(MgbaCore.Key.A or TURBO, "TURBO A"), TURBO_B(MgbaCore.Key.B or TURBO, "TURBO B");
 
-        val prop get() = name.lowercase()
+        val prop get() = when (this) { X -> "start2"; Y -> "select2"; else -> name.lowercase() }
+        /** Its row's name in GAME BUTTONS: the GBA's own buttons say so, X / Y are the DS's. */
+        val title get() = if (this == X || this == Y) label else "GBA $label"
+        /** A line under its row: what X / Y press in the games that have no X / Y (English; translated where drawn). */
+        /** X's NEW tag: on the field of a two-screen device it takes the buttons to the companion. */
+        val badge: String? get() = if (this == X) com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.X_COMPANION) else null
+        val subtitle: String? get() = when (this) {
+            X -> "DS games' X. Others: START, or the companion on the field"
+            Y -> "DS games' Y. Others: SELECT"
+            else -> null
+        }
         /** TURBO A / B start unbound and can go back to it; every other button always keeps a key. */
         val canClear get() = this == TURBO_A || this == TURBO_B
     }
@@ -47,7 +58,7 @@ object GbaControls {
     /** Above every GBA key bit: a [load] value with it is a turbo button for the bits below. */
     const val TURBO = 1 shl 16
 
-    /** START 2 / SELECT 2's mark: on a DS game ([GbaInput.ds]) the key presses the DS's X / Y instead. */
+    /** X / Y's mark: on a DS game ([GbaInput.ds]) the key presses the DS's X / Y instead. */
     const val DS_X = 1 shl 17
     const val DS_Y = 1 shl 18
 

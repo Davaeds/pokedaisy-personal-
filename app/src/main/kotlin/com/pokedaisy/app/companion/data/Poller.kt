@@ -246,6 +246,8 @@ class TelemetrySampler {
         // An unsupported ROM has no game look to borrow - the app's own backdrop.
         return s.copy(
             game = if (s.unsupported) null else kind ?: if (s.connected) activeGame else null,
+            textCode = romGameCode,
+            textLanguage = romLanguage,
             bestEffort = beMatch?.let { m ->
                 BestEffortView(
                     m.candidate.title, m.full, m.off, beFresh,
@@ -296,7 +298,8 @@ class TelemetrySampler {
             quetzalV084 = base?.quetzalV084 == true
             quetzalV1 = base?.quetzalV1 == true
             gen2Cfg?.let { activeGen2 = it }
-            romLanguage = nativeCfg?.language ?: gen1Cfg?.language ?: 'E'
+            // A DS cart: its own text's language (NdsArt.names: a French Sacred Gold is an IPKE HeartGold, GitHub #230).
+            romLanguage = nativeCfg?.language ?: gen1Cfg?.language ?: NdsArt.names?.takeIf { kind?.isDsGame == true }?.language ?: 'E'
             romGameCode = nativeCfg?.gameCode ?: gen1Cfg?.gameCode.orEmpty()
             // Quetzal picks each kind of name's language from its own options (a few bytes a sample).
             quetzalNames = nativeCfg?.takeIf { it.quetzalPlacesDefault >= 0 }

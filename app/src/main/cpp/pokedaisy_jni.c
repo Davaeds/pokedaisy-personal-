@@ -25,6 +25,7 @@
 
 #include "pk_cheats.h"
 #include "pk_rewind.h"
+#include "pk_savevf.h"
 #include "pk_wide.h"
 #include "pk_gb_field.h"
 #include "nds/pk_nds.h"
@@ -336,6 +337,9 @@ Java_com_pokedaisy_app_MgbaCore_pkInit(JNIEnv* env, jobject thiz,
             }
         }
         (*env)->ReleaseStringUTFChars(env, jSavePath, savePath);
+        // A map the file can't give (read-only, or a file system without shared mappings) becomes a copy in memory:
+        // mGBA never checks its map, and a NULL one crashed the first flash read (pk_savevf.c).
+        saveVf = pk_save_vf(saveVf);
         if (saveVf) {
             core->loadSave(core, saveVf);
         } else {
@@ -1145,6 +1149,40 @@ static bool pk_gb_read_banked(struct mCore* core, uint32_t addr, uint8_t* dst, i
     return true;
 }
 
+// pkReadBytes / pkReadInto: [len] bytes at [addr] into [dst], under the core lock; false with no core up.
+static bool pk_read_any(uint32_t addr, uint8_t* dst, int len) {
+    pthread_rwlock_rdlock(&pk_coreLock);
+    bool ok = g.core != NULL || pk_nds_active();
+    if (pk_nds_active()) {
+        pk_nds_read(addr, dst, len);
+    } else if (ok && pk_gb_read_banked(g.core, addr, dst, len)) {
+        // a Color cart's WRAM bank, read by bank
+    } else if (ok) {
+        pk_read_range(g.core, addr, dst, len);
+        // The ROM as the file has it, under any cheat's hook or ROM patch: the
+        // Poller identifies hacks by hashing it (see pk_cheats.c).
+        pk_cheats_overlay(addr, dst, len);
+    }
+    pthread_rwlock_unlock(&pk_coreLock);
+    return ok;
+}
+
+// [dst]'s length of bytes at [addr], into [dst] (no new array: RamSnapshot copies the game's RAM with it each sample).
+JNIEXPORT jboolean JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkReadInto(JNIEnv* env, jobject thiz, jlong addr, jbyteArray dst) {
+    jsize len = (*env)->GetArrayLength(env, dst);
+    if (len <= 0 || len > (1 << 24)) {
+        return JNI_FALSE;
+    }
+    uint8_t* p = (*env)->GetPrimitiveArrayCritical(env, dst, NULL);
+    if (!p) {
+        return JNI_FALSE;
+    }
+    bool ok = pk_read_any((uint32_t) addr, p, len);
+    (*env)->ReleasePrimitiveArrayCritical(env, dst, p, 0);
+    return ok ? JNI_TRUE : JNI_FALSE;
+}
+
 JNIEXPORT jbyteArray JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkReadBytes(JNIEnv* env, jobject thiz, jlong addr, jint len) {
     if (len <= 0 || len > (1 << 24)) {
@@ -1154,19 +1192,7 @@ Java_com_pokedaisy_app_MgbaCore_pkReadBytes(JNIEnv* env, jobject thiz, jlong add
     if (!tmp) {
         return NULL;
     }
-    pthread_rwlock_rdlock(&pk_coreLock);
-    bool ok = g.core != NULL || pk_nds_active();
-    if (pk_nds_active()) {
-        pk_nds_read((uint32_t) addr, tmp, len);
-    } else if (ok && pk_gb_read_banked(g.core, (uint32_t) addr, tmp, len)) {
-        // a Color cart's WRAM bank, read by bank
-    } else if (ok) {
-        pk_read_range(g.core, (uint32_t) addr, tmp, len);
-        // The ROM as the file has it, under any cheat's hook or ROM patch: the
-        // Poller identifies hacks by hashing it (see pk_cheats.c).
-        pk_cheats_overlay((uint32_t) addr, tmp, len);
-    }
-    pthread_rwlock_unlock(&pk_coreLock);
+    bool ok = pk_read_any((uint32_t) addr, tmp, len);
     jbyteArray out = ok ? (*env)->NewByteArray(env, len) : NULL;
     if (out) {
         (*env)->SetByteArrayRegion(env, out, 0, len, (const jbyte*) tmp);
@@ -1360,15 +1386,6 @@ Java_com_pokedaisy_app_MgbaCore_pkRomUnpatch(JNIEnv* env, jobject thiz) {
     pthread_rwlock_wrlock(&pk_coreLock);
     if (g.core) {
         pk_cheats_unpatch(g.core);
-    }
-    pthread_rwlock_unlock(&pk_coreLock);
-}
-
-// For pokedaisy_ra.c: the file's ROM bytes in and out around RA's hash (emu thread).
-void pkRomSwapCheats(void) {
-    pthread_rwlock_wrlock(&pk_coreLock);
-    if (g.core && pk_cheats_rom_patched()) {
-        pk_cheats_swap_rom(g.core);
     }
     pthread_rwlock_unlock(&pk_coreLock);
 }

@@ -382,7 +382,7 @@ fun FieldHud(
                 }
                 // REPEL's steps left (the game's VAR_REPEL_STEP_COUNT), where the game's var is known.
                 val repel = if (style.shows(FieldHudPart.REPEL)) snapshot.repelSteps
-                    ?: itemUse?.repelVar?.let { snapshot.progress?.variable(it) } ?: 0 else 0
+                    ?: itemUse?.let { u -> u.repelVar?.let { snapshot.progress?.variable(it) }?.let(u::repelSteps) } ?: 0 else 0
                 // What a full one lasted, for the bar: the kind whose steps cover what's left, kept while it counts down.
                 var repelFull by remember { mutableStateOf(0) }
                 if (repel <= 0) repelFull = 0

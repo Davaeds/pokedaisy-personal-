@@ -242,7 +242,10 @@ private fun HeldItemLine(itemId: Int, small: GbaTextMetrics, onTake: (() -> Unit
     }
 }
 
-internal val NavButtonSize = 60.dp
+/** The square buttons under a full-tab view (BACK, a summary's party strip, the battle panes' bar); smaller on a short
+ * screen ([LocalShortCompanion]), where 60 dp was a fifth of the RG DS's height. */
+internal val NavButtonSize: androidx.compose.ui.unit.Dp
+    @Composable get() = if (LocalShortCompanion.current) 44.dp else 60.dp
 
 @Composable
 internal fun NavButton(
@@ -358,8 +361,10 @@ internal fun InfoSection(mon: MonView, m: GbaTextMetrics, small: GbaTextMetrics,
     Box(modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(u * 3)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                GbaText(mon.name, optionLook.label, optionLook.labelShadow, m, modifier = Modifier.weight(1f, fill = false))
+                GbaText(mon.shownName, optionLook.label, optionLook.labelShadow, m, modifier = Modifier.weight(1f, fill = false))
                 GenderMark(mon.genderSymbol, m, Modifier.padding(start = u * 3))
+                // A nickname of the player's own: the species after it, like the game's summary.
+                if (mon.renamed) GbaText("/" + mon.name, optionLook.label, optionLook.labelShadow, small, Modifier.padding(start = u * 3))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // The 32px icon at a whole multiple of the frame's GBA pixel, so it stays crisp.
@@ -537,6 +542,19 @@ private fun MoveRow(mv: MoveView?, m: GbaTextMetrics, small: GbaTextMetrics, mod
     ) {
         if (mv == null) {
             GbaText("—", optionLook.muted, optionLook.mutedShadow, m, modifier = Modifier.align(Alignment.CenterStart))
+        } else if (mv.vs.isEmpty() && LocalShortCompanion.current) {
+            // A short screen (the RG DS): no room for a second line - power and PP beside the name, the type left to the
+            // stripe's colour.
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    GbaText(mv.name, optionLook.label, optionLook.labelShadow, m, Modifier.weight(1f, fill = false))
+                    if (forget) { Spacer(Modifier.width(u * 4)); ForgetTag() }
+                }
+                Spacer(Modifier.width(u * 6))
+                Stat(tr("PWR"), powerLabel(mv.power), small)
+                Spacer(Modifier.width(u * 6))
+                Stat(tr("PP"), "${mv.pp}", small)
+            }
         } else Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceEvenly) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 GbaText(mv.name, optionLook.label, optionLook.labelShadow, m, Modifier.weight(1f, fill = false))

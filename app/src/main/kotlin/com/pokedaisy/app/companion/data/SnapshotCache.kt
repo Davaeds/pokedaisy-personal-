@@ -17,8 +17,8 @@ import java.io.File
  */
 object SnapshotCache {
     private const val MAGIC = 0x50445343   // "PDSC"
-    // 2: move ids (the move advice reads them).
-    private const val VERSION = 3
+    // 2: move ids (the move advice reads them). 4: the names' game code and language, nicknames.
+    private const val VERSION = 4
     private const val MAX_BYTES = 256 * 1024
 
     fun fileFor(state: File) = File(state.path + ".companion")
@@ -68,6 +68,8 @@ object SnapshotCache {
             o.writeInt(MAGIC)
             o.writeInt(VERSION)
             o.writeUTF(v.game!!.name)
+            o.writeUTF(v.textCode)
+            o.writeChar(v.textLanguage.code)
             o.writeLong(v.frameCounter)
             o.writeUTF(v.facingDirection)
             o.writeInt(v.x); o.writeInt(v.y)
@@ -97,6 +99,8 @@ object SnapshotCache {
     fun decode(bytes: ByteArray): SnapshotView? = DataInputStream(bytes.inputStream()).use { i ->
         if (i.readInt() != MAGIC || i.readInt() != VERSION) return null
         val game = GameKind.valueOf(i.readUTF())
+        val textCode = i.readUTF()
+        val textLanguage = i.readChar()
         val frameCounter = i.readLong()
         val facing = i.readUTF()
         val x = i.readInt(); val y = i.readInt()
@@ -112,7 +116,7 @@ object SnapshotCache {
         }
         val tabs = List(i.count(16)) { i.readUTF() }.toSet()
         SnapshotView(
-            connected = true, game = game, frameCounter = frameCounter, facingDirection = facing,
+            connected = true, game = game, textCode = textCode, textLanguage = textLanguage, frameCounter = frameCounter, facingDirection = facing,
             x = x, y = y, mapGroup = mapGroup, mapNum = mapNum, regionMapSectionId = mapSec,
             mapWidth = mapWidth, mapHeight = mapHeight, mapType = mapType, playerGender = gender, money = money,
             location = location, party = party, items = items, cachedTabs = tabs,
@@ -152,6 +156,7 @@ object SnapshotCache {
         writeBoolean(m.stats != null)
         m.stats?.let { ints(it.ivs); ints(it.evs); writeInt(it.nature); ints(it.stats) }
         writeInt(m.heldItemId)
+        nullableUTF(m.nickname)
     }
 
     private fun DataInputStream.mon(): MonView {
@@ -166,9 +171,10 @@ object SnapshotCache {
         val personality = readLong()
         val stats = if (readBoolean()) MonStats(ints(), ints(), readInt(), ints()) else null
         val held = readInt()
+        val nickname = nullableUTF()
         return MonView(
             species, name, level, hp, maxHp, status, types, icon, gender, egg, moves,
-            weak, resist, immune, exp, personality, stats, heldItemId = held,
+            weak, resist, immune, exp, personality, stats, heldItemId = held, nickname = nickname,
         )
     }
 }

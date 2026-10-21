@@ -47,7 +47,15 @@ data class MonView(
     val battleStats: List<Int>? = null,
     /** Battlers: the stages on [battleStats], then accuracy, evasion (-6..+6); null = unknown. */
     val statStages: List<Int>? = null,
-)
+    /** Party mons: the nickname as the game stores it ([Mon.nickname]); null = not read. */
+    val nickname: String? = null,
+) {
+    /** What the game's party menu prints: the nickname where it was read, else the species ([name]). */
+    val shownName: String get() = nickname ?: name
+
+    /** The nickname is the player's own, not the species' name (the summary adds the species then). */
+    val renamed: Boolean get() = nickname != null && !nickname.equals(name, ignoreCase = true)
+}
 
 /** [total] EXP; this level starts at [levelStart], the next at [nextLevel] (== levelStart at Lv100). */
 data class ExpProgress(val total: Long, val levelStart: Long, val nextLevel: Long) {
@@ -182,6 +190,11 @@ data class SnapshotView(
      * keys on it - [activeGame] is a plain global Compose can't observe, so a
      * screen reading it alone keeps the previous game's look after a launch. */
     val game: GameKind? = null,
+    /** The [romGameCode] / [romLanguage] this snapshot's names were read with: a launch's saved copy
+     * ([SnapshotCache]) puts them back with [game], so names looked up while drawing (a held item's tag)
+     * are the game's language before detection (GitHub #227: English until the tab was reopened). */
+    val textCode: String = "",
+    val textLanguage: Char = 'E',
     /** Seen / caught flags for the POKéDEX tab; null = no tab for this game. */
     val pokedex: PokedexState? = null,
     /** The map the player is on (SaveBlock1.location) - the GUIDE's HERE page. */
@@ -283,6 +296,9 @@ fun spriteAsset(kind: String, id: Int): String? {
     return if (dir == null) null else "$dir/$id.png"
 }
 
+/** A shiny Pokémon's party icon: `<dir>/shiny/<id>.png`, drawn in its species' shiny palette (DecompIconSource). */
+fun shinyIconAsset(species: Int): String? = spriteAsset("pokemon", species)?.let { it.substringBeforeLast('/') + "/shiny/" + it.substringAfterLast('/') }
+
 fun buildSnapshotView(t: Telemetry): SnapshotView {
     // v2 ROMs export the icon-graphics table addresses; hand them to the live
     // sprite reader so nothing has to be bundled.
@@ -314,13 +330,14 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
             status = statusLabel(m.status),
             types = monTypes(type1, type2),
             // A DS game's eggs keep their species: the egg's own icon is NdsArt's 494.
-            iconAsset = spriteAsset("pokemon", if (isEgg && activeGame.isDsGame) 494 else m.species),
+            iconAsset = if (m.shiny && !isEgg) shinyIconAsset(m.species) else spriteAsset("pokemon", if (isEgg && activeGame.isDsGame) 494 else m.species),
             genderSymbol = m.genderSymbol,
             moves = moves,
             exp = if (isEgg) null else expProgress(m.species, m.level, m.exp),
             personality = m.personality,
             stats = if (isEgg) null else m.stats,
             heldItemId = m.heldItem,
+            nickname = if (isEgg) null else m.nickname,
             weaknesses = matchups.weaknesses,
             resistances = matchups.resistances,
             immunities = matchups.immunities,

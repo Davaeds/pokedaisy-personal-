@@ -160,8 +160,8 @@ fun CompanionSettingsScreen(
                         }
                     } + SettingRow(tk("CANCEL"), null) { page = Page.HOME }
                     Page.BUTTONS -> GbaControls.Btn.entries.map { btn ->
-                        val title = "GBA ${btn.label}"
-                        SettingRow(title, bindingValue(capture, title, settings.gbaControlBindings()[btn])) {
+                        val title = btn.title
+                        SettingRow(title, bindingValue(capture, title, settings.gbaControlBindings()[btn]), subtitle = btn.subtitle, labelBadge = btn.badge) {
                             capture?.toggle(title) {
                                 KeyCapture.Request(
                                     title, chord = false,
@@ -272,7 +272,7 @@ fun CompanionSettingsScreen(
                         if (reveal >= 0 && homeCursor != reveal) SideEffect { homeCursor = reveal }
                         GroupedRows(rows, m, cursor, onClick = { i -> moveCursor(i); rows[i].onClick() }, scroll = if (page == Page.HOME) homeScroll else rememberScrollState(),
                             labelWeight = if (page == Page.TWEAKS) 0.8f else 0.58f, reveal = reveal, onRevealed = { ui.revealRow = null },
-                            onFocused = ::moveCursor) {
+                            onFocused = ::moveCursor, groupTabs = page == Page.HOME) {
                             // Actions, not settings: the list's last line, out of the way of the options.
                             if (page == Page.HOME && settings != null) {
                                 // A summary-window line sets them apart from the last group.

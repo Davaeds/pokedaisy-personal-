@@ -68,6 +68,7 @@ tasks.register<JavaExec>("render") {
     // of that size, at the density the app gives it there (sidePanelDensity).
     systemProperty("companionW", (project.findProperty("companionW") as String?) ?: "")
     systemProperty("companionH", (project.findProperty("companionH") as String?) ?: "")
+    systemProperty("companionDensity", (project.findProperty("companionDensity") as String?) ?: "")
     // Optional: a ROM the GUIDE's live pages (HERE, NEXT BOSS) read from, with the
     // repo's save fixture for that game - see Main.kt's liveGuide().
     systemProperty("rom", (project.findProperty("rom") as String?) ?: "")
@@ -130,6 +131,12 @@ tasks.register<JavaExec>("docsSearchCheck") {
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("render.DocsSearchCheckKt")
     args = listOf(rootDir.resolve("../website/test/docsearch-cases.json").absolutePath)
+}
+
+// GitHub #229: produceKeyedState starts over when its keys change (KeyedStateCheck.kt), on the bare Compose runtime.
+tasks.register<JavaExec>("keyedStateCheck") {
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("render.KeyedStateCheckKt")
 }
 
 tasks.register<JavaExec>("stress") {

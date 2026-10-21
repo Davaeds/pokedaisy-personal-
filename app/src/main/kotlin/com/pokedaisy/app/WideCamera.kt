@@ -101,8 +101,11 @@ class WideCamera {
         return level
     }
 
-    /** Back to 1x on the player at once (a new game, a state load, WIDE switched on). */
+    /** Back to 1x on the player at once (a new game, a state load, WIDE switched on); the [level] picked comes back
+     * [RETURN_DELAY_NANOS] after the field shows, eased out like any return from a close view (a game opened with a
+     * saved ZOOM: once it's loaded, not over its title). */
     fun reset() {
+        closeOverSince = 0L
         scale = 0f
         lookX = 0f
         lookY = 0f

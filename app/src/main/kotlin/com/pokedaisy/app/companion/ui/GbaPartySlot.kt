@@ -108,8 +108,8 @@ fun GbaPartySlot(
         }
         val statusIdx = statusIconIndex(mon)
         px.window(slot) {
-            // Name (the game shows the nickname; FireRed/Emerald print species in caps).
-            val name = if (st.upperCaseNames) mon.name.uppercase() else mon.name
+            // The nickname as the game prints it; without one, the species (FireRed / Emerald print it in caps).
+            val name = mon.nickname ?: if (st.upperCaseNames) mon.name.uppercase() else mon.name
             px.text(assets, name, px.left(st.nameX), px.textY(st.nameY), st.text, st.textShadow)
             // Gender symbol (DisplayPartyPokemonGender) - drawn whenever known,
             // even alongside a status icon, like the game.

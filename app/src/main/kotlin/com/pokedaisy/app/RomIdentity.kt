@@ -73,6 +73,58 @@ object RomIdentity {
     /** The file's MD5 - for a GBA ROM, the hash RetroAchievements identifies it by. */
     fun md5(rom: File): String? = digest(rom, "MD5")
 
+    /** The hash RetroAchievements identifies [rom] by: a DS cart's own ([ndsRaHash]), else the file's MD5. */
+    fun raHash(rom: File): String? = if (isNds(rom)) ndsRaHash(rom) else md5(rom)
+
+    /** RetroAchievements' console id for [rom] (rc_consoles.h): DS 18, Game Boy 4, a Color-only cart 6, else the GBA's 5. */
+    fun raConsole(rom: File): Int = when {
+        isNds(rom) -> 18
+        isGameBoy(rom) -> if (isGameBoyColor(rom)) 6 else 4
+        else -> 5
+    }
+
+    /**
+     * A DS cart's RetroAchievements hash (rcheevos' rc_hash_nintendo_ds): the MD5 of the header's first 0x160 bytes,
+     * the ARM9 and ARM7 code and the 0xA00-byte icon / title block (zero-padded) - not the whole file. A SuperCard
+     * header in front is skipped, as rcheevos does.
+     */
+    fun ndsRaHash(rom: File): String? = try {
+        java.io.RandomAccessFile(rom, "r").use { f ->
+            fun read(at: Long, n: Int): ByteArray {
+                val b = ByteArray(n)
+                if (at < f.length()) {
+                    f.seek(at)
+                    var got = 0
+                    while (got < n) {
+                        val r = f.read(b, got, n - got)
+                        if (r < 0) break
+                        got += r
+                    }
+                }
+                return b
+            }
+            var base = 0L
+            var h = read(0, 512)
+            fun u8(i: Int) = h[i].toInt() and 0xFF
+            if (u8(0) == 0x2E && u8(1) == 0 && u8(2) == 0 && u8(3) == 0xEA && u8(0xB0) == 0x44 && u8(0xB1) == 0x46 && u8(0xB2) == 0x96 && u8(0xB3) == 0) {
+                base = 512
+                h = read(base, 512)
+            }
+            fun u32(i: Int) = (u8(i).toLong() or (u8(i + 1).toLong() shl 8) or (u8(i + 2).toLong() shl 16) or (u8(i + 3).toLong() shl 24))
+            val arm9Size = u32(0x2C)
+            val arm7Size = u32(0x3C)
+            if (arm9Size + arm7Size > 16L shl 20) return null
+            val md5 = MessageDigest.getInstance("MD5")
+            md5.update(h, 0, 0x160)
+            md5.update(read(base + u32(0x20), arm9Size.toInt()))
+            md5.update(read(base + u32(0x30), arm7Size.toInt()))
+            md5.update(read(base + u32(0x68), 0xA00))
+            md5.digest().joinToString("") { "%02x".format(it) }
+        }
+    } catch (_: Throwable) {
+        null
+    }
+
     private fun digest(rom: File, algorithm: String): String? = try {
         val digest = MessageDigest.getInstance(algorithm)
         RomArchive.open(rom).buffered(1 shl 16).use { s ->

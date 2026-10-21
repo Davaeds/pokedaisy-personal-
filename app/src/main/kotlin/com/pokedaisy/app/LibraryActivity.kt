@@ -1,5 +1,6 @@
 package com.pokedaisy.app
 
+import com.pokedaisy.app.companion.ui.produceKeyedState
 import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -822,7 +823,7 @@ class LibraryActivity : ComponentActivity() {
         val key = "${rom.absolutePath}#$revision"
         val hasCover = factsFor(rom).hasCover
         // From the cache at once when it's been decoded before; else decoded off the UI thread (the placeholder meanwhile).
-        val bitmap by androidx.compose.runtime.produceState(if (hasCover) coverBitmaps.get(key) else null, key, hasCover) {
+        val bitmap by produceKeyedState(if (hasCover) coverBitmaps.get(key) else null, key, hasCover) {
             if (value == null && hasCover) {
                 val file = coverFile(rom)
                 value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -1995,7 +1996,7 @@ class LibraryActivity : ComponentActivity() {
             buttonRequest = { btn ->
                 val dir = getExternalFilesDir(null) ?: filesDir
                 KeyCapture.Request(
-                    "GBA ${btn.label}", chord = false,
+                    btn.title, chord = false,
                     onDone = { keys -> GbaControls.setBinding(dir, btn, keys.first()); readButtons(s) },
                     onClear = if (btn.canClear) ({ GbaControls.clearBinding(dir, btn); readButtons(s) }) else null,
                 )

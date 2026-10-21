@@ -26,7 +26,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -182,8 +181,8 @@ private fun SlotCard(
                     // The time comes with the list (Slot.thumbModifiedMillis), not read here: an
                     // unchanged Slot skips this card's redraw, so a file read here went stale.
                     val thumbKey = thumbPath?.let { "$it@${slot.savedAtMillis}@${slot.thumbModifiedMillis}" }
-                    val bmp by produceState(thumbKey?.let(StateThumbs::get), thumbKey) {
-                        if (value != null || thumbPath == null || thumbKey == null) return@produceState
+                    val bmp by produceKeyedState(thumbKey?.let(StateThumbs::get), thumbKey) {
+                        if (value != null || thumbPath == null || thumbKey == null) return@produceKeyedState
                         value = withContext(Dispatchers.IO) {
                             runCatching { BitmapFactory.decodeFile(thumbPath) }.getOrNull()
                         }?.also { StateThumbs.put(thumbKey, it) }

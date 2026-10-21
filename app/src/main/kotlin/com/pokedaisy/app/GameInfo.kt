@@ -158,7 +158,8 @@ class GameInfo(
                 add(tr("SET") to if (!ra.available) tr("Unavailable") else "…")
                 return@buildList
             }
-            val md5 = RomIdentity.md5(rom)
+            // A DS cart's hash is RA's own DS one (header + code + icon), not the file's MD5.
+            val md5 = RomIdentity.raHash(rom)
             val id = md5?.let { ra.lookupGameId(it) }
             add(
                 tr("SET") to when (id) {
@@ -171,7 +172,7 @@ class GameInfo(
                 add(
                     tr("UNLOCKED") to when {
                         !ra.accountSaved -> tr("Sign in (Settings > RetroAchievements) to see yours")
-                        else -> ra.gbaProgress()?.let { all ->
+                        else -> ra.progress(RomIdentity.raConsole(rom))?.let { all ->
                             val p = all[id]
                             when {
                                 p == null -> tr("None yet")
@@ -183,7 +184,7 @@ class GameInfo(
                     },
                 )
             }
-            md5?.let { add("MD5" to it) }
+            md5?.let { add((if (RomIdentity.isNds(rom)) tr("RA HASH") else "MD5") to it) }
         }
 
         private fun baseGame(code: String?): String? = when (code) {

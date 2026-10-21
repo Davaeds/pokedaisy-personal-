@@ -18,7 +18,7 @@ class GbaInput {
     private var buttonBits = 0   // from key events: the bits of every key in heldKeys
     private var turboBits = 0    // TURBO A / B held: pulsed by the engine ([turboMask])
     private val turboKeys = HashMap<Int, Int>()
-    // Per key, not per bit: START and START 2 (X) are two keys for one bit, and
+    // Per key, not per bit: START and X are two keys for one bit, and
     // letting go of one mustn't release the other.
     private val heldKeys = HashMap<Int, Int>()
     private var hatBits = 0      // from D-pad HAT / analog axes
@@ -31,7 +31,7 @@ class GbaInput {
 
     fun setControls(map: Map<Int, Int>) { controls = map }
 
-    /** A DS game runs: START 2 / SELECT 2 ([GbaControls.DS_X] / [GbaControls.DS_Y]) press its X / Y. */
+    /** A DS game runs: X / Y ([GbaControls.DS_X] / [GbaControls.DS_Y]) press its X / Y. */
     @Volatile var ds = false
 
     /** @return true if the event was consumed. */
@@ -51,6 +51,9 @@ class GbaInput {
     /** The GBA button [keyCode] is bound to (D-pad, or the player's GAME BUTTONS; a TURBO key counts as its button),
      * null = none. The companion's window reads keys through this, so it follows the player's bindings. */
     fun buttonFor(keyCode: Int): Int? = keyToBit(keyCode)?.let { it and GbaControls.TURBO.inv() }
+
+    /** [keyCode] is bound to X (GAME BUTTONS), whatever it presses in the game running. */
+    fun isX(keyCode: Int): Boolean = (controls[keyCode] ?: 0) and GbaControls.DS_X != 0
 
     /** Lets go of every key the player holds (not a script's): the companion's window took the buttons, or a rebind
      *  the keys' releases. */
@@ -122,7 +125,7 @@ class GbaInput {
         else -> controls[keyCode]?.let(::forCore)   // remappable face/shoulder/menu buttons
     }
 
-    /** A binding's bits for the game running: START 2 / SELECT 2 are X / Y on a DS, else START / SELECT. */
+    /** A binding's bits for the game running: X / Y are X / Y on a DS, else START / SELECT. */
     private fun forCore(bits: Int): Int {
         val marks = GbaControls.DS_X or GbaControls.DS_Y
         if (bits and marks == 0) return bits

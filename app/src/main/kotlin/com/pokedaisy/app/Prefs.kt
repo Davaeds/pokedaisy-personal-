@@ -156,6 +156,10 @@ class Prefs(context: Context) {
     fun speedIndexFor(romKey: String): Int = p.getInt("speed_$romKey", 0)
     fun setSpeedIndexFor(romKey: String, index: Int) = p.edit().putInt("speed_$romKey", index).apply()
 
+    /** The ZOOM step the player last picked on this ROM (WideCamera.level: 0 = 1x), put back when it's played again. */
+    fun zoomLevelFor(romKey: String): Int = p.getInt("zoom_$romKey", 0)
+    fun setZoomLevelFor(romKey: String, level: Int) = p.edit().putInt("zoom_$romKey", level).apply()
+
     /** The ITEMS tab's starred items per ROM (keyed by CRC32, like [speedIndexFor]): the game's item ids. */
     fun favoriteItemsFor(romKey: String): Set<Int> =
         p.getString("favorite_items_$romKey", null)?.split(",")?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet()

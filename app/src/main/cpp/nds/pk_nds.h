@@ -104,6 +104,8 @@ void pk_nds_wide_window(int x, int y, int w, int h);
 bool pk_nds_rom_code(char out[5]);
 int pk_nds_rom_revision(void);
 uint32_t pk_nds_rom_size(void);
+// The ARM9's data TCM (16 KB), RetroAchievements' $1000000; NULL with no DS up. Emu thread.
+const uint8_t* pk_nds_dtcm(void);
 
 #ifdef __cplusplus
 }
