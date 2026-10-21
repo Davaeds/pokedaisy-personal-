@@ -55,10 +55,26 @@ object NewFeatures {
     /** GAME BUTTONS > X: on the field of a two-screen device, X takes the buttons to the companion, like a DS game's menu. */
     const val X_COMPANION = "x_companion"
 
+    /** SETTINGS > PLAYER LOOK: play as another game's hero (companion.data.PlayerLook). */
+    const val PLAYER_LOOK = "player_look"
+
+    /** SETTINGS > RIVAL LOOK: the rival dressed up along with the player (companion.data.PlayerLook.build's rival). */
+    const val RIVAL_LOOK = "rival_look"
+
+    /** SETTINGS > TEXT LOOK: another game's dialogue box and font (companion.data.TextLook). */
+    const val TEXT_LOOK = "text_look"
+
+    /** SETTINGS > DAY AND NIGHT: the overworld tinted by the device's clock (companion.data.DayNight). */
+    const val DAY_NIGHT = "day_night"
+
+    /** SETTINGS > FOLLOWER: the party's lead walks behind the player (pk_wide.c's follower). */
+    const val FOLLOWER = "follower"
+
     /** Every feature that gets the tag. */
     val ALL = listOf(
         HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB, TOUCH_CONTROLS,
-        COMPANION_TAB, REUSABLE_TMS, UNLIT_SCREEN, LIGHT_COMPANION, X_COMPANION,
+        COMPANION_TAB, REUSABLE_TMS, UNLIT_SCREEN, LIGHT_COMPANION, X_COMPANION, PLAYER_LOOK, RIVAL_LOOK, TEXT_LOOK, DAY_NIGHT,
+        FOLLOWER,
     )
 
     private const val DAYS = 7

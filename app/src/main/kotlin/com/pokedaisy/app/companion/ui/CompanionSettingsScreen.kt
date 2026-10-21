@@ -2,6 +2,7 @@ package com.pokedaisy.app.companion.ui
 
 import com.pokedaisy.app.companion.NewFeatures
 
+import com.pokedaisy.app.companion.data.LookChar
 import com.pokedaisy.app.companion.ui.theme.DarkMode
 import com.pokedaisy.app.companion.i18n.L10n
 import com.pokedaisy.app.companion.i18n.tk
@@ -265,13 +266,14 @@ fun CompanionSettingsScreen(
                     // Rows share out the window's height (big touch targets) down
                     // to a floor, past which the list scrolls instead.
                     // SHADERS too: OptionRows shares the window out, so its 4 rows came out taller than SETTINGS'.
-                    // TWEAKS: OptionRows has no subtitle line for each tweak's description.
-                    if (rows.any { it.header } || page == Page.SHADERS || page == Page.DISPLAY || page == Page.TWEAKS) {
+                    // TWEAKS: OptionRows has no subtitle line for each tweak's description; CHEATS' master switch has one too.
+                    if (rows.any { it.header } || page == Page.SHADERS || page == Page.DISPLAY || page == Page.TWEAKS || page == Page.CHEATS) {
                         // The row the page was opened for (SWAP SCREENS after the swap): the cursor onto it, scrolled to.
                         val reveal = if (page == Page.HOME) ui.revealRow?.let { r -> rows.indexOfFirst { !it.header && it.label == r } } ?: -1 else -1
                         if (reveal >= 0 && homeCursor != reveal) SideEffect { homeCursor = reveal }
                         GroupedRows(rows, m, cursor, onClick = { i -> moveCursor(i); rows[i].onClick() }, scroll = if (page == Page.HOME) homeScroll else rememberScrollState(),
-                            labelWeight = if (page == Page.TWEAKS) 0.8f else 0.58f, reveal = reveal, onRevealed = { ui.revealRow = null },
+                            // Cheat names are the player's own, often long: more room before ON / OFF.
+                            labelWeight = when (page) { Page.TWEAKS -> 0.8f; Page.CHEATS -> 0.75f; else -> 0.58f }, reveal = reveal, onRevealed = { ui.revealRow = null },
                             onFocused = ::moveCursor, groupTabs = page == Page.HOME) {
                             // Actions, not settings: the list's last line, out of the way of the options.
                             if (page == Page.HOME && settings != null) {
@@ -327,7 +329,15 @@ fun CompanionSettingsScreen(
             }
         }
 
-        selector?.let { sel ->
+        selector?.takeIf { it.tiles }?.let { sel ->
+            PlayerLookPicker(
+                sel.title, settings?.playerLookOwn, sel.options.drop(1), sel.current.takeIf { it != sel.options.first() }, m,
+                onPick = { sel.onPick(it ?: sel.options.first()); selector = null; tick++ },
+                onDismiss = { selector = null },
+                label = { settings?.playerLookLabel(it) ?: it },
+            )
+        }
+        selector?.takeIf { !it.tiles }?.let { sel ->
             OptionSelector(
                 sel.title, sel.options, sel.current, { it }, m,
                 onPick = { sel.onPick(it); selector = null; tick++ },
@@ -382,6 +392,8 @@ private class Selector(
     val options: List<String>,
     val current: String,
     val badge: (String) -> String? = { null },
+    /** PLAYER LOOK's tiles ([PlayerLookPicker]): [options] are OFF then the heroes' names. */
+    val tiles: Boolean = false,
     val onPick: (String) -> Unit,
 )
 
@@ -396,7 +408,62 @@ private fun homeRows(
 ): List<SettingRow> {
     fun onOff(on: Boolean) = if (on) tk("ON") else tk("OFF")
     val rateLabels = FF_RATES.map(::rateLabel)
-    return listOfNotNull(
+    // MAKEOVER: the game's look from other games (the user's call: its own group, first and standing out, only in a
+    // game it works in).
+    val looks = s.playerLookSupported
+    val makeover = if (!looks && !s.dayNightSupported && !s.followerSupported) emptyList() else listOfNotNull(
+        featuredGroupTitle(tk("MAKEOVER"), if (looks) "Other games' looks in this one" else "A fresh look for this game"),
+        // Another game's hero for the player (PlayerLook.kt: their sprites from the player's own ROM of that game,
+        // patched into this one in memory). The heroes' names are the games' own, so they aren't translated.
+        if (!looks) null else SettingRow(
+            tk("PLAYER LOOK"),
+            if (s.playerLooks.isEmpty()) tk("N/A") else s.playerLook?.let { s.playerLookLabel(it) } ?: tk("OFF"),
+            enabled = s.playerLooks.isNotEmpty(),
+            labelBadge = NewFeatures.badge(NewFeatures.PLAYER_LOOK),
+            // No description line; only why it's greyed out.
+            subtitle = if (s.playerLooks.isEmpty()) "Needs FireRed, LeafGreen, Ruby, Sapphire or Emerald too" else null,
+        ) {
+            // Tiles with each hero's sprite (PlayerLookPicker), not a list of names.
+            if (s.playerLooks.isNotEmpty()) {
+                val off = tk("OFF")
+                select(Selector(tk("PLAYER LOOK"), listOf(off) + s.playerLooks, s.playerLook ?: off, tiles = true) { s.setPlayerLook(it.takeIf { l -> l != off }) })
+            }
+        },
+        // The rival of the other gender (Emerald, Ruby, Sapphire) wears the same game's other hero.
+        if (looks && s.rivalLookSupported) {
+            val on = s.rivalLook && s.playerLook != null
+            SettingRow(
+                tk("RIVAL LOOK"), if (s.playerLook == null) tk("N/A") else onOff(s.rivalLook), enabled = s.playerLook != null,
+                labelBadge = NewFeatures.badge(NewFeatures.RIVAL_LOOK),
+                subtitle = if (s.playerLook == null) "Pick a PLAYER LOOK first" else null,
+            ) { if (s.playerLook != null) { s.setRivalLook(!s.rivalLook); changed() } }
+        } else null,
+        // Another game's dialogue box and letters (TextLook.kt). One style kept: a flip; more: a pick-list.
+        if (looks && s.textLooks.isNotEmpty()) {
+            val off = tk("OFF")
+            SettingRow(
+                tk("TEXT LOOK"), s.textLook ?: off, labelBadge = NewFeatures.badge(NewFeatures.TEXT_LOOK),
+            ) {
+                if (s.textLooks.size == 1) s.setTextLook(if (s.textLook == null) s.textLooks[0] else null).also { changed() }
+                else select(Selector(tk("TEXT LOOK"), listOf(off) + s.textLooks, s.textLook ?: off) { s.setTextLook(it.takeIf { l -> l != off }) })
+            }
+        } else null,
+        // The party's lead walking behind the player (pk_wide.c's follower: a hack's following Pokémon, MonArt).
+        if (s.followerSupported) {
+            SettingRow(
+                tk("FOLLOWER"), if (s.followerReady) onOff(s.follower) else tk("N/A"), enabled = s.followerReady,
+                labelBadge = NewFeatures.badge(NewFeatures.FOLLOWER),
+                subtitle = if (s.followerReady) null else "Needs a game with following Pokémon too",
+            ) { if (s.followerReady) { s.setFollower(!s.follower); changed() } }
+        } else null,
+        // The overworld by the device's clock (DayNight.kt): every GBA game but those with their own.
+        if (s.dayNightSupported) {
+            SettingRow(tk("DAY AND NIGHT"), onOff(s.dayNight), labelBadge = NewFeatures.badge(NewFeatures.DAY_NIGHT)) {
+                s.setDayNight(!s.dayNight); changed()
+            }
+        } else null,
+    )
+    return makeover + listOfNotNull(
         groupTitle(tk("FF / SPEED")),
         // On / off - the group's title already says fast-forward.
         SettingRow("FF", onOff(s.ffToggled)) { s.setFfToggled(!s.ffToggled); changed() },
@@ -411,14 +478,14 @@ private fun homeRows(
         },
         // Keeps the last ~20 s; the REWIND HOLD hotkey plays them backwards.
         if (s.rewindSupported) {
-            SettingRow(tk("REWIND"), onOff(s.rewind), subtitle = "Keeps the last 20 s to play backwards") { s.setRewind(!s.rewind); changed() }
+            SettingRow(tk("REWIND"), onOff(s.rewind)) { s.setRewind(!s.rewind); changed() }
         } else null,
         // SCENE SPEEDS, FF MODE and FF MUSIC: set once and rarely touched, on their own page.
         SettingRow(tk("SPEED OPTIONS"), null, subtitle = "Scene speeds, FF mode and FF music", opensPage = true) { navigate(Page.SPEED) },
         groupTitle(tk("GAMEPLAY")),
         // The game's own switch for random encounters (WildEncounters.kt): ON (the game's rate) or OFF.
         SettingRow(tk("WILD ENCOUNTERS"), if (s.wildEncountersSupported) wildEncountersLabel(s.wildEncounters) else tk("N/A"),
-            enabled = s.wildEncountersSupported, subtitle = "In grass, caves and water") {
+            enabled = s.wildEncountersSupported) {
             if (s.wildEncountersSupported) { s.setWildEncounters(if (s.wildEncounters == 0) 100 else 0); changed() }
         },
         // A TM stays in the bag after it teaches a move, as an HM does (ReusableTms.kt: the ROM's own check patched).
@@ -428,18 +495,16 @@ private fun homeRows(
             when { s.reusableTmsBuiltIn -> tk("ON"); s.reusableTmsSupported -> onOff(s.reusableTms); else -> tk("N/A") },
             enabled = s.reusableTmsSupported && !s.reusableTmsBuiltIn,
             labelBadge = NewFeatures.badge(NewFeatures.REUSABLE_TMS),
-            subtitle = if (s.reusableTmsBuiltIn) "This game's TMs never run out" else "A TM stays in the bag after use",
+            subtitle = if (s.reusableTmsBuiltIn) "This game's TMs never run out" else null,
         ) {
             if (s.reusableTmsSupported) { s.setReusableTms(!s.reusableTms); changed() }
         },
         // B held for the player while walking on the field; holding it walks. Never on a bike or in a menu.
-        SettingRow(tk("AUTO-RUN"), if (s.fieldReadable) onOff(s.autoRun) else tk("N/A"), enabled = s.fieldReadable,
-            subtitle = "Holding B walks instead") { if (s.fieldReadable) { s.setAutoRun(!s.autoRun); changed() } },
+        SettingRow(tk("AUTO-RUN"), if (s.fieldReadable) onOff(s.autoRun) else tk("N/A"), enabled = s.fieldReadable) { if (s.fieldReadable) { s.setAutoRun(!s.autoRun); changed() } },
         // Every map lets the player run (buildings too); FireRed / Emerald engines.
-        SettingRow(tk("RUN INDOORS"), if (s.runIndoorsSupported) onOff(s.runIndoors) else tk("N/A"), enabled = s.runIndoorsSupported,
-            subtitle = "Running inside buildings too") { if (s.runIndoorsSupported) { s.setRunIndoors(!s.runIndoors); changed() } },
+        SettingRow(tk("RUN INDOORS"), if (s.runIndoorsSupported) onOff(s.runIndoors) else tk("N/A"), enabled = s.runIndoorsSupported) { if (s.runIndoorsSupported) { s.setRunIndoors(!s.runIndoors); changed() } },
         // This game's cheats on / off (the codes are typed or imported in the top screen's Settings).
-        SettingRow(tk("CHEATS"), cheatsValue(s), opensPage = true, subtitle = "GameShark, Action Replay and CodeBreaker codes") { navigate(Page.CHEATS) },
+        SettingRow(tk("CHEATS"), cheatsValue(s), opensPage = true) { navigate(Page.CHEATS) },
         groupTitle(tk("SCREEN")),
         // The game at the GBA's 3:2, stretched to fill the top screen, or WIDE (the overworld drawn past
         // its edges); WIDE is tagged BETA, or NOT YET on a game it doesn't know (which shows it as ORIGINAL).
@@ -479,7 +544,7 @@ private fun homeRows(
             ) { s.setCompanionTab(!tab); changed() }
         },
         // Two screens: the game and the companion trade screens (this companion moves with them).
-        SettingRow(tk("SWAP SCREENS"), onOff(s.swapScreens), subtitle = "Game and companion trade screens") { s.setSwapScreens(!s.swapScreens); changed() }
+        SettingRow(tk("SWAP SCREENS"), onOff(s.swapScreens)) { s.setSwapScreens(!s.swapScreens); changed() }
             .takeIf { s.usesSecondScreen },
         // Two screens played on one: the second is free for other apps, the companion opens over the game.
         SettingRow(
@@ -539,7 +604,7 @@ private fun cheatRows(s: CompanionSettings, changed: () -> Unit): List<SettingRo
     fun onOff(on: Boolean) = if (on) tk("ON") else tk("OFF")
     val master = s.cheatsEnabled
     val cheats = s.cheats
-    return listOf(SettingRow(tk("CHEATS"), onOff(master)) { s.setCheatsEnabled(!master); changed() }) +
+    return listOf(SettingRow(tk("CHEATS"), onOff(master), subtitle = "GameShark, Action Replay and CodeBreaker codes") { s.setCheatsEnabled(!master); changed() }) +
         if (cheats.isEmpty()) {
             listOf(
                 SettingRow(tk("NO CHEATS FOR THIS GAME"), null, enabled = false) {},

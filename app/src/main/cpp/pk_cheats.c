@@ -21,6 +21,9 @@
 // The app's own game options that change the ROM (REUSABLE TMS: ReusableTms.kt)
 // are patches too, kept in a list of their own (sOptions) so loading cheats never
 // drops them: pk_cheats_patch / pk_cheats_unpatch, the same overlay and swap.
+// PLAYER LOOK (PlayerLook.kt) writes whole blocks instead - another game's sprites
+// over the player's, new pictures in the ROM's empty tail, the pointers to them:
+// sBlocks, each keeping the file's bytes it covers (pk_cheats_block / _unblock).
 
 #include <stdint.h>
 #include <stdio.h>
@@ -57,6 +60,17 @@ static int sFixCount;
 #define PK_MAX_OPTIONS 64
 static struct pk_fix sOptions[PK_MAX_OPTIONS];
 static int sOptionCount;
+
+// A block patch: `orig` (malloc'd) holds the file's bytes over [addr, addr + len).
+struct pk_block {
+    uint32_t addr;
+    int len;
+    uint8_t* orig;
+};
+
+#define PK_MAX_BLOCKS 256
+static struct pk_block sBlocks[PK_MAX_BLOCKS];
+static int sBlockCount;
 
 static int pk_cheats_is_gba(struct mCore* core) {
     return core && core->platform(core) == mPLATFORM_GBA;
@@ -179,6 +193,21 @@ static void pk_fixes_overlay(const struct pk_fix* fixes, int count, uint32_t add
 void pk_cheats_overlay(uint32_t addr, uint8_t* dst, int len) {
     pk_fixes_overlay(sFixes, sFixCount, addr, dst, len);
     pk_fixes_overlay(sOptions, sOptionCount, addr, dst, len);
+    for (int i = 0; i < sBlockCount; i++) {
+        const struct pk_block* k = &sBlocks[i];
+        for (uint32_t base = BASE_CART0; base < BASE_CART_SRAM; base += SIZE_CART0) {
+            // The block as seen through this mirror, clipped to the read.
+            uint32_t from = base | (k->addr & (SIZE_CART0 - 1));
+            uint32_t lo = from > addr ? from : addr;
+            uint32_t hi = from + (uint32_t) k->len;
+            if (addr + (uint32_t) len < hi) {
+                hi = addr + (uint32_t) len;
+            }
+            if (lo < hi) {
+                memcpy(dst + (lo - addr), k->orig + (lo - from), hi - lo);
+            }
+        }
+    }
 }
 
 static void pk_fixes_swap(struct mCore* core, struct pk_fix* fixes, int count) {
@@ -204,6 +233,17 @@ void pk_cheats_swap_rom(struct mCore* core) {
     }
     pk_fixes_swap(core, sFixes, sFixCount);
     pk_fixes_swap(core, sOptions, sOptionCount);
+    for (int i = 0; i < sBlockCount; i++) {
+        struct pk_block* k = &sBlocks[i];
+        uint8_t* rom = pk_rom_byte(core, k->addr);
+        if (rom && pk_rom_byte(core, k->addr + (uint32_t) k->len - 1)) {
+            for (int b = 0; b < k->len; b++) {
+                uint8_t live = rom[b];
+                rom[b] = k->orig[b];
+                k->orig[b] = live;
+            }
+        }
+    }
 }
 
 // A game option's ROM patch: `value` over [addr, addr + len) (len <= 4), only if
@@ -267,8 +307,124 @@ void pk_cheats_unpatch(struct mCore* core) {
     sOptionCount = 0;
 }
 
+static uint32_t pk_crc32(const uint8_t* p, int len) {
+    uint32_t c = 0xFFFFFFFFu;
+    for (int i = 0; i < len; i++) {
+        c ^= p[i];
+        for (int k = 0; k < 8; k++) {
+            c = (c >> 1) ^ (0xEDB88320u & (0u - (c & 1u)));
+        }
+    }
+    return ~c;
+}
+
+// A PLAYER LOOK block: `data` over [addr, addr + len), only if the ROM there is still the
+// file's (its CRC32 = `expectCrc`, no cheat or other patch on it) and the block doesn't
+// overlap one already in. Returns 1 if it went in, 0 if not.
+int pk_cheats_block(struct mCore* core, uint32_t addr, const uint8_t* data, int len, uint32_t expectCrc) {
+    if (!pk_cheats_is_gba(core) || len < 1 || sBlockCount >= PK_MAX_BLOCKS || addr < BASE_CART0 || addr >= BASE_CART_SRAM) {
+        return 0;
+    }
+    uint32_t off = addr & (SIZE_CART0 - 1);
+    uint8_t* rom = pk_rom_byte(core, addr);
+    if (!rom || !pk_rom_byte(core, addr + (uint32_t) len - 1)) {
+        return 0;
+    }
+    for (int i = 0; i < sBlockCount; i++) {
+        uint32_t o = sBlocks[i].addr & (SIZE_CART0 - 1);
+        if (off < o + (uint32_t) sBlocks[i].len && o < off + (uint32_t) len) {
+            return 0;
+        }
+    }
+    if (pk_crc32(rom, len) != expectCrc) {
+        return 0;
+    }
+    uint8_t* orig = malloc((size_t) len);
+    if (!orig) {
+        return 0;
+    }
+    memcpy(orig, rom, (size_t) len);
+    // mGBA's own patch for the first byte: copies a still-mapped ROM file first
+    // (_pristineCow), so the rest goes into that copy, never the file.
+    int8_t old = 0;
+    GBAPatch8(((struct GBA*) core->board)->cpu, addr, (int8_t) data[0], &old);
+    rom = pk_rom_byte(core, addr);
+    memcpy(rom, data, (size_t) len);
+    struct pk_block* k = &sBlocks[sBlockCount++];
+    k->addr = BASE_CART0 | off;
+    k->len = len;
+    k->orig = orig;
+    return 1;
+}
+
+// Takes every PLAYER LOOK block out again (the file's bytes back).
+void pk_cheats_unblock(struct mCore* core) {
+    for (int i = sBlockCount - 1; i >= 0; i--) {
+        struct pk_block* k = &sBlocks[i];
+        uint8_t* rom = pk_cheats_is_gba(core) ? pk_rom_byte(core, k->addr) : NULL;
+        if (rom) {
+            memcpy(rom, k->orig, (size_t) k->len);
+        }
+        free(k->orig);
+        k->orig = NULL;
+    }
+    sBlockCount = 0;
+}
+
+// Swaps 32-byte palettes already loaded: wherever one of `from` (n of them back to back)
+// sits in EWRAM (the game's palette buffers, gPlttBufferUnfaded / Faded) or in the OBJ half
+// of palette RAM, `to` goes in its place - so a look put in or taken out mid-game recolours
+// the player now, not on the next map. Returns how many were swapped. A `from` of fewer than
+// three colours is skipped: a black or blank palette's bytes are every empty run of EWRAM.
+static bool pk_palette_real(const uint8_t* pal) {
+    uint16_t seen[3];
+    int distinct = 0;
+    for (int i = 0; i < 16 && distinct < 3; i++) {
+        uint16_t c = (uint16_t) (pal[i * 2] | (pal[i * 2 + 1] << 8));
+        bool dup = false;
+        for (int j = 0; j < distinct; j++) dup |= seen[j] == c;
+        if (!dup) seen[distinct++] = c;
+    }
+    return distinct >= 3;
+}
+
+int pk_cheats_repalette(struct mCore* core, const uint8_t* from, int n, const uint8_t* to) {
+    if (!pk_cheats_is_gba(core) || n < 1) {
+        return 0;
+    }
+    struct GBA* gba = core->board;
+    int swapped = 0;
+    uint8_t* ewram = (uint8_t*) gba->memory.wram;
+    for (int o = 0; o + 32 <= SIZE_WORKING_RAM; o += 2) {
+        for (int i = 0; i < n; i++) {
+            if (!pk_palette_real(from + i * 32)) continue;
+            if (!memcmp(ewram + o, from + i * 32, 32)) {
+                memcpy(ewram + o, to, 32);
+                swapped++;
+                o += 30;
+                break;
+            }
+        }
+    }
+    for (int slot = 16; slot < 32; slot++) {
+        const uint8_t* live = (const uint8_t*) &gba->video.palette[slot * 16];
+        for (int i = 0; i < n; i++) {
+            if (!pk_palette_real(from + i * 32)) continue;
+            if (!memcmp(live, from + i * 32, 32)) {
+                for (int c = 0; c < 16; c++) {
+                    uint16_t v = (uint16_t) (to[c * 2] | (to[c * 2 + 1] << 8));
+                    core->busWrite16(core, BASE_PALETTE_RAM + (uint32_t) (slot * 32 + c * 2), v);
+                }
+                swapped++;
+                break;
+            }
+        }
+    }
+    return swapped;
+}
+
 int pk_cheats_rom_patched(void) {
-    return sFixCount > 0 || sOptionCount > 0;
+    return sFixCount > 0 || sOptionCount > 0 || sBlockCount > 0;
 }
 
 // Checks one cheat's code lines ('\n'-separated) on a scratch cheat device - no

@@ -26,8 +26,10 @@
 // this port against the same captures (native-capture/mgba_dump's `wide` / `widecheck`).
 
 #include "pk_wide.h"
+#include "pk_cheats.h"
 
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -135,6 +137,7 @@ static uint32_t r32(uint32_t a) {
 static int32_t s32(uint32_t a) { return (int32_t) r32(a); }
 
 static inline uint32_t le16(const uint8_t* p) { return (uint32_t) (p[0] | p[1] << 8); }
+static inline uint32_t le32(const uint8_t* p) { return le16(p) | le16(p + 2) << 16; }
 
 // --- snapshots ----------------------------------------------------------------------------------
 
@@ -753,15 +756,91 @@ static int lineOamN;
 static int drawingLine = PK_WIDE_H;   // the line last drawn; PK_WIDE_H between frames
 static bool vramTorn, vramTornLast;
 static void (*origWriteVRAM)(struct GBAVideoRenderer*, uint32_t);
+static void followWrote(uint32_t address);
 static void hookWriteVRAM(struct GBAVideoRenderer* r, uint32_t address) {
     if (drawingLine < PK_WIDE_H - 1) vramTorn = true;
+    followWrote(address);
     origWriteVRAM(r, address);
 }
+
+// DAY AND NIGHT (companion/data/DayNight.kt): the renderer's copy of the map's BG palettes (0-12) and every sprite
+// palette tinted as each frame starts drawing - written through the renderer's own writePalette, so palette RAM, the
+// game's palette buffers and the save never change. The game's own writes (its VBlank copy every frame) go in as ever
+// and are tinted again before the next frame is drawn. Palettes 13-15 are the text windows': left alone.
+static int tintR = 256, tintG = 256, tintB = 256;   // per channel, 256 = as is
+static bool tintShown;                              // the renderer holds tinted colours
+
+static inline uint16_t tint555(uint16_t c) {
+    int r = (c & 31) * tintR >> 8, g = ((c >> 5) & 31) * tintG >> 8, b = ((c >> 10) & 31) * tintB >> 8;
+    return (uint16_t) (r | g << 5 | b << 10);
+}
+
+static void tintPalettes(struct GBAVideoRenderer* r, const uint16_t* pal) {
+    bool on = tintR != 256 || tintG != 256 || tintB != 256;
+    if ((!on && !tintShown) || !r->writePalette) return;
+    for (int i = 0; i < 512; i++) {
+        if (i >= 13 * 16 && i < 256) continue;
+        r->writePalette(r, (uint32_t) (i * 2), on ? tint555(pal[i]) : pal[i]);
+    }
+    tintShown = on;
+}
+
+// FOLLOWER (companion/data/Follower.kt): a Pokémon walking a tile behind the player, drawn as one more hardware sprite -
+// a hidden OAM entry, the last 16 OBJ tiles and an OBJ palette slot no shown sprite uses - written as each frame starts
+// drawing and the game's own bytes put back after its last line, so the game, its save and its states never hold it
+// (a tile the game writes in the meantime keeps the game's). Where it stands is an offset from the player's tile (map
+// connections shift every coordinate), it steps when the player does, eased by the map's own scroll (any speed).
+#define FOLLOW_TILE 1008                     // OBJ tiles 1008-1023: the end of OBJ VRAM
+#define FOLLOW_VRAM (0x10000 + FOLLOW_TILE * 32)
+static bool followOn;                        // asked for this frame (the field, not surfing: FollowerKt)
+static uint8_t followFrames[6 * 512], followPal[32];
+static bool followHave;                      // frames set
+static int followState;                      // 0 none (after a warp: until a step), 1 placed
+static int followFromX, followFromY, followToX, followToY;   // tiles from the player's (now) tile
+static int followPrevCx, followPrevCy, followDir;            // the player's last tile; the follower's facing (0 S 1 N 2 W 3 E)
+static int followScroll0X, followScroll0Y;                   // BG2's scroll when this step started
+static bool followMoving;
+static int followWhy, followDbg[8];                                        // why the last frame drew none (mgba_dump's followinfo)
+static int followOam = -1, followSlot = -1;                  // this frame's OAM entry / palette slot (-1: not drawn)
+static uint16_t followSavedOam[4];
+static uint8_t followSavedVram[512];
+static uint8_t followDirty[256];                             // halfwords the game wrote over this frame
+
+static void followWrote(uint32_t address) {
+    if (followOam >= 0 && address >= FOLLOW_VRAM && address < FOLLOW_VRAM + 512) followDirty[(address - FOLLOW_VRAM) >> 1] = 1;
+}
+
+void pk_follower_info(char* out, int n) {
+    snprintf(out, (size_t) n, "on %d have %d state %d why %d oam %d slot %d to %d,%d from %d,%d dir %d box %d,%d-%d,%d at %d,%d p %d base %d",
+             followOn, followHave, followState, followWhy, followOam, followSlot, followToX, followToY, followFromX, followFromY, followDir,
+             followDbg[0], followDbg[1], followDbg[2], followDbg[3], followDbg[4], followDbg[5], followDbg[6], followDbg[7]);
+}
+
+void pk_follower_set(const uint8_t* frames, const uint8_t* pal) {
+    if (frames && pal) {
+        memcpy(followFrames, frames, sizeof(followFrames));
+        memcpy(followPal, pal, sizeof(followPal));
+        followHave = true;
+    } else {
+        followHave = false;
+    }
+}
+
+static void hookScanlines(struct GBA* gba);
+void pk_follower_show(struct mCore* core, int on) {
+    followOn = on != 0;
+    if (!on) followState = 0;
+    if (on && core && core->platform(core) == mPLATFORM_GBA) hookScanlines((struct GBA*) core->board);
+}
+
+static void followBegin(struct GBAVideoRenderer* r);
+static void followEnd(struct GBAVideoRenderer* r);
 
 static void hookDrawScanline(struct GBAVideoRenderer* r, int y) {
     if (y == 0) {
         vramTornLast = vramTorn;   // the frame before, done
         vramTorn = false;
+        if (hookGba) tintPalettes(r, hookGba->video.palette);
     }
     drawingLine = y;
     if (hookGba && y >= 0 && y < PK_WIDE_H) {
@@ -772,12 +851,21 @@ static void hookDrawScanline(struct GBAVideoRenderer* r, int y) {
             memcpy(linePalBuf[linePalN++], pal, sizeof(linePalBuf[0]));
         linePalOf[y] = (uint8_t) (linePalN - 1);
         const uint16_t* oam = hookGba->video.oam.raw;
+        // WIDE's record of the OAM leaves the follower's entry out: it's not the game's.
+        static uint16_t own[512];
+        if (followOam >= 0) {
+            memcpy(own, oam, sizeof(own));
+            memcpy(&own[followOam * 4], followSavedOam, 8);
+            oam = own;
+        }
         if (y == 0) lineOamN = 0;
         if (!lineOamN || (memcmp(oam, lineOamBuf[lineOamN - 1], sizeof(lineOamBuf[0])) && lineOamN < LINE_PALS))
             memcpy(lineOamBuf[lineOamN++], oam, sizeof(lineOamBuf[0]));
         lineOamOf[y] = (uint8_t) (lineOamN - 1);
     }
+    if (y == 0) followBegin(r);
     origDrawScanline(r, y);
+    if (y == PK_WIDE_H - 1) followEnd(r);
 }
 
 static void hookScanlines(struct GBA* gba) {
@@ -793,6 +881,14 @@ static void hookScanlines(struct GBA* gba) {
         r->writeVRAM = hookWriteVRAM;
     }
     hookGba = gba;
+}
+
+void pk_tint_set(struct mCore* core, int r, int g, int b) {
+    if (!core || core->platform(core) != mPLATFORM_GBA) return;
+    tintR = r < 0 ? 0 : r > 256 ? 256 : r;
+    tintG = g < 0 ? 0 : g > 256 ? 256 : g;
+    tintB = b < 0 ? 0 : b > 256 ? 256 : b;
+    hookScanlines((struct GBA*) core->board);
 }
 
 /** Line y's registers as drawn, or the latched ones until the hook has seen a whole frame. Above and below the
@@ -898,6 +994,8 @@ static int score(const struct Snap* s, int cx, int cy, int hofs, int vofs) {
 // --- drawing ---------------------------------------------------------------------------------------
 
 static inline uint32_t color(uint16_t c, uint32_t alpha) {
+    // DAY AND NIGHT: the margins (the map and its people, from palette RAM) tinted as the renderer's frame is.
+    if (tintShown) c = tint555(c);
     uint32_t v = (uint32_t) (c & 0x1F) << 3 | (uint32_t) ((c >> 5) & 0x1F) << 11 | (uint32_t) ((c >> 10) & 0x1F) << 19;
     return v | ((v >> 5) & 0x070707) | alpha;   // mGBA's mColorFrom555
 }
@@ -1932,7 +2030,7 @@ int pk_wide_knows(uint32_t crc) {
 
 // SCENE SPEEDS, AUTO-RUN and RUN INDOORS (GitHub #43 / #85): the field read through this game's WIDE table whether or
 // not WIDE is drawing - its own copy of the few addresses they need, so WIDE's state is left alone.
-static struct { uint32_t locked, main, inBattleOff, objects, mapHeader, questLog, wild, avatar; int family; } F;
+static struct { uint32_t locked, main, inBattleOff, objects, mapHeader, questLog, wild, avatar, sprites, gfxInfo; int family; } F;
 /** WILD ENCOUNTERS: we set the game's switch last (so NORMAL puts it back once), and the roll's state. */
 static bool wildOwned;
 static uint32_t wildRng = 0x9E3779B9u;
@@ -1952,6 +2050,8 @@ int pk_field_configure(uint32_t crc) {
     F.main = (uint32_t) rom->a[PK_WIDE_GMAIN];
     F.inBattleOff = (uint32_t) FAMILIES[rom->family][PK_WIDE_INBATTLE_OFF - PK_WIDE_ADDRS];
     F.objects = (uint32_t) rom->a[PK_WIDE_OBJECT_EVENTS];
+    F.sprites = (uint32_t) rom->a[PK_WIDE_SPRITES];
+    F.gfxInfo = (uint32_t) rom->a[PK_WIDE_OBJ_GFX_INFO];
     F.mapHeader = (uint32_t) rom->a[PK_WIDE_MAP_HEADER];
     F.questLog = (uint32_t) rom->a[PK_WIDE_QUEST_LOG];
     F.family = rom->family;
@@ -1975,6 +2075,225 @@ static int playerGraphics(void) {
     if (!oe) return -1;
     bool wide = F.family == PK_WIDE_FAMILY_EX || F.family == PK_WIDE_FAMILY_FR_EX;
     return wide ? (int) le16(oe + 4) : oe[5];
+}
+
+/**
+ * PLAYER LOOK: the player's sprite set up again from its graphics record, as ObjectEventSetGraphicsId does when the
+ * player gets on a bike - OAM shape and size, animations, frame table, subsprite tables, the centre-to-corner offsets -
+ * and its frame copied again (animBeginning). A look that changes the record (a Pokémon's 32x32 frames) or moves its frame
+ * table (into the ROM's tail, which the next look rewrites) would otherwise go on drawing from the old one until the
+ * next map. The game's own records and every Gen 3 player record are 32 px tall, so the sprite's place stays. Returns 1
+ * when it was done. Vanilla-shaped games only (an 8-bit graphics id, gSprites' 0x44-byte layout).
+ */
+int pk_look_refresh(struct mCore* core, const uint8_t* pal) {
+    if (!F.locked || !F.sprites || !F.gfxInfo || !core) return 0;
+    if (F.family == PK_WIDE_FAMILY_EX || F.family == PK_WIDE_FAMILY_FR_EX) return 0;
+    G = (struct GBA*) core->board;
+    int k = playerObject();
+    const uint8_t* oe = k < 0 ? NULL : mem(F.objects + 0x24u * (uint32_t) k, 0x24);
+    if (!oe) return 0;
+    uint32_t spriteId = oe[4], gfx = oe[5];
+    if (spriteId >= 64) return 0;
+    const uint8_t* rp = mem(F.gfxInfo + 4 * gfx, 4);
+    if (!rp) return 0;
+    uint32_t rec = le32(rp);
+    const uint8_t* r = mem(rec, 0x24);
+    if (!r || le16(r) != 0xFFFF) return 0;
+    const uint8_t* oam = mem(le32(r + 0x10), 4);
+    if (!oam) return 0;
+    uint32_t s = F.sprites + 0x44 * spriteId;
+    // Still the player's sprite (in use, its animations the record's: no look changes those) - not, say, a battle's.
+    if (!(r8(s + 0x3E) & 1) || r16(s + 0x08) != le16(r + 0x18) || r16(s + 0x0A) != le16(r + 0x1A)) return 0;
+    uint16_t attr0 = (uint16_t) ((r16(s) & 0x3FFF) | (le16(oam) & 0xC000));
+    uint16_t attr1 = (uint16_t) ((r16(s + 2) & 0x3FFF) | (le16(oam + 2) & 0xC000));
+    // Set up once: a refresh tried again (its palette waiting, below) mustn't restart the animation every frame.
+    if (r16(s) != attr0 || r16(s + 2) != attr1 || r32(s + 0x0C) != le32(r + 0x1C) || r32(s + 0x18) != le32(r + 0x14)) {
+        core->busWrite16(core, s, attr0);
+        core->busWrite16(core, s + 2, attr1);
+        core->busWrite32(core, s + 0x08, le32(r + 0x18));
+        core->busWrite32(core, s + 0x0C, le32(r + 0x1C));
+        core->busWrite32(core, s + 0x18, le32(r + 0x14));
+        core->busWrite8(core, s + 0x28, (uint8_t) -(int) (le16(r + 8) / 2));
+        core->busWrite8(core, s + 0x29, (uint8_t) -(int) (le16(r + 10) / 2));
+        core->busWrite8(core, s + 0x3F, (uint8_t) ((r8(s + 0x3F) | 0x04) & ~0x10));
+    }
+    // The look's colours over the sprite's palette slot: in the game's two palette buffers (gPlttBufferUnfaded, then
+    // gPlttBufferFaded 0x400 on, the slot at 0x200 + 32 per slot) and palette RAM - only there. Only while both
+    // buffers and palette RAM hold the same real colours: mid-fade (a battle ending, a door) palette RAM is black or
+    // dimmed, and a search for that by content once matched every empty 32 bytes of EWRAM - the map's tilemap
+    // buffers and the save blocks went Kadabra-coloured. 0 = not yet (the engine asks again on a later frame).
+    if (pal) {
+        uint32_t slot = (r16(s + 4) >> 12) & 15;
+        uint8_t live[32];
+        for (int i = 0; i < 16; i++) {
+            uint16_t c = G->video.palette[256 + slot * 16 + i];
+            live[i * 2] = (uint8_t) c;
+            live[i * 2 + 1] = (uint8_t) (c >> 8);
+        }
+        if (!memcmp(live, pal, 32)) return 1;
+        uint16_t seen[3];
+        int distinct = 0;
+        for (int i = 0; i < 16 && distinct < 3; i++) {
+            uint16_t c = (uint16_t) (live[i * 2] | live[i * 2 + 1] << 8);
+            bool dup = false;
+            for (int j = 0; j < distinct; j++) dup |= seen[j] == c;
+            if (!dup) seen[distinct++] = c;
+        }
+        if (distinct < 3) return 0;
+        uint8_t* wram = (uint8_t*) G->memory.wram;
+        int at = -1;
+        for (int o = 0x200 + (int) slot * 32; o + 0x400 + 32 <= SIZE_WORKING_RAM; o += 4) {
+            if (memcmp(wram + o, live, 32) || memcmp(wram + o + 0x400, live, 32)) continue;
+            if (at >= 0) return 0;   // two places it could be: neither is touched
+            at = o;
+        }
+        if (at < 0) return 0;
+        memcpy(wram + at, pal, 32);
+        memcpy(wram + at + 0x400, pal, 32);
+        for (int i = 0; i < 16; i++)
+            core->busWrite16(core, BASE_PALETTE_RAM + 0x200u + slot * 32u + (uint32_t) i * 2u, (uint16_t) (pal[i * 2] | pal[i * 2 + 1] << 8));
+    }
+    return 1;
+}
+
+/** The player's tile and object, or false. */
+static bool followPlayer(int* cx, int* cy, int* px, int* py, uint32_t* spriteId) {
+    if (!F.objects) return false;
+    int k = playerObject();
+    const uint8_t* oe = k < 0 ? NULL : mem(F.objects + 0x24u * (uint32_t) k, 0x24);
+    if (!oe) return false;
+    *spriteId = oe[4];
+    *cx = (int16_t) le16(oe + 0x10); *cy = (int16_t) le16(oe + 0x12);
+    *px = (int16_t) le16(oe + 0x14); *py = (int16_t) le16(oe + 0x16);
+    return true;
+}
+
+/** An OAM entry the game isn't showing: switched off, or parked below the screen (its unused entries sit at y 160). */
+static inline bool oamHidden(uint16_t a0) {
+    int y = a0 & 0xFF;
+    return (a0 & 0x0300) == 0x0200 || (y >= 160 && y < 192);
+}
+
+static inline int sgn(int v) { return v > 0 ? 1 : v < 0 ? -1 : 0; }
+
+/** Line 0: where the follower stands this frame, then its sprite into the hardware (saved first). */
+static void followBegin(struct GBAVideoRenderer* r) {
+    followOam = followSlot = -1;
+    if (!followOn || !followHave || !hookGba || !F.objects || F.family == PK_WIDE_FAMILY_EX || F.family == PK_WIDE_FAMILY_FR_EX) { followWhy = 1; return; }
+    G = hookGba;
+    int cx, cy, px, py;
+    uint32_t spriteId;
+    if (!followPlayer(&cx, &cy, &px, &py, &spriteId) || spriteId >= 64) { followWhy = 2; return; }
+    const uint16_t* io = hookGba->memory.io;
+    int sx = io[0x18 >> 1] & 0x1FF, sy = io[0x1A >> 1] & 0x1FF;   // BG2HOFS / BG2VOFS: the map's scroll
+    if (cx != followPrevCx || cy != followPrevCy) {
+        int dx = cx - px, dy = cy - py;
+        bool step = (dx == 0) != (dy == 0) && abs(dx + dy) <= 2;
+        if (step && followState == 1) {
+            // Where it was, from the new tile: its old offset, less the step. It goes to where the player was.
+            int ox = followToX - (cx - followPrevCx), oy = followToY - (cy - followPrevCy);
+            if (abs(cx - followPrevCx) + abs(cy - followPrevCy) > 2) { ox = followToX - dx; oy = followToY - dy; }   // a connection
+            followFromX = ox; followFromY = oy;
+        } else if (step) {
+            followFromX = px - cx; followFromY = py - cy;   // the first step after a warp: it appears where the player was
+            followState = 1;
+        } else {
+            followState = 0;                                // a warp: hidden until a step
+        }
+        if (step) {
+            followToX = px - cx; followToY = py - cy;
+            int mx = followToX - followFromX, my = followToY - followFromY;
+            followDir = mx > 0 ? 3 : mx < 0 ? 2 : my < 0 ? 1 : 0;
+            followScroll0X = sx; followScroll0Y = sy;
+            followMoving = mx || my;
+        }
+        followPrevCx = cx; followPrevCy = cy;
+    }
+    if (followState != 1) { followWhy = 3; return; }
+    // How far the step has gone: the map's scroll moves 16 px a tile with the camera.
+    int moved = abs(((sx - followScroll0X + 256) & 0x1FF) - 256) + abs(((sy - followScroll0Y + 256) & 0x1FF) - 256);
+    int p = moved >= 16 ? 256 : moved * 16;   // 0..256
+    if (!followMoving) p = 256;
+    // The player's sprite on screen: the OAM entries showing its tiles (subsprites split it), their box.
+    uint32_t s = F.sprites + 0x44 * spriteId;
+    int base = (int) (r16(s + 4) & 0x3FF);
+    const uint16_t* oam = hookGba->video.oam.raw;
+    int x0 = 999, y0 = 999, x1 = -999, y1 = -999, prio = 2, last = -1;
+    static const int W[3][4] = { { 8, 16, 32, 64 }, { 16, 32, 32, 64 }, { 8, 8, 16, 32 } };
+    static const int H[3][4] = { { 8, 16, 32, 64 }, { 8, 8, 16, 32 }, { 16, 32, 32, 64 } };
+    bool used[16] = { false };
+    for (int k = 0; k < 128; k++) {
+        uint16_t a0 = oam[k * 4], a1 = oam[k * 4 + 1], a2 = oam[k * 4 + 2];
+        if (oamHidden(a0)) continue;
+        used[a2 >> 12] = true;
+        int t = a2 & 0x3FF, shape = a0 >> 14, size = a1 >> 14;
+        if (shape > 2) continue;
+        if (t < base || t >= base + 16) continue;
+        int x = a1 & 0x1FF, yy = a0 & 0xFF;
+        if (x >= 256) x -= 512;
+        if (yy >= 160) yy -= 256;
+        if (x < x0) x0 = x;
+        if (yy < y0) y0 = yy;
+        if (x + W[shape][size] > x1) x1 = x + W[shape][size];
+        if (yy + H[shape][size] > y1) y1 = yy + H[shape][size];
+        prio = (a2 >> 10) & 3;
+        last = k;
+    }
+    if (last < 0) { followWhy = 4; return; }
+    // Its place: (from + p (to - from)) - the player's own (from the last tile towards this one) in tiles, from the
+    // player's feet.
+    int pfx = (px - cx) * (256 - p), pfy = (py - cy) * (256 - p);          // the player, x256, from its tile
+    int fx = followFromX * 256 + (followToX - followFromX) * p, fy = followFromY * 256 + (followToY - followFromY) * p;
+    int cxPix = (x0 + x1) / 2 + (fx - pfx) * 16 / 256, feet = y1 + (fy - pfy) * 16 / 256;
+    int ox = cxPix - 16, oy = feet - 32;
+    followDbg[0] = x0; followDbg[1] = y0; followDbg[2] = x1; followDbg[3] = y1; followDbg[4] = ox; followDbg[5] = oy; followDbg[6] = p; followDbg[7] = base;
+    if (ox <= -32 || ox >= 240 || oy <= -32 || oy >= 160) { followWhy = 5; return; }
+    // A free entry (after the game's: drawn under them) and a palette slot no shown sprite uses.
+    int entry = -1;
+    for (int k = 127; k > last; k--) if (oamHidden(oam[k * 4])) { entry = k; break; }
+    int slot = -1;
+    for (int k = 15; k >= 0; k--) if (!used[k]) { slot = k; break; }
+    if (entry < 0 || slot < 0) { followWhy = 6; return; }
+    // The frame: standing, or stepping in the first half of a step.
+    int frame = (followDir == 3 ? 2 : followDir) * 2 + (followMoving && p < 128 ? 1 : 0);
+    uint8_t* vram = (uint8_t*) hookGba->video.vram;
+    memcpy(followSavedVram, vram + FOLLOW_VRAM, 512);
+    memset(followDirty, 0, sizeof(followDirty));
+    memcpy(vram + FOLLOW_VRAM, followFrames + frame * 512, 512);
+    for (int i = 0; i < 512; i += 2) origWriteVRAM(r, FOLLOW_VRAM + (uint32_t) i);
+    memcpy(followSavedOam, &oam[entry * 4], 8);
+    uint16_t* w = &hookGba->video.oam.raw[entry * 4];
+    w[0] = (uint16_t) ((oy & 0xFF));                                       // square, 4bpp, shown
+    w[1] = (uint16_t) ((ox & 0x1FF) | (2 << 14) | (followDir == 3 ? 0x1000 : 0));   // 32x32, flipped facing east
+    w[2] = (uint16_t) (FOLLOW_TILE | prio << 10 | slot << 12);
+    r->writeOAM(r, (uint32_t) entry * 4);
+    r->writeOAM(r, (uint32_t) entry * 4 + 1);
+    r->writeOAM(r, (uint32_t) entry * 4 + 2);
+    for (int i = 0; i < 16; i++) {
+        uint16_t c = (uint16_t) (followPal[i * 2] | followPal[i * 2 + 1] << 8);
+        r->writePalette(r, (uint32_t) (0x200 + slot * 32 + i * 2), tintShown ? tint555(c) : c);
+    }
+    followOam = entry;
+    followSlot = slot;
+    followWhy = 0;
+}
+
+/** After the last line: the game's own OAM entry, tiles (but those it wrote meanwhile) and palette back. */
+static void followEnd(struct GBAVideoRenderer* r) {
+    if (followOam < 0 || !hookGba) return;
+    uint8_t* vram = (uint8_t*) hookGba->video.vram;
+    for (int i = 0; i < 256; i++) {
+        if (followDirty[i]) continue;
+        memcpy(vram + FOLLOW_VRAM + i * 2, followSavedVram + i * 2, 2);
+        origWriteVRAM(r, FOLLOW_VRAM + (uint32_t) i * 2);
+    }
+    memcpy(&hookGba->video.oam.raw[followOam * 4], followSavedOam, 8);
+    for (int k = 0; k < 3; k++) r->writeOAM(r, (uint32_t) followOam * 4 + (uint32_t) k);
+    for (int i = 0; i < 16; i++) {
+        uint16_t c = hookGba->video.palette[256 + followSlot * 16 + i];
+        r->writePalette(r, (uint32_t) (0x200 + followSlot * 32 + i * 2), tintShown ? tint555(c) : c);
+    }
+    followOam = followSlot = -1;
 }
 
 /** Whether a PlayerAvatar sits at [a]: objectEventId (+5) the player's object, gender (+7) 0 / 1, and flags (+0) one of

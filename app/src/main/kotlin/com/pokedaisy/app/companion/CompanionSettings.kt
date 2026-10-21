@@ -68,6 +68,37 @@ interface CompanionSettings {
     /** The game's own TMs never run out ([com.pokedaisy.app.companion.data.ReusableTms.BUILT_IN]): the row says so. */
     val reusableTmsBuiltIn: Boolean get() = false
 
+    /** PLAYER LOOK ([com.pokedaisy.app.companion.data.PlayerLook]): [playerLookSupported] = a FireRed / LeafGreen /
+     * Emerald game; [playerLooks] = the heroes it can wear now (another game's, kept from the player's own ROMs);
+     * [playerLook] = the one worn, by name (null = the game's own). */
+    val playerLookSupported: Boolean get() = false
+    val playerLooks: List<String> get() = emptyList()
+    val playerLook: String? get() = null
+    /** The player's own hero here, by name (the picker's OFF tile); null before the save has a gender. */
+    val playerLookOwn: String? get() = null
+    fun setPlayerLook(look: String?) {}
+    /** A PLAYER LOOK pick's name as the row and its tile show it (a hero's, or a Pokémon's in the game). */
+    fun playerLookLabel(name: String): String = com.pokedaisy.app.companion.data.LookChar.byName(name)?.label ?: name
+    /** RIVAL LOOK: the rival of the other gender ([rivalLookSupported]: Emerald, Ruby, Sapphire) dressed up with the player. */
+    val rivalLookSupported: Boolean get() = false
+    val rivalLook: Boolean get() = true
+    fun setRivalLook(on: Boolean) {}
+    /** FOLLOWER: the party's lead walks behind the player ([followerSupported]: a GBA game it's drawn in; [followerReady]:
+     * Pokémon sprites kept, from Heart and Soul). */
+    val followerSupported: Boolean get() = false
+    val followerReady: Boolean get() = false
+    val follower: Boolean get() = false
+    fun setFollower(on: Boolean) {}
+    /** DAY AND NIGHT ([com.pokedaisy.app.companion.data.DayNight]): the overworld tinted by the clock. */
+    val dayNightSupported: Boolean get() = false
+    val dayNight: Boolean get() = false
+    fun setDayNight(on: Boolean) {}
+    /** TEXT LOOK: the other games' text looks kept ([textLooks], "FIRERED" / "EMERALD"), the one on ([textLook], null =
+     * the game's own). */
+    val textLooks: List<String> get() = emptyList()
+    val textLook: String? get() = null
+    fun setTextLook(style: String?) {}
+
     /** Whether fast-forward is currently toggled on (independent of the hold trigger). */
     val ffToggled: Boolean
     fun setFfToggled(on: Boolean)

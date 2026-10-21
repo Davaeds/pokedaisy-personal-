@@ -152,6 +152,30 @@ class Prefs(context: Context) {
         get() = p.getBoolean("reusable_tms", false)
         set(v) = p.edit().putBoolean("reusable_tms", v).apply()
 
+    /** PLAYER LOOK per ROM (keyed by CRC32): the hero the player wears ([com.pokedaisy.app.companion.data.LookChar]'s
+     * name), null = the game's own. */
+    fun playerLookFor(romKey: String): String? = p.getString("player_look_$romKey", null)
+    fun setPlayerLookFor(romKey: String, look: String?) = p.edit().putString("player_look_$romKey", look).apply()
+
+    /** FOLLOWER: the party's lead Pokémon walks behind the player (every game it works in; off to start with). */
+    var follower: Boolean
+        get() = p.getBoolean("follower", false)
+        set(v) = p.edit().putBoolean("follower", v).apply()
+
+    /** DAY AND NIGHT: the overworld tinted by the device's clock (every GBA game; off to start with). */
+    var dayNight: Boolean
+        get() = p.getBoolean("day_night", false)
+        set(v) = p.edit().putBoolean("day_night", v).apply()
+
+    /** TEXT LOOK per ROM: the style worn (a LookEngine name, "FIRERED" / "EMERALD"), null = the game's own. */
+    fun textLookFor(romKey: String): String? = p.getString("text_look_$romKey", null)
+    fun setTextLookFor(romKey: String, style: String?) = p.edit().putString("text_look_$romKey", style).apply()
+
+    /** RIVAL LOOK: the rival of the other gender wears the other hero of the player's look's game (every game). */
+    var rivalLook: Boolean
+        get() = p.getBoolean("rival_look", true)
+        set(v) = p.edit().putBoolean("rival_look", v).apply()
+
     /** Remembered speed-cycle index per ROM (keyed by CRC32). */
     fun speedIndexFor(romKey: String): Int = p.getInt("speed_$romKey", 0)
     fun setSpeedIndexFor(romKey: String, index: Int) = p.edit().putInt("speed_$romKey", index).apply()

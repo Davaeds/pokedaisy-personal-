@@ -547,6 +547,26 @@ TMs never run out by themselves (checked headless), so `ReusableTms.BUILT_IN` sh
 list beside the cheats' in `pk_cheats.c` (`sOptions`: loading cheats never drops them), with the same overlay / RA swap, so the
 Poller's hash and RetroAchievements' see the file; they don't pause achievements. Played headless with mgba_dump's `rompatch`
 (docs/ROM_FEATURES.md note 15). The newer-engine hacks build the check another way: each needs its own site.
+**PLAYER LOOK** (2026-10-22, the companion's MAKEOVER group - first, a blue-framed `featuredGroupTitle`, only in a game it works in; per ROM: `Prefs.playerLookFor`, NEW tag; `PlayerLook.kt`,
+`PlayerLookRunner.kt`, docs/DEVELOPMENT.md's "PLAYER LOOK"): play retail FireRed / LeafGreen / Ruby / Sapphire / Emerald (and Kaizo, Legacy, Imperium, Ultra
+Violet: `PlayerLook.HACKS`) as another game's hero, picked from tiles of the heroes walking (`PlayerLookPicker`),
+its graphics found by fingerprint in the player's own ROMs (`scripts/gen_player_look_sigs.py`; kept in `rom-art/look/`, never
+bundled) and patched into the running ROM in memory as blocks (`pk_cheats_block`, overlaid for the Poller / RA hashes like the
+options' patches; mgba_dump `romblocks` / `romunblock`). The player's palette slot is shared with the surf blob, shadows, arrows
+and Emerald's FLY bird: across games their colours stay and the hero is remapped into the rest (`PlayerLook.wear`) - a plain
+palette swap recoloured the blob. Loaded palettes are swapped in RAM on toggle and after state loads (`pk_cheats_repalette`).
+The companion's MAP head and CARD follow `PlayerLook.worn`. Ruby / Sapphire are a third engine (`LookEngine.RUBY`: Emerald's
+sheets, walking + running in one, front and back palettes on one tag); a hack is offered only once played dressed up.
+Heart and Soul's Gold / Kris are worn by the others (`LookEngine.HEART_AND_SOUL`, never a host; smol front pictures).
+The party's Pokémon too (`MonArt`: the follower sprites of Heart and Soul, R.O.W.E., Recharged Yellow, Seaglass; `buildMon` makes the hero's records 32x32 over
+new frame tables, frames picked by the records' own animations). RIVAL LOOK (`Prefs.rivalLook`, on): Emerald / R/S's rival (the other gender's hero: same sheets, palette tag,
+trainer pic) wears the look's `counterpart`, built in the same patch (`build(rival = true)`, `settleBoth`). TEXT LOOK
+(`TextLook.kt`, same group and patch): FireRed's / Emerald's dialogue box and font in the other; FireRed's box in Emerald
+needs Emerald's frame routines swapped for `scripts/text_look_dialogue.s` (assembled bytes in `TextLook.DIALOGUE_CODE`).
+FOLLOWER (same group): the party lead walks behind the player as one more hardware sprite put in at line 0 and taken
+out after line 159 (pk_wide.c `followBegin` / `followEnd`: OBJ tiles 1008-1023, a free OAM entry and palette slot).
+DAY AND NIGHT (`DayNight.kt`, same group, any GBA game): the renderer's BG palettes 0-12 + OBJ tinted at line 0 through
+`writePalette` (pk_wide.c `tintPalettes`, palette RAM untouched; text windows 13-15 kept), eased by the engine on the field.
 **QoL batch 2**: PC anywhere on every language + FireRed rev 0 + Ruby / Sapphire (`port_field_items.py` maps PcFns, each
 checked against its gSpecials; R/S's special is ShowPokemonStorageSystem, 60, same opcodes) and so on the hacks using those
 tables (CFRU, Gaia, Odyssey, Orange Islands, Ultra Violet: retail's gSpecials, checked). The field reads take the WIDE

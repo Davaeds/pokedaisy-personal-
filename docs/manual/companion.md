@@ -3,7 +3,7 @@ title: The companion at a glance
 summary: What the bottom screen shows, how the tab bar works, and what the companion's SETTINGS tab holds.
 section: companion
 order: 1
-keywords: [bottom screen, second screen, tabs, tab bar, overview, back button, click, sound, language, translation, close, restart, reset, gear, more, apps, hidden tabs, extra tabs, grid]
+keywords: [bottom screen, second screen, tabs, tab bar, overview, back button, click, sound, language, translation, close, restart, reset, gear, more, apps, hidden tabs, extra tabs, grid, player look, hero, heroine, protagonist, character, outfit, costume, skin, sprite, play as]
 ---
 
 The companion is everything on the bottom screen while a game runs. It reads your game as you play, so your party, bag, location and battles are always up to date without opening a single menu on the top screen. It's drawn in the game's own menu style: FireRed's party screen in FireRed, Emerald's in Emerald, and each supported hack's own look where it has one.
@@ -73,6 +73,7 @@ The gear opens the companion's SETTINGS, laid out like FireRed's OPTION screen. 
 
 The options come in groups, the ones you change while playing first:
 
+- **MAKEOVER**: `PLAYER LOOK`, `RIVAL LOOK`, `TEXT LOOK`, `FOLLOWER` and `DAY AND NIGHT`, fresh looks for your game. It sits at the top in a blue frame of its own, and only shows in a game it works in. See [MAKEOVER](#makeover) below.
 - **FF / SPEED**: `FF`, `FF SPEED`, `GAME SPEED`, `REWIND` and `SPEED OPTIONS` (a page with `SCENE SPEEDS`, `FF MODE` and `FF MUSIC`). See [Fast-forward](fast-forward.md).
 - **GAMEPLAY**: `WILD ENCOUNTERS`, `REUSABLE TMS`, `AUTO-RUN`, `RUN INDOORS` and `CHEATS`. See [Controls](controls.md), [Bag](bag.md) and [Cheats](cheats.md).
 - **SCREEN**: `ASPECT`, `HUD`, `DISPLAY OPTIONS` (a page with `STATUS BAR`, `SHADERS`, `OVERLAY` and `LIGHT COMPANION`), `DARK MODE`, `FPS / CPU` and, depending on your device, `BATTLE BUTTONS`, `COMPANION VIEW`, `COMPANION BUTTON`, `SWAP SCREENS` or `SINGLE SCREEN`. See [Screen and display](screen.md).
@@ -94,6 +95,50 @@ Every option is explained in the [Settings reference](settings-reference.md). Th
 | `JUMP TO BATTLE` | A battle opens the `BATTLE` tab, then goes back to where you were. |
 
 ![The TWEAKS page, with its four switches and a line under each](shots/companion-settings-tweaks.png "SETTINGS > TWEAKS")
+
+### MAKEOVER
+
+`MAKEOVER` is the group at the top of SETTINGS, framed in blue: it brings fresh looks into the game you're playing, with `PLAYER LOOK`, `RIVAL LOOK`, `TEXT LOOK`, `FOLLOWER` and `DAY AND NIGHT` below. It only shows in a game where one of them works.
+
+### PLAYER LOOK
+
+Ever wanted to walk around Emerald as the hero of FireRed, or the other way round? `PLAYER LOOK` dresses you up as another game's hero. Your sprite on the map changes (walking, running, on a bike, surfing, fishing), and so do your back in battle, your picture on the trainer card and your head on the region map. The companion's `MAP` and `CARD` follow along.
+
+Tap the row and every hero you can wear shows as a tile, each one walking in place as they look on the map, with the game they come from under their name. The first tile, `OFF`, is your own hero. Tap a tile to put it on.
+
+PokeDaisy doesn't come with any of these pictures: they're taken from your own copy of the other game. So the tiles only show heroes from FireRed, LeafGreen, Ruby, Sapphire or Emerald carts, or from Heart and Soul, that you've played here once or that are in your library. Each of those games gives you its two heroes (Ruby and Sapphire's look a little different from Emerald's, and Heart and Soul brings Gold and Kris), and you can also pick the other hero of the game you're playing. Heart and Soul's heroes can be worn in the other games, but Heart and Soul itself keeps its own. Until one is found the row shows `N/A`. It starts on `OFF` (your own hero), and each game remembers its own pick.
+
+Your save stays exactly as it was. The change only lives in the game's memory while you play, and the save just notes which of the game's two heroes you are. Turn it `OFF` and your own hero is back at once, and the save opens the same in any other emulator.
+
+> [!NOTE]
+> `PLAYER LOOK` works on the original FireRed, LeafGreen, Ruby, Sapphire and Emerald carts, in every language, and on Emerald Kaizo, Emerald Legacy, Emerald Imperium and Ultra Violet. Poses only one game has, like Emerald's wheelies and diving, use the nearest pose the other hero has.
+
+You can also walk around as one of your own Pokémon. With a game whose Pokémon follow you (Heart and Soul, R.O.W.E., Recharged Yellow or Emerald Seaglass) played here or in your library, the tiles also show the Pokémon in your party, walking as they follow you in that game. With more than one of those games, each Pokémon comes from one of them only, and its tile says which. Pick one and it takes your place on the map (walking, running, on a bike and surfing), on the trainer card and with its back to you in battle. Only the first 386 can be picked, and a few of the very biggest aren't among them.
+
+### RIVAL LOOK
+
+In Ruby, Sapphire and Emerald your rival is the game's other hero. With `RIVAL LOOK` on (it starts on), they dress up too, as the other hero of the game you picked: wear FireRed's boy and your rival turns up as its girl, on the map and in battle. Turn it `OFF` and your rival keeps their own look while you wear another. It shows `N/A` until you pick a `PLAYER LOOK`, and FireRed and LeafGreen don't have it (their rival isn't one of the heroes).
+
+### TEXT LOOK
+
+`TEXT LOOK` gives your game the other game's text boxes and letters: FireRed's rounded blue and white box in Emerald, or Emerald's teal one in FireRed and LeafGreen. Everything people say, signs and the save question show in it, and the letters of every menu change too.
+
+Like the heroes, the box and the letters come from your own copy of the other game, so the row shows once you've played it here or it's in your library. Tap it to switch between your game's own look (`OFF`) and the other game's. Your save isn't touched.
+
+> [!NOTE]
+> The letters only change between games in the same language (an English FireRed's in an English Emerald, say), since each language has letters of its own. The boxes work in every language. Emerald Imperium keeps its own box but takes the letters.
+
+### FOLLOWER
+
+With `FOLLOWER` on, the first Pokémon in your party walks a step behind you on the map, turning corners with you, keeping up when you run or ride your bike, and waiting while you surf. It's drawn by PokeDaisy over the game, so your game and your save don't change. It doesn't block anyone and you can't talk to it, and after you go through a door it shows up again with your first step.
+
+Its sprite comes from a game whose Pokémon follow you (Heart and Soul, R.O.W.E., Recharged Yellow or Emerald Seaglass), like the Pokémon you can wear with `PLAYER LOOK`, so the row shows `N/A` until one of those has been played here or is in your library. It's off to start with, and games whose Pokémon already follow you don't have it.
+
+### DAY AND NIGHT
+
+With `DAY AND NIGHT` on, the map follows your device's clock: a soft pink at dawn, the game's own colours by day, an orange glow at dusk and a deep blue at night. Only the outdoors changes, and only while you walk around: text boxes and menus keep their colours, buildings stay lit, and battles look as they always do. It eases in and out as you go between them.
+
+It works in every GBA game except those that already change with the time of day themselves (Unbound, Heart and Soul, Elite Redux). It's off to start with. Your game and your save don't change: only the picture does.
 
 ### LANGUAGE
 

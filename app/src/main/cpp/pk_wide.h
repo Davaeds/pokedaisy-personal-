@@ -176,6 +176,26 @@ enum { PK_WIDE_SCENE_FIELD, PK_WIDE_SCENE_TEXT, PK_WIDE_SCENE_OVERLAY, PK_WIDE_S
        PK_WIDE_SCENE_FADE, PK_WIDE_SCENE_MENU };
 int pk_wide_scene(void);
 
+/** DAY AND NIGHT: tints the map's BG palettes (0-12) and the sprites' by r / g / b (256 = as is) from the next frame
+ * drawn on, in the renderer only (palette RAM untouched). GBA only; emu thread. */
+void pk_tint_set(struct mCore* core, int r, int g, int b);
+
+/** PLAYER LOOK: the player's sprite set up again from its graphics record (after the ROM's look changed), and [pal]
+ * (32 bytes; NULL = leave the colours) put over its palette slot (the game's two palette buffers and palette RAM, only
+ * while they agree: never mid-fade). 1 = done, 0 = not now (ask again on a later frame). */
+int pk_look_refresh(struct mCore* core, const uint8_t* pal);
+
+/** FOLLOWER: the Pokémon's six 32x32 frames (south, south step, north, north step, west, west step: 3072 bytes) and its
+ * palette (32 bytes); NULL = none. Any thread before the frame, emu thread in practice. */
+void pk_follower_set(const uint8_t* frames, const uint8_t* pal);
+
+/** FOLLOWER: drawn from the next frame on (the field), or not (it disappears, and after it comes back appears only once
+ * the player steps). */
+void pk_follower_show(struct mCore* core, int on);
+
+/** FOLLOWER: its state as text (mgba_dump's followinfo). */
+void pk_follower_info(char* out, int n);
+
 /** The signal (SIGSEGV...) that made pk_wide_view switch WIDE off for this game, or 0. A fault while drawing never
  * takes the app down: the frame is shown plain until the game is configured again. */
 int pk_wide_fault(void);

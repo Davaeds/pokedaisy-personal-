@@ -155,6 +155,11 @@ object OptionColors {
     /** A field-move button's frame: [titleLayers]' build in those blues. */
     val fieldMoveLayers get() = if (gen1) G1_FRAME else if (dark) listOf(Color(0xFF0B0D11) to 2, Color(0xFF4A62C8) to 1)
         else listOf(Color(0xFF3152CD) to 2, Color(0xFFA4C5F6) to 1)
+    /** A featured settings group's band (MAKEOVER): the field-move blue's frame over a pale blue, so it stands out from
+     * the red group titles. Gen 1: its black band, like the other titles there. */
+    val featureFill get() = if (gen1) G1_INK else c(0xFFDCE8FC, 0xFF1C2546)
+    val featureText get() = if (gen1) G1_PAPER else fieldMove
+    val featureShadow get() = if (gen1) Color.Transparent else fieldMoveShadow
     /** Secondary text (paths, timestamps, hints) - lighter than [label] (dimmer in dark). */
     val muted get() = if (gen1) c(0xFF787878, 0xFF9A9A9A) else c(0xFF8C8C94, 0xFF8F95A3)
     val mutedShadow get() = if (gen1) Color.Transparent else c(0xFFD6D6D6, 0xFF2C313A)

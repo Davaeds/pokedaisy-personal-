@@ -49,6 +49,8 @@ class SettingRow(
     val keywords: String = "",
     /** The row opens a page of its own (not a pick-list): a pixel chevron at its right end. */
     val opensPage: Boolean = false,
+    /** A group title drawn to stand out ([featuredGroupTitle]). */
+    val featured: Boolean = false,
     val onClick: () -> Unit,
 )
 
@@ -142,6 +144,12 @@ val SETTING_KEYWORDS: Map<String, String> = mapOf(
     "SCENE SPEEDS" to "battle speed text speed instant text fast text menu speed overworld speed faster battles quality of life qol bike speed surf speed faster bike faster surfing",
     "AUTO-RUN" to "auto run autorun running shoes run sprint dash always run hold b",
     "RUN INDOORS" to "run inside buildings indoor running shoes houses",
+    "MAKEOVER" to "makeover look looks style customize customise appearance costume outfit skin dress up player rival",
+    "FOLLOWER" to "follower following pokemon walking pokemon partner companion pet behind you lead heartgold soulsilver yellow pikachu",
+    "DAY AND NIGHT" to "day and night daytime nighttime night time dusk dawn sunset evening clock time of day tint darker dark lighting dns",
+    "TEXT LOOK" to "text look text box textbox dialogue dialog box message box window frame font letters typeface firered emerald",
+    "RIVAL LOOK" to "rival look rival costume outfit skin sprite appearance dress up brendan may other hero opponent",
+    "PLAYER LOOK" to "player look hero heroine character protagonist trainer costume outfit skin sprite appearance swap play as another game red leaf brendan may",
     "REUSABLE TMS" to "reusable tm tms technical machine machines reuse infinite unlimited keep tm single use consumed used up teach moves",
     "WILD ENCOUNTERS" to "wild encounters encounter rate random battles grass caves repel no encounters fewer battles",
 )
@@ -151,6 +159,10 @@ private fun fold(s: String): String =
 
 /** A group's title row in [GroupedRows]. */
 fun groupTitle(label: String) = SettingRow(label, null, header = true) {}
+
+/** A group's title that stands out from the others (MAKEOVER, the user's call): a framed blue band with gold stars and
+ * [tagline] under the title. */
+fun featuredGroupTitle(label: String, tagline: String) = SettingRow(label, null, header = true, subtitle = tagline, featured = true) {}
 
 /**
  * A settings list in groups, shared by both screens' SETTINGS: group titles (red, like
@@ -307,7 +319,10 @@ private fun GroupedRowsList(
     val subtitleLine = if (gameScale == 1f) m.lineHeight else subtitleMetrics(m).lineHeight + m.u * 2
     Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
         rows.forEachIndexed { i, row ->
-            if (row.header) {
+            if (row.header && row.featured) {
+                val track = if (tops == null) Modifier else Modifier.onGloballyPositioned { tops[i] = it.positionInParent().y.toInt() }
+                FeaturedTitle(row, m, top = if (i == 0) 1 else 6, modifier = track)
+            } else if (row.header) {
                 val track = if (tops == null) Modifier else Modifier.onGloballyPositioned { tops[i] = it.positionInParent().y.toInt() }
                 val band = OptionColors.groupTitleFill
                 if (band == null) {
@@ -342,6 +357,33 @@ private fun GroupedRowsList(
             }
         }
         footer()
+    }
+}
+
+/** [featuredGroupTitle]'s band: the title between two gold stars, its tagline under it, in a field-move blue frame. */
+@Composable
+private fun FeaturedTitle(row: SettingRow, m: GbaTextMetrics, top: Int, modifier: Modifier = Modifier) {
+    val u = m.u
+    val small = subtitleMetrics(m)
+    Column(
+        modifier
+            .padding(start = u * 2, end = u * 2, top = u * top, bottom = u * 2)
+            .fillMaxWidth()
+            .drawBehind {
+                val px = u.toPx()
+                drawLayeredBox(OptionColors.fieldMoveLayers.inPx(px), OptionColors.featureFill, radius = 3 * px)
+            }
+            .padding(horizontal = u * 8, vertical = u * 4),
+    ) {
+        androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            ShadowedPixelIcon(PixelIcons.star, OptionColors.favorite, OptionColors.featureShadow, m)
+            GbaText(
+                tr(row.label), OptionColors.featureText, OptionColors.featureShadow, m,
+                modifier = Modifier.padding(horizontal = u * 4),
+            )
+            ShadowedPixelIcon(PixelIcons.star, OptionColors.favorite, OptionColors.featureShadow, m)
+        }
+        row.subtitle?.let { GbaText(tr(it), OptionColors.label, OptionColors.labelShadow, small, modifier = Modifier.padding(top = u)) }
     }
 }
 

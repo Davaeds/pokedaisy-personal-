@@ -309,6 +309,12 @@ internal enum class MapLabelStyle(val width: Int, val height: Int) {
 
     /** The player's 16x16 head on the map (regionmap/player_*.png, from the ROM by RomArt). */
     fun headAsset(gender: Int, game: GameKind? = null): String? = when (this) {
+        // PLAYER LOOK: another game's hero worn, whose head the game's own map shows now.
+        FIRERED, EMERALD -> com.pokedaisy.app.companion.data.PlayerLook.worn.value?.headArt ?: ownHeadAsset(gender, game)
+        else -> ownHeadAsset(gender, game)
+    }
+
+    private fun ownHeadAsset(gender: Int, game: GameKind? = null): String? = when (this) {
         FIRERED -> if (gender == 1) "player_leaf" else "player_red"
         // Super Mariomon drew MARIO in Brendan's slot.
         // Recharged Emerald redrew both heads for its map.

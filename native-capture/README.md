@@ -81,10 +81,16 @@ One command per line:
 | `fieldinfo [run]` | Print the app's field read of this frame (`pk_field_state`, behind SCENE SPEEDS' TEXT, AUTO-RUN and RUN INDOORS; `wideon` picks the game): known, locked (a script holds the field), battle, text (a text box up while locked), bike, surf, avatar (bike / surf from the game's own player state). With `run`, RUN INDOORS sets the map's allowRunning first |
 | `wideghosts` | List the far-off objects (unspawned templates) the last snapshot holds: box in VMap pixels, palette tag, priority; `NO PALETTE` if neither a loaded slot nor the ROM's table has its colours |
 | `wideshot FILE` | Write the last wide frame (`240 + 2 * MARGIN` x 160) as a PPM |
+| `follower FILE` / `followon 0\|1` / `followinfo` | FOLLOWER: FILE is a Pokémon's six 32x32 frames + palette (3104 bytes); `followon 1` draws it behind the player (after `wideon`, which loads the field table); `followinfo` prints where it is and why a frame drew none. Repo builds only |
+| `lookrefresh [PAL]` | PLAYER LOOK's refresh of the player's sprite from its record after `romunblock` / `romblocks`, PAL (64 hex digits) put over its palette slot |
+| `tint R G B` | DAY AND NIGHT's tint from the next frame on (256 each = none): the map's BG palettes 0-12 and the sprites' as the renderer draws them, EXPAND's margins too (`pk_wide.c`'s `tintPalettes`). Repo builds only |
+| `rawshot FILE` | The current frame as `W H` and a newline, then its 32-bit pixels as the core gives them (this libmgba leaves the top byte 0 for nearly every pixel: no layer tags) |
 | `widecentre FILE` | Write the last frame's rebuild of the middle 240x160 (with `widecheck` on) as a PPM, to diff against `shot` |
 | `widerec FILE N` | Run N frames (keys as `keys` holds them) recording every wide frame into FILE - `scripts/wide_gif.py FILE out.gif` makes an animation (or a contact sheet) of it |
 | `rompatch AT EXPECT ADDR VALUE` | A game option's ROM patch as the app makes it (`pk_cheats_patch`, REUSABLE TMS: `ReusableTms.kt`; all hex, EXPECT and VALUE as byte strings): VALUE at ADDR, only where the ROM holds EXPECT from AT. Repo builds only, like `cheat`; `romcheck` then shows the file's bytes through the overlay and the swap |
 | `romunpatch` | Take those patches out again |
+| `romblocks FILE` | PLAYER LOOK's blocks the way the app puts them in (`pk_cheats_block`, all or none): FILE is `PlayerLook.Patch.toText()` (`block ADDR CRC HEX` lines, then `pal FROMHEX TOHEX` lines: the palettes already loaded, swapped by `pk_cheats_repalette`). `PlayerLookTest` writes one per hero and game to `app/build/player-look/`. Repo builds only |
+| `romunblock` | Take PLAYER LOOK's blocks out again |
 | `romcheck ROMFILE` | Compare the ROM with the file three ways: the raw bus, the bus through `pk_cheats_overlay` (what the Poller hashes) and swapped (what RetroAchievements hashes) |
 
 Lines starting with `#`, and blank lines, are ignored.

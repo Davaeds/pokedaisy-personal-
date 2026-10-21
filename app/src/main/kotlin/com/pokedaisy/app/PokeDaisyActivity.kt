@@ -62,7 +62,10 @@ import com.pokedaisy.app.companion.ui.CompanionScreen
 import com.pokedaisy.app.companion.ui.GameStatusBar
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.pokedaisy.app.companion.data.isGen2
@@ -156,6 +159,17 @@ class PokeDaisyActivity : Activity() {
     private var states: SaveStates? = null
 
     private val telemetry = TelemetryStore()
+
+    /** PLAYER LOOK for the running game: its patches built off the UI thread, the pick handed to the engine. */
+    private var lookPatch: com.pokedaisy.app.companion.data.PlayerLook.Patch? = null
+    private val lookRunner by lazy {
+        PlayerLookRunner(applicationContext) { p ->
+            lookPatch = p
+            if (::engine.isInitialized) engine.setPlayerLook(p)
+        }
+    }
+    /** Follows the game's own player gender (a new game picks one) for PLAYER LOOK. */
+    private val lookGender = kotlinx.coroutines.CoroutineScope(androidx.compose.ui.platform.AndroidUiDispatcher.Main)
     private lateinit var displayManager: DisplayManager
     private var presentation: DualScreenPresentation? = null
     // BACK for the companion: one per companion copy (bottom screen, debug mirror).
@@ -830,6 +844,26 @@ class PokeDaisyActivity : Activity() {
 
     /** The loaded ROM is a Game Boy / Color cart (no GBA header, no L/R). */
     @Volatile private var romIsGameBoy = false
+
+    /** FOLLOWER: the party lead's national number (null: none / unknown). */
+    @Volatile private var followerLead: Int? = null
+
+    /** FOLLOWER works here: a GBA game (not a Game Boy or DS one) that has no following Pokémon of its own. */
+    private fun followerSupported() = !romIsGameBoy && !romIsNds && ::engine.isInitialized &&
+        com.pokedaisy.app.companion.data.activeGame !in FOLLOWERS_OF_THEIR_OWN
+
+    /** The engine's follower: the lead's sprite while the row is on. */
+    private fun applyFollower() {
+        if (!::engine.isInitialized) return
+        val on = Prefs(this).follower && followerSupported()
+        val n = followerLead
+        engine.follower = if (on && n != null) engine.follower?.takeIf { it.national == n }
+            ?: com.pokedaisy.app.companion.data.MonArt.load(filesDir, n) else null
+    }
+
+    /** DAY AND NIGHT works here: a GBA game (not a Game Boy or DS one) that doesn't change with the time itself. */
+    private fun dayNightSupported() = !romIsGameBoy && !romIsNds && ::engine.isInitialized &&
+        com.pokedaisy.app.companion.data.activeGame !in com.pokedaisy.app.companion.data.DayNight.OWN_DAY_NIGHT
     /** The game running is a DS cart (melonDS): two screens, touch, X / Y ([loadRom]). */
     @Volatile private var romIsNds = false
     /** The DS game's generated world (its wild rates for WILD ENCOUNTERS), or null. */
@@ -1017,6 +1051,38 @@ class PokeDaisyActivity : Activity() {
             if (::engine.isInitialized) engine.setReusableTms(tmSites, on)
         }
         override val reusableTmsSupported get() = tmSites.isNotEmpty()
+        override val playerLookSupported get() = lookRunner.supported.value
+        override val playerLooks get() = lookRunner.offered.value.map { it.name } + lookRunner.offeredMons.value.map { "MON:$it" }
+        override val playerLook get() = lookRunner.picked.value?.name ?: lookRunner.pickedMon.value?.let { "MON:$it" }
+        override fun playerLookLabel(name: String) = com.pokedaisy.app.companion.data.MonArt.monOf(name)?.let { lookRunner.monNames[it] ?: "#$it" }
+            ?: com.pokedaisy.app.companion.data.LookChar.byName(name)?.label ?: name
+        override val playerLookOwn get() = lookRunner.own.value?.name
+        override fun setPlayerLook(look: String?) {
+            Prefs(this@PokeDaisyActivity).setPlayerLookFor(romKey, look)
+            lookRunner.apply()
+        }
+        override val textLooks get() = lookRunner.textOffered.value.map { it.name }
+        override val textLook get() = lookRunner.textPicked.value?.name
+        override fun setTextLook(style: String?) {
+            Prefs(this@PokeDaisyActivity).setTextLookFor(romKey, style)
+            lookRunner.apply()
+        }
+        override val followerSupported get() = followerSupported()
+        override val followerReady get() = com.pokedaisy.app.companion.data.MonArt.available(filesDir).isNotEmpty()
+        override val follower get() = Prefs(this@PokeDaisyActivity).follower
+        override fun setFollower(on: Boolean) {
+            Prefs(this@PokeDaisyActivity).follower = on
+            applyFollower()
+        }
+        override val dayNightSupported get() = dayNightSupported()
+        override val dayNight get() = Prefs(this@PokeDaisyActivity).dayNight
+        override fun setDayNight(on: Boolean) { Prefs(this@PokeDaisyActivity).dayNight = on }
+        override val rivalLookSupported get() = lookRunner.rivalSupported
+        override val rivalLook get() = Prefs(this@PokeDaisyActivity).rivalLook
+        override fun setRivalLook(on: Boolean) {
+            Prefs(this@PokeDaisyActivity).rivalLook = on
+            lookRunner.apply()
+        }
         override val reusableTmsBuiltIn get() =
             com.pokedaisy.app.companion.data.activeGame in com.pokedaisy.app.companion.data.ReusableTms.BUILT_IN
         override val ffToggled get() = if (::engine.isInitialized) engine.fastForwardToggled else false
@@ -1313,6 +1379,42 @@ class PokeDaisyActivity : Activity() {
         RetroAchievements.init(this)
         RetroAchievements.onUnlockSound = { unlockSound?.play() }
         AchievementBadges.dir = java.io.File(cacheDir, "ra-badges")
+        lookGender.launch {
+            telemetry.snapshot.map { it.playerGender }.distinctUntilChanged().collect { lookRunner.onGender(it) }
+        }
+        // PLAYER LOOK's Pokémon: the party's species (national numbers) with their names in the game.
+        lookGender.launch {
+            telemetry.snapshot.map { Triple(it.party.map { m -> m.species }, it.party.firstOrNull { m -> !m.isEgg }?.species, it.pokedex) }
+                .distinctUntilChanged().collect { (species, leadSpecies, dex) ->
+                val tables = dex?.tables ?: return@collect
+                val named = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    species.distinct().mapNotNull { sp ->
+                        runCatching { com.pokedaisy.app.companion.data.PokedexSource.nationalOf(tables, sp) }.getOrNull()
+                            ?.takeIf { it in 1..com.pokedaisy.app.companion.data.MonArt.LAST }
+                            ?.let { it to com.pokedaisy.app.companion.data.speciesName(sp) }
+                    }
+                }
+                lookRunner.onParty(named.map { it.first }.distinct(), named.toMap())
+                followerLead = leadSpecies?.let { sp ->
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        runCatching { com.pokedaisy.app.companion.data.PokedexSource.nationalOf(tables, sp) }.getOrNull()
+                    }
+                }?.takeIf { it in 1..com.pokedaisy.app.companion.data.MonArt.LAST }
+                applyFollower()
+            }
+        }
+        // DAY AND NIGHT: the tint the engine eases to on the field - the clock's, outdoors, while the row is on.
+        lookGender.launch {
+            while (true) {
+                if (::engine.isInitialized) {
+                    val snap = telemetry.snapshot.value
+                    engine.dayNightTint = if (Prefs(this@PokeDaisyActivity).dayNight && dayNightSupported() &&
+                        com.pokedaisy.app.companion.data.DayNight.outdoors(snap.mapType)
+                    ) com.pokedaisy.app.companion.data.DayNight.now() else com.pokedaisy.app.companion.data.DayNight.NONE
+                }
+                kotlinx.coroutines.delay(500)
+            }
+        }
 
         // Debug-only mirror of the companion UI onto the main display, for
         // Claude's own testing use (screenshotting/tapping over adb): the
@@ -1701,6 +1803,9 @@ class PokeDaisyActivity : Activity() {
             restoreSpeedIndex(Prefs(this@PokeDaisyActivity).speedIndexFor(romKey))
             applyFieldPrefs(this)
         }
+        // PLAYER LOOK: this ROM's scan and patches, in the background; the engine gets the pick once they're in.
+        lookPatch = null
+        lookRunner.load(r, crc, if (gba) gameCode else "", if (gba) SavesLocation.saveFor(this, Prefs(this), romFile) else null)
     }
 
     /** SCENE SPEEDS, AUTO-RUN, RUN INDOORS, WILD ENCOUNTERS and REUSABLE TMS onto [e], and the game whose field they read (EXPAND on or off). */
@@ -1939,6 +2044,7 @@ class PokeDaisyActivity : Activity() {
         unlockSound = null
         stageRecomposer.cancel()
         stageRecomposing.cancel()
+        lookGender.cancel()
         com.pokedaisy.app.companion.ui.GameStart.waiting = false
         super.onDestroy()
     }
@@ -3198,6 +3304,13 @@ class PokeDaisyActivity : Activity() {
     }
 
     companion object {
+        /** Games whose Pokémon follow the player already: FOLLOWER isn't offered there. */
+        private val FOLLOWERS_OF_THEIR_OWN = setOf(
+            com.pokedaisy.app.companion.data.GameKind.HEART_AND_SOUL, com.pokedaisy.app.companion.data.GameKind.SOULGOLD,
+            com.pokedaisy.app.companion.data.GameKind.ROWE, com.pokedaisy.app.companion.data.GameKind.EMERALD_SEAGLASS,
+            com.pokedaisy.app.companion.data.GameKind.RECHARGED_YELLOW,
+        )
+
         /** BIKE / ROD's SELECT presses before giving up, and the frames each waits to see it take (~3 s in all at 1x). */
         private const val SELECT_TRIES = 15
         private const val SELECT_WAIT = 10

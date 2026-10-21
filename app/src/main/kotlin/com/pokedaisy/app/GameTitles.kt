@@ -24,6 +24,9 @@ object GameTitles {
 
     val BY_SHA1: Map<String, String> by lazy { RETAIL + HACKS + RETAIL_PORT_TITLES }
 
+    /** A retail cart's SHA-1 (any language and revision), not a hack's. */
+    fun isRetail(sha1: String): Boolean = sha1 in RETAIL || sha1 in RETAIL_PORT_TITLES
+
     /** Retail carts (the library's GBA / GB / GBC tag when a game has no cover: [RomCategory]). */
     /** The DS carts [BY_SHA1] names (the website's ROM check reads DS carts by their header: compat.json's `ds`). */
     internal val NDS_SHA1S = setOf(

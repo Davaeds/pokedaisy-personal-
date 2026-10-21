@@ -177,6 +177,16 @@ under LANGUAGE in either Settings screen. Species, move and item names and the G
   day and night, berries, tides and daily events follow the device's clock, and saves keep it.
 - **Fast-forward music** that keeps playing the song at its normal speed, instead of chipmunk sound.
 - **Save states** on hotkeys, with undo.
+- **Player look** (optional, the companion's SETTINGS > MAKEOVER > PLAYER LOOK): play Emerald as FireRed's hero, Ruby /
+  Sapphire as Emerald's or FireRed / LeafGreen as Ruby's (any of them as any other), or any of them as Heart and Soul's Gold or Kris, on the map, in battle, on the trainer card and the region map. Their sprites are taken from
+  your own copy of the other game (none are bundled) and the save isn't changed. With a hack whose Pokémon follow you (Heart and Soul, R.O.W.E.,
+  Recharged Yellow, Emerald Seaglass) you can also walk as one of your party's Pokémon, its follower sprite on the map and its pictures in battle and on the card. In Ruby, Sapphire and Emerald the
+  rival dresses up too, as the other hero of that game (RIVAL LOOK), and TEXT LOOK swaps in the other game's text boxes
+  and letters (FireRed's in Emerald, Emerald's in FireRed / LeafGreen).
+- **Follower** (optional, SETTINGS > MAKEOVER > FOLLOWER): your first Pokémon walks behind you on the map, drawn by the
+  app over the game (its sprite from your own copy of one of those hacks); the game and the save don't change.
+- **Day and night** (optional, SETTINGS > MAKEOVER > DAY AND NIGHT): the overworld outdoors follows your clock, with dawn,
+  dusk and night tints, in any GBA game. Text boxes, menus and battles keep their colours; the save isn't touched.
 - **Rewind** (optional, Settings > REWIND): hold the REWIND HOLD hotkey (R on a keyboard; pick a pad button in
   HOTKEYS) to play the last ~20 seconds backwards. It never touches your save file.
 - **Status bar** (optional): game, location, money, clock and battery above the game.

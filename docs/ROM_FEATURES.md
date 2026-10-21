@@ -6,63 +6,63 @@ change to any of the places listed under "Where it's decided" updates its rows h
 
 ✅ yes · ◐ partly (see the note) · — no · n/a doesn't apply
 
-| Game | Version | EXPAND | Battle buttons | One-press picks | POKéMON switch | Field items | FLY | Trainer card | Field reads | Bike / surf | Wild encounters | PC anywhere | Reusable TMs |
-| ---- | ------- | :----: | :------------: | :-------------: | :------------: | :---------: | :-: | :----------: | :---------: | :---------: | :-------------: | :---------: | :----------: |
-| Yellow (GB) | USA/Europe | ✅ ¹² | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — |
-| Yellow (GB) | DE / FR / IT / ES | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — |
-| Red / Blue (GB) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — |
-| Gold / Silver (GBC) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a | — |
-| Crystal (GBC) | USA, USA/Europe rev 1, AU | ✅ ¹² | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — |
-| Crystal Clear (GBC) | 2.5.11, 2.6.0 (4 builds) | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a | — |
-| Prism (GBC) | 0.95 build 254 | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a | ✅ ¹⁶ |
-| Polished Crystal (GBC) | 3.2.0 - 3.2.3 (16 builds) | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a | ✅ ¹⁶ |
-| FireRed | USA/Europe rev 1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| FireRed | USA/Europe rev 0 | ✅ | ✅ | — | — | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| FireRed | ES | ✅ | ✅ | ◐ ² | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| FireRed | DE / FR / IT / JP | ✅ | ✅ | — | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| LeafGreen | USA/Europe rev 0 and 1 | ✅ | ✅ | — | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| LeafGreen | ES / DE / FR / IT / JP | ✅ | ✅ | — | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| Emerald | USA/Europe | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| Emerald | ES / DE / FR / IT | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| Emerald | JP | ✅ | ✅ | — | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| Ruby / Sapphire | USA rev 1 and 2 | ✅ | ✅ | ✅ | — | ✅ | ✅ | — | ◐ ⁵ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| Ruby / Sapphire | USA rev 0, ES / DE / FR / IT | ✅ | ✅ | ✅ | — | ✅ | ✅ | — | ◐ ⁵ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| Ruby / Sapphire | JP | ✅ | ✅ | ✅ | — | ✅ | ✅ | — | ◐ ⁵ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| Platinum (DS) | USA rev 1 | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | — |
-| HeartGold (DS) | USA | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | — |
-| SoulSilver (DS) | USA | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | — |
-| Amethyst | 1.3.0, 1.4.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | — |
-| Ash Gray | 4.5.3, Fork Bug Fix 1.0 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | — |
-| Celia's Stupid Romhack | 1.1.4 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | ✅ ¹⁵ |
-| Elite Redux | 2.65.3b, 2.65.4.1b | ✅ | ✅ ¹⁰ | ✅ ¹⁰ | ✅ | — | — | — | ✅ ¹⁰ | ✅ ¹⁰ | ✅ ¹⁰ | — ¹⁰ | n/a ¹⁵ |
-| Emerald Imperium | 1.3.1 | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| Emerald Kaizo | 2.0 | ✅ | ✅ | ✅ | ✅ | ✅ | — ⁴ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| Emerald Legacy | 1.1.4 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| Emerald Rogue | 2.2.1-EX | ✅ | — | — | — | — | — | — | ◐ ⁶ | — | — | — | — |
-| Emerald Seaglass | 3.0 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | — |
-| FireRed Rocket Edition | the one release | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ✅ ¹⁵ |
-| Gaia | 3.2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | — |
-| Ghost Grey | 1.0.1, 1.0.2, 1.0.4 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹¹ | — | ✅ ¹¹ | ✅ ¹¹ | ✅ ¹¹ | ✅ ¹¹ | — |
-| Glazed | 9.2.0 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁷ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| GS Chronicles | 2.7.6 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | — |
-| Heart and Soul | 2.0.6 | ✅ | ✅ | ✅ | ✅ | — | ✅ | — | ◐ ⁶ | — | ✅ | ✅ | — |
-| Lazarus | 2.0 | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
-| Odyssey | 4.1.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | — |
-| Orange Islands | Beta 5.7, an older beta | ◐ ³ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| Quetzal | English / Spanish Alpha 9 v0 | ◐ ³ | ✅ | ✅ | ✅ | — | — | — | ◐ ⁶ | — | — | — | — |
-| Quetzal | English / Spanish Alpha 9 v1 | — | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — |
-| Quetzal, Moemon Quetzal | English / Spanish Alpha 0.8.4 (+ Hotfix) | — | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — |
-| R.O.W.E. | 2.1.9.1 Experimental | ◐ ³ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | — |
-| Radical Red | 4.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁶ |
-| Recharged Emerald | 2.2.5, 2.2.8, Rebalanced 2.2.8 | — | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — |
-| Recharged Yellow | 1.8.0, 1.9.0, 1.9.4, 1.9.7 | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | ✅ | ✅ | ✅ | — | — |
-| SoulGold | 1.1.4, 1.2 (3 builds) | ✅ | ✅ | ✅ | ✅ | ◐ ¹⁷ | ✅ | ✅ | ◐ ⁶ | — | ✅ | ✅ | ✅ ¹⁶ |
-| Super Mariomon | 1.2.1-1.3, 1.5.1, 1.5.2 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | — |
-| Sword and Shield Ultimate Plus | 1.2.1.2 + its 3 patches | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | — |
-| Team Rocket Dragonsden | 1.5 | — | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — |
-| Too Many Types 2 | 1.5.2 | ✅ | ✅ | ✅ | ✅ | — | — | — | ◐ ⁶ | — | ✅ | — | — |
-| Ultra Violet | 1.22 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ |
-| Unbound | 2.1.1.1, 2.1.1.1 French | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁶ |
+| Game | Version | EXPAND | Battle buttons | One-press picks | POKéMON switch | Field items | FLY | Trainer card | Field reads | Bike / surf | Wild encounters | PC anywhere | Reusable TMs | Player look |
+| ---- | ------- | :----: | :------------: | :-------------: | :------------: | :---------: | :-: | :----------: | :---------: | :---------: | :-------------: | :---------: | :----------: | :---------: |
+| Yellow (GB) | USA/Europe | ✅ ¹² | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — | n/a |
+| Yellow (GB) | DE / FR / IT / ES | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — | n/a |
+| Red / Blue (GB) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — | n/a |
+| Gold / Silver (GBC) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a | — | n/a |
+| Crystal (GBC) | USA, USA/Europe rev 1, AU | ✅ ¹² | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — | n/a |
+| Crystal Clear (GBC) | 2.5.11, 2.6.0 (4 builds) | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a | — | n/a |
+| Prism (GBC) | 0.95 build 254 | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a | ✅ ¹⁶ | n/a |
+| Polished Crystal (GBC) | 3.2.0 - 3.2.3 (16 builds) | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a | ✅ ¹⁶ | n/a |
+| FireRed | USA/Europe rev 1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| FireRed | USA/Europe rev 0 | ✅ | ✅ | — | — | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| FireRed | ES | ✅ | ✅ | ◐ ² | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| FireRed | DE / FR / IT / JP | ✅ | ✅ | — | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| LeafGreen | USA/Europe rev 0 and 1 | ✅ | ✅ | — | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| LeafGreen | ES / DE / FR / IT / JP | ✅ | ✅ | — | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| Emerald | USA/Europe | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| Emerald | ES / DE / FR / IT | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| Emerald | JP | ✅ | ✅ | — | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| Ruby / Sapphire | USA rev 1 and 2 | ✅ | ✅ | ✅ | — | ✅ | ✅ | — | ◐ ⁵ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| Ruby / Sapphire | USA rev 0, ES / DE / FR / IT | ✅ | ✅ | ✅ | — | ✅ | ✅ | — | ◐ ⁵ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| Ruby / Sapphire | JP | ✅ | ✅ | ✅ | — | ✅ | ✅ | — | ◐ ⁵ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| Platinum (DS) | USA rev 1 | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | — | n/a |
+| HeartGold (DS) | USA | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | — | n/a |
+| SoulSilver (DS) | USA | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | — | n/a |
+| Amethyst | 1.3.0, 1.4.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | — | — |
+| Ash Gray | 4.5.3, Fork Bug Fix 1.0 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | — | — |
+| Celia's Stupid Romhack | 1.1.4 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | ✅ ¹⁵ | — |
+| Elite Redux | 2.65.3b, 2.65.4.1b | ✅ | ✅ ¹⁰ | ✅ ¹⁰ | ✅ | — | — | — | ✅ ¹⁰ | ✅ ¹⁰ | ✅ ¹⁰ | — ¹⁰ | n/a ¹⁵ | — |
+| Emerald Imperium | 1.3.1 | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ ¹⁸ |
+| Emerald Kaizo | 2.0 | ✅ | ✅ | ✅ | ✅ | ✅ | — ⁴ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| Emerald Legacy | 1.1.4 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| Emerald Rogue | 2.2.1-EX | ✅ | — | — | — | — | — | — | ◐ ⁶ | — | — | — | — | — |
+| Emerald Seaglass | 3.0 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | — | — |
+| FireRed Rocket Edition | the one release | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ✅ ¹⁵ | — |
+| Gaia | 3.2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | — | — |
+| Ghost Grey | 1.0.1, 1.0.2, 1.0.4 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹¹ | — | ✅ ¹¹ | ✅ ¹¹ | ✅ ¹¹ | ✅ ¹¹ | — | — |
+| Glazed | 9.2.0 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁷ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — |
+| GS Chronicles | 2.7.6 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | — | — |
+| Heart and Soul | 2.0.6 | ✅ | ✅ | ✅ | ✅ | — | ✅ | — | ◐ ⁶ | — | ✅ | ✅ | — | — |
+| Lazarus | 2.0 | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — |
+| Odyssey | 4.1.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | — | — |
+| Orange Islands | Beta 5.7, an older beta | ◐ ³ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | — |
+| Quetzal | English / Spanish Alpha 9 v0 | ◐ ³ | ✅ | ✅ | ✅ | — | — | — | ◐ ⁶ | — | — | — | — | — |
+| Quetzal | English / Spanish Alpha 9 v1 | — | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — |
+| Quetzal, Moemon Quetzal | English / Spanish Alpha 0.8.4 (+ Hotfix) | — | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — |
+| R.O.W.E. | 2.1.9.1 Experimental | ◐ ³ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | — | — |
+| Radical Red | 4.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁶ | — |
+| Recharged Emerald | 2.2.5, 2.2.8, Rebalanced 2.2.8 | — | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — |
+| Recharged Yellow | 1.8.0, 1.9.0, 1.9.4, 1.9.7 | ✅ | ✅ | ✅ | ✅ | — | — | ✅ | ✅ | ✅ | ✅ | — | — | — |
+| SoulGold | 1.1.4, 1.2 (3 builds) | ✅ | ✅ | ✅ | ✅ | ◐ ¹⁷ | ✅ | ✅ | ◐ ⁶ | — | ✅ | ✅ | ✅ ¹⁶ | — |
+| Super Mariomon | 1.2.1-1.3, 1.5.1, 1.5.2 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | — | — |
+| Sword and Shield Ultimate Plus | 1.2.1.2 + its 3 patches | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | — | — |
+| Team Rocket Dragonsden | 1.5 | — | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — |
+| Too Many Types 2 | 1.5.2 | ✅ | ✅ | ✅ | ✅ | — | — | — | ◐ ⁶ | — | ✅ | — | — | — |
+| Ultra Violet | 1.22 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ |
+| Unbound | 2.1.1.1, 2.1.1.1 French | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁶ | — |
 
 1. Yellow's and Crystal's battle controls steer from the cursor they read off the screen (`readGen1BattleInput`,
    `readGen2BattleInput`: the menu's own cursor variables, checked against the filled ▶ on screen), not from addresses
@@ -187,6 +187,29 @@ change to any of the places listed under "Where it's decided" updates its rows h
     (`scripts/find_field_items_soulgold.py`); checked headless on v1.2 with a player's save (GitHub #242: the bag 5 -> 4,
     the steps 100). Its QUICK MENU BIKE / ROD go through its SELECT wheel (`KeyItems.selectWheel`): no USE / GIVE / TAKE
     for other items (its renumbered items and gItemsInfo aren't mapped).
+18. PLAYER LOOK dresses the player as another game's hero (Red / Leaf, Emerald's Brendan / May or Ruby / Sapphire's,
+    whichever games the player has), their graphics taken from the player's own ROM of that game and patched into this one
+    in memory (`PlayerLook.kt`, the blocks through `pk_cheats_block`). Every graphic is found by fingerprint
+    (`scripts/gen_player_look_sigs.py`: all FireRed / LeafGreen / Ruby / Sapphire / Emerald carts, every language and
+    revision, hold the whole set), so it needs no per-ROM table. Offered on retail carts and on the hacks in
+    `PlayerLook.HACKS` (Emerald Kaizo, Emerald Legacy, Emerald Imperium, Ultra Violet: retail's hero graphics and the tables
+    pointing at them, each played dressed up); another hack may load its hero's pictures or palettes its own way. Played
+    headless with mgba_dump's `romblocks` on the English saves (FireRed rev 1, Emerald, Ruby and Sapphire rev 1, each hack's
+    own save or retail's): walking, running, the bikes, surfing and the field move, the trainer card, a battle's throw, the
+    look put on and taken off mid-game, `romcheck` reading the file's bytes through the overlay and the swap, and FireRed's
+    patch refused by Emerald (the CRCs). The shared palette slot's colours (surf blob, shadows, warp arrows) are kept
+    (`LOOK_SHARED_COLOURS`). Ruby / Sapphire give the front and back picture palettes one tag, so the back one is told
+    apart by where it sits (24 bytes past the hero's back picture entry); their reflections are one flat colour, so a
+    Ruby / Sapphire hero worn elsewhere gets a reflection palette made from their own (`PlayerLook.reflect`). Super
+    Mariomon kept May, but the only save to play it with is Mario's: not offered. Heart and Soul's Gold and Kris are
+    worn by the others (`LookEngine.HEART_AND_SOUL`: Emerald's sheets frame for frame, the front picture smol-compressed,
+    found at a ROM pointer's target), played headless in Emerald, FireRed and Sapphire (on mid-game there); Heart and Soul
+    itself isn't dressed up (its row stays —). RIVAL LOOK dresses the other gender's hero as the look's counterpart in the same patch: in Emerald
+    and Ruby / Sapphire that's the rival (same sheets, palette tag and trainer picture), checked headless in all three.
+    TEXT LOOK (same group, same patch) swaps FireRed's and Emerald's dialogue box and font (`TextLook.kt`): the box on every
+    Western FireRed / LeafGreen / Emerald (Emerald's frame code found by its bytes: not Imperium), the font between English ones.
+    A Pokémon as the look (the follower sprites of Heart and Soul, R.O.W.E., Recharged Yellow or Seaglass) works on the same games, checked in Emerald, FireRed, Ruby,
+    Sapphire. DAY AND NIGHT (same group) works on every GBA game but Unbound, Heart and Soul and Elite Redux: no table, so no column.
 
 ## What each column is
 
@@ -207,6 +230,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 - **Wild encounters**: CONTROLS > WILD ENCOUNTERS (`WildEncounters.kt`).
 - **PC anywhere**: the BAG's `PC` button (`Pc.kt`).
 - **Reusable TMs**: GAMEPLAY > REUSABLE TMS, a TM kept in the bag after it teaches a move (`ReusableTms.kt`).
+- **Player look**: MAKEOVER > PLAYER LOOK, the player as another game's hero (`PlayerLook.kt`); RIVAL LOOK dresses the rival too (Emerald, Ruby, Sapphire).
 
 ## Where it's decided
 
@@ -278,6 +302,9 @@ change to any of the places listed under "Where it's decided" updates its rows h
 - **Reusable TMs**: `ReusableTms.find` (the sites by their code, counted per engine by the header's game code, all
   calling one function; the native patch checks them again, `pk_cheats_patch`) and `ReusableTms.BUILT_IN` (by
   `GameKind`). The newer-engine hacks build that check another way: each needs its own site.
+- **Player look**: `PlayerLook.scan` (every hero's graphics by fingerprint, `PlayerLookSigsGen.kt`) and
+  `PlayerLookRunner` (retail carts, `GameTitles.isRetail` or a collection dump of one (`RetailDumps`), and
+  `PlayerLook.HACKS`).
 - **Trainer card**: `NativeConfig.trainerCard` (Emerald Legacy's: its own card style, `CardStyle.LEGACY`, for its fifth
   star's black card). SoulGold (every build), Lazarus and Recharged Yellow (every build) draw their own cards
   (`CardStyle.SOULGOLD` / `.LAZARUS` / `.RECHARGED_YELLOW`): their art found from headless VRAM dumps of the open card and

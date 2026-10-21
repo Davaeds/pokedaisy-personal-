@@ -1143,6 +1143,172 @@ ON, imported ones OFF. `Prefs.cheatsEnabled` is the master switch (off by defaul
 - **Savestates** don't carry cheats (`SAVESTATE_CHEATS` isn't in the flags); a state made with a
   cheat on does carry the memory it wrote, like any emulator.
 
+## PLAYER LOOK (another game's hero)
+
+SETTINGS > MAKEOVER > PLAYER LOOK plays one game as another game's hero: Red or Leaf in Emerald, Brendan or May
+(Emerald's or Ruby / Sapphire's: the same people drawn again for Emerald) in FireRed / LeafGreen, any of them in Ruby /
+Sapphire, or the other hero of the same game. The pick is a grid of tiles (`PlayerLookPicker`), each hero walking in
+place in their own colours (`LookArt.walk`), the game's own hero first as OFF. Nothing is bundled: the heroes' graphics come from the
+player's own ROM of that game, and the running ROM is patched **in memory only**.
+
+- **Finding the graphics** (`PlayerLook.scan`): every hero's sheets, palettes and pictures (`LookPart`) by
+  fingerprint, RomArt's rolling window (`PlayerLookSigsGen.kt` from `scripts/gen_player_look_sigs.py`: pokefirered's and
+  pokeruby's built files and pokeemerald's PNGs converted as its build does, each found in the retail ROMs - the pinned
+  pokeemerald build isn't retail any more, so never its ELF). Every copy is kept, and so are the words pointing at them (a palette
+  table's `{ptr, tag}`, a picture table's `{ptr, size, tag}`, literal pools). Every FireRed / LeafGreen / Ruby /
+  Sapphire / Emerald cart in every language and revision holds the whole set (the script's report on the multi-language
+  folder). Ruby / Sapphire (`LookEngine.RUBY`) have Emerald's sheets but walking and running in one (`RS_NORMAL`), their
+  other sheets under Emerald's parts, a compressed back picture, and no reflection palette of the hero's (palette 10,
+  one flat water colour, for both). Heart and Soul's Gold and Kris (`LookEngine.HEART_AND_SOUL`, worn only, never
+  dressed up: `engineFor` never gives it) are Emerald's sheets frame for frame from pokehns' PNGs (its sparse checkout
+  needs their folders added); their front picture is smol (`LookBlob.smol`, `Smol.decompressAny`), which the script
+  finds by trying every target of a ROM pointer.
+- **Keeping heroes** (`LookArt`): any scan leaves its whole heroes decoded in `rom-art/look/<hero>/` and their region
+  map head in `regionmap/player_<hero>.png`. `PlayerLookRunner` scans the running ROM on load, then the library's other
+  FireRed / LeafGreen / Ruby / Sapphire / Emerald ROMs for heroes still missing (each file once,
+  `rom-art/look/scanned.txt`), builds every patch either gender could wear and lets go of the bytes. Only retail carts
+  (`GameTitles.isRetail`, `RetailDumps`) and the hacks in `PlayerLook.HACKS` (Kaizo, Legacy, Imperium, Ultra Violet: each
+  played dressed up) wear one; any hack's whole heroes are still kept. A ROM whose object-event palette table doesn't
+  give the hero's tag gets no patch (`build` returns null): the frames alone would be drawn in the wrong colours.
+- **The patch** (`PlayerLook.build`): the player's own sheets are written over in place, frame by frame. Within one
+  engine a sheet is copied whole; across engines the frames are matched by the games' animation tables, always through
+  Emerald's sheets (`PlayerLook.sheet`: `em()` gives any hero's frames in Emerald's sheets, FireRed's come from those): FireRed's run frames into Emerald's running sheet's order, a 16x32 frame centred in a 32x32 one
+  (surfing, field move) or the middle of a 32x32 one taken (`widen` / `narrow`), Emerald-only poses from the nearest
+  FireRed frame (wheelies from the bike, Dive recoloured to the Dive palette, watering standing), the battle back
+  picture's throw (Emerald's 4 frames, FireRed's 5). The overworld palette goes in place where the object-event palette
+  table gives the hero's tag (0x1100 / 0x1110, reflections + 1). **That palette slot is shared**: the surf blob, the
+  jump shadows, the warp arrows and Emerald's FLY bird draw with it, so across games the colours they use stay
+  (`LOOK_SHARED_COLOURS`, from the decomps' graphics) and the hero's go in the other slots (`PlayerLook.wear`: most used
+  first, the rest joining the nearest colour), his pixels remapped to match - a straight palette swap turned Emerald's
+  surf blob bright blue. Compressed pictures (front pic, trainer palettes, FireRed's map head) go into the ROM's empty
+  tail as all-literal LZ77 streams and the pointers to them move there: the front pic's every reference, the trainer
+  palettes' by tag (Emerald's player uses one palette for both pictures, its front and back tables' entries told apart
+  by their tags; the front one's tag is the one its picture's `{ptr, 0x800, tag}` entry carries). Ruby / Sapphire give
+  both entries the same tag and data, so there the back one is the entry 24 bytes past the hero's back picture entry
+  (three back pictures, then their palettes: pokeruby's `battle_1.c`), and the back picture itself moves to the tail
+  too. A Ruby / Sapphire hero worn elsewhere gets a reflection palette made from their own (`PlayerLook.reflect`). The player's own gender is dressed up; with
+  RIVAL LOOK (`Prefs.rivalLook`, on) the other gender's hero too, as the look's `counterpart` (`build(rival = true)`, one
+  free-tail cursor for both): in Emerald and Ruby / Sapphire that's the rival, whose records (RivalMayNormal & co.) use the
+  same sheets, palette tag and trainer picture (`hasRival`; FireRed's rival is neither hero). The palettes to swap after a
+  state load go per slot (`settleBoth`): a palette can't say whose slot it's in, so one the other slot takes is left be.
+- **In the core** (`pk_cheats_block`): blocks beside the cheats' and REUSABLE TMS's patches, each keeping the file's
+  bytes under it (malloc'd): only where the ROM's CRC32 there is the file's (no cheat on it), all or none
+  (`pkRomBlocks`); `pk_cheats_overlay` and `pk_cheats_swap_rom` cover them, so the Poller's hash and RetroAchievements'
+  see the file. mGBA copies the mapped ROM before the first write (`_pristineCow`): the file is never written. Palettes
+  already loaded are swapped in EWRAM (the game's palette buffers) and OBJ palette RAM (`pk_cheats_repalette`), so a
+  look put on or off mid-game shows at once, and again after every state load (a state made in another look). The save
+  only holds a graphics id and the gender: untouched.
+- **Checking it headless**: `PlayerLookTest` (ROM-backed) writes every hero x game patch to `app/build/player-look/`;
+  mgba_dump's `romblocks FILE` puts one in exactly as the app does (and its `pal` lines), `romunblock` takes it out,
+  `romcheck` compares the ROM with the file through the overlay and the swap. Checked on FireRed rev 1's, Emerald's,
+  Ruby's and Sapphire's saves and on Kaizo (Emerald's save), Legacy, Imperium and Ultra Violet (their own): walking, running, both bikes, surfing (Surf taught by SetMonData, a `warp` beside water), the trainer card, a
+  wild battle's throw, on and off mid-game; a FireRed patch is refused by Emerald (the CRCs). The rival
+  (`*-rival.txt`): the map's first object template made the rival (RIVAL_*_NORMAL, its own local id) and added beside the
+  player by a poked script (getplayerxy - map coordinates, no offset - addvar, setobjectxyperm, addobject), the card
+  opened with the gender byte flipped for the rival's trainer picture; Emerald, Ruby and Sapphire.
+
+
+### A Pokémon as the player look
+
+PLAYER LOOK also offers the party's Pokémon (`"MON:<national>"` picks, `MonArt.monOf`) from a hack's follower sprites
+(`MonArt.Source`, each kept in `rom-art/look/mon/<tag>/`; with several, a species comes from the first source in that order
+that has it). R.O.W.E.: graphics ids 600 + species in its gObjectEventGraphicsInfoPointers (found as the table whose records'
+paletteTag is 0x1800 + species), nine raw frame images (3-8 = the sheet), palettes by tag in sObjectEventSpritePalettes,
+pictures from the tables its ROM's symbol table names. Recharged Yellow: a flat 0x24-byte record array by FireRed species id
+(its base from the function that picks a follower's record, checked by shape), frames one LZ77 stream, the battle palette as
+the overworld one, ids to national through sSpeciesToNationalPokedexNum (found by contents). Emerald Seaglass: gSpeciesInfo
+0x088F0780 (0xD0 each), overworldData +0xA4 (one LZ77 stream; its size field says 0x200 even at 64x64), owPal +0xC8 and the
+pictures / palette +0x58 / +0x60 / +0x68, all LZ77. A 64x64 sprite whose drawing sits in the bottom middle 32x32 of every
+frame is kept cropped (`crop64`; Seaglass's and R.O.W.E.'s seven big ones). Radical Red has no following Pokémon (its
+overworld Pokémon are a hand-picked set with no species link). Heart and Soul: `MonArt` reads v2.0.6's gSpeciesInfo (0x087E6544, 0x10C each; checked on PIKACHU's record): overworldData +0xB0
+(an ObjectEventGraphicsInfo whose one image entry is the whole smol-compressed sheet: six 32x32 frames, south x2, north x2,
+west x2), overworldPalette +0xF8 (raw), frontPic +0x58 / backPic +0x5C (smol), palette +0x60 (raw - TOGETIC's starts with
+0x10, so LZ77 only with a 32-byte header), species 1-386.
+`PlayerLook.buildMon` (`dress(mon = ...)`): no sheet is written; `monRecords` finds every overworld record of the hero
+through its frame tables (entries pointing into one of the hero's sheets, the normal table on into the running one;
+Emerald's normal record says size 512 for 256-byte frames, so the entries' size counts) and makes each 32x32 (size /
+width / height, the bike record's OAM and subsprite tables, `TRACKS_BIKE_TIRE` -> `TRACKS_FOOT`) over a new frame
+table into the six frames (in the tail, remapped into the slot like a hero's: `wearMon`); each entry's frame is the way the
+record's animations show it (`facings`: animations in fours, south / north / west / east, the first four standing). The
+back picture fills every throw frame (moved down by its empty bottom rows, `MonArt.asTrainerBack`: the player's picture is
+centred at y 80, a Pokémon's at 80 + its back y_offset, which is those rows), the front picture and palette go where a hero's do. `PlayerLookRunner` keeps the
+scan for these (built on first pick, `monPatch`) and takes the party from the snapshot (`onParty`, national numbers by
+`PokedexSource.nationalOf`). Played headless (`PlayerLookTest.pokemonLooks` -> `<game>-<hero>-as-mon<n>.txt`) in Emerald,
+FireRed, Ruby and Sapphire: walking, running, both bikes, the card, a battle.
+A look changed mid-game leaves the player's sprite on the old record (a Pokémon's 32x32 shape, a frame table in the tail
+the next look rewrites) and the old colours (a palette swap by content can't know a Pokémon's, nor tell Emerald's May's from
+the rival's): on the field after every change and state load the engine calls `MgbaCore.pkLookRefresh` (pk_wide.c's
+`pk_look_refresh`: the sprite set up from its record as ObjectEventSetGraphicsId does - only while it's still the player's,
+its animations the record's - and `Patch.playerPal` put over its palette slot). mgba_dump's `lookrefresh
+[PAL]` after `romunblock` / `romblocks` checks it: Red -> a Pokémon -> May -> Red in place, each right.
+The palette goes only where the slot is: gPlttBufferUnfaded and gPlttBufferFaded (0x400 apart, the slot at 0x200 + 32 per
+slot, both found holding palette RAM's colours) and palette RAM, and only while those three agree on a palette of 3+ colours;
+otherwise the refresh returns 0 and the engine tries again on later field frames. The first version swapped the slot's
+live colours by content everywhere in EWRAM: run on the first field frame after a battle, still faded to black, it wrote the
+Pokémon's palette over every empty 32 bytes (5,399 of them: the map's tilemap buffers, the save blocks). `pk_cheats_repalette`
+skips a `from` of under 3 colours for the same reason, and `EmulatorEngine.setPlayerLook` ignores the same patch again
+(`Patch.sameAs`: the runner hands it over whenever the party read changes, as it does when a battle starts).
+
+### TEXT LOOK (another game's text boxes and letters)
+
+MAKEOVER > TEXT LOOK (`TextLook.kt`, `Prefs.textLookFor`) puts FireRed's dialogue box and normal font in Emerald, or
+Emerald's in FireRed / LeafGreen, in the same patch as PLAYER LOOK's (`PlayerLookRunner` adds its blocks). The pieces are
+found by fingerprint in one pass with the heroes (`PlayerLook.scan(rom, TextBlob.entries)`, `Fingerprints.find`;
+`TextLookSigsGen.kt` from `scripts/gen_text_look_sigs.py`: FireRed's `menu_message.4bpp` + `stdpal_0`, `latin_normal.fwlatfont`
+and text.c's widths; Emerald's `message_box.png` and `latin_normal.png` converted as gbagfx does - `latfont`, four 2bpp tiles a
+glyph - and fonts.c's widths) and kept per style in `rom-art/look/text/` (`TextArt`).
+- **Fonts**: one format in both games (512 glyphs x 64 bytes, a width byte each): written over every copy (FireRed keeps
+  four). Each language has its own font, so the fingerprints (English's) only match English carts and their hacks; the box
+  is in every Western cart (and the Japanese FireRed / LeafGreen).
+- **The box**: the same window in both (30 tiles, 6 rows), drawn from Emerald's 14 tiles (straight sides, every middle row
+  alike) or FireRed's 18 (a pill whose ends change row by row). Emerald's re-cuts into FireRed's slots and needs nothing else
+  (`TextLook.cut`). FireRed's can't be drawn by Emerald's routines, so in Emerald its 13 tiles go into the box's slots as they
+  are and both of Emerald's frame routines (menu.c's `WindowFunc_DrawDialogueFrame` and the custom-tile one the shops / bag
+  messages use) are replaced through their pointers by `scripts/text_look_dialogue.s` (`TextLook.DIALOGUE_CODE`, assembled
+  with the `firered-qol-build` image's arm-none-eabi-as), two copies in the ROM's last 2 KB: FireRed's layout one column
+  narrower than Emerald's wider window, any height, the tile base / palette read from two constants or from
+  `sTileNum` / `sPaletteNum` (the custom routine's only EWRAM pool words). The routines are found by their code
+  (`TextLookCode`: a `CodeSig` fingerprint, no code kept but an 8-byte anchor - the CRC32 of the routine with BL pairs and
+  address-like pool words zeroed, `TextLook.mask`) - English / German / French Emerald,
+  Kaizo, Legacy; Imperium (a gcc rebuild) gets the letters only. Both boxes draw their frame with palette entries 10-15
+  and text with 1-9, so the source's six frame colours go into the host's box palette (`TextLook.boxPalette`).
+- **Checked headless**: `PlayerLookTest.textLooks` writes `<game>-text-<style>.txt`; the save prompt, the START menu, the
+  bag and a direct call of `DrawDialogFrameWithCustomTileAndPalette` were shot with mgba_dump's `romblocks` in Emerald and
+  FireRed.
+
+### FOLLOWER (a Pokémon walking behind the player)
+
+MAKEOVER > FOLLOWER (`Prefs.follower`, off): the party's lead (first non-egg, `PokedexSource.nationalOf`) walks a tile
+behind the player, its sprite a hack's follower frames (`MonArt`). It's one more hardware sprite, put in through
+pk_wide.c's scanline hook: at line 0 (`followBegin`) a hidden OAM entry after the game's (so drawn under them), OBJ tiles
+1008-1023 and an OBJ palette slot no shown sprite uses are written - VRAM / OAM raw plus the renderer's `writeOAM` /
+`writePalette` - and after line 159 (`followEnd`) the game's own bytes go back (a VRAM halfword the game wrote meanwhile,
+seen by the `writeVRAM` hook, is kept). The game, its save and states never hold it; WIDE's per-line OAM record leaves
+the entry out. Where it stands is an offset from the player's tile (gObjectEvents' current / previous coords), so map
+connections (which shift every coordinate) don't move it; each step it takes the tile the player left, eased by BG2's
+scroll (16 px a tile, any speed); a warp hides it until the next step. The player's place on screen is the box of the OAM
+entries showing its sprite's tiles (subsprites split it; parked entries sit at y 160). Vanilla-shaped games only (an
+8-bit graphics id); not on Heart and Soul / SoulGold (followers of their own) or while surfing (`EmulatorEngine.stepFollower`).
+mgba_dump: `follower FILE` (frames + palette), `followon 1`, `followinfo`; checked walking / turning / running in
+Emerald and FireRed, with EXPAND too.
+
+### DAY AND NIGHT (the overworld by the clock)
+
+MAKEOVER > DAY AND NIGHT (`DayNight.kt`, `Prefs.dayNight`, off) tints the map by the device's clock: keyframes by hour
+(night, dawn, day, dusk) blended by the minute. Picked over a GPU pass on the frame's layer tags: mGBA's output here
+(mgba_dump's `rawshot`) leaves the top byte 0 for nearly every pixel, so text windows couldn't be told apart. Instead the
+renderer's own palette copy is tinted: pk_wide.c's scanline hook, at line 0 of every frame, writes the tinted colours of
+BG palettes 0-12 (the map's tilesets) and all 16 OBJ palettes through `renderer->writePalette` (`tintPalettes`); palettes
+13-15 (the text windows, the START menu, FireRed's description box) are left alone. Palette RAM, the game's palette
+buffers and the save never change; the game's VBlank copy overwrites the renderer's copy and the next line 0 tints it
+again. EXPAND's margins come from palette RAM through pk_wide's `color()`, which tints them the same way while it's on.
+- The activity sets `EmulatorEngine.dayNightTint` every half second (the clock's tint; none indoors - `Telemetry.mapType`
+  not a town / city / route / ocean route - or with the row off, on a Game Boy / DS game or one in
+  `DayNight.OWN_DAY_NIGHT`); the engine eases toward it on the field's screen (`FfMenuWatch.onField`, no battle) and back
+  to none elsewhere, 4/256 a frame, through `MgbaCore.pkSetTint` (sent again every second while on: a new core is hooked
+  when told).
+- Checked headless with mgba_dump's `tint R G B`: field, START menu, the save prompt, EXPAND (`wideon 22` + `wideshot`)
+  on Emerald and FireRed: map and people tinted, every window as it was, the margins matching the middle.
 ## PC BOXES and TRADE (save files)
 
 A game's library menu > PC BOXES (`SaveEditorActivity`, `companion/ui/PcBoxesScreen.kt`) reads the

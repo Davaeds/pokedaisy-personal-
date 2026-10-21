@@ -133,6 +133,18 @@ The `SPEED OPTIONS` page:
 | `FF MODE` | as on the top screen | Where fast-forward slows down. | [Fast-forward](fast-forward.md) |
 | `FF MUSIC` | as on the top screen | What fast-forward sounds like. | [Fast-forward](fast-forward.md) |
 
+### Makeover
+
+At the top of SETTINGS, in a blue frame, in the games where any of it works.
+
+| Setting | Choices | What it does | More |
+| --- | --- | --- | --- |
+| `PLAYER LOOK` | **`OFF`**, another game's hero, or a Pokémon in your party | Plays as the hero of another FireRed, LeafGreen, Ruby, Sapphire or Emerald game (or Heart and Soul) you have, taken from your own copy, picked from tiles that show each one. With a game whose Pokémon follow you (Heart and Soul, R.O.W.E., Recharged Yellow or Emerald Seaglass), your party's Pokémon too. `N/A` until one is found. | [Companion](companion.md#player-look) |
+| `RIVAL LOOK` | **`ON`**, `OFF` | Your rival wears the other hero of the game you picked. Ruby, Sapphire and Emerald only; `N/A` until you pick a `PLAYER LOOK`. | [Companion](companion.md#rival-look) |
+| `TEXT LOOK` | **`OFF`**, or the other game | FireRed's text boxes and letters in Emerald, or Emerald's in FireRed and LeafGreen, from your own copy of that game. Shows once that game is found. | [Companion](companion.md#text-look) |
+| `FOLLOWER` | `ON`, **`OFF`** | Your first Pokémon walks behind you on the map, drawn over the game. Needs Heart and Soul, R.O.W.E., Recharged Yellow or Emerald Seaglass too (their sprites); not in games whose Pokémon follow you already. | [Companion](companion.md#follower) |
+| `DAY AND NIGHT` | `ON`, **`OFF`** | The map outdoors follows your clock: dawn, dusk and night tints. Text boxes, menus, buildings and battles keep their colours. Every GBA game but those with a day and night of their own. | [Companion](companion.md#day-and-night) |
+
 ### Gameplay
 
 | Setting | Choices | What it does | More |

@@ -179,7 +179,7 @@ object RomArt {
     internal fun head(b: ByteBuffer, i: Int): Long = fmix(b.getLong(i) xor fmix(b.getLong(i + 8)))
 
     /** [RomBlob.pre] of the 8 bytes [a] (little-endian): the scan's per-byte filter. */
-    private fun pre(a: Long): Int = ((a * -0x61c8864680b583ebL) ushr 48).toInt() // 0x9E3779B97F4A7C15
+    internal fun pre(a: Long): Int = ((a * -0x61c8864680b583ebL) ushr 48).toInt() // 0x9E3779B97F4A7C15
 
     /**
      * Decoded data of every blob found in [rom], in one pass: a rolling 8-byte
@@ -289,7 +289,7 @@ object RomArt {
     }
 
     /** A sprite of [w]x[h] from consecutive 4bpp tiles, index 0 transparent. */
-    private fun sprite(tiles: ByteArray, pal: IntArray, w: Int, h: Int, tileOf: (Int, Int) -> Int = { tx, ty -> ty * (w / 8) + tx }): Image {
+    internal fun sprite(tiles: ByteArray, pal: IntArray, w: Int, h: Int, tileOf: (Int, Int) -> Int = { tx, ty -> ty * (w / 8) + tx }): Image {
         val img = Image(w, h)
         for (ty in 0 until h / 8) for (tx in 0 until w / 8) for (y in 0 until 8) for (x in 0 until 8) {
             val v = px4(tiles, tileOf(tx, ty), x, y)

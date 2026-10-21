@@ -74,6 +74,20 @@ object MgbaCore {
      * between frames. */
     external fun pkFieldState(runIndoors: Boolean, wildKeep: Int): Int
 
+    /** DAY AND NIGHT: the map's BG palettes (0-12) and the sprites' drawn tinted by [r] / [g] / [b] (256 = as is),
+     * in the renderer only. GBA; emu thread. */
+    external fun pkSetTint(r: Int, g: Int, b: Int)
+
+    /** PLAYER LOOK: the player's sprite set up again from its graphics record, as the game does getting on a bike (a
+     * Pokémon's look changes the record; the next look rewrites the tail its frame table sat in). Emu thread. */
+    external fun pkLookRefresh(pal: ByteArray?): Boolean
+
+    /** FOLLOWER: the Pokémon's six 32x32 frames (3072 bytes) and palette (32); nulls = none. Emu thread. */
+    external fun pkFollowerSet(frames: ByteArray?, pal: ByteArray?)
+
+    /** FOLLOWER: drawn from the next frame on, or not (off, it reappears only once the player steps). Emu thread. */
+    external fun pkFollowerShow(on: Boolean)
+
     // pkFieldState's bits (pk_wide.h's PK_FIELD_*).
     const val FIELD_KNOWN = 1
     const val FIELD_LOCKED = 2
@@ -220,6 +234,19 @@ object MgbaCore {
 
     /** Emu thread: every game option's ROM patch out again. */
     external fun pkRomUnpatch()
+
+    /** Emu thread: PLAYER LOOK's blocks ([com.pokedaisy.app.companion.data.PlayerLook]) in place of any before - block i
+     * is [lens][i] bytes of [data] (back to back) at [addrs][i], only where the ROM's CRC32 there is [crcs][i] (the
+     * file's bytes). All or none: how many went in, or -1. The Poller's reads and RetroAchievements' hash still see the
+     * file's bytes. */
+    external fun pkRomBlocks(addrs: IntArray, lens: IntArray, crcs: IntArray, data: ByteArray): Int
+
+    /** Emu thread: every PLAYER LOOK block out again. */
+    external fun pkRomUnblock()
+
+    /** Emu thread: the 32-byte palettes in [from] (back to back) swapped for [to] wherever the game has one loaded
+     * (EWRAM's palette buffers, OBJ palette RAM). Returns how many. */
+    external fun pkRepalette(from: ByteArray, to: ByteArray): Int
 
     // --- FF-music rendering (see FfMusicRenderer) ---
     // A second, fully independent core, never the player's real session —

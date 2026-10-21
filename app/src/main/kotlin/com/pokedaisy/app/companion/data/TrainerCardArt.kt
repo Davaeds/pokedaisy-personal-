@@ -237,9 +237,11 @@ object TrainerCardArt {
     /**
      * The card as the game shows it: 240x160, front or [back]; [colon] = the
      * play time's blinking colon. [backdrop] false leaves out the screen
-     * behind the card (BG2), transparent instead - see [cardBounds].
+     * behind the card (BG2), transparent instead - see [cardBounds]. [pic]: another 64x64 front pic and its palette in
+     * place of the player's (PLAYER LOOK's hero, as the game itself then draws it).
      */
-    fun render(art: Art, card: TrainerCardInfo, back: Boolean, colon: Boolean = true, backdrop: Boolean = true): RomArt.Image {
+    fun render(art: Art, card: TrainerCardInfo, back: Boolean, colon: Boolean = true, backdrop: Boolean = true,
+               pic: Pair<ByteArray, ByteArray>? = null): RomArt.Image {
         val b = blobs(art.style)
         val kanto = !art.style.hoenn
         val ry = art.style == CardStyle.RECHARGED_YELLOW || art.style == CardStyle.RECHARGED_YELLOW_V1_9
@@ -277,7 +279,8 @@ object TrainerCardArt {
                 tile(img, bg3, pal, (3 shl 12) or (t + 16), x, lay.badgeY + 1)
                 tile(img, bg3, pal, (3 shl 12) or (t + 17), x + 1, lay.badgeY + 1)
             }
-            pic(img, d(if (card.female) b.picFemale else b.picMale), RomArt.palette(d(if (card.female) b.picFemalePal else b.picMalePal)), lay)
+            if (pic != null) pic(img, pic.first, RomArt.palette(pic.second), lay)
+            else pic(img, d(if (card.female) b.picFemale else b.picMale), RomArt.palette(d(if (card.female) b.picFemalePal else b.picMalePal)), lay)
         } else if (kanto) {
             // DrawCardBackStats: a little marker beside each FireRed stat line that has a count.
             fun mark(x: Int, y: Int) {

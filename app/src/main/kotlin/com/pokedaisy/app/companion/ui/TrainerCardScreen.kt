@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import com.pokedaisy.app.companion.data.CardStyle
+import com.pokedaisy.app.companion.data.LookArt
+import com.pokedaisy.app.companion.data.PlayerLook
 import com.pokedaisy.app.companion.data.RomArt
 import com.pokedaisy.app.companion.data.TrainerCardArt
 import com.pokedaisy.app.companion.data.TrainerCardInfo
@@ -82,9 +84,15 @@ fun TrainerCardScreen(card: TrainerCardInfo, art: TrainerCardArt.Art, modifier: 
     // behind it would draw a box of other stripes (and cost a scale step).
     // Both colon states, each rendered once per card: the blink used to re-render the
     // whole card (and a new bitmap) every second on the main thread.
-    val renders = remember(art, card, back) { arrayOfNulls<ImageBitmap>(2) }
+    // PLAYER LOOK: the worn hero's front pic, as the game's own card now shows it.
+    val context = LocalContext.current
+    val look = PlayerLook.worn.value
+    val lookPic = produceKeyedState<Pair<ByteArray, ByteArray>?>(null, look) {
+        value = look?.let { c -> withContext(Dispatchers.IO) { runCatching { LookArt.frontPic(context.filesDir, c) }.getOrNull() } }
+    }.value
+    val renders = remember(art, card, back, lookPic) { arrayOfNulls<ImageBitmap>(2) }
     val image = renders[if (colon) 1 else 0] ?: run {
-        val img = TrainerCardArt.render(art, card, back, colon, backdrop = false)
+        val img = TrainerCardArt.render(art, card, back, colon, backdrop = false, pic = lookPic)
         val (l, t, r, b) = TrainerCardArt.cardBounds(img).toList()
         val px = IntArray((r - l) * (b - t)) { img.argb[(t + it / (r - l)) * img.width + l + it % (r - l)] }
         Bitmap.createBitmap(px, r - l, b - t, Bitmap.Config.ARGB_8888).asImageBitmap().also { renders[if (colon) 1 else 0] = it }

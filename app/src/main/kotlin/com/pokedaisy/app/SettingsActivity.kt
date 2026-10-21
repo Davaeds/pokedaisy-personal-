@@ -584,7 +584,7 @@ class SettingsActivity : ComponentActivity() {
                 }
             },
             // Keeps the last ~20 s; the REWIND HOLD hotkey plays them backwards.
-            SettingRow(tk("REWIND"), if (prefs.rewind) tk("ON") else tk("OFF"), subtitle = "Keeps the last 20 s to play backwards") { prefs.rewind = !prefs.rewind; revision++ },
+            SettingRow(tk("REWIND"), if (prefs.rewind) tk("ON") else tk("OFF")) { prefs.rewind = !prefs.rewind; revision++ },
             // FF MODE and FF MUSIC: set once and rarely touched, on their own page (the companion's has SCENE SPEEDS too).
             SettingRow(tk("SPEED OPTIONS"), null, subtitle = "FF mode and FF music", opensPage = true) { screen = Screen.SPEED },
             groupTitle(tk("SCREEN")),
@@ -627,7 +627,7 @@ class SettingsActivity : ComponentActivity() {
                 revision++
             }.takeIf { !usesSecondScreen },
             // Game and companion trade screens; the game picks it up on resume.
-            SettingRow(tk("SWAP SCREENS"), onOff(Screens.swapped(this, prefs)), subtitle = "Game and companion trade screens") {
+            SettingRow(tk("SWAP SCREENS"), onOff(Screens.swapped(this, prefs))) {
                 Screens.setSwapped(this, prefs, !Screens.swapped(this, prefs))
                 revision++
             }.takeIf { usesSecondScreen },
@@ -676,7 +676,7 @@ class SettingsActivity : ComponentActivity() {
             SettingRow(tk("FOLDERS"), null, opensPage = true, subtitle = "Where ROMs, saves and states live") { screen = Screen.FOLDERS },
             SettingRow(tk("HIDDEN GAMES"), RomFolder.hiddenRoms(this@SettingsActivity, prefs).size.takeIf { it > 0 }?.toString() ?: tk("NONE"), opensPage = true) { screen = Screen.HIDDEN },
             // A game's GameShark / Action Replay / CodeBreaker codes, on their own page.
-            SettingRow(tk("CHEATS"), onOff(prefs.cheatsEnabled), opensPage = true, subtitle = "GameShark, Action Replay and CodeBreaker codes") { screen = Screen.CHEATS },
+            SettingRow(tk("CHEATS"), onOff(prefs.cheatsEnabled), opensPage = true) { screen = Screen.CHEATS },
             groupTitle(tk("ONLINE")),
             // Signed in = on; the account's name, else OFF.
             SettingRow(
@@ -1201,7 +1201,7 @@ class SettingsActivity : ComponentActivity() {
         val master = prefs.cheatsEnabled
         val ready = rom != null && cheatCrc != null
         val rows = buildList {
-            add(SettingRow(tk("CHEATS"), onOff(master)) { prefs.cheatsEnabled = !master; revision++ })
+            add(SettingRow(tk("CHEATS"), onOff(master), subtitle = "GameShark, Action Replay and CodeBreaker codes") { prefs.cheatsEnabled = !master; revision++ })
             add(SettingRow(tk("GAME"), rom?.let { GameTitles.label(this@SettingsActivity, prefs, it) } ?: tk("NONE")) {
                 if (games.isEmpty()) return@SettingRow
                 val labels = games.map { GameTitles.label(this@SettingsActivity, prefs, it) }

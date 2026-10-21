@@ -51,6 +51,13 @@
 //   widerec FILE N     - run N frames, recording every wide frame into FILE (scripts/wide_gif.py)
 //   layers MASK        - draw only the video layers in MASK from the next frame on
 //                        (bit 0-3 = BG0-BG3, bit 4 = OBJ; 0x1F = all, the default)
+//   follower FILE      - FOLLOWER's Pokémon: FILE = its six 32x32 frames + palette (3104 bytes); `followon 1` draws it
+//   followon 0|1       - FOLLOWER shown (needs `wideon`: the field reads' table)
+//   lookrefresh [PAL]  - PLAYER LOOK's refresh of the player's sprite from its record (pk_look_refresh), after
+//                        `romblocks` / `romunblock` changed the look in place; needs `wideon` (the field reads' table)
+//   tint R G B         - DAY AND NIGHT's tint from the next frame (256 each = none): the map's and sprites' palettes
+//   rawshot FILE       - write the current frame as "W H\n" then its 32-bit pixels as the core gives them, mGBA's
+//                        layer tags in the top byte (BG n = 0x08 | n << 4; DAY AND NIGHT's tint reads them)
 //   shot FILE          - write the current frame to FILE as a binary PPM (P6) -
 //                        no PNG dependency; `python3 -c 'from PIL import Image;
 //                        Image.open("x.ppm").save("x.png")'` converts it
@@ -73,6 +80,10 @@
 //                        (pk_cheats_patch; hex, EXPECT / VALUE as byte strings):
 //                        VALUE at ADDR only where the ROM holds EXPECT from AT
 //   romunpatch         - take the game options' patches out again (pk_cheats_unpatch)
+//   romblocks FILE     - PLAYER LOOK's blocks the way the app puts them in (pk_cheats_block, all or
+//                        none; FILE = PlayerLook.Patch.toText(): `block ADDR CRC HEX` lines, then
+//                        `pal FROMHEX TOHEX` lines for the palettes already loaded, pk_cheats_repalette)
+//   romunblock         - take them out again (pk_cheats_unblock)
 //   romcheck ROMFILE   - compare the ROM as the companion reads it (bus +
 //                        pk_cheats_overlay) and as RA hashes it (swapped) with
 //                        the file
@@ -787,6 +798,44 @@ static void cmdRomPatch(const char* line) {
     printf("rompatch %08x: %s, rom patched: %s\n", addr, ok ? "in" : "code didn't match", pk_cheats_rom_patched() ? "yes" : "no");
 }
 
+static void cmdRomBlocks(const char* path) {
+    FILE* f = fopen(path, "rb");
+    if (!f) {
+        printf("romblocks: cannot open %s\n", path);
+        return;
+    }
+    pk_cheats_unblock(core);
+    static char line[1 << 17];
+    static uint8_t data[1 << 16], to[32];
+    int blocks = 0, ok = 1, pals = 0;
+    while (ok && fgets(line, sizeof(line), f)) {
+        unsigned addr = 0, crc = 0;
+        if (!strncmp(line, "block ", 6)) {
+            char* hex = line + 6;
+            if (sscanf(hex, "%x %x", &addr, &crc) != 2) { ok = 0; break; }
+            hex = strchr(strchr(hex, ' ') + 1, ' ') + 1;
+            hex[strcspn(hex, "\r\n")] = 0;
+            int n = hexBytes(hex, data, sizeof(data));
+            ok = n > 0 && pk_cheats_block(core, addr, data, n, crc);
+            if (!ok) printf("romblocks: block %08x (%d bytes) didn't go in\n", addr, n);
+            blocks += ok;
+        } else if (!strncmp(line, "pal ", 4)) {
+            char* from = line + 4;
+            char* sp = strchr(from, ' ');
+            if (!sp) continue;
+            *sp = 0;
+            char* toHex = sp + 1;
+            toHex[strcspn(toHex, "\r\n")] = 0;
+            int n = hexBytes(from, data, sizeof(data));
+            if (hexBytes(toHex, to, sizeof(to)) == 32 && n >= 32) pals += pk_cheats_repalette(core, data, n / 32, to);
+        }
+    }
+    fclose(f);
+    if (!ok) pk_cheats_unblock(core);
+    printf("romblocks: %d block(s) in, %d palette(s) swapped, rom patched: %s\n", ok ? blocks : 0, pals,
+           pk_cheats_rom_patched() ? "yes" : "no");
+}
+
 static void cmdRomCheck(const char* path) {
     FILE* f = fopen(path, "rb");
     if (!f) {
@@ -1151,6 +1200,12 @@ int main(int argc, char** argv) {
         } else if (!strcmp(cmd, "romunpatch")) {
             pk_cheats_unpatch(core);
             printf("romunpatch: rom patched: %s\n", pk_cheats_rom_patched() ? "yes" : "no");
+        } else if (!strcmp(cmd, "romblocks")) {
+            sscanf(line, "%*s %255[^\n]", arg1);
+            cmdRomBlocks(arg1);
+        } else if (!strcmp(cmd, "romunblock")) {
+            pk_cheats_unblock(core);
+            printf("romunblock: rom patched: %s\n", pk_cheats_rom_patched() ? "yes" : "no");
         } else if (!strcmp(cmd, "romcheck")) {
             sscanf(line, "%*s %255[^\n]", arg1);
             cmdRomCheck(arg1);
@@ -1332,6 +1387,40 @@ int main(int argc, char** argv) {
             sscanf(line, "%*s %63s", m);
             unsigned mask = (unsigned) strtoul(m, NULL, 0);
             for (size_t i = 0; i < 5; i++) core->enableVideoLayer(core, i, (mask >> i) & 1);
+        } else if (!strcmp(cmd, "follower")) {
+            sscanf(line, "%*s %255s", arg1);
+            static uint8_t buf[3104];
+            FILE* f = fopen(arg1, "rb");
+            if (f && fread(buf, 1, sizeof(buf), f) == sizeof(buf)) pk_follower_set(buf, buf + 3072);
+            else fprintf(stderr, "mgba_dump: follower: can't read %s\n", arg1);
+            if (f) fclose(f);
+        } else if (!strcmp(cmd, "followinfo")) {
+            char info[200];
+            pk_follower_info(info, sizeof(info));
+            printf("followinfo: %s\n", info);
+        } else if (!strcmp(cmd, "followon")) {
+            int on = 0;
+            sscanf(line, "%*s %d", &on);
+            pk_follower_show(core, on);
+        } else if (!strcmp(cmd, "lookrefresh")) {
+            // An optional 64 hex digits: the palette to put over the player's slot (a patch file's `playerpal` line).
+            char hex[80] = {0};
+            uint8_t pal[32];
+            int havePal = sscanf(line, "%*s %79s", hex) == 1 && strlen(hex) == 64;
+            for (int i = 0; havePal && i < 32; i++) { unsigned v; sscanf(hex + i * 2, "%2x", &v); pal[i] = (uint8_t) v; }
+            printf("lookrefresh: %d\n", pk_look_refresh(core, havePal ? pal : NULL));
+        } else if (!strcmp(cmd, "tint")) {
+            int tr = 256, tg = 256, tb = 256;
+            sscanf(line, "%*s %d %d %d", &tr, &tg, &tb);
+            pk_tint_set(core, tr, tg, tb);
+        } else if (!strcmp(cmd, "rawshot")) {
+            sscanf(line, "%*s %255s", arg1);
+            FILE* f = fopen(arg1, "wb");
+            if (f) {
+                fprintf(f, "%u %u\n", videoW, videoH);
+                for (unsigned y = 0; y < videoH; y++) fwrite(&video[y * videoW], 4, videoW, f);
+                fclose(f);
+            }
         } else if (!strcmp(cmd, "shot")) {
             sscanf(line, "%*s %255s", arg1);
             cmdShot(arg1);
