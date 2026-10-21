@@ -407,6 +407,8 @@ fun OptionLine(
     onFocus: (() -> Unit)? = null,
     /** A pixel chevron at the row's right end: it opens a page of its own. */
     chevron: Boolean = false,
+    /** Room under the text, inside [height]: the label sits that much above the row's middle. */
+    bottomPadding: Dp = 0.dp,
     onClick: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -430,7 +432,7 @@ fun OptionLine(
             .background(if (selected || focused) OptionColors.rowSelected else Color.Transparent)
             .then(if (divider) Modifier.drawBehind { drawRowDivider(OptionColors.divider, m.u.toPx(), 4 * m.u.toPx()) } else Modifier)
             .then(if (enabled) Modifier.soundClickable(interactionSource = interaction, indication = null, onClick = { stack?.lastClicked = self; onClick() }) else Modifier)
-            .padding(horizontal = m.u * 8),
+            .padding(start = m.u * 8, end = m.u * 8, bottom = bottomPadding),
     ) {
         Column(Modifier.fillMaxWidth()) {
             // The label and value columns stay where they are with or without a chevron, so values line up down a list.

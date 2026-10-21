@@ -187,7 +187,7 @@ fun GroupedRows(
     firstRowFocus: androidx.compose.ui.focus.FocusRequester? = null,
     /** Row i took the D-pad's focus: the cursor follows it, so only one row is white. */
     onFocused: ((Int) -> Unit)? = null,
-    /** A column of the group titles on the right ([GroupTabs]) where the window is wide enough: a tap scrolls the list
+    /** A column of the group titles on the left ([GroupTabs]) where the window is wide enough: a tap scrolls the list
      * to that group. For a long list (SETTINGS' home pages); it's still one list. */
     groupTabs: Boolean = false,
     footer: @Composable () -> Unit = {},
@@ -204,11 +204,21 @@ fun GroupedRows(
         }
         // Each group title's top in the list (content pixels), as laid out.
         val tops = remember { androidx.compose.runtime.mutableStateMapOf<Int, Int>() }
+        // The row the player last moved to (the D-pad's focus, the cursor): its group's tab lights, even while the
+        // scroll still shows the group before at the top (DOWN from a group's last row onto the next group's first).
+        var follow by remember { mutableStateOf(-1) }
+        // The cursor it opened on doesn't count: the list may have been dragged away from it before.
+        var opened by remember { mutableStateOf(false) }
+        LaunchedEffect(cursor) {
+            if (opened && cursor >= 0) follow = cursor
+            opened = true
+        }
+        val focused: (Int) -> Unit = { i -> follow = i; onFocused?.invoke(i) }
         androidx.compose.foundation.layout.Row(Modifier.fillMaxSize()) {
+            GroupTabs(rows, groups, tops, scroll, follow, m)
             androidx.compose.foundation.layout.Box(Modifier.weight(1f).fillMaxSize()) {
-                GroupedRowsList(rows, m, cursor, onClick, scroll, labelWeight, reveal, onRevealed, firstRowFocus, onFocused, tops, footer)
+                GroupedRowsList(rows, m, cursor, onClick, scroll, labelWeight, reveal, onRevealed, firstRowFocus, focused, tops, footer)
             }
-            GroupTabs(rows, groups, tops, scroll, m)
         }
     }
 }
@@ -218,9 +228,10 @@ private const val MIN_GROUP_TABS = 3
 private val GROUP_TABS_MIN_WIDTH = 400.dp
 
 /**
- * [GroupedRows]' group tabs: the group titles down the window's right edge, the one the list is showing lit like a
- * selected tab; a tap scrolls the list to that group. Touch only (the D-pad walks the rows). Near the list's end, where
- * the last groups can't reach the top, the one tapped stays lit (else the last).
+ * [GroupedRows]' group tabs: the group titles down the window's left edge, the one the list is showing lit like a
+ * selected tab; a tap scrolls the list to that group. Touch only (the D-pad walks the rows). The group of the row the
+ * player last moved to ([follow]) or the tab last tapped stays lit until the list is dragged; then the group at the top
+ * decides (at the list's very end, the last).
  */
 @Composable
 private fun GroupTabs(
@@ -228,32 +239,38 @@ private fun GroupTabs(
     groups: List<Int>,
     tops: Map<Int, Int>,
     scroll: ScrollState,
+    follow: Int,
     m: GbaTextMetrics,
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var picked by remember { mutableStateOf(-1) }
+    // A row moved to: its group, wherever the scroll left the group titles.
+    LaunchedEffect(follow) { if (follow >= 0) groups.lastOrNull { it <= follow }?.let { picked = it } }
+    // Dragging the list hands the choice back to the scroll.
+    LaunchedEffect(scroll) {
+        scroll.interactionSource.interactions.collect { if (it is androidx.compose.foundation.interaction.DragInteraction.Start) picked = -1 }
+    }
     val atEnd = scroll.maxValue > 0 && scroll.value >= scroll.maxValue - 1
     val slack = with(androidx.compose.ui.platform.LocalDensity.current) { (m.u * 4).roundToPx() }
     val shown = groups.lastOrNull { (tops[it] ?: Int.MAX_VALUE) <= scroll.value + slack } ?: groups.first()
-    // A tap the list can't scroll far enough for (its last groups) keeps its tab lit; scrolling back lets go of it.
     // At the very end the last group is on screen whatever reached the top.
-    val current = if (atEnd) picked.takeIf { it >= 0 } ?: groups.last() else shown
+    val current = picked.takeIf { it >= 0 } ?: if (atEnd) groups.last() else shown
     val small = rememberGbaTextMetrics(1f)
     androidx.compose.foundation.layout.Column(
         Modifier
             .width(androidx.compose.foundation.layout.IntrinsicSize.Max)
             .fillMaxHeight()
             .drawBehind {
-                // A dashed rule between the list and its tabs, like the rows' dividers.
+                // A dashed rule between the tabs and the list, like the rows' dividers.
                 val px = m.u.toPx()
                 var y = 4 * px
                 while (y < size.height - 4 * px) {
-                    drawRect(OptionColors.divider, androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Size(px, 2 * px))
+                    drawRect(OptionColors.divider, androidx.compose.ui.geometry.Offset(size.width - px, y), androidx.compose.ui.geometry.Size(px, 2 * px))
                     y += 4 * px
                 }
             }
             .verticalScroll(rememberScrollState())
-            .padding(start = m.u * 6, end = m.u * 4, top = m.u * 4, bottom = m.u * 4),
+            .padding(start = m.u * 4, end = m.u * 6, top = m.u * 4, bottom = m.u * 4),
         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(m.u * 2),
     ) {
         for (g in groups) {
@@ -264,8 +281,6 @@ private fun GroupTabs(
             }
         }
     }
-    // Scrolled by hand past where the tap left it: the list decides again.
-    LaunchedEffect(shown, atEnd) { if (!atEnd && !scroll.isScrollInProgress) picked = -1 }
 }
 
 /** One of [GroupTabs]: a tab chip's frame (white with a red label when [selected], like the tab bar's) at the list's
@@ -348,7 +363,10 @@ private fun GroupedRowsList(
                         .then(if (i == firstRow && firstRowFocus != null) Modifier.focusRequester(firstRowFocus) else Modifier)
                         // The companion's window: the D-pad starts on the cursor row.
                         .focusStart(i == cursor),
-                    height = if (row.subtitle != null) rowHeight + subtitleLine else rowHeight,
+                    // A one-line row's letters sit low in their line (room above the capitals, none under): a little more
+                    // under them, so the space below matches the space above.
+                    height = if (row.subtitle != null) rowHeight + subtitleLine else rowHeight + m.u * ONE_LINE_ROW_EXTRA,
+                    bottomPadding = if (row.subtitle != null) 0.dp else m.u * ONE_LINE_ROW_EXTRA,
                     divider = rows.getOrNull(i + 1)?.header == false, labelBadge = row.labelBadge, labelIcon = row.labelIcon,
                     valueBadge = row.badge, enabled = row.enabled, subtitle = row.subtitle, labelWeight = labelWeight,
                     chevron = row.opensPage,
@@ -359,6 +377,9 @@ private fun GroupedRowsList(
         footer()
     }
 }
+
+/** GBA pixels added under a [GroupedRows] row without a subtitle. */
+private const val ONE_LINE_ROW_EXTRA = 2
 
 /** [featuredGroupTitle]'s band: the title between two gold stars, its tagline under it, in a field-move blue frame. */
 @Composable

@@ -1465,6 +1465,10 @@ fun main(args: Array<String>) {
         Shot("$g-settings-close", bw, bh, bd, companion("SETTINGS")) {
             onNodeWithText("CLOSE GAME").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         },
+        // The D-pad onto FF, the first row of FF / SPEED, while MAKEOVER still fills the top: FF / SPEED's group tab lights.
+        Shot("$g-settings-group-follow", bw, bh, bd, companion("SETTINGS")) {
+            onNodeWithText("FF").performSemanticsAction(SemanticsActions.RequestFocus)
+        },
         // The COMPANION group, ONE-TAP MOVES under BATTLE HINTS.
         Shot("$g-settings-companion", bw, bh, bd, companion("SETTINGS")) {
             onNodeWithText("ONE-TAP MOVES").performScrollTo()
