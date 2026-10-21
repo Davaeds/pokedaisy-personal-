@@ -96,6 +96,8 @@ class RomItemTextTest {
         Case("Super Mariomon (v1.3).gba", GameKind.MARIOMON, NATIVE_MARIOMON_V1_3, mapOf(28 to "by 20 points", 802 to "wooden")),
         Case("Super Mariomon (v1.2.2).gba", GameKind.MARIOMON, NATIVE_MARIOMON_V1_2_2, mapOf(28 to "by 20 points")),
         Case("Super Mariomon (v1.2.1).gba", GameKind.MARIOMON, NATIVE_MARIOMON_V1_2_1, mapOf(28 to "by 20 points")),
+        // Team Rocket Edition: Dragonsden's ESCAPE ROPE, as its battle bag shows it (expansion's item ids).
+        Case("Pokemon Team Rocket Dragonsden Version.gba", GameKind.TEAM_ROCKET, NATIVE_TEAM_ROCKET, mapOf(121 to "a cave or a dungeon")),
     )
 
     /** What the Poller does on detecting [cfg]'s game: its table, or the vanilla one found by shape. */

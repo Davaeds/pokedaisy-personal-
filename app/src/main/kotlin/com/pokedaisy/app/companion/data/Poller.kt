@@ -499,6 +499,7 @@ class TelemetrySampler {
                 MARIOMON_V1_2_1_SHA1 -> { kind = GameKind.MARIOMON; nativeCfg = NATIVE_MARIOMON_V1_2_1 }
                 ELITE_REDUX_V2_65_3B_SHA1 -> { kind = GameKind.ELITE_REDUX; nativeCfg = NATIVE_ELITE_REDUX_V2_65_3B }
                 ELITE_REDUX_V2_65_4_1B_SHA1 -> { kind = GameKind.ELITE_REDUX; nativeCfg = NATIVE_ELITE_REDUX_V2_65_4_1B }
+                TEAM_ROCKET_DRAGONSDEN_V1_5_SHA1 -> { kind = GameKind.TEAM_ROCKET; nativeCfg = NATIVE_TEAM_ROCKET }
                 else -> {
                     kind = GameKind.EMERALD
                     unsupportedRom(reader, code, size, hash, "unrecognized Emerald-based ROM hack " +
@@ -854,6 +855,9 @@ class TelemetrySampler {
         // hashes (GPIO bytes zero, so a plain `shasum`). Each its own build: RAM and ROM tables moved between them.
         const val ELITE_REDUX_V2_65_3B_SHA1 = "5b38a681b6924ef3e0bb9f6cfbf22426c4c4e523"
         const val ELITE_REDUX_V2_65_4_1B_SHA1 = "2f3e17e55c6afe23da97ec0f96a067eeb142ad15"
+        // Pokémon Team Rocket Edition: Dragonsden Version 1.5 (its START menu says so; BPEE, 32 MB; DragonsdenTV's own build)
+        // - host-side masked hash (GPIO bytes zero, so a plain `shasum`).
+        const val TEAM_ROCKET_DRAGONSDEN_V1_5_SHA1 = "40780347d0b4df6bf491eaf12603e5422caee677"
         // Pokémon Ghost Grey v1.0.1, v1.0.2 and v1.0.4 (BPRE rev 0, 32 MB; JoeyZeed) - host-side masked hashes (GPIO
         // bytes zero, so a plain `shasum`).
         const val GHOST_GREY_V1_0_1_SHA1 = "20dfaea1d5317cf95fe0b493208edce7d50b865f"
@@ -1030,7 +1034,7 @@ class TelemetrySampler {
             ORANGE_ISLANDS_V5_7_BETA_SHA1, ORANGE_ISLANDS_UNVERSIONED_SHA1,
             FIRERED_ROCKET_EDITION_UNVERSIONED_SHA1, ASH_GRAY_V4_5_3_SHA1, ASH_GRAY_FORK_BUG_FIX_V1_0_SHA1,
             GHOST_GREY_V1_0_1_SHA1, GHOST_GREY_V1_0_2_SHA1, GHOST_GREY_V1_0_4_SHA1,
-            ELITE_REDUX_V2_65_3B_SHA1, ELITE_REDUX_V2_65_4_1B_SHA1,
+            ELITE_REDUX_V2_65_3B_SHA1, ELITE_REDUX_V2_65_4_1B_SHA1, TEAM_ROCKET_DRAGONSDEN_V1_5_SHA1,
             ULTRA_VIOLET_V1_22_SHA1, SWORD_SHIELD_ULTIMATE_PLUS_V1_2_1_2_SHA1, SWORD_SHIELD_ULTIMATE_PLUS_V1_2_1_2_CASUAL_SHA1,
             SWORD_SHIELD_ULTIMATE_PLUS_V1_2_1_2_PERFORMANCE_SHA1, SWORD_SHIELD_ULTIMATE_PLUS_V1_2_1_2_CASUAL_PERFORMANCE_SHA1,
             RECHARGED_YELLOW_V1_8_0_SHA1, RECHARGED_YELLOW_V1_9_0_SHA1, RECHARGED_YELLOW_V1_9_4_SHA1,

@@ -134,7 +134,7 @@ enum class GuideId {
     // Recharged Yellow v1.9.7, and its earlier releases with their own area data (same guide text).
     RECHARGED_YELLOW, RECHARGED_YELLOW_V180, RECHARGED_YELLOW_V190, RECHARGED_YELLOW_V194,
     MARIOMON,
-    ULTRA_VIOLET, SWORD_SHIELD, ROCKET_EDITION, ASH_GRAY, GHOST_GREY, ELITE_REDUX,
+    ULTRA_VIOLET, SWORD_SHIELD, ROCKET_EDITION, ASH_GRAY, GHOST_GREY, ELITE_REDUX, TEAM_ROCKET,
     // Quetzal Alpha 0.8.4: Hoenn alone (Alpha 9 added Johto and Kanto).
     QUETZAL_V084,
     GS_CHRONICLES,
@@ -186,6 +186,7 @@ fun gameGuide(id: GuideId?): GameGuide? = when (id) {
     GuideId.ASH_GRAY -> GUIDE_ASH_GRAY
     GuideId.GHOST_GREY -> GUIDE_GHOST_GREY
     GuideId.ELITE_REDUX -> GUIDE_ELITE_REDUX
+    GuideId.TEAM_ROCKET -> GUIDE_TEAM_ROCKET
     GuideId.SWORD_SHIELD -> GUIDE_SWORD_SHIELD
     GuideId.GS_CHRONICLES -> GUIDE_GS_CHRONICLES
     GuideId.RECHARGED_YELLOW, GuideId.RECHARGED_YELLOW_V180, GuideId.RECHARGED_YELLOW_V190,

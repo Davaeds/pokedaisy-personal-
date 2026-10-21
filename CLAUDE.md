@@ -1246,6 +1246,17 @@ wild switch 0x0203D214 / 0x0203D21C (2.65.4.1b reads the player's coordinates be
 11 lines now). Its R button is an auto run of its own. Trainer battles: gBattleTypeFlags' TRAINER is vanilla's 8, gEnemyParty the same packed mons (`elite_redux_trainer*` fixtures); a single
 battle never opens the target screen (no move targets user-or-selected), so its handler was read in a forced double battle.
 No field items, FLY or card; its START menu has its own PC.
+**Team Rocket Edition: Dragonsden Version 1.5 (2026-10-21)** (`GameKind.TEAM_ROCKET`, `NATIVE_TEAM_ROCKET`; not FireRed Rocket
+Edition): DragonsdenTV's closed BPEE build (32 MB, gcc) on an older pokeemerald-expansion - vanilla struct shapes with expansion's
+ids (National Dex species to 1395 = SPECIES_EGG, 755 moves, expansion's items in vanilla's 44-byte gItems, 36-byte base stats).
+Mapped from its one save (`~/Downloads/Game ROMs & Emulation/rom saves from discord/mGBA Romhack Saves/Pokemon - Team Rocket
+Edition.srm`) and the ROM; the version is on its START menu. Gotchas: the party mon is vanilla's encrypted 100 bytes but
+language + flags share +0x12 (hasSpecies bit 4, isEgg bit 5) and the OT name starts at +0x13, so expansion's Mint XOR must stay off
+(`PartyMonLayout.natureModifier`); BattlePokemon is 0x5C (a third type at +0x24); monToSwitchIntoId is gBattleStruct + 0x62; its
+setwildbattle takes a second mon's fields (ScriptContext_SetupScript 0x080CEDC5); its Kanto / Johto towns are Hoenn maps under
+Kanto names (the save's "Rustboro" is CELADON CITY, mapsec 0x5E); gItems has a few slots whose itemId is another's (names go by
+slot). Its party menu is Emerald's slots on FireRed's teal backdrop (`buildGameBackground`). No DEX (a regional order of its own:
+the summary shows CROBAT as No. 067), region map, EXPAND, field reads or field items yet; GUIDE is HERE only.
 **Emerald Legacy v1.1.4 (2026-10-14)**: BPEE, 16 MB, but a rebuild - its public source (`$DECOMPS/pokelegacy`, tag V1.1.4)
 built with agbcc is the release byte for byte, so take every address from that ELF (`nm`) and every struct offset / constant
 from agbcc compiling `offsetof` against its headers, never from retail. Runs as `GameKind.EMERALD` under `LEGACY_TEXT`

@@ -62,7 +62,7 @@ fun expProgress(species: Int, level: Int, exp: Long?): ExpProgress? {
     // Gen 1's growth rates and curves are Gen 3's for the first 151 (Yellow's species are Dex numbers here).
     if (activeGame != GameKind.FIRERED && activeGame != GameKind.EMERALD && !activeGame.isGen1 &&
         activeGame != GameKind.ORANGE_ISLANDS && activeGame != GameKind.RECHARGED_YELLOW &&
-        activeGame != GameKind.MARIOMON &&
+        activeGame != GameKind.MARIOMON && activeGame != GameKind.TEAM_ROCKET &&
         // Crystal's growth rates for its 251 are Gen 3's, byte for byte, and its curves the same formulas (CrystalDecodeTest);
         // Crystal Clear, Gold and Silver kept Crystal's base data (gen_gen2_tables.py checks it).
         !activeGame.isGen2) return null
@@ -86,7 +86,9 @@ fun expProgress(species: Int, level: Int, exp: Long?): ExpProgress? {
     // Orange Islands kept FireRed's growth rates but for its CRYSTAL ONIX slots.
     if (activeGame == GameKind.ORANGE_ISLANDS && species >= 409) return null
     // Super Mariomon keeps vanilla's curves; its species' rates come from its own gBaseStats.
+    // So does Team Rocket Edition: Dragonsden (its species are National Dex ids, past Gen 3's).
     val rate = if (activeGame == GameKind.MARIOMON) (if (mariomonV13) growthRatesMariomonV13 else growthRatesMariomon).getOrNull(species)
+        else if (activeGame == GameKind.TEAM_ROCKET) growthRatesTeamRocket.getOrNull(species)?.takeIf { it <= 5 }
         else gen3GrowthRates.getOrNull(species)?.toInt()
     if (rate == null) return null
     val table = gen3ExperienceTables.getOrNull(rate) ?: return null

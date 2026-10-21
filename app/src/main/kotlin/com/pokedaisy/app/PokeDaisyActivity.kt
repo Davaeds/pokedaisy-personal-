@@ -863,6 +863,10 @@ class PokeDaisyActivity : Activity() {
             telemetry.knownPartyMenu()?.let { (menu, party) ->
                 BattleInputController.SwitchAddrs(partyMenu = menu, party = party, monStride = 0x4C, grid = true)
             }
+        // Team Rocket Edition: Dragonsden: Emerald's one-column list at its own gPartyMenu (NATIVE_TEAM_ROCKET). Headless: a
+        // written POKéMON cell + A opened it, DOWN, A, SHIFT sent slot 1 in (gBattlerPartyIndexes[0] = 1).
+        game == com.pokedaisy.app.companion.data.GameKind.TEAM_ROCKET ->
+            BattleInputController.SwitchAddrs(partyMenu = 0x0203DE64L, party = 0x02025170L)
         game == com.pokedaisy.app.companion.data.GameKind.AMETHYST ->
             BattleInputController.SwitchAddrs(partyMenu = 0x0203B0A0L, party = 0x02024284L, grid = true)
         // Unbound (EN / FR): FireRed's gPartyMenu / gPlayerParty (CFRU keeps its EWRAM) under CFRU's two-column party

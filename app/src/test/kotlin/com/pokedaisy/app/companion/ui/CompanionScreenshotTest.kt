@@ -714,7 +714,7 @@ open class CompanionScreenshotTest {
         GuideRomSource.encounters(live, v.mapGroup, v.mapNum)?.let { e ->
             (e.grass + e.water + e.oldRod + e.goodRod + e.superRod).forEach { DecompIconSource.get(it.species) }
         }
-        PokedexSource.nationalOf(v.pokedex!!.tables, 1)
+        v.pokedex?.let { PokedexSource.nationalOf(it.tables, 1) }
         v.progress?.let { p -> gameGuide(guideId(kind, live))?.bosses?.forEach { b -> b.trainers(p).forEach { GuideRomSource.party(live, it) } } }
         paparazzi.snapshot {
             AppTheme {
@@ -992,6 +992,13 @@ open class CompanionScreenshotTest {
     @Test fun eliteReduxBattleMenu() = retail("elite_redux_battle", NATIVE_ER, ER_ROM, GameKind.ELITE_REDUX, "BATTLE", art = true, controls = true)
     @Test fun eliteReduxDexEntry() = retail("elite_redux", NATIVE_ER, ER_ROM, GameKind.ELITE_REDUX, "DEX", entry = 1072, art = true)
     @Test fun eliteReduxGuideHere() = retailGuide("elite_redux", NATIVE_ER, ER_ROM, "HERE", kind = GameKind.ELITE_REDUX)
+    @Test fun teamRocketParty() = retail("team_rocket", NATIVE_TR, TR_ROM, GameKind.TEAM_ROCKET, "PARTY", art = true)
+    @Test fun teamRocketItems() = retail("team_rocket", NATIVE_TR, TR_ROM, GameKind.TEAM_ROCKET, "ITEMS", art = true)
+    @Test fun teamRocketMap() = retail("team_rocket", NATIVE_TR, TR_ROM, GameKind.TEAM_ROCKET, "MAP", art = true)
+    @Test fun teamRocketBattle() = retail("team_rocket_battle", NATIVE_TR, TR_ROM, GameKind.TEAM_ROCKET, "BATTLE", art = true)
+    @Test fun teamRocketBattleMenu() = retail("team_rocket_battle", NATIVE_TR, TR_ROM, GameKind.TEAM_ROCKET, "BATTLE", art = true, controls = true)
+    @Test fun teamRocketGuideHere() = retailGuide("team_rocket_route", NATIVE_TR, TR_ROM, "HERE", kind = GameKind.TEAM_ROCKET)
+    @Test fun teamRocketTrainer() = retail("team_rocket_trainer_next", NATIVE_TR, TR_ROM, GameKind.TEAM_ROCKET, "BATTLE", art = true)
     // Ghost Grey: its 1.0.3 save in v1.0.4 (the fixtures' READMEs), its grey map from the ROM.
     @Test fun ghostGreyParty() = retail("ghost_grey", NATIVE_GG, GG_ROM, GameKind.FIRERED, "PARTY", art = true)
     @Test fun ghostGreyItems() = retail("ghost_grey", NATIVE_GG, GG_ROM, GameKind.FIRERED, "ITEMS", art = true)
@@ -1801,6 +1808,8 @@ private val NATIVE_RE get() = com.pokedaisy.app.companion.data.NATIVE_ROCKET_EDI
 private val NATIVE_AG get() = com.pokedaisy.app.companion.data.NATIVE_ASH_GRAY
 private const val GG_ROM = "Pokemon Ghost Grey (v1.0.4).gba"
 private const val ER_ROM = "Pokemon Elite Redux (2.65.4.1b).gba"
+private const val TR_ROM = "Pokemon Team Rocket Dragonsden Version.gba"
+private val NATIVE_TR get() = com.pokedaisy.app.companion.data.NATIVE_TEAM_ROCKET
 private val NATIVE_ER get() = com.pokedaisy.app.companion.data.NATIVE_ELITE_REDUX_V2_65_4_1B
 private val NATIVE_GG get() = com.pokedaisy.app.companion.data.NATIVE_GHOST_GREY
 private val NATIVE_SS get() = com.pokedaisy.app.companion.data.NATIVE_SWORD_SHIELD

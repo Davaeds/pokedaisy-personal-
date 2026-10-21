@@ -1,0 +1,14 @@
+# Pokémon Team Rocket Edition: Dragonsden Version: the field (team_rocket.txt), then a scripted warp to map 0.16 (ROUTE 101)
+# at (10, 10): warp / waitstate / end poked into free EWRAM and run through ScriptContext_SetupScript (0x080CEDC5).
+wait 300
+press A
+wait 300
+press A
+wait 300
+press A
+wait 500
+poke32 0x0203F800 0xFF100039
+poke32 0x0203F804 0x000A000A
+poke32 0x0203F808 0x00000227
+call 0x080CEDC5 0x0203F800
+wait 300

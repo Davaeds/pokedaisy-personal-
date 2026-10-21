@@ -1,0 +1,19 @@
+# Pokémon Team Rocket Edition: Dragonsden Version: a scripted wild RATTATA Lv5 - setwildbattle 19 5 0 (its setwildbattle
+# takes a second mon's species / level / item too, zero here) / dowildbattle / end, poked into free EWRAM and run through
+# its ScriptContext_SetupScript (0x080CEDC5; the one that loads gScriptCmdTable 0x0822B190 and its end); dumped at the
+# action menu ("What will Crobat do?").
+wait 300
+press A
+wait 300
+press A
+wait 300
+press A
+wait 500
+poke32 0x0203F800 0x050013B6
+poke32 0x0203F804 0x00000000
+poke32 0x0203F808 0xB7000000
+poke32 0x0203F80C 0x00000002
+call 0x080CEDC5 0x0203F800
+wait 300
+press A
+wait 400

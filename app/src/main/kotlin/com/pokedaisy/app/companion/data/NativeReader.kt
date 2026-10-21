@@ -2168,6 +2168,74 @@ val NATIVE_ELITE_REDUX_V2_65_3B = NATIVE_ELITE_REDUX_V2_65_4_1B.copy(
     guideTables = GUIDE_TABLES_ELITE_REDUX_V2_65_3B,
 )
 
+// gBagPockets' eight pockets: Items, Medicine, Poké Balls, Battle Items, Berries, Treasures (evolution items), TMs, Key
+// Items - its bag screen's order and each pocket's gItems.pocket (1-8).
+val TEAM_ROCKET_BAG_POCKET_ORDER = listOf(
+    POCKET_ITEMS, POCKET_ITEMS, POCKET_POKE_BALLS, POCKET_ITEMS, POCKET_BERRIES, POCKET_ITEMS, POCKET_TM_HM, POCKET_KEY_ITEMS,
+)
+
+// Pokémon Team Rocket Edition: Dragonsden Version (32 MB, BPEE, sha1 40780347…, unversioned; DragonsdenTV): its own closed
+// pokeemerald build (gcc) on an older pokeemerald-expansion - vanilla's struct shapes with expansion's ids (National Dex
+// species to 1395, 755 moves, expansion's items). Mapped headless from a save off its Discord ("Pokemon - Team Rocket
+// Edition.srm", Jason in CELADON CITY, six Pokémon Lv77-79), every address checked on the game's own screens:
+//   - gPlayerParty 0x02025170 / gPlayerPartyCount 0x0202516D, gEnemyParty 0x020253C8 (+0x258, as in vanilla): 100-byte
+//     encrypted mons with the flags folded into +0x12 ([TEAM_ROCKET_PARTY_MON]); the egg is species 1395.
+//   - gSaveBlock1Ptr / 2Ptr 0x0300524C / 0x03005250 (gPokemonStoragePtr after them); vanilla Emerald's SaveBlock1 up to
+//     money (+0x490 XOR SaveBlock2 +0xAC: ₽3,000,000, its AddMoney caps at 99,999,999).
+//   - gMain 0x030032E0 (vblankCounter1 +0x20 counted 16 in 16 frames), gMapHeader 0x020382D8 (mapsec 0x5E CELADON CITY;
+//     mapType 8 in its Pokémon Center), gObjectEvents 0x02038314 (the player's coords = pos + 7).
+//   - gBagPockets 0x0203ADDC: eight pockets ([TEAM_ROCKET_BAG_POCKET_ORDER]), quantities XOR the key; the battle's bag
+//     screen showed the Items pocket's five.
+//   - Battle (a scripted wild RATTATA: its setwildbattle takes a second mon's fields): gBattleTypeFlags 0x02024BB8,
+//     gBattlersCount 0x02024C38, gBattlerPartyIndexes 0x02024C3A, gBattlerPositions 0x02024C42, gBattleMons 0x02024C50
+//     ([TEAM_ROCKET_BATTLE_MON]), gBattleStruct 0x020250EC with the menus' cursors +0x10 / +0x14 (RIGHT walked the action
+//     cursor 0 -> 1, DOWN 1 -> 3 ran). gBattlerControllerFuncs 0x03005220: action / move / bag / party read live
+//     (0x08082291 / 0x08082CE1 / 0x08084D71 / 0x08084CB5), HandleInputChooseTarget 0x08082569 (HandleInputChooseMove's
+//     two stores). gPartyMenu 0x0203DE64 (Emerald's list, slotId +9 walked 0 -> 1 on DOWN).
+//   - Icons: vanilla-shaped tables from its GF ROM header (0x08000138..), sItemIconTable 0x08D3B894; gItems 0x08C833B0.
+//     Names / types / map sections: scripts/gen_team_rocket_tables.py.
+val NATIVE_TEAM_ROCKET = NATIVE_EMERALD.copy(
+    itemDescs = vanillaItems(0x08C833B0L, 923),
+    playerParty = 0x02025170L,
+    playerPartyCount = 0x0202516DL,
+    enemyParty = 0x020253C8L,
+    partyMonLayout = TEAM_ROCKET_PARTY_MON,
+    battleMons = 0x02024C50L,
+    battleMonLayout = TEAM_ROCKET_BATTLE_MON,
+    battlerPositions = 0x02024C42L,
+    battlersCount = 0x02024C38L,
+    battleTypeFlags = 0x02024BB8L,
+    battlerPartyIndexes = 0x02024C3AL,
+    battleStructPtr = 0x020250ECL,
+    monToSwitchIntoOff = 0x62,
+    actionCursor = 0x020250FCL,
+    moveCursor = 0x02025100L,
+    battlerControllerFuncs = 0x03005220L,
+    handleInputChooseAction = 0x08082291L,
+    handleInputChooseMove = 0x08082CE1L,
+    completeWhenChoseItem = 0x08084D71L,
+    waitForMonSelection = 0x08084CB5L,
+    handleInputChooseTarget = 0x08082569L,
+    partyMenu = 0x0203DE64L,
+    gMain = 0x030032E0L,
+    saveBlock1Ptr = 0x0300524CL,
+    saveBlock2Ptr = 0x03005250L,
+    objectEvents = 0x02038314L,
+    mapHeader = 0x020382D8L,
+    bagPockets = 0x0203ADDCL,
+    bagPocketCount = 8,
+    bagPocketOrder = TEAM_ROCKET_BAG_POCKET_ORDER,
+    encryptionKeyOff = 0xACL,
+    moneyOff = 0x490L,
+    maxMoney = 99_999_999L,
+    monIconTable = 0x08C722E8L,
+    monIconPaletteIndices = 0x08C74754L,
+    monIconPaletteTable = 0x08C75070L,
+    itemIconTable = 0x08D3B894L,
+    eggSpecies = 1395,
+    guideTables = GUIDE_TABLES_TEAM_ROCKET,
+)
+
 // Pokémon Sword and Shield Ultimate Plus v1.2.1.2 (32 MB, sha1 afe4c8e0…): Galar on CFRU, so
 // FireRed 1.0's code and RAM with its data repointed. The words FireRed loads its tables from
 // hold the hack's: gItems 0x093C0000 (Radical Red's address too), gMonIconTable 0x099F1EB8,
@@ -3049,6 +3117,7 @@ private fun Mon.withNativeGender(raw: ByteArray, off: Int, layout: PartyMonLayou
         GameKind.GS_CHRONICLES -> genderRatiosGsChronicles
         GameKind.MARIOMON -> if (mariomonV13) genderRatiosMariomonV13 else genderRatiosMariomon
         GameKind.ELITE_REDUX -> genderRatiosEliteRedux
+        GameKind.TEAM_ROCKET -> genderRatiosTeamRocket
         else -> return this
     }
     // BoxPokemon +0x13 flags byte (isBadEgg:1, hasSpecies:1, isEgg:1): an egg

@@ -70,6 +70,8 @@ data class PartyMonLayout(
     val rowe: Boolean = false,
     /** Elite Redux's bit-packed struct ([ELITE_REDUX_PARTY_MON], [decodeEliteReduxMon]). */
     val eliteRedux: Boolean = false,
+    /** Expansion's Mints: +0x12's bits above the language are a nature XORed in. Off where that byte holds other flags. */
+    val natureModifier: Boolean = true,
 )
 
 val VANILLA_PARTY_MON = PartyMonLayout()
@@ -99,6 +101,14 @@ val ELITE_REDUX_PARTY_MON = PartyMonLayout(
     size = 0x4C, status = 0x38, level = 0x3C, hp = 0x3E, maxHp = 0x40, flags = 0x15, eggMask = 0x80, hasStats = true,
     eliteRedux = true,
 )
+
+/**
+ * Pokémon Team Rocket Edition: Dragonsden Version's struct Pokemon: vanilla's 100 bytes, encryption and substructs, but
+ * the language and the flags share one byte at +0x12 (language bits 0-2, hasSpecies bit 4, isEgg bit 5 - an egg given
+ * headless read 0x31, every other mon 0x12) and the OT name starts a byte early (+0x13). No Mints: nature is PID % 25
+ * (the save's Crobat is Adamant by its stats; the XOR would make it Lonely).
+ */
+val TEAM_ROCKET_PARTY_MON = PartyMonLayout(flags = 0x12, eggMask = 0x20, natureModifier = false)
 
 private fun decodeEliteReduxMon(raw: ByteArray, off: Int): Mon? {
     val w08 = u32(raw, off + 0x08)
@@ -236,7 +246,8 @@ private fun monStats(raw: ByteArray, off: Int, layout: PartyMonLayout, evs: List
     val pidNature = (u32(raw, off) % 25).toInt()
     // pokeemerald-expansion's Mints: hiddenNatureModifier sits above the 3
     // language bits at +0x12 (0 in every other game) and is XORed in.
-    val nature = (pidNature xor ((raw[off + 0x12].toInt() and 0xFF) ushr 3)).takeIf { it < 25 } ?: pidNature
+    val nature = if (!layout.natureModifier) pidNature
+        else (pidNature xor ((raw[off + 0x12].toInt() and 0xFF) ushr 3)).takeIf { it < 25 } ?: pidNature
     return MonStats(
         ivs = List(6) { ((ivWord shr (5 * it)) and 0x1F).toInt() },
         evs = evs,
@@ -353,6 +364,14 @@ val ELITE_REDUX_BATTLE_MON = BattleMonLayout(
     ability = 0x28, abilityU16 = true, item = 0x3A,
     species = 0x14, stats = 0x16, statStages = 0x3C,
 )
+
+/**
+ * Pokémon Team Rocket Edition: Dragonsden Version's 0x5C-byte struct BattlePokemon: expansion's fields where
+ * [EXPANSION_BATTLE_MON] has them (a third type byte at +0x24, PP from +0x25, HP +0x2A, level +0x2C, item +0x30), then the
+ * nickname, OT name, experience +0x48, personality +0x4C, status1 +0x50, status2, otId +0x58 (its battle dump's lead
+ * matched its party struct field for field).
+ */
+val TEAM_ROCKET_BATTLE_MON = EXPANSION_BATTLE_MON.copy(size = 0x5C)
 
 /** R.O.W.E.'s: expansion's layout, the species' form id in its top 5 bits. */
 val ROWE_BATTLE_MON = EXPANSION_BATTLE_MON.copy(speciesMask = 0x7FF)

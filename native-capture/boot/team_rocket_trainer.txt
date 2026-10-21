@@ -1,0 +1,19 @@
+# Pokémon Team Rocket Edition: Dragonsden Version: a scripted trainer battle - trainerbattle TRAINER_BATTLE_SINGLE_NO_INTRO_TEXT
+# (5C 03), trainer 415 (KANTO LEADER BROCK, four Pokémon), local id 0, lose text = his name (0x08583664), then end - run
+# through ScriptContext_SetupScript (0x080CEDC5); dumped at the action menu after "would like to battle!".
+wait 300
+press A
+wait 300
+press A
+wait 300
+press A
+wait 500
+poke32 0x0203F800 0x019F035C
+poke32 0x0203F804 0x36640000
+poke32 0x0203F808 0x00020858
+call 0x080CEDC5 0x0203F800
+wait 300
+press A
+wait 400
+press A
+wait 400

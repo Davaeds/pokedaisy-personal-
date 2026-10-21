@@ -968,6 +968,26 @@ val GUIDE_TABLES_ELITE_REDUX_V2_65_4_1B = GuideTables(
     mapGroups = 0x091F54A0L,
 )
 
+/**
+ * Pokémon Team Rocket Edition: Dragonsden Version: HERE only. Vanilla-shaped tables: gWildMonHeaders 0x08C2A974 (20 bytes,
+ * 443 headers, 14 literal-pool words; Route 101's land set decodes to its Lv70-85 Hoenn Pokémon), gTrainers 0x0857F588 (40
+ * bytes; 415 is KANTO LEADER BROCK, whose four the headless trainer battle met, from 24-byte TrainerMons). SaveBlock1's flags / vars at +0x1CA8 /
+ * +0x1F6C, as its GF ROM header (0x08000150) says.
+ */
+val GUIDE_TABLES_TEAM_ROCKET = GuideTables(
+    trainers = 0x0857F588L,
+    learnsets = 0,
+    wildHeaders = 0x08C2A974L,
+    sb1FlagsOff = 0x1CA8,
+    sb1VarsOff = 0x1F6C,
+    flagBytes = 0x2C4,
+    probeTrainer = 415,
+    probeName = "BROCK",
+    guide = GuideId.TEAM_ROCKET,
+    // 24-byte TrainerMons: iv, level (u16), species, held item, six EVs, a nature, moves +0x10.
+    trainerMon = TrainerMonLayout(stride = 24, movesOff = 16, speciesOff = 4, itemOff = 6, levelOff = 2),
+)
+
 /** 2.65.3b's: the same shapes at its own addresses. */
 val GUIDE_TABLES_ELITE_REDUX_V2_65_3B = GUIDE_TABLES_ELITE_REDUX_V2_65_4_1B.copy(
     trainers = 0x089A9DC0L,

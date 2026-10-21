@@ -168,6 +168,7 @@ object BestEffort {
             Candidate("QUETZAL_ES", GameKind.QUETZAL, NATIVE_QUETZAL_ES, EMERALD, "Pokémon Quetzal (ES)"),
             Candidate("ELITE_REDUX_V2_65_4_1B", GameKind.ELITE_REDUX, NATIVE_ELITE_REDUX_V2_65_4_1B, EMERALD, "Pokémon Elite Redux 2.65.4.1b"),
             Candidate("ELITE_REDUX_V2_65_3B", GameKind.ELITE_REDUX, NATIVE_ELITE_REDUX_V2_65_3B, EMERALD, "Pokémon Elite Redux 2.65.3b"),
+            Candidate("TEAM_ROCKET", GameKind.TEAM_ROCKET, NATIVE_TEAM_ROCKET, EMERALD, "Pokémon Team Rocket Edition: Dragonsden"),
             Candidate("MARIOMON_V1_5_2", GameKind.MARIOMON, NATIVE_MARIOMON_V1_5_2, EMERALD, "Super Mariomon v1.5.2"),
             Candidate("MARIOMON_V1_5_1", GameKind.MARIOMON, NATIVE_MARIOMON_V1_5_1, EMERALD, "Super Mariomon v1.5.1"),
             Candidate("MARIOMON_V1_3", GameKind.MARIOMON, NATIVE_MARIOMON_V1_3, EMERALD, "Super Mariomon v1.3"),

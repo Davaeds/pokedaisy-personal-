@@ -328,6 +328,7 @@ shows a "not supported" notice).
 | Super Mariomon                 | 1.2.1-1.3, 1.5.1, 1.5.2    |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   ◐   |
 | Recharged Emerald              | 2.2.5, 2.2.8, Rebalanced   |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   ◐   |
 | Elite Redux                    | 2.65.3b, 2.65.4.1b         |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   ◐   |
+| Team Rocket Dragonsden         | 1.5                        |  ✅   | ✅  |   ◐    |  ◐  |    —    |   ◐   |
 | Emerald Rogue                  | 2.2.1-EX                   |  ✅   | ✅  |   ✅   | ✅  |   ✅    |   —   |
 | SoulGold                       | 1.1.4, 1.2 (3 builds)      |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   ◐   |
 | R.O.W.E.                       | 2.1.9.1 Experimental       |  ✅   | ✅  |   ◐    | ✅  |    ◐    |   —   |
@@ -346,7 +347,8 @@ Platinum, HeartGold and SoulSilver are the DS games the companion reads, in the 
 revision 1); their pictures, Pokédex pages and maps come from your cart. Platinum's battles show in the BATTLE tab,
 HeartGold's and SoulSilver's not yet, and on the DS the battle buttons don't press the game's menus yet. On a
 one-screen device a DS game shows its top screen; the touch screen needs a second screen for now.
-Map ◐ means place names
+Team Rocket Dragonsden is DragonsdenTV's Team Rocket Edition: Dragonsden Version, not FireRed Rocket Edition; its
+Kanto, Sevii and Johto maps and its own Pokédex aren't read yet. Map ◐ means place names
 only, without the map picture. Guide ◐ means the live pages only (the wild encounters here and the next
 boss), without the area lists. Battle ◐ means the battle panes work but haven't
 been checked in every kind of battle. The guides were

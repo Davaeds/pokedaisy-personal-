@@ -1,0 +1,10 @@
+# Pokémon Team Rocket Edition: Dragonsden Version with the save off its Discord ("Pokemon - Team Rocket Edition.srm"):
+# its title (A skips the splash), CONTINUE (Jason, BADGES 08), then the field in CELADON CITY (frame ~1400).
+# Checked headless 2026-10-21.
+wait 300
+press A
+wait 300
+press A
+wait 300
+press A
+wait 500

@@ -546,7 +546,8 @@ private val RechargedEmeraldPartyStyle: PartySlotStyle by lazy {
     )
 }
 
-/** Elite Redux's party slots: Emerald's, but the names in its own mixed case ("Zekrom"), as its party menu prints them. */
+/** Elite Redux's and Team Rocket Edition: Dragonsden's party slots: Emerald's, but the names in their own mixed case
+ * ("Zekrom", "Houndoom"), as their party menus print them. */
 private val EliteReduxPartyStyle by lazy { EmeraldPartyStyle.copy(upperCaseNames = false) }
 
 /** The in-game party-slot look for [game], or null for games that don't have one yet. */
@@ -564,6 +565,8 @@ fun partySlotStyleFor(game: GameKind): PartySlotStyle? = when (game) {
     }
     // Elite Redux's party menu is Emerald's slots (its ROM kept the art: RomArt's partyem/) in a two-column grid.
     GameKind.ELITE_REDUX -> EliteReduxPartyStyle
+    // Team Rocket Edition: Dragonsden's party menu is Emerald's slots and list, as its battle party screen showed.
+    GameKind.TEAM_ROCKET -> EliteReduxPartyStyle
     GameKind.HEART_AND_SOUL -> HeartAndSoulPartyStyle
     GameKind.UNBOUND -> UnboundPartyStyle
     GameKind.RADICAL_RED -> RadicalRedPartyStyle
