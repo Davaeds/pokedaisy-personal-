@@ -740,6 +740,39 @@ val POKEDEX_IMPERIUM = PokedexTables(
 )
 
 /**
+ * Pokémon Wishes of Tomorrow v1.2.6 (expansion 1.15.3): the page from gSpeciesInfo (0x104-byte entries with Imperium's
+ * field offsets: natDexNum +0x3C, category +0x1F, text +0x4C, smol front pic +0x58, a plain palette +0x60, footprint
+ * +0x80; level-up / teachable / evolutions +0x94 / +0x98 / +0xA0, 12-byte evolution records with a condition list),
+ * gAbilitiesInfo 0x08CC1EFC (0x1C-byte records, from its RHHEXP block). Its dex is expansion's own Hoenn list (214, u32
+ * national numbers at 0x08CC18B0, what HoennToNationalOrder reads), then National (1025) once unlocked; flags in
+ * SaveBlock1 +0x359C / +0x361D (the GF header's seen offset). Checked against its own dex screen on the headless save:
+ * SEEN 1 / OWN 1 in the regional list (PIKACHU, No. 164; the party's other four aren't in it).
+ */
+val POKEDEX_WISHES = PokedexTables(
+    entries = 0,
+    frontPics = 0,
+    palettes = 0,
+    speciesInfo = 0x087011C0L,
+    speciesToNational = 0,
+    abilityNames = 0x08CC1EFCL,
+    footprints = 0,
+    abilityNameLength = 17,
+    abilityNameStride = 0x1C,
+    categorySuffix = "Pokémon",
+    speciesCount = 1581,
+    nationalCount = 1025,
+    regionalCount = 214,
+    regionName = "HOENN",
+    regionalOrder = 0x08CC18B0L,
+    regionalOrderStride = 4,
+    expansion = SpeciesInfoDex(stride = 0x104, paletteOff = 0x60, footprintOff = 0x80, levelUpOff = 0x94, teachableOff = 0x98, evolutionsOff = 0xA0),
+    evoLayout = EvoLayout(EvoScheme.EXPANSION_PARAMS, record = 12, conditionsEnd = 39),
+    flags = DexFlags(DexFlagBlock.SAVE_BLOCK_1, 0x359C, 0x361D, 129),
+    nationalMagicOff = 2,
+    nationalMagic = 0xDA,
+)
+
+/**
  * Pokémon Quetzal English Alpha 9 v0: vanilla's table shapes, grown. Entries are 12 bytes
  * {category*, height, weight, text*} by species (Mega forms have their own); front pics are
  * smol; gSpeciesInfo is 0x24-byte entries with u16 abilities (hidden at +0x1C); species map to

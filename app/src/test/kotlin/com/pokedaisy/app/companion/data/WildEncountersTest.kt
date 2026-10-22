@@ -54,6 +54,9 @@ class WildEncountersTest {
         // Elite Redux (its own gcc pokeemerald): 2.65.4.1b reads the player's coordinates before the header lookup's call.
         "Pokemon Elite Redux (2.65.3b).gba" to 0x0203D214L,
         "Pokemon Elite Redux (2.65.4.1b).gba" to 0x0203D21CL,
+        // Wishes of Tomorrow (expansion 1.15.3): +0xAC from an expansion 1.15.3 build's, like the globals around it. Not
+        // walked: without field reads (no WIDE rows) the app doesn't roll it yet (ROM_FEATURES' note 21).
+        "Pokemon Wishes of Tomorrow (v1.2.6).gba" to 0x0203788CL,
         // Not found: no WILD ENCOUNTERS there.
         "Pokemon Emerald Rogue (v2.2.1-EX).gba" to 0L,
         "Pokemon Quetzal (Alpha 9.0) (English).gba" to 0L,

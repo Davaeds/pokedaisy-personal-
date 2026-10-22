@@ -418,6 +418,8 @@ private fun backdropColors(game: GameKind): IntArray? = when (game) {
     GameKind.SWORD_SHIELD -> intArrayOf(0xFFCE3131.toInt(), 0xFFCE3131.toInt(), 0xFF9C2121.toInt())
     // HeartGold / SoulSilver's party screen: teal behind its Poké Ball, a deeper teal below.
     GameKind.HEARTGOLD, GameKind.SOULSILVER -> intArrayOf(0xFF8ADBDB.toInt(), 0xFF69CBCB.toInt(), 0xFF38B2BA.toInt())
+    // Wishes of Tomorrow's party menu: FireRed's lined backdrop in its own blues (sampled headless).
+    GameKind.WISHES -> intArrayOf(0xFF63A5BD.toInt(), 0xFF186B8C.toInt(), 0xFF213163.toInt())
     else -> null
 }
 

@@ -64,6 +64,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | Too Many Types 2 | 1.5.2 | ✅ | ✅ | ✅ | ✅ | — | — | — | ◐ ⁶ | — | ✅ | — | — | — | ✅ ¹⁹ |
 | Ultra Violet | 1.22 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ | ✅ ¹⁹ |
 | Unbound | 2.1.1.1, 2.1.1.1 French | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁶ | — | ✅ ¹⁹ |
+| Wishes of Tomorrow | 1.2.6 | — | ✅ ²¹ | ✅ ²¹ | ✅ ²¹ | — | — | — | — | — | — ²¹ | — | — | — | — |
 
 1. Yellow's and Crystal's battle controls steer from the cursor they read off the screen (`readGen1BattleInput`,
    `readGen2BattleInput`: the menu's own cursor variables, checked against the filled ▶ on screen), not from addresses
@@ -254,6 +255,12 @@ change to any of the places listed under "Where it's decided" updates its rows h
     and battle: the shared-palette icon recoloured through the species' normal / shiny battle palettes
     (`shinyIconPalette`; gMonShinyPaletteTable 0xDC0 past gMonPaletteTable, every entry's tag checked).
 20. SHINY ODDS on Orange Islands: the build with a save on this machine (8bac897d...) only; the other one isn't checked.
+21. Wishes of Tomorrow (pokeemerald-expansion 1.15.3, `NATIVE_WISHES`), checked headless on its new-game save: the five
+    controller handlers read live (the target screen's in a double battle), RIGHT / DOWN walked the action cursor 0 -> 1
+    -> 2, a written move cell + A spent that move's PP, and the switch (Emerald's list at its own gPartyMenu) went
+    written POKéMON cell + A, DOWN, A, SHIFT: party slot 1 out (`wishes_battle`'s README). `WildEncounters.find` finds its
+    switch (0x0203788C, where an expansion 1.15.3 build's sits plus the 0xAC every global around it moved), but without
+    field reads (no WIDE rows: EXPAND isn't mapped) the app never rolls it, so the row stays —.
 
 ## What each column is
 

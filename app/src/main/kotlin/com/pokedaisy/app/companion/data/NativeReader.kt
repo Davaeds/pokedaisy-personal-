@@ -457,6 +457,8 @@ fun readNativeTelemetry(client: MemoryReader, cfg: NativeConfig): Telemetry {
 
     val pokedex = cfg.pokedex?.let { runCatching { readPokedexState(client, cfg, it) }.getOrNull() }
     val progress = cfg.guideTables?.let { runCatching { readSaveProgress(client, cfg, it) }.getOrNull() }
+    // A save that plays randomized wild Pokémon (Wishes of Tomorrow's randomizer): the GUIDE swaps them the same way.
+    GuideRandomizer.update(cfg.guideTables, progress)
     // gEnemyParty: a trainer's whole party (the FOE TEAM strip), or the wild
     // one(s) - read in every battle for the foes' IVs.
     val battleFoes = if (inBattle && cfg.enemyParty != 0L) runCatching {
@@ -710,6 +712,7 @@ private fun Mon.withNativeGender(raw: ByteArray, off: Int, layout: PartyMonLayou
         GameKind.MARIOMON -> if (mariomonV13) genderRatiosMariomonV13 else genderRatiosMariomon
         GameKind.ELITE_REDUX -> genderRatiosEliteRedux
         GameKind.TEAM_ROCKET -> genderRatiosTeamRocket
+        GameKind.WISHES -> genderRatiosWishes
         else -> return this
     }
     // BoxPokemon +0x13 flags byte (isBadEgg:1, hasSpecies:1, isEgg:1): an egg

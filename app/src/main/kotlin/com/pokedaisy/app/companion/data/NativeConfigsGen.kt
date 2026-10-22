@@ -4924,6 +4924,81 @@ val NATIVE_UNBOUND_FR = NATIVE_UNBOUND_WITH_DEX.copy(
     guideTables = GUIDE_TABLES_UNBOUND_FR,
 )
 
+// ---- gamedata/gen3/hacks/wishes.toml ----
+
+// Pokémon Wishes of Tomorrow v1.2.6 (32 MB, BPEE, sha1 60182b93…; FlatFoot Labs): pokeemerald-expansion 1.15.3 (its RHHEXP
+// block), gcc, no source. Mapped headless from a new game played in it (randomizer off: `wishes`, Cyndaquil Lv12, Pikachu,
+// Charizard holding Charizardite X, Gengar, Lucario and a Togepi egg in MUNEN VILLAGE), each address also a literal-pool
+// word whose reference count matches an expansion 1.15.3 build's (scratch build of the tag, `nm`), and checked live:
+// - gPlayerParty 0x02031EBC / gPlayerPartyCount 0x02031C5D, gEnemyParty 0x02031C64 (+0x58 on the reference build):
+// vanilla's 100-byte encrypted mons with expansion's packing (species / moves 11 bits, PP 7, experience 21, held
+// item 10); the egg is species 1581 (gSpeciesInfo's last entry, the header's NUM_SPECIES).
+// - gSaveBlock1Ptr / 2Ptr 0x0300522C / 0x03005228 (2 before 1, as in the reference); money SB1+0x490 XOR SB2+0xAC
+// (₽3000). SaveBlock1's flags / vars +0x1270 / +0x13A0 and dex flags +0x359C as its GF ROM header says (896 trainer
+// flags: FLAG_SYS_POKEMON_GET is 0x880, the START menu's POKéMON appeared with it). gMain 0x03006728 (inBattle +0x439).
+// - gMapHeader 0x02001AE8 (mapsec 0xD1 MUNEN VILLAGE), gObjectEvents 0x020015D4 (the player's coords = pos + 7).
+// - gBagPockets 0x02006B64: Emerald's five pockets (quantities XOR the key; the bag screen shows the same items).
+// - Battle (a scripted wild ZIGZAGOON and GENERAL EDWARDS' six): gBattleTypeFlags 0x020000B0 (4 wild, 0x0C trainer),
+// gBattlersCount 0x020000B6, gBattlerPartyIndexes 0x02000148, gBattlerPositions 0x0200023C, gBattleMons 0x02000420
+// ([WISHES_BATTLE_MON]: 0x88 bytes), gBattleStruct 0x020000B8 with monToSwitchIntoId at +0xEB ("is about to send out
+// BLASTOISE" read 02 for the foe), the menus' cursors 0x020003AC / 0x020003B0 (RIGHT walked the action cursor 0 -> 1,
+// DOWN to 2; DOWN in FIGHT moved the move cursor 0 -> 2). gBattlerControllerFuncs 0x03002450: action / move / bag /
+// party read live (0x0805DA1D / 0x0805C91D / 0x0805C075 / 0x0805AEED), HandleInputChooseTarget 0x0805C42D (live on a
+// double battle's target screen; in the move handler's own literal pool, as on the reference build). gPartyMenu
+// 0x02031BB0 (slotId +9 walked 0 -> 1 on DOWN). A Mega Evolution reads as its own species id (TYRANITAR -> 926, in
+// gBattleMons and gEnemyParty).
+// - Icons: gSpeciesInfo 0x087011C0 (0x104-byte entries, iconSprite +0x68, iconPalIndex +0x8A), gMonIconPaletteTable
+// 0x08CC6488 (the GF header's); gItemsInfo 0x086AF774 (0x2C-byte entries: icon +0x24 smol-compressed, its palette +0x28
+// plain). Names / types / moves / chart / map sections: scripts/gen_expansion_tables.py wishes.
+val NATIVE_WISHES = NATIVE_EMERALD.copy(
+    itemDescs = ItemDescTable(0x086AF788L, 0x2C, -8),
+    playerParty = 0x02031EBCL,
+    playerPartyCount = 0x02031C5DL,
+    enemyParty = 0x02031C64L,
+    gMain = 0x03006728L,
+    saveBlock1Ptr = 0x0300522CL,
+    saveBlock2Ptr = 0x03005228L,
+    encryptionKeyOff = 0xACL,
+    moneyOff = 0x490L,
+    objectEvents = 0x020015D4L,
+    mapHeader = 0x02001AE8L,
+    bagPockets = 0x02006B64L,
+    bagPocketCount = 5,
+    bagPocketOrder = EMERALD_BAG_POCKET_ORDER,
+    speciesMask = 0x07FF,
+    moveMask = 0x07FF,
+    ppMask = 0x7F,
+    battleTypeFlags = 0x020000B0L,
+    battlersCount = 0x020000B6L,
+    battlerPartyIndexes = 0x02000148L,
+    battlerPositions = 0x0200023CL,
+    battleMons = 0x02000420L,
+    battleMonLayout = WISHES_BATTLE_MON,
+    battleStructPtr = 0x020000B8L,
+    monToSwitchIntoOff = 0xEB,
+    actionCursor = 0x020003ACL,
+    moveCursor = 0x020003B0L,
+    battlerControllerFuncs = 0x03002450L,
+    handleInputChooseAction = 0x0805DA1DL,
+    handleInputChooseMove = 0x0805C91DL,
+    completeWhenChoseItem = 0x0805C075L,
+    waitForMonSelection = 0x0805AEEDL,
+    handleInputChooseTarget = 0x0805C42DL,
+    partyMenu = 0x02031BB0L,
+    eggSpecies = 1581,
+    monIconTable = 0x08701228L, // gSpeciesInfo[0].iconSprite
+    monIconStride = 0x104,
+    monIconPaletteIndices = 0x0870124AL, // gSpeciesInfo[0].iconPalIndex
+    monPalIdxStride = 0x104,
+    monPalIdxMask = 0x07,
+    monIconPaletteTable = 0x08CC6488L,
+    itemIconTable = 0x086AF798L, // gItemsInfo[0].iconPic
+    itemIconStride = 0x2C,
+    itemPalCompressed = false,
+    pokedex = POKEDEX_WISHES,
+    guideTables = GUIDE_TABLES_WISHES,
+)
+
 /** The ported configs, by game code + revision ("BPRD0"): gamedata/gen3/ports/. */
 val RETAIL_PORTS: Map<String, () -> NativeConfig> = mapOf(
     "AXPD0" to { NATIVE_PORT_AXPD0 },

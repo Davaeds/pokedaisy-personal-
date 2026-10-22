@@ -67,6 +67,7 @@ class BestEffortTest {
         Game("Super Mariomon (v1.5.1 Anniversary).gba", "mariomon_v1_5_1", "BPEE", "MARIOMON_V1_5_1"),
         Game("Pokemon Elite Redux (2.65.4.1b).gba", "elite_redux", "BPEE", "ELITE_REDUX_V2_65_4_1B"),
         Game("Pokemon Team Rocket Dragonsden Version.gba", "team_rocket", "BPEE", "TEAM_ROCKET"),
+        Game("Pokemon Wishes of Tomorrow (v1.2.6).gba", "wishes", "BPEE", "WISHES"),
         Game("Super Mariomon (v1.3).gba", "mariomon_v1_3", "BPEE", "MARIOMON_V1_3"),
     )
 

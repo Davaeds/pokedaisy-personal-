@@ -233,6 +233,36 @@ GAMES = {
                     gender={1: 31, 4: 31, 25: 127}, items={1: "Poké Ball", 2: "Great Ball", 28: "Potion"},
                     moves={1: (1, 40), 10: (1, 40), 33: (1, 40), 52: (11, 40), 57: (12, 90), 89: (5, 100), 585: (19, 95)}),
     ),
+    # Pokemon Wishes of Tomorrow v1.2.6 (FlatFoot Labs; BPEE, 32 MB), pokeemerald-expansion 1.15.3 (its RHHEXP
+    # block: 848 moves, 1581 species, 924 items, 20-letter item names), gcc, no source. Its GF ROM header gives
+    # gSpeciesInfo 0x087011C0, gItemsInfo 0x086AF774 and gMovesInfo 0x086D00FC; checked against the data:
+    #  - species: 0x104-byte entries, National Dex ids: "Bulbasaur" at 0x087012F0 (entry +0x2C), "Ivysaur"
+    #    0x104 later; base stats 45/49/49/45/65/65 at name-0x2C, types (13 Grass, 4 Poison) name-0x26, genderRatio
+    #    31 name-0x1A - the same offsets as Imperium's 1.10. Its headless save's party (Cyndaquil, Pikachu,
+    #    Charizard, Gengar, Lucario, a Togepi egg) reads these names at those ids.
+    #  - items: 0x2C-byte entries with a name POINTER at +0x14 ("Poké Ball" at 1, "Potion" at 28 = the bag's;
+    #    Snag Ball 918), the description pointer 8 bytes before the name's.
+    #  - moves: 0x44-byte entries, the name pointer first ("Pound" 1, "Karate Chop" 2); +0xA type/power bits.
+    #  - chart: the unique [21][21] u32 run whose Normal row is 1x except Rock/Steel 0.5x, Ghost 0x (0x083DB990).
+    #  - mapsecs: older {x, y, w, h, name ptr} entries from 0x08CE114C; the save's gMapHeader in its first town
+    #    reads 0xD1 = MUNEN VILLAGE. Its region map isn't read (names only).
+    "wishes": dict(
+        suffix="Wishes",
+        label="Pokemon Wishes of Tomorrow v1.2.6",
+        sha1="60182b934d2e8eb3eef226a9bbc25e5df6becd4f",
+        species_name1=0x087012F0, species_stride=0x104, species_max=1581,
+        species_types_off=-0x26, species_gender_off=-0x1A, species_growth_off=-0x17,
+        items_base=0x086AF774 + 0x14, items_stride=0x2C, items_desc_off=-8,
+        moves_base=0x086D00FC, moves_stride=0x44, move_bits_off=0x0A,
+        chart=0x083DB990, chart_n=21,
+        mapsec_base=0x08CE114C, mapsec_name_off=4,
+        checks=dict(species={1: "Bulbasaur", 6: "Charizard", 25: "Pikachu", 94: "Gengar", 155: "Cyndaquil",
+                             448: "Lucario"},
+                    types={1: (13, 4), 6: (11, 3), 25: (14, 14), 155: (11, 11)},
+                    gender={1: 31, 25: 127}, growth={1: 3, 25: 0, 155: 3, 448: 3},
+                    items={1: "Poké Ball", 2: "Great Ball", 28: "Potion", 918: "Snag Ball"},
+                    moves={1: (1, 40), 2: (2, 50), 33: (1, 40), 52: (11, 40), 57: (12, 90), 89: (5, 100), 585: (19, 95)}),
+    ),
 }
 
 CHARS = {0x00: " ", 0x1B: "é", 0xAB: "!", 0xAC: "?", 0xAD: ".", 0xAE: "-", 0xB0: "…", 0xB1: "“", 0xB2: "”",
@@ -309,7 +339,7 @@ def write(name, body):
 
 
 def species(rom, g):
-    names, types, gender = {}, {}, {}
+    names, types, gender, growth = {}, {}, {}, {}
     for i in range(1, g["species_max"]):
         a = g["species_name1"] + (i - 1) * g["species_stride"]
         if rom.off(a) + g["species_stride"] > len(rom.d):
@@ -320,11 +350,14 @@ def species(rom, g):
         names[i] = n
         types[i] = (rom.u8(a + g["species_types_off"]), rom.u8(a + g["species_types_off"] + 1))
         gender[i] = rom.u8(a + g["species_gender_off"])
+        if "species_growth_off" in g:
+            growth[i] = rom.u8(a + g["species_growth_off"])
     c = g["checks"]
     assert all(names.get(i) == n for i, n in c["species"].items()), "species table address is wrong"
     assert all(types.get(i) == t for i, t in c["types"].items()), "species type offset is wrong"
     assert all(gender.get(i) == r for i, r in c["gender"].items()), "species gender offset is wrong"
-    return names, types, gender
+    assert all(growth.get(i) == r for i, r in c.get("growth", {}).items()), "species growth rate offset is wrong"
+    return names, types, gender, growth
 
 
 def named_table(rom, base, stride, inline=False, limit=4000):
@@ -365,7 +398,7 @@ def main():
     sfx = g["suffix"]
     low = sfx[0].lower() + sfx[1:]
 
-    names, types, gender = species(rom, g)
+    names, types, gender, growth = species(rom, g)
     write(f"SpeciesNames{sfx}.kt", header(g, "gSpeciesInfo inline names, keyed by the\n"
           "// game's own species ids (National Dex order, then forms/customs).\n") +
           f"val speciesNames{sfx}: Map<Int, String> = mapOf(\n" +
@@ -378,6 +411,11 @@ def main():
     write(f"GenderRatios{sfx}.kt", header(g, "gSpeciesInfo genderRatio by species id (0 always\n"
           "// male, 254 always female, 255 genderless, else female when (personality & 0xFF) < ratio).\n") +
           f"val genderRatios{sfx}: IntArray by lazy {{ unhexRatios(\"{hexs}\") }}\n")
+    if growth:  # only games that ask (species_growth_off): their EXP bar
+        hexg = "".join("%02x" % growth.get(i, 255) for i in range(max(growth) + 1))
+        write(f"GrowthRates{sfx}.kt", header(g, "gSpeciesInfo growthRate by species id (vanilla's GROWTH_* ids:\n"
+              "// ExpTables.kt's curves; 255 = no species).\n") +
+              f"internal val growthRates{sfx}: IntArray by lazy {{ unhexRatios(\"{hexg}\") }}\n")
 
     items = named_table(rom, g["items_base"], g["items_stride"], g.get("items_name_inline", False))
     assert all(items.get(i) == n for i, n in g["checks"]["items"].items()), "item table address is wrong"

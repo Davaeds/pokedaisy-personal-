@@ -195,3 +195,17 @@ default = { kotlin = 'emptyMap()' }
 kotlin = 'NightWild?'
 type = 'ref'
 default = 'none'
+
+# The save's progress also carries SaveBlock2's trainer ID (GBA_VAR_TRAINER_ID): Wishes of Tomorrow's randomizer swaps
+# the wild Pokémon by it (WishesRandomizer).
+[field.trainerIdVar]
+kotlin = 'Boolean'
+type = 'bool'
+default = false
+
+# Bytes from one species' learnset pointer to the next: 4 for a pointer table, gSpeciesInfo's stride where the
+# pointers live in it (learnsets = gSpeciesInfo + its levelUpLearnset offset: Wishes of Tomorrow).
+[field.learnsetStride]
+kotlin = 'Int'
+type = 'int'
+default = 4

@@ -722,7 +722,8 @@ private fun lightBagFor(game: GameKind, hgssPocket: Int = 0): BagPalette = when 
     GameKind.BLACK -> BlackBag
     // Too Many Types 2's, Glazed's, Imperium's and Quetzal's bags are Emerald's; Gaia's and Celia's are FireRed's.
     // Elite Redux's and Team Rocket Edition: Dragonsden's bag screens are Emerald's too.
-    GameKind.TMT2, GameKind.GLAZED, GameKind.IMPERIUM, GameKind.QUETZAL, GameKind.ELITE_REDUX, GameKind.TEAM_ROCKET -> EmeraldBag
+    GameKind.TMT2, GameKind.GLAZED, GameKind.IMPERIUM, GameKind.QUETZAL, GameKind.ELITE_REDUX, GameKind.TEAM_ROCKET,
+    GameKind.WISHES -> EmeraldBag
     GameKind.FIRERED -> if (com.pokedaisy.app.companion.data.runningGhostGrey) GhostGreyBag else FireRedBag
     else -> FireRedBag
 }

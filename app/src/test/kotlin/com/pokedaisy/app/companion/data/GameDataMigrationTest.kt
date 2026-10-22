@@ -26,10 +26,13 @@ class GameDataMigrationTest {
     private val generated = configs("NativeConfigsGenKt", "NATIVE_")
     private val legacy = configs("LegacyNativeConfigsKt", "LEGACY_NATIVE_")
 
+    /** Games added since the move, written in gamedata/ from the start: they have no hand-written config. */
+    private val bornInGamedata = setOf("WISHES")
+
     @Test
     fun `every hand-written config has a generated one and no more`() {
         assertEquals(68, legacy.size)
-        assertEquals(legacy.keys.sorted(), generated.keys.sorted())
+        assertEquals((legacy.keys + bornInGamedata).sorted(), generated.keys.sorted())
     }
 
     @Test

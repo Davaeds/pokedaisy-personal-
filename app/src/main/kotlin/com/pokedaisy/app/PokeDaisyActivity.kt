@@ -1018,6 +1018,10 @@ class PokeDaisyActivity : Activity() {
         // written POKéMON cell + A opened it, DOWN, A, SHIFT sent slot 1 in (gBattlerPartyIndexes[0] = 1).
         game == com.pokedaisy.app.companion.data.GameKind.TEAM_ROCKET ->
             BattleInputController.SwitchAddrs(partyMenu = 0x0203DE64L, party = 0x02025170L)
+        // Wishes of Tomorrow: Emerald's list at its own gPartyMenu (NATIVE_WISHES). Headless: a written POKéMON cell + A
+        // opened it, DOWN, A, SHIFT sent slot 1 in (gBattlerPartyIndexes[0] = 1).
+        game == com.pokedaisy.app.companion.data.GameKind.WISHES ->
+            BattleInputController.SwitchAddrs(partyMenu = 0x02031BB0L, party = 0x02031EBCL)
         game == com.pokedaisy.app.companion.data.GameKind.AMETHYST ->
             BattleInputController.SwitchAddrs(partyMenu = 0x0203B0A0L, party = 0x02024284L, grid = true)
         // Unbound (EN / FR): FireRed's gPartyMenu / gPlayerParty (CFRU keeps its EWRAM) under CFRU's two-column party

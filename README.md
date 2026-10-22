@@ -167,6 +167,7 @@ shows a "not supported" notice).
 | Recharged Emerald              | 2.2.5, 2.2.8, Rebalanced   |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   ◐   |
 | Elite Redux                    | 2.65.3b, 2.65.4.1b         |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   ◐   |
 | Team Rocket Dragonsden         | 1.5                        |  ✅   | ✅  |   ◐    |  ◐  |    —    |   ◐   |
+| Wishes of Tomorrow             | 1.2.6                      |  ✅   | ✅  |   ◐    |  ◐  |   ✅    |   ◐   |
 | Emerald Rogue                  | 2.2.1-EX                   |  ✅   | ✅  |   ✅   | ✅  |   ✅    |   —   |
 | SoulGold                       | 1.1.4, 1.2 (3 builds)      |  ✅   | ✅  |   ◐    | ✅  |   ✅    |   ◐   |
 | R.O.W.E.                       | 2.1.9.1 Experimental       |  ✅   | ✅  |   ◐    | ✅  |    ◐    |   —   |
@@ -179,6 +180,8 @@ when it isn't sure. Map ◐ means place names only,
 without the map picture. Guide ◐ means the live pages only (the wild encounters here and the next boss). Battle ◐
 means the battle panes work but haven't been checked in every kind of battle. On the DS, HeartGold's and SoulSilver's
 battles aren't read yet. Team Rocket Dragonsden is DragonsdenTV's Team Rocket Edition, not FireRed Rocket Edition.
+Wishes of Tomorrow's region map isn't read yet; with its randomizer on, the guide and the Pokédex's AREA show the wild
+Pokémon your save meets.
 The guides were written from each game's own data and may contain mistakes.
 
 </details>

@@ -1356,6 +1356,16 @@ setwildbattle takes a second mon's fields (ScriptContext_SetupScript 0x080CEDC5)
 Kanto names (the save's "Rustboro" is CELADON CITY, mapsec 0x5E); gItems has a few slots whose itemId is another's (names go by
 slot). Its party menu is Emerald's slots on FireRed's teal backdrop (`buildGameBackground`). No DEX (a regional order of its own:
 the summary shows CROBAT as No. 067), region map, EXPAND, field reads or field items yet; GUIDE is HERE only.
+**Wishes of Tomorrow 1.2.6 (2026-10-22)** (`GameKind.WISHES`, `NATIVE_WISHES`): FlatFoot Labs' closed BPEE build (32 MB) on
+pokeemerald-expansion 1.15.3 (its RHHEXP block). No save existed: two new games played headless (randomizer off / on), party,
+bag and dex flags given through its own script commands (`callnative ScrCmd_createmon` 0x0A200DD5; FLAG_SYS_POKEMON_GET 0x880:
+896 trainer flags), saved in game next to RetroArch's. RAM by literal-pool reference counts against a build of the expansion tag
+(`nm`; its globals sit a constant few bytes off the reference's), each then read live. Its BattlePokemon is 0x88, its struct
+Trainer 0x38 (gTrainers[3][896], EASY empty); a Mega Evolution is its own species id (TYRANITAR 926). Its first-A-is-swallowed
+main menu needs two A presses headless. Its **randomizer** swaps species at run time (wild and trainers, never the ROM's tables)
+by a hash of species and SaveBlock2's trainer ID (`WishesRandomizer`, checked against the game's own function); the GUIDE's wild
+lists and the DEX's AREA follow it through `GuideRandomizer` (`GuideTables.trainerIdVar`). DEX: expansion's Hoenn list (u32
+entries) + National. No region map (names only), EXPAND, field reads, field items or card yet; GUIDE is HERE only.
 **Emerald Legacy v1.1.4 (2026-10-14)**: BPEE, 16 MB, but a rebuild - its public source (`$DECOMPS/pokelegacy`, tag V1.1.4)
 built with agbcc is the release byte for byte, so take every address from that ELF (`nm`) and every struct offset / constant
 from agbcc compiling `offsetof` against its headers, never from retail. Runs as `GameKind.EMERALD` under `LEGACY_TEXT`

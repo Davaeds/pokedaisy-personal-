@@ -1042,6 +1042,19 @@ open class CompanionScreenshotTest {
     @Test fun teamRocketBattleMenu() = retail("team_rocket_battle", NATIVE_TR, TR_ROM, GameKind.TEAM_ROCKET, "BATTLE", art = true, controls = true)
     @Test fun teamRocketGuideHere() = retailGuide("team_rocket_route", NATIVE_TR, TR_ROM, "HERE", kind = GameKind.TEAM_ROCKET)
     @Test fun teamRocketTrainer() = retail("team_rocket_trainer_next", NATIVE_TR, TR_ROM, GameKind.TEAM_ROCKET, "BATTLE", art = true)
+    // Wishes of Tomorrow: its headless new game (the fixtures' READMEs); Emerald's party slots and bag from its ROM.
+    @Test fun wishesParty() = retail("wishes", NATIVE_WOT, WOT_ROM, GameKind.WISHES, "PARTY", art = true)
+    @Test fun wishesItems() = retail("wishes", NATIVE_WOT, WOT_ROM, GameKind.WISHES, "ITEMS", art = true)
+    @Test fun wishesMap() = retail("wishes", NATIVE_WOT, WOT_ROM, GameKind.WISHES, "MAP", art = true)
+    @Test fun wishesDex() = retail("wishes", NATIVE_WOT, WOT_ROM, GameKind.WISHES, "DEX", art = true)
+    @Test fun wishesDexEntry() = retail("wishes", NATIVE_WOT, WOT_ROM, GameKind.WISHES, "DEX", entry = 155, art = true)
+    @Test fun wishesBattle() = retail("wishes_battle", NATIVE_WOT, WOT_ROM, GameKind.WISHES, "BATTLE", art = true)
+    @Test fun wishesBattleMenu() = retail("wishes_battle", NATIVE_WOT, WOT_ROM, GameKind.WISHES, "BATTLE", art = true, controls = true)
+    @Test fun wishesTrainer() = retail("wishes_trainer", NATIVE_WOT, WOT_ROM, GameKind.WISHES, "BATTLE", art = true)
+    @Test fun wishesMega() = retail("wishes_mega", NATIVE_WOT, WOT_ROM, GameKind.WISHES, "BATTLE", art = true)
+    @Test fun wishesGuideHere() = retailGuide("wishes_route", NATIVE_WOT, WOT_ROM, "HERE", kind = GameKind.WISHES)
+    // Its randomizer: the same route, the wild Pokémon swapped the way this save's game swaps them.
+    @Test fun wishesGuideHereRandom() = retailGuide("wishes_random", NATIVE_WOT, WOT_ROM, "HERE", kind = GameKind.WISHES)
     // Ghost Grey: its 1.0.3 save in v1.0.4 (the fixtures' READMEs), its grey map from the ROM.
     @Test fun ghostGreyParty() = retail("ghost_grey", NATIVE_GG, GG_ROM, GameKind.FIRERED, "PARTY", art = true)
     @Test fun ghostGreyItems() = retail("ghost_grey", NATIVE_GG, GG_ROM, GameKind.FIRERED, "ITEMS", art = true)
@@ -1853,6 +1866,8 @@ private const val GG_ROM = "Pokemon Ghost Grey (v1.0.4).gba"
 private const val ER_ROM = "Pokemon Elite Redux (2.65.4.1b).gba"
 private const val TR_ROM = "Pokemon Team Rocket Dragonsden Version.gba"
 private val NATIVE_TR get() = com.pokedaisy.app.companion.data.NATIVE_TEAM_ROCKET
+private const val WOT_ROM = "Pokemon Wishes of Tomorrow (v1.2.6).gba"
+private val NATIVE_WOT get() = com.pokedaisy.app.companion.data.NATIVE_WISHES
 private val NATIVE_ER get() = com.pokedaisy.app.companion.data.NATIVE_ELITE_REDUX_V2_65_4_1B
 private val NATIVE_GG get() = com.pokedaisy.app.companion.data.NATIVE_GHOST_GREY
 private val NATIVE_SS get() = com.pokedaisy.app.companion.data.NATIVE_SWORD_SHIELD

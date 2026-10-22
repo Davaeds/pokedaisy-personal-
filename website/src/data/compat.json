@@ -88,6 +88,7 @@
     {"sha1": "3b6c51d8fb6b513bdd01b7bda3ed8965bc985d58", "title": "Pokémon Ultra Violet", "version": "v1.22"},
     {"sha1": "b4776b82a4c7915d0fadeaa27e013523f99dfd94", "title": "Pokémon Unbound", "version": "v2.1.1.1"},
     {"sha1": "0ce2a880aa097f1dce4e1db8ee513d0e82d15859", "title": "Pokémon Unbound", "version": "v2.1.1.1-FR"},
+    {"sha1": "60182b934d2e8eb3eef226a9bbc25e5df6becd4f", "title": "Pokémon Wishes of Tomorrow", "version": "v1.2.6"},
     {"sha1": "43dd208b23eade69aa3384301e934ecafbf6c2b3", "title": "Super Mariomon", "version": "v1.2.1"},
     {"sha1": "08d1c275c0ba4d559b33427292702d61ad49fb5c", "title": "Super Mariomon", "version": "v1.2.2"},
     {"sha1": "043512c2497871c018df606fb90ffbd4c81430f4", "title": "Super Mariomon", "version": "v1.3"},
@@ -250,6 +251,7 @@
       {"game": "Recharged Emerald", "version": "2.2.5, 2.2.8, Rebalanced", "cells": ["yes", "yes", "part", "yes", "yes", "part"]},
       {"game": "Elite Redux", "version": "2.65.3b, 2.65.4.1b", "cells": ["yes", "yes", "part", "yes", "yes", "part"]},
       {"game": "Team Rocket Dragonsden", "version": "1.5", "cells": ["yes", "yes", "part", "part", "no", "part"]},
+      {"game": "Wishes of Tomorrow", "version": "1.2.6", "cells": ["yes", "yes", "part", "part", "yes", "part"]},
       {"game": "Emerald Rogue", "version": "2.2.1-EX", "cells": ["yes", "yes", "yes", "yes", "yes", "no"]},
       {"game": "SoulGold", "version": "1.1.4, 1.2 (3 builds)", "cells": ["yes", "yes", "part", "yes", "yes", "part"]},
       {"game": "R.O.W.E.", "version": "2.1.9.1 Experimental", "cells": ["yes", "yes", "part", "yes", "part", "no"]}

@@ -639,6 +639,8 @@ fun partySlotStyleFor(game: GameKind): PartySlotStyle? = when (game) {
     GameKind.ELITE_REDUX -> EliteReduxPartyStyle
     // Team Rocket Edition: Dragonsden's party menu is Emerald's slots and list, as its battle party screen showed.
     GameKind.TEAM_ROCKET -> EliteReduxPartyStyle
+    // So is Wishes of Tomorrow's (its own blue backdrop: Theme's backdropColors).
+    GameKind.WISHES -> EliteReduxPartyStyle
     GameKind.HEART_AND_SOUL -> HeartAndSoulPartyStyle
     // Unbound FR redrew "HP" / "Lv" as "PV" / "N." and its status icons (GitHub #227): its own art, English's layout.
     GameKind.UNBOUND -> if (romGameCode == com.pokedaisy.app.companion.data.UNBOUND_FR_TEXT) UnboundFrPartyStyle else UnboundPartyStyle

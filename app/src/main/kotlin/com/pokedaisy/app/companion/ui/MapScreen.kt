@@ -350,7 +350,7 @@ internal enum class MapLabelStyle(val width: Int, val height: Int) {
         private val EMERALD_FAMILY = setOf(
             GameKind.EMERALD, GameKind.EMERALD_SEAGLASS, GameKind.TMT2, GameKind.ROWE,
             GameKind.EMERALD_ROGUE, GameKind.HEART_AND_SOUL, GameKind.LAZARUS, GameKind.SOULGOLD,
-            GameKind.GLAZED, GameKind.IMPERIUM, GameKind.MARIOMON,
+            GameKind.GLAZED, GameKind.IMPERIUM, GameKind.MARIOMON, GameKind.WISHES,
         )
 
         fun of(game: GameKind?) = when (game) {

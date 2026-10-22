@@ -536,6 +536,7 @@ class TelemetrySampler {
                 ELITE_REDUX_V2_65_3B_SHA1 -> { kind = GameKind.ELITE_REDUX; nativeCfg = NATIVE_ELITE_REDUX_V2_65_3B }
                 ELITE_REDUX_V2_65_4_1B_SHA1 -> { kind = GameKind.ELITE_REDUX; nativeCfg = NATIVE_ELITE_REDUX_V2_65_4_1B }
                 TEAM_ROCKET_DRAGONSDEN_V1_5_SHA1 -> { kind = GameKind.TEAM_ROCKET; nativeCfg = NATIVE_TEAM_ROCKET }
+                WISHES_OF_TOMORROW_V1_2_6_SHA1 -> { kind = GameKind.WISHES; nativeCfg = NATIVE_WISHES }
                 else -> {
                     kind = GameKind.EMERALD
                     unsupportedRom(reader, code, size, hash, "unrecognized Emerald-based ROM hack " +
@@ -904,6 +905,9 @@ class TelemetrySampler {
         // Pokémon Team Rocket Edition: Dragonsden Version 1.5 (its START menu says so; BPEE, 32 MB; DragonsdenTV's own build)
         // - host-side masked hash (GPIO bytes zero, so a plain `shasum`).
         const val TEAM_ROCKET_DRAGONSDEN_V1_5_SHA1 = "40780347d0b4df6bf491eaf12603e5422caee677"
+        // Pokémon Wishes of Tomorrow v1.2.6 (FlatFoot Labs; BPEE, 32 MB, pokeemerald-expansion 1.15.3) - host-side masked
+        // hash (GPIO bytes zero, so a plain `shasum`).
+        const val WISHES_OF_TOMORROW_V1_2_6_SHA1 = "60182b934d2e8eb3eef226a9bbc25e5df6becd4f"
         // Pokémon Ghost Grey v1.0.1, v1.0.2 and v1.0.4 (BPRE rev 0, 32 MB; JoeyZeed) - host-side masked hashes (GPIO
         // bytes zero, so a plain `shasum`).
         const val GHOST_GREY_V1_0_1_SHA1 = "20dfaea1d5317cf95fe0b493208edce7d50b865f"
@@ -1081,6 +1085,7 @@ class TelemetrySampler {
             FIRERED_ROCKET_EDITION_UNVERSIONED_SHA1, ASH_GRAY_V4_5_3_SHA1, ASH_GRAY_FORK_BUG_FIX_V1_0_SHA1,
             GHOST_GREY_V1_0_1_SHA1, GHOST_GREY_V1_0_2_SHA1, GHOST_GREY_V1_0_4_SHA1,
             ELITE_REDUX_V2_65_3B_SHA1, ELITE_REDUX_V2_65_4_1B_SHA1, TEAM_ROCKET_DRAGONSDEN_V1_5_SHA1,
+            WISHES_OF_TOMORROW_V1_2_6_SHA1,
             ULTRA_VIOLET_V1_22_SHA1, SWORD_SHIELD_ULTIMATE_PLUS_V1_2_1_2_SHA1, SWORD_SHIELD_ULTIMATE_PLUS_V1_2_1_2_CASUAL_SHA1,
             SWORD_SHIELD_ULTIMATE_PLUS_V1_2_1_2_PERFORMANCE_SHA1, SWORD_SHIELD_ULTIMATE_PLUS_V1_2_1_2_CASUAL_PERFORMANCE_SHA1,
             RECHARGED_YELLOW_V1_8_0_SHA1, RECHARGED_YELLOW_V1_9_0_SHA1, RECHARGED_YELLOW_V1_9_4_SHA1,

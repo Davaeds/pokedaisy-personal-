@@ -26,7 +26,8 @@ package com.pokedaisy.app.companion.data
 // NativeReader.kt. Heart and Soul and Lazarus now have their own
 // ROM-extracted tables (*Hns.kt / *Lazarus.kt, scripts/gen_expansion_tables.py).
 enum class GameKind { FIRERED, EMERALD, UNBOUND, GAIA, RADICAL_RED, ODYSSEY, HEART_AND_SOUL, LAZARUS, ROWE, EMERALD_ROGUE, AMETHYST, EMERALD_SEAGLASS, CELIA, TMT2, SOULGOLD, YELLOW, GLAZED, IMPERIUM, QUETZAL, ORANGE_ISLANDS, RECHARGED_YELLOW, MARIOMON, SWORD_SHIELD, GS_CHRONICLES, CRYSTAL, CRYSTAL_CLEAR, PRISM,
-    GOLD, SILVER, RED, BLUE, ELITE_REDUX, POLISHED_CRYSTAL, PLATINUM, HEARTGOLD, SOULSILVER, TEAM_ROCKET, BLACK }
+    GOLD, SILVER, RED, BLUE, ELITE_REDUX, POLISHED_CRYSTAL, PLATINUM, HEARTGOLD, SOULSILVER, TEAM_ROCKET, BLACK,
+    WISHES }
 
 @Volatile
 var activeGame: GameKind = GameKind.FIRERED
@@ -226,6 +227,8 @@ private inline val rogue get() = activeGame == GameKind.EMERALD_ROGUE
 private inline val eliteRedux get() = activeGame == GameKind.ELITE_REDUX
 // Pokémon Team Rocket Edition: Dragonsden Version: its own species / moves / items / map sections (gen_team_rocket_tables.py).
 private inline val teamRocket get() = activeGame == GameKind.TEAM_ROCKET
+// Pokémon Wishes of Tomorrow: its own species / moves / items / map sections (gen_expansion_tables.py wishes).
+private inline val wishes get() = activeGame == GameKind.WISHES
 
 /** Elite Redux 2.65.3b is running (its few names / types / moves over 2.65.4.1b's). Set with [activeGame] by the Poller. */
 var eliteRedux265_3 = false
@@ -265,6 +268,7 @@ val activeSpeciesNames: Map<Int, String> get() = localText?.species ?: when {
     mariomon -> if (mariomonV13) speciesNamesMariomonV13 else speciesNamesMariomon
     eliteRedux -> if (eliteRedux265_3) speciesNamesEliteRedux265_3 else speciesNamesEliteRedux
     teamRocket -> speciesNamesTeamRocket
+    wishes -> speciesNamesWishes
     else -> frHack?.speciesMerged ?: speciesNames
 }
 val activeMoveData: Map<Int, MoveInfo> get() = localText?.moveData ?: when {
@@ -295,6 +299,7 @@ val activeMoveData: Map<Int, MoveInfo> get() = localText?.moveData ?: when {
     amethyst -> moveDataAmethyst   // both versions' (GitHub #96: past Gen 3's 354 they read "Move#N")
     eliteRedux -> if (eliteRedux265_3) moveDataEliteRedux265_3 else moveDataEliteRedux
     teamRocket -> moveDataTeamRocket
+    wishes -> moveDataWishes
     odyssey -> fireRedHackOdyssey.movesMerged
     else -> frHack?.movesMerged ?: moveData
 }
@@ -329,6 +334,7 @@ val activeItemNames: Map<Int, String> get() = localText?.items ?: when {
     mariomon -> itemNamesMariomon
     eliteRedux -> if (eliteRedux265_3) itemNamesEliteRedux265_3 else itemNamesEliteRedux
     teamRocket -> itemNamesTeamRocket
+    wishes -> itemNamesWishes
     odyssey -> fireRedHackOdyssey.itemsMerged
     else -> frHack?.itemsMerged ?: itemNames
 }
@@ -359,6 +365,7 @@ val activeSpeciesTypeData: Map<Int, SpeciesTypes> get() = when {
     emeraldLegacy -> speciesTypeDataEmeraldLegacy
     eliteRedux -> if (eliteRedux265_3) speciesTypeDataEliteRedux265_3 else speciesTypeDataEliteRedux
     teamRocket -> speciesTypeDataTeamRocket
+    wishes -> speciesTypeDataWishes
     odyssey -> fireRedHackOdyssey.typesMerged   // its regional forms (GitHub #206)
     else -> frHack?.typesMerged ?: speciesTypeData
 }
@@ -389,6 +396,7 @@ val activeTypeEffectiveness: Map<Int, Int> get() = when {
     mariomon -> typeEffectivenessMariomon
     eliteRedux -> typeEffectivenessEliteRedux
     teamRocket -> typeEffectivenessTeamRocket
+    wishes -> typeEffectivenessWishes
     odyssey -> fireRedHackOdyssey.typeChart ?: typeEffectiveness
     else -> frHack?.typeChart ?: typeEffectiveness
 }
@@ -414,6 +422,7 @@ val activeTypeNames: Map<Int, String> get() = when {
     mariomon -> typeNamesMariomon
     eliteRedux -> typeNamesEliteRedux
     teamRocket -> typeNamesTeamRocket
+    wishes -> typeNamesWishes
     else -> frHack?.typeNamesMerged ?: typeNames
 }
 val activeMapSecData: Map<Int, MapSecInfo> get() = localText?.mapSecData ?: when {
@@ -447,6 +456,8 @@ val activeMapSecData: Map<Int, MapSecInfo> get() = localText?.mapSecData ?: when
     eliteRedux -> mapSecDataEliteRedux
     // Its own sections' names; no map of its own is drawn yet (it has several), so none is "on the map".
     teamRocket -> mapSecDataTeamRocket
+    // Its own region's sections (Munen Village...); its region map isn't read, so none is "on the map".
+    wishes -> mapSecDataWishes
     else -> frHack?.mapSecsMerged ?: mapSecData
 }
 /**
@@ -558,6 +569,8 @@ val activeRegionMapImages: Array<String> get() = when {
     orangeIslands || swordShield || gsChronicles || frHack?.ownRegionMap == true -> emptyArray()
     // Team Rocket Edition: Dragonsden's Kanto / Sevii / Johto maps aren't read yet - the MAP tab names the place.
     teamRocket -> emptyArray()
+    // Wishes of Tomorrow's own region map isn't read yet - the MAP tab names the place.
+    wishes -> emptyArray()
     else -> regionMapImages
 }
 
@@ -619,6 +632,7 @@ fun GameKind.displayName(): String = when (this) {
     GameKind.GS_CHRONICLES -> "Pokémon GS Chronicles"
     GameKind.ELITE_REDUX -> "Pokémon Elite Redux"
     GameKind.TEAM_ROCKET -> "Pokémon Team Rocket Edition: Dragonsden Version"
+    GameKind.WISHES -> "Pokémon Wishes of Tomorrow"
     GameKind.RECHARGED_YELLOW -> "Pokémon Recharged Yellow"
     GameKind.MARIOMON -> "Super Mariomon"
     GameKind.CRYSTAL -> "Pokémon Crystal"

@@ -426,6 +426,14 @@ val ELITE_REDUX_BATTLE_MON = BattleMonLayout(
  */
 val TEAM_ROCKET_BATTLE_MON = EXPANSION_BATTLE_MON.copy(size = 0x5C)
 
+/**
+ * Pokémon Wishes of Tomorrow's (pokeemerald-expansion 1.15.3) 0x88-byte struct BattlePokemon: expansion's fields where
+ * [EXPANSION_BATTLE_MON] has them (types +0x22 / +0x23 and a third at +0x24, PP +0x25, HP +0x2A, level +0x2C, max HP +0x2E,
+ * item +0x30, status1 +0x50), its volatiles grown to 0x88 (the reference build's sizeof; its wild and trainer battles
+ * read the foe at +0x88, Heart and Soul's size).
+ */
+val WISHES_BATTLE_MON = EXPANSION_BATTLE_MON.copy(size = 0x88)
+
 /** R.O.W.E.'s: expansion's layout, the species' form id in its top 5 bits. */
 val ROWE_BATTLE_MON = EXPANSION_BATTLE_MON.copy(speciesMask = 0x7FF)
 
