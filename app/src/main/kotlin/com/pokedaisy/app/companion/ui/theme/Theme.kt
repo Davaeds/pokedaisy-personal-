@@ -410,6 +410,8 @@ private fun backdropColors(game: GameKind): IntArray? = when (game) {
     GameKind.LAZARUS -> IntArray(3) { 0xFFFFFFFF.toInt() }
     // Imperium's party grid: grey / near-black rows.
     GameKind.IMPERIUM -> intArrayOf(0xFF424242.toInt(), 0xFF101821.toInt(), 0xFF101821.toInt())
+    // Dreamstone Mysteries' party grid: Imperium's rows, the same two colours.
+    GameKind.DREAMSTONE -> intArrayOf(0xFF424242.toInt(), 0xFF101821.toInt(), 0xFF101821.toInt())
     GameKind.ROWE -> IntArray(3) { 0xFF292929.toInt() }
     // Super Mariomon's party menu: flat brown behind its wood-plank slots.
     GameKind.MARIOMON -> IntArray(3) { 0xFF845A4A.toInt() }

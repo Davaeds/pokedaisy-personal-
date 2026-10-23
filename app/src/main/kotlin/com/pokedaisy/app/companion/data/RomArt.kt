@@ -27,7 +27,7 @@ object RomArt {
     const val DIR = "rom-art"
 
     /** Bump when [OUTPUTS] grows, so ROMs scanned before get scanned again. */
-    private const val SCAN_VERSION = 21
+    private const val SCAN_VERSION = 22
 
     /** Bumped whenever new art lands on disk, so loaders can retry. */
     val updates: StateFlow<Int> get() = _updates
@@ -147,7 +147,7 @@ object RomArt {
             listOf("$UNBOUND_FR_PARTY_DIR/status_icons.png", "$UNBOUND_FR_PARTY_DIR/font_small.png") +
             listOf(SWSH_BACKDROP) + (slots + "empty").map { "$SWSH_PARTY_DIR/slot_$it.png" } +
             listOf("kanto", "sevii123", "sevii45", "sevii67", "hoenn", "seaglass", "lazarus", "soulgold", "glazed", "imperium", "hns", "recharged_emerald", "rowe_hoenn", "rowe_kanto", "rowe_sevii",
-                "mariomon", "quetzal_kanto", "quetzal_sevii123", "quetzal_sevii45", "quetzal_sevii67").map { "regionmap/$it.png" } +
+                "mariomon", "quetzal_kanto", "quetzal_sevii123", "quetzal_sevii45", "quetzal_sevii67", "dreamstone").map { "regionmap/$it.png" } +
             PLAYER_ICONS.map { "regionmap/${it.first}.png" } +
             listOf(BAG_STARS_SOULGOLD, HOLD_ICONS) +
             TrainerCardArt.BLOBS.map { rawPath(it) }
@@ -415,6 +415,10 @@ object RomArt {
                 "sevii45" to RomBlob.FR_SEVII45_MAP, "sevii67" to RomBlob.FR_SEVII67_MAP).forEach { (name, map) ->
                 if (has(map)) out["regionmap/$name.png"] = screen(tiles, pal, d(map), 30)
             }
+        }
+        // Dreamstone Mysteries' Cormoria TOWN MAP: FireRed's kind of screen (4bpp tiles, a 32-wide u16 tilemap, BG palette 0).
+        if (has(RomBlob.DSM_REGION_GFX, RomBlob.DSM_REGION_PAL, RomBlob.DSM_REGION_MAP)) {
+            out["regionmap/dreamstone.png"] = screen(d(RomBlob.DSM_REGION_GFX), palette(d(RomBlob.DSM_REGION_PAL)), d(RomBlob.DSM_REGION_MAP), 32)
         }
         // Emerald's region map, and Seaglass's / Lazarus's / SoulGold's / Glazed's / Imperium's own (same region_map.c, their own art).
         listOf(

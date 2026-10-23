@@ -1376,6 +1376,20 @@ main menu needs two A presses headless. Its **randomizer** swaps species at run 
 by a hash of species and SaveBlock2's trainer ID (`WishesRandomizer`, checked against the game's own function); the GUIDE's wild
 lists and the DEX's AREA follow it through `GuideRandomizer` (`GuideTables.trainerIdVar`). DEX: expansion's Hoenn list (u32
 entries) + National. No region map (names only), EXPAND, field reads, field items or card yet; GUIDE is HERE only.
+**Dreamstone Mysteries (2026-10-23)** (`GameKind.DREAMSTONE`, `NATIVE_DREAMSTONE`; dsmyst's Cormoria, BPEE 32 MB, no version in
+the game - its debug menu's EXPANSION VERSION says "v1.11.2 Development Build"): closed, so pokeemerald-expansion's 1.11.2 tag
+built plain (Debian's arm-none-eabi-gcc 12, in a container) was the map - every RAM global sits within a few bytes of that
+build's, then checked in dumps, and struct offsets came from `offsetof` compiled against its headers. No save existed: a new
+game was played headless and given five Pokémon through its own `callnative ScrCmd_createmon` (0x0A1EDA35: side, slot 6,
+species, level, a u32 of optional-field bits) - `~/Documents/RetroArch/saves/mGBA/Pokemon Dreamstone Mysteries.sav`, the
+`dreamstone` README. Gotchas: its script commands run through the ROM's 0x0A000000 mirror (a ROM scan for 0x08 code
+pointers misses gScriptCmdTable, 0x0826CF9C; find it in the script context in RAM instead); the field-controls lock is
+expansion's special flag 0x4005 (a bit at 0x0200179C), not a byte, so `pk_field_state` can't read it - no field reads, WILD
+ENCOUNTERS (its switch 0x02037F88 checked headless anyway), EXPAND, field items or FLY; gTrainers is [3][855] by difficulty
+(var 0x40A8; 0 reads the first table where it has a team: `altTrainers`); the clock seeds the RNG, so a fair fight replays
+differently each run (`dreamstone_trainer_next` pokes the foe's HP). Imperium's gSpeciesInfo DEX (`POKEDEX_DREAMSTONE`: its
+own 315-entry Cormoria list, which the game titles HOENN), party palette and backdrop; Emerald's bag; its TOWN MAP is a
+FireRed-like screen (RomArt's `DSM_REGION_*`), no player head (the player picks one of five looks).
 **Emerald Legacy v1.1.4 (2026-10-14)**: BPEE, 16 MB, but a rebuild - its public source (`$DECOMPS/pokelegacy`, tag V1.1.4)
 built with agbcc is the release byte for byte, so take every address from that ELF (`nm`) and every struct offset / constant
 from agbcc compiling `offsetof` against its headers, never from retail. Runs as `GameKind.EMERALD` under `LEGACY_TEXT`

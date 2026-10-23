@@ -156,6 +156,7 @@ fun activeRegionMap(): RegionMapModel? {
         GameKind.GLAZED -> regionLayoutsGlazed
         GameKind.HEART_AND_SOUL -> regionLayoutsHns
         GameKind.IMPERIUM -> regionLayoutsImperium
+        GameKind.DREAMSTONE -> regionLayoutsDreamstone
         GameKind.QUETZAL -> if (quetzalV084) regionLayoutsEmerald else regionLayoutsQuetzal
         GameKind.ROWE -> regionLayoutsRowe
         GameKind.MARIOMON -> if (mariomonV13) regionLayoutsMariomonV13 else regionLayoutsMariomon

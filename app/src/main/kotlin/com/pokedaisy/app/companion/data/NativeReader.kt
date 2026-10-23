@@ -268,6 +268,13 @@ val TEAM_ROCKET_BAG_POCKET_ORDER = listOf(
     POCKET_ITEMS, POCKET_ITEMS, POCKET_POKE_BALLS, POCKET_ITEMS, POCKET_BERRIES, POCKET_ITEMS, POCKET_TM_HM, POCKET_KEY_ITEMS,
 )
 
+/** Pokémon Dreamstone Mysteries' gBagPockets: seven, in its items' own pocket numbers (gItemsInfo +0x41: 1 Items,
+ * 2 Medicine, 3 Battle Items, 4 Poké Balls, 5 Berries, 6 TMs, 7 Key Items), as its bag screen's tabs show them; Medicine
+ * and Battle Items fold into the app's ITEMS, like the other hacks' extra pockets. */
+val DREAMSTONE_BAG_POCKET_ORDER = listOf(
+    POCKET_ITEMS, POCKET_ITEMS, POCKET_ITEMS, POCKET_POKE_BALLS, POCKET_BERRIES, POCKET_TM_HM, POCKET_KEY_ITEMS,
+)
+
 // The game's notes: [config.recharged_yellow_v1_8_0] in gamedata/gen3/hacks/recharged_yellow.toml.
 val RECHARGED_YELLOW_BAG_POCKET_ORDER =
     listOf(POCKET_ITEMS, POCKET_ITEMS, POCKET_POKE_BALLS, POCKET_TM_HM, POCKET_BERRIES, POCKET_KEY_ITEMS)
@@ -713,6 +720,7 @@ private fun Mon.withNativeGender(raw: ByteArray, off: Int, layout: PartyMonLayou
         GameKind.ELITE_REDUX -> genderRatiosEliteRedux
         GameKind.TEAM_ROCKET -> genderRatiosTeamRocket
         GameKind.WISHES -> genderRatiosWishes
+        GameKind.DREAMSTONE -> genderRatiosDreamstone
         else -> return this
     }
     // BoxPokemon +0x13 flags byte (isBadEgg:1, hasSpecies:1, isEgg:1): an egg

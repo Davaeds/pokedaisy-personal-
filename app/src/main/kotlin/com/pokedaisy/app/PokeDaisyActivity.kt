@@ -1055,6 +1055,10 @@ class PokeDaisyActivity : Activity() {
             telemetry.knownPartyMenu()?.let { (menu, party) -> BattleInputController.SwitchAddrs(partyMenu = menu, party = party, monStride = 0x68) }
         game == com.pokedaisy.app.companion.data.GameKind.IMPERIUM ->
             BattleInputController.SwitchAddrs(partyMenu = 0x020370E0L, party = 0x020375F8L, grid = true)
+        // Dreamstone Mysteries: a two-column grid (NATIVE_DREAMSTONE). Headless: a written POKéMON cell + A opened it, DOWN
+        // (slotId 0 -> 2), A, SHIFT put slot 2 into gBattlerPartyIndexes[0].
+        game == com.pokedaisy.app.companion.data.GameKind.DREAMSTONE ->
+            BattleInputController.SwitchAddrs(partyMenu = 0x02031E04L, party = 0x02032314L, grid = true)
         // Glazed is retail Emerald's RAM and party menu code (NATIVE_GLAZED).
         game == com.pokedaisy.app.companion.data.GameKind.GLAZED ->
             BattleInputController.SwitchAddrs(partyMenu = 0x0203CEC8L, party = 0x020244ECL)

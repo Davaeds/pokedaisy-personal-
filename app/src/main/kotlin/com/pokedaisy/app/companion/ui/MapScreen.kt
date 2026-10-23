@@ -332,7 +332,9 @@ internal enum class MapLabelStyle(val width: Int, val height: Int) {
         FIRERED -> if (gender == 1) "player_leaf" else "player_red"
         // Super Mariomon drew MARIO in Brendan's slot.
         // Recharged Emerald redrew both heads for its map.
-        EMERALD -> if (com.pokedaisy.app.companion.data.runningEmeraldHack != null) { if (gender == 1) "player_may_re" else "player_brendan_re" }
+        // Dreamstone Mysteries' player picks one of five looks at the start: no head of ours fits, so none is drawn.
+        EMERALD -> if (game == GameKind.DREAMSTONE) null
+            else if (com.pokedaisy.app.companion.data.runningEmeraldHack != null) { if (gender == 1) "player_may_re" else "player_brendan_re" }
             else if (gender == 1) "player_may" else if (game == GameKind.MARIOMON) "player_mario" else "player_brendan"
         // Red's standing sprite (Gen1Art), Crystal's CHRIS / KRIS or Gold / Silver's boy (Gen2Art), from the ROM.
         // Crystal Clear's player is the player's own (model, skin, colours): none drawn.
@@ -352,6 +354,8 @@ internal enum class MapLabelStyle(val width: Int, val height: Int) {
             GameKind.EMERALD, GameKind.EMERALD_SEAGLASS, GameKind.TMT2, GameKind.ROWE,
             GameKind.EMERALD_ROGUE, GameKind.HEART_AND_SOUL, GameKind.LAZARUS, GameKind.SOULGOLD,
             GameKind.GLAZED, GameKind.IMPERIUM, GameKind.MARIOMON, GameKind.WISHES,
+            // Dreamstone Mysteries' TOWN MAP: its place name in a framed window bottom right, like Emerald's.
+            GameKind.DREAMSTONE,
         )
 
         fun of(game: GameKind?) = when (game) {

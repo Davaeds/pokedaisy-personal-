@@ -59,6 +59,8 @@ class MoneyTest {
         // Wishes of Tomorrow's new game (its START menu: ₽3000), the randomizer one too.
         assertEquals(3000L, money("wishes", NATIVE_WISHES))
         assertEquals(3000L, money("wishes_random", NATIVE_WISHES))
+        // Dreamstone Mysteries' new game (its save screen and START menu): SaveBlock1 +0x490 XOR SaveBlock2 +0xAC.
+        assertEquals(3000L, money("dreamstone", NATIVE_DREAMSTONE))
         // Ghost Grey's 1.0.3 save in each build (its trainer card: ₽163300).
         assertEquals(163300L, money("ghost_grey", NATIVE_GHOST_GREY))
         assertEquals(163300L, money("ghost_grey_v102", NATIVE_GHOST_GREY))

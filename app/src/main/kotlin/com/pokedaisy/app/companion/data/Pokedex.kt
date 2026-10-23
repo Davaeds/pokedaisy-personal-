@@ -773,6 +773,37 @@ val POKEDEX_WISHES = PokedexTables(
 )
 
 /**
+ * Pokémon Dreamstone Mysteries (expansion 1.11.2): Imperium's gSpeciesInfo page (the same 0x104-byte entries and
+ * offsets; gSpeciesInfo 0x087B0160, gAbilitiesInfo 0x08E65E98), its own regional order - 315 national numbers from
+ * 0x08E65C20 (GOTHITA first; CHIKORITA No. 054, OSHAWOTT No. 224) - and the flags in its SaveBlock1 (+0x3494 seen,
+ * +0x3515 caught; the bits of the five a new game was given). Checked against its own dex screen headless: "No054
+ * Chikorita, Leaf POKéMON", 2'11", 14.1 lbs., SEEN 2 / OWN 2 (of the five, only CHIKORITA and OSHAWOTT are in its
+ * list). The game titles that list HOENN (expansion's leftover word); the app names the region the game is in.
+ */
+val POKEDEX_DREAMSTONE = PokedexTables(
+    entries = 0,
+    frontPics = 0,
+    palettes = 0,
+    speciesInfo = 0x087B0160L,
+    speciesToNational = 0,
+    abilityNames = 0x08E65E98L,
+    footprints = 0,
+    abilityNameLength = 17,
+    abilityNameStride = 0x1C,
+    categorySuffix = "Pokémon",
+    speciesCount = 1524,
+    nationalCount = 1025,
+    regionalCount = 315,
+    regionName = "CORMORIA",
+    regionalOrder = 0x08E65C20L,
+    expansion = SpeciesInfoDex(stride = 0x104, paletteOff = 0x60, footprintOff = 0x80, levelUpOff = 0x94, teachableOff = 0x98, evolutionsOff = 0xA0),
+    evoLayout = EvoLayout(EvoScheme.EXPANSION),
+    flags = DexFlags(DexFlagBlock.SAVE_BLOCK_1, 0x3494, 0x3515, 129),
+    nationalMagicOff = 2,
+    nationalMagic = 0xDA,
+)
+
+/**
  * Pokémon Quetzal English Alpha 9 v0: vanilla's table shapes, grown. Entries are 12 bytes
  * {category*, height, weight, text*} by species (Mega forms have their own); front pics are
  * smol; gSpeciesInfo is 0x24-byte entries with u16 abilities (hidden at +0x1C); species map to

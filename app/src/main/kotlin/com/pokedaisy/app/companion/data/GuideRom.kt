@@ -993,6 +993,36 @@ val GUIDE_TABLES_WISHES = GuideTables(
     trainerIdVar = true,
 )
 
+/**
+ * Pokémon Dreamstone Mysteries (pokeemerald-expansion 1.11.2), from the ROM: gTrainers is [3][855] 0x28-byte records
+ * from 0x085837E4 (GetTrainerDifficultyLevel: VarGet(0x40A8) picks the table, a NULL party there falls back to the second);
+ * [trainers] is the second, the first is [altTrainers] (see GuideDreamstone.kt), the third is empty. 12 = LEADER INGER
+ * (Rockruff 12, Geodude 12, Minior 13), 1.11.2's 0x24-byte TrainerMon. gWildMonHeaders 0x0900247C (165 of 24 bytes:
+ * land / water / rock smash / fishing / hidden; ROUTE 1's land set is its RATTATA / PIDOVE / CUBONE / ROCKRUFF), gMapGroups
+ * 0x09186E6C (40 groups; CARABRUE TOWN is 0.0, ROUTE 1 0.4). SaveBlock1's flags / vars at +0x148C / +0x15B8 (FlagSet's and
+ * GetVarPointer's literals, 0x0810E820 / 0x0810E672).
+ */
+val GUIDE_TABLES_DREAMSTONE = GuideTables(
+    trainers = 0x085837E4L + 0x8598,
+    learnsets = 0,
+    wildHeaders = 0x0900247CL,
+    sb1FlagsOff = 0x148C,
+    sb1VarsOff = 0x15B8,
+    flagBytes = 0x12C,
+    probeTrainer = 12,
+    probeName = "Inger",
+    guide = GuideId.DREAMSTONE,
+    trainerStride = 0x28,
+    trainerNameOff = 0x13,
+    trainerNameLen = 11,
+    trainerSizeOff = 0x20,
+    trainerPartyOff = 4,
+    trainerMon = TrainerMonLayout(stride = 0x24, movesOff = 0x0C, speciesOff = 0x14, itemOff = 0x16, levelOff = 0x1A),
+    altTrainers = listOf(0x085837E4L),
+    wildLayout = WildLayout(stride = 24),
+    mapGroups = 0x09186E6CL,
+)
+
 /** 2.65.3b's: the same shapes at its own addresses. */
 val GUIDE_TABLES_ELITE_REDUX_V2_65_3B = GUIDE_TABLES_ELITE_REDUX_V2_65_4_1B.copy(
     trainers = 0x089A9DC0L,

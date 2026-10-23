@@ -57,6 +57,9 @@ class WildEncountersTest {
         // Wishes of Tomorrow (expansion 1.15.3): +0xAC from an expansion 1.15.3 build's, like the globals around it. Not
         // walked: without field reads (no WIDE rows) the app doesn't roll it yet (ROM_FEATURES' note 21).
         "Pokemon Wishes of Tomorrow (v1.2.6).gba" to 0x0203788CL,
+        // Dreamstone Mysteries (expansion 1.11.2): checked headless - set, 160 steps in ROUTE 1's grass met nothing; left
+        // alone, a PIDOVE came. Not offered yet: the switch is rolled by the field read, which doesn't know this game.
+        "Pokemon Dreamstone Mysteries.gba" to 0x02037F88L,
         // Not found: no WILD ENCOUNTERS there.
         "Pokemon Emerald Rogue (v2.2.1-EX).gba" to 0L,
         "Pokemon Quetzal (Alpha 9.0) (English).gba" to 0L,

@@ -1055,6 +1055,17 @@ open class CompanionScreenshotTest {
     @Test fun wishesGuideHere() = retailGuide("wishes_route", NATIVE_WOT, WOT_ROM, "HERE", kind = GameKind.WISHES)
     // Its randomizer: the same route, the wild Pokémon swapped the way this save's game swaps them.
     @Test fun wishesGuideHereRandom() = retailGuide("wishes_random", NATIVE_WOT, WOT_ROM, "HERE", kind = GameKind.WISHES)
+    // Pokémon Dreamstone Mysteries: Imperium's party grid colours, Emerald's bag, its Cormoria map, its own DEX order.
+    @Test fun dreamstoneParty() = retail("dreamstone", NATIVE_DSM, DSM_ROM, GameKind.DREAMSTONE, "PARTY", art = true)
+    @Test fun dreamstoneItems() = retail("dreamstone", NATIVE_DSM, DSM_ROM, GameKind.DREAMSTONE, "ITEMS", art = true)
+    @Test fun dreamstoneMap() = retail("dreamstone", NATIVE_DSM, DSM_ROM, GameKind.DREAMSTONE, "MAP", art = true)
+    @Test fun dreamstoneDex() = retail("dreamstone", NATIVE_DSM, DSM_ROM, GameKind.DREAMSTONE, "DEX", art = true)
+    @Test fun dreamstoneDexEntry() = retail("dreamstone", NATIVE_DSM, DSM_ROM, GameKind.DREAMSTONE, "DEX", entry = 152, art = true)
+    @Test fun dreamstoneBattle() = retail("dreamstone_battle", NATIVE_DSM, DSM_ROM, GameKind.DREAMSTONE, "BATTLE", art = true)
+    @Test fun dreamstoneBattleMenu() = retail("dreamstone_battle", NATIVE_DSM, DSM_ROM, GameKind.DREAMSTONE, "BATTLE", art = true, controls = true)
+    @Test fun dreamstoneTrainer() = retail("dreamstone_trainer_next", NATIVE_DSM, DSM_ROM, GameKind.DREAMSTONE, "BATTLE", art = true)
+    @Test fun dreamstoneGuideHere() = retailGuide("dreamstone_route", NATIVE_DSM, DSM_ROM, "HERE", kind = GameKind.DREAMSTONE)
+    @Test fun dreamstoneGuideBoss() = retailGuide("dreamstone", NATIVE_DSM, DSM_ROM, "NEXT BOSS", kind = GameKind.DREAMSTONE)
     // Ghost Grey: its 1.0.3 save in v1.0.4 (the fixtures' READMEs), its grey map from the ROM.
     @Test fun ghostGreyParty() = retail("ghost_grey", NATIVE_GG, GG_ROM, GameKind.FIRERED, "PARTY", art = true)
     @Test fun ghostGreyItems() = retail("ghost_grey", NATIVE_GG, GG_ROM, GameKind.FIRERED, "ITEMS", art = true)
@@ -1883,6 +1894,8 @@ private val NATIVE_AG get() = com.pokedaisy.app.companion.data.NATIVE_ASH_GRAY
 private const val GG_ROM = "Pokemon Ghost Grey (v1.0.4).gba"
 private const val ER_ROM = "Pokemon Elite Redux (2.65.4.1b).gba"
 private const val TR_ROM = "Pokemon Team Rocket Dragonsden Version.gba"
+private const val DSM_ROM = "Pokemon Dreamstone Mysteries.gba"
+private val NATIVE_DSM get() = com.pokedaisy.app.companion.data.NATIVE_DREAMSTONE
 private val NATIVE_TR get() = com.pokedaisy.app.companion.data.NATIVE_TEAM_ROCKET
 private const val WOT_ROM = "Pokemon Wishes of Tomorrow (v1.2.6).gba"
 private val NATIVE_WOT get() = com.pokedaisy.app.companion.data.NATIVE_WISHES

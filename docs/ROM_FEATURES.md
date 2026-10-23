@@ -36,6 +36,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | Amethyst | 1.3.0, 1.4.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ ¹⁹ |
 | Ash Gray | 4.5.3, Fork Bug Fix 1.0 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | — | — | ✅ ¹⁹ |
 | Celia's Stupid Romhack | 1.1.4 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | ✅ ¹⁵ | — | — |
+| Dreamstone Mysteries | the one release | — | ✅ | ✅ | ✅ | — | — | — | — | — | — ²² | — | — | — | — |
 | Elite Redux | 2.65.3b, 2.65.4.1b | ✅ | ✅ ¹⁰ | ✅ ¹⁰ | ✅ | — | — | — | ✅ ¹⁰ | ✅ ¹⁰ | ✅ ¹⁰ | — ¹⁰ | n/a ¹⁵ | — | ✅ ¹⁹ |
 | Emerald Imperium | 1.3.1 | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ ¹⁸ | ✅ ¹⁹ |
 | Emerald Kaizo | 2.0 | ✅ | ✅ | ✅ | ✅ | ✅ | — ⁴ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ ¹⁵ | ✅ ¹⁸ | ✅ ¹⁹ |
@@ -273,6 +274,11 @@ change to any of the places listed under "Where it's decided" updates its rows h
     written POKéMON cell + A, DOWN, A, SHIFT: party slot 1 out (`wishes_battle`'s README). `WildEncounters.find` finds its
     switch (0x0203788C, where an expansion 1.15.3 build's sits plus the 0xAC every global around it moved), but without
     field reads (no WIDE rows: EXPAND isn't mapped) the app never rolls it, so the row stays —.
+22. Dreamstone Mysteries: its WILD ENCOUNTERS switch is found (`WildEncounters.find`: 0x02037F88) and was checked
+    headless - set, 160 steps in ROUTE 1's grass met nothing; left alone, a PIDOVE came - but the field read that rolls it
+    (`pk_field_state`) doesn't know the game: on its pokeemerald-expansion 1.11.2 the field-controls lock is a bit among the
+    special flags (FLAG 0x4005 at 0x0200179C), not the byte the field read tests. No EXPAND, field reads, field items, FLY
+    or PC yet for the same reason (no WIDE / field row, no field item functions mapped).
 
 ## What each column is
 

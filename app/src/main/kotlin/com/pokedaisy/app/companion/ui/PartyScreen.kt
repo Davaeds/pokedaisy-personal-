@@ -580,6 +580,8 @@ fun partyPaletteFor(game: GameKind): PartyPalette = when (game) {
     GameKind.POLISHED_CRYSTAL -> PolishedCrystalPartyPalette
     GameKind.GLAZED, GameKind.QUETZAL -> GlazedPartyPalette
     GameKind.IMPERIUM -> ImperiumPartyPalette
+    // Dreamstone Mysteries' party grid is Imperium's, colour for colour (sampled headless: boxes, cursor, empty slots).
+    GameKind.DREAMSTONE -> ImperiumPartyPalette
     GameKind.SWORD_SHIELD -> SwordShieldPartyPalette
     GameKind.MARIOMON -> MariomonPartyPalette
     GameKind.HEARTGOLD, GameKind.SOULSILVER -> HeartGoldPartyPalette
