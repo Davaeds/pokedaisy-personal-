@@ -217,33 +217,41 @@ object GameTitles {
      * Recognises every ROM in [roms] not already cached (or changed since). Blocking
      * (hashes) - never on the UI thread. True when a new answer was cached, i.e. a
      * name may have changed and the list should redraw.
+     *
+     * The hashing (up to 512 MB a DS cart) runs outside the cache's lock, which the UI thread's
+     * [label] / [category] / [platform] take: a pass holds it only to copy the cache and to put
+     * each answer in. Passes run one at a time ([passLock]), so no file is hashed twice and the
+     * cache file has one writer.
      */
-    @Synchronized
-    fun identify(context: Context, roms: List<File>): Boolean {
-        val cache = cache(context)
+    fun identify(context: Context, roms: List<File>): Boolean = synchronized(passLock) {
+        val snapshot = synchronized(this) { HashMap(cache(context)) }
         var changed = false
         for (rom in roms) {
-            val known = cache[rom.absolutePath]?.takeIf { it.matches(rom) && it.category != null }
+            val known = snapshot[rom.absolutePath]?.takeIf { it.matches(rom) && it.category != null }
             if (!rom.isFile || known?.platform != null) continue
             // Named before platforms were kept: only the header to read, no hash.
-            if (known != null) {
-                cache[rom.absolutePath] = Entry(known.size, known.modified, known.title, known.category, platformOf(rom) { RomIdentity.sha1(rom) })
-                changed = true
-                continue
+            val entry = if (known != null) {
+                Entry(known.size, known.modified, known.title, known.category, platformOf(rom) { RomIdentity.sha1(rom) })
+            } else {
+                val nds = RomIdentity.isNds(rom)
+                val worthHashing = if (nds) RomIdentity.ndsGameCode(rom) in NDS_CODES
+                    else RomIdentity.gameCode(rom) in CODES || RomIdentity.isGameBoy(rom)
+                val sha1 = if (worthHashing) RomIdentity.sha1(rom) else null
+                val title = sha1?.let { BY_SHA1[it] }
+                Entry(rom.length(), rom.lastModified(), title, categoryOf(rom, sha1, worthHashing), platformOf(rom) { sha1 })
             }
-            val nds = RomIdentity.isNds(rom)
-            val worthHashing = if (nds) RomIdentity.ndsGameCode(rom) in NDS_CODES
-                else RomIdentity.gameCode(rom) in CODES || RomIdentity.isGameBoy(rom)
-            val sha1 = if (worthHashing) RomIdentity.sha1(rom) else null
-            val title = sha1?.let { BY_SHA1[it] }
-            cache[rom.absolutePath] = Entry(rom.length(), rom.lastModified(), title, categoryOf(rom, sha1, worthHashing), platformOf(rom) { sha1 })
+            synchronized(this) { cache(context)[rom.absolutePath] = entry }
             changed = true
         }
         // Forget files that are gone, so the cache doesn't grow forever.
-        val pruned = cache.keys.removeAll { !File(it).isFile }
-        if (changed || pruned) save(context, cache)
-        return changed
+        val gone = snapshot.keys.filter { !File(it).isFile }
+        val pruned = gone.isNotEmpty() && synchronized(this) { cache(context).keys.removeAll(gone.toSet()) }
+        if (changed || pruned) save(context, synchronized(this) { HashMap(cache(context)) })
+        changed
     }
+
+    /** Held for a whole [identify] pass (never by the UI thread's lookups). */
+    private val passLock = Any()
 
     private val TAGS = Regex("""\s*[(\[][^)\]]*[)\]]""")
     private val NUMBERING = Regex("""^\d{1,5}\s*-\s+""")
