@@ -1375,7 +1375,10 @@ Trainer 0x38 (gTrainers[3][896], EASY empty); a Mega Evolution is its own specie
 main menu needs two A presses headless. Its **randomizer** swaps species at run time (wild and trainers, never the ROM's tables)
 by a hash of species and SaveBlock2's trainer ID (`WishesRandomizer`, checked against the game's own function); the GUIDE's wild
 lists and the DEX's AREA follow it through `GuideRandomizer` (`GuideTables.trainerIdVar`). DEX: expansion's Hoenn list (u32
-entries) + National. No region map (names only), EXPAND, field reads, field items or card yet; GUIDE is HERE only.
+entries) + National. MAP: its JOKAIM TOWN MAP, Emerald's kind of 8bpp affine screen with smol art (RomArt's `WSH_REGION_*`,
+the first of six regions in its map code's table at 0x08CDC868 - the others, FireRed-style Kanto / Sevii and one more, the game
+never shows for its places), its own cursor grid (`place_min` 0xD1) and Emerald's Brendan / May heads, as in the game. No
+EXPAND, field reads, field items (so no FLY) or card yet; GUIDE is HERE only.
 **Dreamstone Mysteries (2026-10-23)** (`GameKind.DREAMSTONE`, `NATIVE_DREAMSTONE`; dsmyst's Cormoria, BPEE 32 MB, no version in
 the game - its debug menu's EXPANSION VERSION says "v1.11.2 Development Build"): closed, so pokeemerald-expansion's 1.11.2 tag
 built plain (Debian's arm-none-eabi-gcc 12, in a container) was the map - every RAM global sits within a few bytes of that

@@ -19,7 +19,7 @@ put it. Source: the pinned decomp builds (see CLAUDE.md) and their ELFs.
 
 Usage: scripts/gen_rom_art_sigs.py   (needs $DECOMPS/pokefirered and
 $DECOMPS/pokeemerald built once, and the hack ROMs at the *_ROM paths below - Unbound /
-Radical Red / Odyssey / Amethyst / Sword and Shield Ultimate Plus / Heart and Soul / Lazarus / Seaglass / SoulGold / Glazed / Imperium / Dreamstone Mysteries /
+Radical Red / Odyssey / Amethyst / Sword and Shield Ultimate Plus / Heart and Soul / Lazarus / Seaglass / SoulGold / Glazed / Imperium / Dreamstone Mysteries / Wishes of Tomorrow /
 Quetzal / R.O.W.E. / Super Mariomon / Recharged Emerald, and $DECOMPS/pokelegacy built; a missing one keeps its rows as they were. Re-run only if a pin changes)
 """
 import os
@@ -226,6 +226,18 @@ DREAMSTONE_ROM = os.path.expanduser("~/Downloads/Game ROMs & Emulation/gba/Pokem
 
 def dreamstone_symbols(rom):
     return {"RegionGfx": (0xE846E8, 0), "RegionMap": (0xE843E8, 0), "RegionPal": (0xE826E8, 0x20)}
+
+
+# Pokemon Wishes of Tomorrow v1.2.6 (sha1 60182b93...), pokeemerald-expansion 1.15.3: its own JOKAIM TOWN MAP, Emerald's
+# kind of screen - 8bpp tiles (smol), a 64x64 one-byte affine tilemap (smol) and a 48-colour palette at BG palette 7 - the
+# second triple of the first row of its map code's region table (0x08CDC868: seven words a region, six regions; the rest
+# are FireRed-style Kanto / Sevii maps and one more the game doesn't show for any of its places). Headless, the TOWN MAP's
+# VRAM, BG2 tilemap and palette RAM matched them.
+WISHES_ROM = os.path.expanduser("~/Downloads/Game ROMs & Emulation/gba/Pokemon Wishes of Tomorrow (v1.2.6).gba")
+
+
+def wishes_symbols(rom):
+    return {"RegionGfx": (0xCE59A8, 0), "RegionMap": (0xCE5880, 0), "RegionPal": (0xCE77C8, 0x60)}
 
 
 # Pokemon Quetzal English Alpha 9 v0 (sha1 d0658315...): FireRed's Kanto / Sevii maps (pixel for
@@ -494,6 +506,11 @@ GAMES = {
         ("DSM_REGION_MAP", "RegionMap", True),
         ("DSM_REGION_PAL", "RegionPal", False),
     ]),
+    "WSH": (WISHES_ROM, None, [
+        ("WSH_REGION_GFX", "RegionGfx", "smol"),
+        ("WSH_REGION_MAP", "RegionMap", "smol"),
+        ("WSH_REGION_PAL", "RegionPal", False),
+    ]),
     "RW": (ROWE_ROM, None, [
         ("RW_REGION_PAL", "RegionPal", False),
         ("RW_REGION_GFX", "RegionGfx", True),
@@ -643,7 +660,7 @@ def fireRed_symbols(p):
 
 # The binary hacks' made-up symbols (no ELF).
 ROM_SYMBOLS = {"RY": recharged_yellow_symbols, "UB": unbound_symbols, "UBFR": unbound_fr_symbols, "RR": cfru_symbols, "OD": cfru_symbols, "AM": cfru_symbols, "SS": cfru_symbols, "LZ": lazarus_symbols, "SGL": seaglass_symbols, "SG": soulgold_symbols,
-               "GZ": glazed_symbols, "IMP": imperium_symbols, "DSM": dreamstone_symbols, "QTZ": quetzal_symbols, "HNS": hns_symbols, "RW": rowe_symbols, "MM": mariomon_symbols, "RE": recharged_emerald_symbols,
+               "GZ": glazed_symbols, "IMP": imperium_symbols, "DSM": dreamstone_symbols, "WSH": wishes_symbols, "QTZ": quetzal_symbols, "HNS": hns_symbols, "RW": rowe_symbols, "MM": mariomon_symbols, "RE": recharged_emerald_symbols,
                **{"EM" + lang: emerald_eu_symbols(lang) for lang in EMERALD_EU_ROMS},
                **{"FR" + lang: fireRed_symbols(p) for lang, p in fireRed_ports().items()}}
 

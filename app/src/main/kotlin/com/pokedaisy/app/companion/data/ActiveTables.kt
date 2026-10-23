@@ -475,7 +475,7 @@ val activeMapSecData: Map<Int, MapSecInfo> get() = localText?.mapSecData ?: when
     eliteRedux -> mapSecDataEliteRedux
     // Its own sections' names; no map of its own is drawn yet (it has several), so none is "on the map".
     teamRocket -> mapSecDataTeamRocket
-    // Its own region's sections (Munen Village...); its region map isn't read, so none is "on the map".
+    // Its own JOKAIM sections (Munen Village...) on its own region map; Emerald's / Kanto's leftovers off it.
     wishes -> mapSecDataWishes
     // Its own Cormoria sections (and Emerald's leftovers, off the map), on its own region map.
     dreamstone -> mapSecDataDreamstone
@@ -591,8 +591,8 @@ val activeRegionMapImages: Array<String> get() = when {
     orangeIslands || swordShield || gsChronicles || frHack?.ownRegionMap == true -> emptyArray()
     // Team Rocket Edition: Dragonsden's Kanto / Sevii / Johto maps aren't read yet - the MAP tab names the place.
     teamRocket -> emptyArray()
-    // Wishes of Tomorrow's own region map isn't read yet - the MAP tab names the place.
-    wishes -> emptyArray()
+    // Wishes of Tomorrow's JOKAIM map, rebuilt from its ROM (RomArt's WSH_REGION_*).
+    wishes -> regionMapImagesWishes
     // Dreamstone Mysteries' Cormoria map, rebuilt from its ROM (RomArt's DSM_REGION_*).
     dreamstone -> regionMapImagesDreamstone
     else -> regionMapImages

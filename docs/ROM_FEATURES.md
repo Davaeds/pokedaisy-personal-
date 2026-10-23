@@ -273,7 +273,8 @@ change to any of the places listed under "Where it's decided" updates its rows h
     -> 2, a written move cell + A spent that move's PP, and the switch (Emerald's list at its own gPartyMenu) went
     written POKéMON cell + A, DOWN, A, SHIFT: party slot 1 out (`wishes_battle`'s README). `WildEncounters.find` finds its
     switch (0x0203788C, where an expansion 1.15.3 build's sits plus the 0xAC every global around it moved), but without
-    field reads (no WIDE rows: EXPAND isn't mapped) the app never rolls it, so the row stays —.
+    field reads (no WIDE rows: EXPAND isn't mapped) the app never rolls it, so the row stays —. Its JOKAIM TOWN MAP is
+    on the MAP tab (rebuilt from the ROM), but with no field item functions mapped there is no FLY button on it yet.
 22. Dreamstone Mysteries: its WILD ENCOUNTERS switch is found (`WildEncounters.find`: 0x02037F88) and was checked
     headless - set, 160 steps in ROUTE 1's grass met nothing; left alone, a PIDOVE came - but the field read that rolls it
     (`pk_field_state`) doesn't know the game: on its pokeemerald-expansion 1.11.2 the field-controls lock is a bit among the

@@ -244,8 +244,15 @@ GAMES = {
     #    Snag Ball 918), the description pointer 8 bytes before the name's.
     #  - moves: 0x44-byte entries, the name pointer first ("Pound" 1, "Karate Chop" 2); +0xA type/power bits.
     #  - chart: the unique [21][21] u32 run whose Normal row is 1x except Rock/Steel 0.5x, Ghost 0x (0x083DB990).
-    #  - mapsecs: older {x, y, w, h, name ptr} entries from 0x08CE114C; the save's gMapHeader in its first town
-    #    reads 0xD1 = MUNEN VILLAGE. Its region map isn't read (names only).
+    #  - mapsecs: older {x, y, w, h, name ptr} entries from 0x08CE114C (0x00-0xE4, MAPSEC_NONE 0xE5); the save's gMapHeader
+    #    in its first town reads 0xD1 = MUNEN VILLAGE. Emerald's / Kanto's ids keep their vanilla rects; its own JOKAIM
+    #    sections are 0xD1-0xE4, with a few Kanto ids renamed for its places (SENNEN 0x66, TORII ROUTE 0x67).
+    #  - region map: Emerald's kind of screen (an 8bpp affine BG, a 64x64 one-byte tilemap, its palette at BG palette 7),
+    #    smol art: RomArt's WSH_REGION_* rebuild regionmap/wishes.png. Its map code keeps six regions (a table of
+    #    tilemap / tiles / palette at 0x08CDC868, one u8 [15][28] cursor grid each from 0x08CE24CC: FireRed-style Kanto and
+    #    Sevii maps among them), but the TOWN MAP shows JOKAIM for every place it has (headless: MUNEN VILLAGE and RYUDEN
+    #    ISLAND, which isn't on JOKAIM's grid, both on JOKAIM with the player's head at the entry + (1, 2) tiles). JOKAIM's
+    #    grid is 0x08CE2D00.
     "wishes": dict(
         suffix="Wishes",
         label="Pokemon Wishes of Tomorrow v1.2.6",
@@ -256,6 +263,8 @@ GAMES = {
         moves_base=0x086D00FC, moves_stride=0x44, move_bits_off=0x0A,
         chart=0x083DB990, chart_n=21,
         mapsec_base=0x08CE114C, mapsec_name_off=4,
+        # Below 0xD1 (its first own section) only the grid's are placed: Emerald's / Kanto's leftovers keep their rects.
+        region_map=dict(image="wishes", layout=0x08CE2D00, w=28, h=15, ox=1, oy=2, none=0xE5, place_min=0xD1),
         checks=dict(species={1: "Bulbasaur", 6: "Charizard", 25: "Pikachu", 94: "Gengar", 155: "Cyndaquil",
                              448: "Lucario"},
                     types={1: (13, 4), 6: (11, 3), 25: (14, 14), 155: (11, 11)},

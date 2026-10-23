@@ -333,6 +333,7 @@ internal enum class MapLabelStyle(val width: Int, val height: Int) {
         // Super Mariomon drew MARIO in Brendan's slot.
         // Recharged Emerald redrew both heads for its map.
         // Dreamstone Mysteries' player picks one of five looks at the start: no head of ours fits, so none is drawn.
+        // Wishes of Tomorrow's JOKAIM map keeps Emerald's Brendan / May heads (by gender, checked headless).
         EMERALD -> if (game == GameKind.DREAMSTONE) null
             else if (com.pokedaisy.app.companion.data.runningEmeraldHack != null) { if (gender == 1) "player_may_re" else "player_brendan_re" }
             else if (gender == 1) "player_may" else if (game == GameKind.MARIOMON) "player_mario" else "player_brendan"
