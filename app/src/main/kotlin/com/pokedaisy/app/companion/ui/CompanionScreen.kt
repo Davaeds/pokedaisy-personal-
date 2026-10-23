@@ -706,7 +706,7 @@ internal fun companionTabLabel(id: String): String = when (id) {
         GameKind.ROWE -> "INVENTORY"
         GameKind.MARIOMON -> "POCKETS"
         GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM, GameKind.GOLD, GameKind.SILVER -> "PACK"
-        GameKind.YELLOW, GameKind.RED, GameKind.BLUE -> tr("ITEM")   // Gen 1's START menu (the European carts' own word)
+        GameKind.YELLOW, GameKind.RED, GameKind.BLUE, GameKind.PURE_RED, GameKind.PURE_BLUE -> tr("ITEM")   // Gen 1's START menu (the European carts' own word)
         else -> tr("BAG")
     }
     else -> id

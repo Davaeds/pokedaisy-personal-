@@ -11,6 +11,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | Yellow (GB) | USA/Europe | ✅ ¹² | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — | n/a | n/a |
 | Yellow (GB) | DE / FR / IT / ES | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — | n/a | n/a |
 | Red / Blue (GB) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — | n/a | n/a |
+| PureRed / PureBlue (GB) | 2.7.6 | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — | n/a | n/a |
 | Gold / Silver (GBC) | USA/Europe | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a | — | n/a | — |
 | Crystal (GBC) | USA, USA/Europe rev 1, AU | ✅ ¹² | ✅ | ✅ ¹ | ✅ ⁸ | — | ✅ ¹³ | — | n/a | n/a | ✅ ¹³ | ✅ ¹³ | — | n/a | — |
 | Crystal Clear (GBC) | 2.5.11, 2.6.0 (4 builds) | n/a | ✅ | ✅ ¹ | ✅ ⁸ | — | — | — | n/a | n/a | n/a | n/a | — | n/a | — |
@@ -85,6 +86,8 @@ change to any of the places listed under "Where it's decided" updates its rows h
    `silver_battle` fixtures, the controls' timing not run on them.
    Red / Blue have Yellow's battle menus and menu variables (at Yellow's addresses, the cursor columns 9 / 15): their
    reads are checked on the `red_battle*` fixtures, the controls' timing wasn't run on them.
+   PureRed / PureBlue keep Red's battle menus at Red's places (FIGHT / ITEM column 9, PkMn / RUN 15, the move list at
+   (5, 12)): reads checked on the `purered_battle*` / `pureblue_battle` fixtures, the controls' timing not run on them.
 2. Spanish FireRed's port copies English rev 1's config, cursors included. Its battle RAM matches English byte for
    byte (gBattleStruct 0x02023FE8, gEnemyParty 0x0202402C, the cursors sit between them), but it was never checked
    headless.
@@ -117,7 +120,10 @@ change to any of the places listed under "Where it's decided" updates its rows h
    the target or over the one out (40 / 47), after a faint (16, one A, no submenu), the one out and a fainted one refused
    before any press; the SWITCH menu's first A is dropped and pressed again every time. Red / Blue have Yellow's party menu code: their reads (the list, SWITCH / STATS / CANCEL, the pick after a
    faint) are checked on the `red_battle_*` fixtures and by pressing headless (an A on SWITCH takes from 2 frames after
-   the menu shows, as Yellow's Delay3 lets it), not through the controller.
+   the menu shows, as Yellow's Delay3 lets it), not through the controller. PureRed / PureBlue have Red's party menus,
+   but number BATTLE_PARTY_MENU (the pick after a faint) 1, not 2 (`Gen1Config.battlePartyMenu`): reads checked on the
+   `purered_battle_*` fixtures and by pressing headless (A, then A on SWITCH 4 frames later, sent the slot in; A after a
+   faint sent the slot out), not through the controller.
 9. Should work, not run on this hack yet: it is FireRed rev 0's code edited in place (Rocket Edition, Ash Gray) or a
    CFRU hack (GS Chronicles), and the tables these columns use are FireRed rev 0's / the CFRU hacks', each checked on
    other games.
@@ -161,6 +167,12 @@ change to any of the places listed under "Where it's decided" updates its rows h
     FLY go by RAM alone (the walk counter, wFontLoaded's text box bit, the joypad and warp flags). FLY's list is the game's
     own (Gen 1: the visited towns in town map order; Crystal: the visited flypoints of the region the Fly map would show).
     Gold / Silver and the Crystal hacks: not yet (their RAM moved).
+    PureRed / PureBlue (`GB_FIELD_PURE_RGB`, pureRGB's own source; both carts the same code): Red's ways in at its places -
+    the PC routine in bank 0x33, called from 0x03D7 (its loop waits at OverworldLoop's `rst DelayFrame`), the wild data in
+    bank 0x2C, the game state in WRAM bank 1 (read and written by bank). Checked headless on the converted Red save: the PC
+    opened from Vermilion's Pokémon Center and backed out of, FLY's flags taken from the field (landed in Saffron, then
+    walked); the encounter hold is the same bytes Red's is (TryDoWildEncounter reads them as Red does), its put-back
+    checked against the cart's data (`GbFieldTest`: ROUTE 21's 25 / 7), not walked in grass.
 14. The DS games' features are `app/src/main/cpp/nds/`: EXPAND draws the 3D overworld's margins from the game's own
     polygons (`pk_nds_wide.cpp`; battles carry their background, HP boxes and text box to the edges, tuned on HG/SS);
     the field read, WILD ENCOUNTERS' hold (the map's rates at 0) and the bike / surf bits are `pk_nds_field.cpp`; PC and FLY

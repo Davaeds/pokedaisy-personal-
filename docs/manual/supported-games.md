@@ -3,7 +3,7 @@ title: Supported games
 summary: Which games the companion can read, how to check your ROM, and what happens with a hack or version PokeDaisy doesn't know.
 section: help
 order: 1
-keywords: [nds, nintendo ds, platinum, heartgold, soulsilver, black, unova, gen 5, compatibility, compatible, rom hack, hacks, version, sha1, sha-1, checksum, unsupported, best effort, partially supported, request]
+keywords: [nds, nintendo ds, platinum, heartgold, soulsilver, black, unova, gen 5, purered, pureblue, purergb, compatibility, compatible, rom hack, hacks, version, sha1, sha-1, checksum, unsupported, best effort, partially supported, request]
 ---
 
 Any GBA, Game Boy or DS game plays in PokeDaisy. "Supported" is about the companion on the bottom screen: to show your party, bag, map and battles, it has to know exactly which game you're running and where that game keeps its data. A game it doesn't know still plays fine on the top screen; the companion shows a notice instead of your party.
@@ -19,6 +19,7 @@ Any GBA, Game Boy or DS game plays in PokeDaisy. "Supported" is about the compan
 **Game Boy and Game Boy Color:**
 
 - Pokémon Red and Blue: the USA / Europe releases, drawn in the game's own look: the colours they show on a Super Game Boy.
+- PureRed and PureBlue, the PureRGB hack of Red and Blue: version 2.7.6, drawn in the game's own look (the colours of its default OG setting), with its own types, moves, items, places and Pokédex. A save from the original Red or Blue works too, once the game itself has updated it: pick CONTINUE and answer its questions.
 - Pokémon Yellow: the USA / Europe release and the German, French, Italian and Spanish ones, drawn in the game's own look. A German, French, Italian or Spanish copy shows its own names and Pokédex text. Item descriptions are only shown in the English one, as these games have none of their own.
 - Pokémon Gold and Silver: the USA / Europe releases, drawn in the game's own look.
 - Pokémon Crystal: the USA release, the USA / Europe revision 1 and the Australian one, drawn in the game's own look.

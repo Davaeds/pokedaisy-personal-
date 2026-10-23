@@ -517,6 +517,16 @@ and the art takes the SGB palettes (sampled headless). MEW sits apart in bank 1 
 `jr @`: STEADY music parks on WRAM 0xCD39, which `pkRenderGbPark` (and mgba_dump's `gbpark`) writes the `jr @` into first. The
 user's Red save holds Yellow's team; in Blue its map's tileset pointers are Red's (Blue's are 0x10 lower, garbage graphics until
 `boot/blue.txt` pokes them). docs/DEVELOPMENT.md.
+**PureRed / PureBlue v2.7.6 (2026-10-22)**: `GameKind.PURE_RED` / `.PURE_BLUE` (`isPureRgb`, in `isGen1`; checked before
+`yellow` in ActiveTables), Vortyne's pureRGB at tag v2.7.6 (`$DECOMPS/purergb`, rgbds 1.0.3: `make red blue` = both releases byte for
+byte, so its .sym gives everything). A Color cart that keeps its state in WRAM bank 1 (bank 2 = palette buffers): `GEN1_PURE_RED`'s
+D000+ addresses are `wramx(1, ...)`. Its own tables (`gen_gen1_tables.py purered`, one `*PureRgb.kt` set for both: types NONE /
+CRYSTAL / TRI / FLOATING / MAGMA and a second GROUND, name pointer tables, 35-byte base data, forms that carry a base Dex number,
+growth rates, one-byte text words `Gen1Charset.PURE`), its own icon sheet and dex records (`Gen1Art.iconSheet`,
+`Gen1DexTables.dexEntryData`), BATTLE_PARTY_MENU 1, a 30-item bag, GbField with its own banks. Its look is its default COLORS = OG:
+the Color's two-tone palettes (sampled headless), the DEX in its SGB palettes. No save of its own: the retail Red save converts
+through the game's updater on CONTINUE (`native-capture/boot/purergb.txt`: "Original Game", START, wCurMapTileset bit 7 cleared,
+NO to its Pallet warp, which froze headless). No EXPAND. PureGreen (a .bps the user has) isn't added. docs/DEVELOPMENT.md.
 **Gold / Silver (2026-10-15)**: `GameKind.GOLD` / `.SILVER` (`isGoldSilver`, both in `isGen2` with the Crystal family),
 `GEN2_GOLD` / `GEN2_SILVER` - pret/pokegold's RAM (wBattleMon / wCurOTMon / wCurBattleMon in bank 0), Crystal's structs, menus and
 look (the party menu and PACK are Crystal's colours, sampled headless), one table set (`gen_gen2_tables.py gold_silver`). Dex pages

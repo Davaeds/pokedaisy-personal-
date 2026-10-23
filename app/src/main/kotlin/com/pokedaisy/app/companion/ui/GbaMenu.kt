@@ -67,6 +67,7 @@ import com.pokedaisy.app.companion.data.GameKind
 import com.pokedaisy.app.companion.data.activeGame
 import com.pokedaisy.app.companion.data.isGameBoyGame
 import com.pokedaisy.app.companion.data.isRedBlue
+import com.pokedaisy.app.companion.data.isPureRgb
 import com.pokedaisy.app.companion.ui.theme.AppColors
 import com.pokedaisy.app.companion.ui.theme.gbaFocusRing
 import androidx.compose.ui.focus.onFocusChanged
@@ -109,8 +110,9 @@ object OptionColors {
     private val G1_INK get() = if (dark) Color(0xFFE8E8E8) else gbInk(activeGame)
     private val G1_PAPER get() = if (dark) Color(0xFF181818) else gbPaper(activeGame)
 
-    /** A Game Boy game's own black and white in light mode: Yellow's and Gen 2's GBC ones, Red / Blue's SGB ones. */
-    fun gbInk(game: GameKind?): Color = if (game.isRedBlue) Color(0xFF181010) else Color(0xFF181818)
+    /** A Game Boy game's own black and white in light mode: Yellow's and Gen 2's GBC ones, Red / Blue's SGB ones,
+     * PureRed / PureBlue's pure black (their Color palettes, sampled headless). */
+    fun gbInk(game: GameKind?): Color = if (game.isRedBlue) Color(0xFF181010) else if (game.isPureRgb) Color.Black else Color(0xFF181818)
     fun gbPaper(game: GameKind?): Color = if (game.isRedBlue) Color(0xFFFFEFFF) else Color(0xFFFFFFFF)
     private val G1_FRAME get() = listOf(G1_PAPER to 2, G1_INK to 1, G1_PAPER to 1, G1_INK to 1, G1_PAPER to 1)
 

@@ -27,7 +27,7 @@ package com.pokedaisy.app.companion.data
 // ROM-extracted tables (*Hns.kt / *Lazarus.kt, scripts/gen_expansion_tables.py).
 enum class GameKind { FIRERED, EMERALD, UNBOUND, GAIA, RADICAL_RED, ODYSSEY, HEART_AND_SOUL, LAZARUS, ROWE, EMERALD_ROGUE, AMETHYST, EMERALD_SEAGLASS, CELIA, TMT2, SOULGOLD, YELLOW, GLAZED, IMPERIUM, QUETZAL, ORANGE_ISLANDS, RECHARGED_YELLOW, MARIOMON, SWORD_SHIELD, GS_CHRONICLES, CRYSTAL, CRYSTAL_CLEAR, PRISM,
     GOLD, SILVER, RED, BLUE, ELITE_REDUX, POLISHED_CRYSTAL, PLATINUM, HEARTGOLD, SOULSILVER, TEAM_ROCKET, BLACK,
-    WISHES }
+    WISHES, PURE_RED, PURE_BLUE }
 
 @Volatile
 var activeGame: GameKind = GameKind.FIRERED
@@ -73,6 +73,9 @@ private inline val rechargedYellow get() = activeGame == GameKind.RECHARGED_YELL
 // them too: every table the generator reads comes out as Yellow's in both (gen_gen1_tables.py red / blue checks it).
 private inline val yellow get() = activeGame.isGen1
 private inline val redBlue get() = activeGame.isRedBlue
+// PureRed / PureBlue (Vortyne/pureRGB): Gen 1's reader, tables of their own (gen_gen1_tables.py purered: its types, moves,
+// items, places). Checked before [yellow], which they also are.
+private inline val pureRgb get() = activeGame.isPureRgb
 // Pokémon Crystal (Game Boy Color): Gen 2's own tables (gen_gen2_tables.py), keyed by National Dex number. Crystal
 // Clear kept its species, moves and types (the generator checks them against Crystal's); its items and places are its own.
 // Gold and Silver kept the same species, moves and types too; their items and landmarks are their own (one table for both).
@@ -192,7 +195,8 @@ fun emeraldHackFor(cfg: NativeConfig?): HackText? = when {
  * FireRed-engine hack but the ones that kept FireRed's (FireRed itself carries its title-cased names). */
 val readsRomRegionMap: Boolean get() = when (activeGame) {
     // Recharged Yellow is a rebuild: FireRed 1.0's literal pools RomRegionMap follows aren't its code.
-    GameKind.YELLOW, GameKind.RED, GameKind.BLUE, GameKind.RECHARGED_YELLOW, GameKind.PLATINUM, GameKind.HEARTGOLD, GameKind.SOULSILVER, GameKind.BLACK -> false
+    GameKind.YELLOW, GameKind.RED, GameKind.BLUE, GameKind.RECHARGED_YELLOW, GameKind.PLATINUM, GameKind.HEARTGOLD, GameKind.SOULSILVER, GameKind.BLACK,
+    GameKind.PURE_RED, GameKind.PURE_BLUE -> false
     GameKind.FIRERED -> runningFireRedHack?.ownRegionMap == true
     else -> true
 }
@@ -239,6 +243,7 @@ var eliteRedux265_3 = false
 val activeSpeciesNames: Map<Int, String> get() = localText?.species ?: when {
     black -> NdsArt.names?.speciesMerged ?: speciesNamesBlack
     gen4 -> NdsArt.names?.speciesMerged ?: speciesNamesPlatinum   // the cart's own words (GitHub #230)
+    pureRgb -> speciesNamesPureRgb
     yellow -> speciesNamesYellow
     polished -> speciesNamesPolishedCrystal
     prism -> speciesNamesPrism
@@ -274,6 +279,7 @@ val activeSpeciesNames: Map<Int, String> get() = localText?.species ?: when {
 val activeMoveData: Map<Int, MoveInfo> get() = localText?.moveData ?: when {
     black -> NdsArt.names?.movesMerged ?: moveDataBlack
     gen4 -> NdsArt.names?.movesMerged ?: moveDataPlatinum
+    pureRgb -> moveDataPureRgb
     yellow -> moveDataYellow
     polished -> if (faithful) moveDataPolishedCrystalFaithful else moveDataPolishedCrystal
     prism -> moveDataPrism
@@ -307,6 +313,7 @@ val activeItemNames: Map<Int, String> get() = localText?.items ?: when {
     black -> NdsArt.names?.itemsMerged(false) ?: itemNamesBlack
     heartGold -> NdsArt.names?.itemsMerged(true) ?: itemNamesHeartGold
     platinum -> NdsArt.names?.itemsMerged(false) ?: itemNamesPlatinum
+    pureRgb -> itemNamesPureRgb
     yellow -> itemNamesYellow
     polished -> if (faithful) itemNamesPolishedCrystalFaithful else itemNamesPolishedCrystal
     prism -> itemNamesPrism
@@ -341,6 +348,7 @@ val activeItemNames: Map<Int, String> get() = localText?.items ?: when {
 val activeSpeciesTypeData: Map<Int, SpeciesTypes> get() = when {
     black -> speciesTypesBlack
     gen4 -> speciesTypesPlatinum
+    pureRgb -> speciesTypeDataPureRgb
     yellow -> speciesTypeDataYellow
     polished -> if (faithful) speciesTypeDataPolishedCrystalFaithful else speciesTypeDataPolishedCrystal
     prism -> speciesTypeDataPrism
@@ -375,6 +383,7 @@ private val speciesTypeDataEmeraldLegacy: Map<Int, SpeciesTypes> by lazy {
 }
 private const val SPECIES_DEOXYS = 410
 val activeTypeEffectiveness: Map<Int, Int> get() = when {
+    pureRgb -> typeEffectivenessPureRgb
     yellow -> typeEffectivenessYellow
     polished -> typeEffectivenessPolishedCrystal
     prism -> typeEffectivenessPrism
@@ -401,6 +410,7 @@ val activeTypeEffectiveness: Map<Int, Int> get() = when {
     else -> frHack?.typeChart ?: typeEffectiveness
 }
 val activeTypeNames: Map<Int, String> get() = when {
+    pureRgb -> typeNamesPureRgb
     yellow -> typeNamesYellow
     polished -> typeNamesPolishedCrystal
     prism -> typeNamesPrism
@@ -427,6 +437,7 @@ val activeTypeNames: Map<Int, String> get() = when {
 }
 val activeMapSecData: Map<Int, MapSecInfo> get() = localText?.mapSecData ?: when {
     gen4 -> emptyMap()   // no region map yet: the place comes from the map header (Telemetry.mapSecName)
+    pureRgb -> mapSecDataPureRgb
     yellow -> mapSecDataYellow
     polished -> mapSecDataPolishedCrystal
     prism -> mapSecDataPrism
@@ -543,6 +554,7 @@ private val regionMapImagesRechargedEmerald = arrayOf("recharged_emerald")
 
 val activeRegionMapImages: Array<String> get() = when {
     redBlue -> arrayOf(Gen1Art.RED_BLUE_TOWN_MAP_NAME)   // Red's / Blue's town map, in their own colours (Gen1Art)
+    pureRgb -> arrayOf(Gen1Art.pureTownMapName(activeGame))   // PureRed's / PureBlue's, in each one's colours (Gen1Art)
     gen4 -> emptyArray()   // Sinnoh's map comes from RegionMapModel's own; Johto / Kanto's aren't read yet
     yellow -> arrayOf("yellow")   // its town map, rebuilt from the ROM (Gen1Art)
     polished -> Gen2Art.POLISHED_TOWN_MAPS   // Johto, Kanto and the Orange Islands, from the ROM
@@ -582,6 +594,7 @@ val activeRegionMapImages: Array<String> get() = when {
 val activeMonSpriteDir: String get() = when {
     unbound -> "pokemon-unbound"
     redBlue -> Gen1Art.RED_BLUE_ICONS
+    pureRgb -> Gen1Art.pureIcons(activeGame)
     yellow -> Gen1Art.YELLOW_ICONS   // its own party icons, rebuilt from the ROM
     polished -> Gen2Art.POLISHED_ICONS
     black -> NdsArt.BLACK_ICONS
@@ -645,4 +658,6 @@ fun GameKind.displayName(): String = when (this) {
     GameKind.HEARTGOLD -> "Pokémon HeartGold"
     GameKind.SOULSILVER -> "Pokémon SoulSilver"
     GameKind.BLACK -> "Pokémon Black"
+    GameKind.PURE_RED -> "Pokémon PureRed"
+    GameKind.PURE_BLUE -> "Pokémon PureBlue"
 }

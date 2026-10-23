@@ -1137,6 +1137,24 @@ open class CompanionScreenshotTest {
     @Test fun redMap() = yellow("red", "MAP", cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
     @Test fun redSettings() = yellow("red", "SETTINGS", cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
     @Test fun redDexEntry() = yellow("red", "DEX", dexEntry = 151, cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
+    // PureRed / PureBlue v2.7.6: the retail Red save, converted by the game (the purered / pureblue fixtures).
+    private val pureRedRom = "Pokemon PureRed (v2.7.6).gb"
+    private val pureBlueRom = "Pokemon PureBlue (v2.7.6).gb"
+    private fun pure(fixture: String, tab: String, blue: Boolean = false, controls: Boolean = false, dexEntry: Int? = null) = yellow(
+        fixture, tab, controls = controls, dexEntry = dexEntry,
+        cfg = if (blue) com.pokedaisy.app.companion.data.GEN1_PURE_BLUE else com.pokedaisy.app.companion.data.GEN1_PURE_RED,
+        romFile = if (blue) pureBlueRom else pureRedRom, game = if (blue) GameKind.PURE_BLUE else GameKind.PURE_RED,
+    )
+    @Test fun pureRedParty() = pure("purered", "PARTY")
+    @Test fun pureRedItems() = pure("purered", "ITEMS")
+    @Test fun pureRedMap() = pure("purered", "MAP")
+    @Test fun pureRedDex() = pure("purered", "DEX")
+    @Test fun pureRedDexEntry() = pure("purered", "DEX", dexEntry = 1)
+    @Test fun pureRedBattle() = pure("purered_battle", "BATTLE")
+    @Test fun pureRedBattleMoves() = pure("purered_battle", "BATTLE", controls = true)
+    @Test fun pureBlueParty() = pure("pureblue", "PARTY", blue = true)
+    @Test fun pureBlueMap() = pure("pureblue", "MAP", blue = true)
+    @Test fun pureBlueDexEntry() = pure("pureblue", "DEX", blue = true, dexEntry = 100)
     @Test fun yellowParty() = yellow("yellow", "PARTY")
     /** A Normal / Flying summary (all three matchup groups) in Yellow's taller font, under the tab bar: its headings sit on
      * their chips' lines there, and once were clipped to a chip's height. */

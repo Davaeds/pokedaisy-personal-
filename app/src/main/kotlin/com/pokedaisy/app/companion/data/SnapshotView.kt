@@ -101,6 +101,8 @@ fun expProgress(species: Int, level: Int, exp: Long?): ExpProgress? {
         else if (activeGame == GameKind.TEAM_ROCKET) growthRatesTeamRocket.getOrNull(species)?.takeIf { it <= 5 }
         // Wishes of Tomorrow (expansion 1.15.3): vanilla's curves, its gSpeciesInfo's rates (gen_expansion_tables.py).
         else if (activeGame == GameKind.WISHES) growthRatesWishes.getOrNull(species)?.takeIf { it <= 5 }
+        // PureRGB moved 25 species to other curves: its own BaseStats' (gen_gen1_tables.py purered).
+        else if (activeGame.isPureRgb) gen1GrowthRatesPureRgb.getOrNull(species)
         else gen3GrowthRates.getOrNull(species)?.toInt()
     if (rate == null) return null
     val table = gen3ExperienceTables.getOrNull(rate) ?: return null

@@ -575,6 +575,14 @@ private val RedBlueBag = YellowBag.copy(
     backdrop = Color(0xFFFFEFFF) to Color(0xFFFFEFFF),
 )
 
+/** PureRed / PureBlue (on a Color, headless): Yellow's ITEM window in pure black on white. */
+private val PureRgbBag = YellowBag.copy(
+    panelLayers = listOf(Color.Black to 1, Color.White to 1, Color.Black to 1, Color.White to 1),
+    text = Color.Black, tabText = Color.Black, tabUnderline = Color.Black,
+    descLayers = listOf(Color.Black to 1, Color.White to 1, Color.Black to 1),
+    descText = Color.Black, iconBoxEdge = Color.Black,
+)
+
 /** Pokémon Ghost Grey's bag (headless): Yellow's black-on-white boxes with its grey row lines, on white. */
 private val GhostGreyBag = YellowBag.copy(
     panelLayers = listOf(Color.Black to 1, Color.White to 1, Color.Black to 1, Color.White to 1),
@@ -710,6 +718,7 @@ private fun lightBagFor(game: GameKind, hgssPocket: Int = 0): BagPalette = when 
     GameKind.SOULGOLD -> SoulGoldBag
     GameKind.YELLOW -> YellowBag
     GameKind.RED, GameKind.BLUE -> RedBlueBag
+    GameKind.PURE_RED, GameKind.PURE_BLUE -> PureRgbBag
     // Gold's and Silver's PACK is Crystal's, pixel for pixel (sampled headless in both).
     GameKind.CRYSTAL, GameKind.GOLD, GameKind.SILVER -> CrystalBag
     GameKind.CRYSTAL_CLEAR -> CrystalClearBag

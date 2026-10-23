@@ -230,6 +230,9 @@ object AppColors {
         "Prism" to Color(0xFFE070D8),
         // Pokémon Odyssey's AETHER (type 9): ours too.
         "Aether" to Color(0xFF9DB7F5),
+        // PureRGB's own: NONE (STRUGGLE's), CRYSTAL (a hardened rock), FLOATING, MAGMA - ours (TRI is Prism's above).
+        "None" to Color(0xFF68A090), "Crystal" to Color(0xFF8CC8D8), "Floating" to Color(0xFFB8A0D8),
+        "Magma" to Color(0xFFC8481C),
     )
 
     /** By the game's own type name: title-cased ("Fire"), or Gen 1's capitals ("FIRE", and its unused BIRD as Flying). */
@@ -314,6 +317,7 @@ fun rememberGameFont(game: GameKind?): FontFamily? {
         val path = when (game) {
             GameKind.YELLOW -> com.pokedaisy.app.companion.data.Gen1Art.yellowFont(com.pokedaisy.app.companion.data.romLanguage)
             GameKind.RED, GameKind.BLUE -> com.pokedaisy.app.companion.data.Gen1Art.RED_BLUE_FONT
+            GameKind.PURE_RED, GameKind.PURE_BLUE -> com.pokedaisy.app.companion.data.Gen1Art.PURE_FONT
             GameKind.CRYSTAL -> com.pokedaisy.app.companion.data.Gen2Art.CRYSTAL_FONT
             GameKind.CRYSTAL_CLEAR -> com.pokedaisy.app.companion.data.Gen2Art.CRYSTAL_CLEAR_FONT
             GameKind.PRISM -> com.pokedaisy.app.companion.data.Gen2Art.PRISM_FONT

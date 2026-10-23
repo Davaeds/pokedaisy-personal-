@@ -273,6 +273,7 @@ working · — = not attempted.
 | **Pokémon Yellow** (Game Boy, USA/Europe) | Gen 1 retail cart (sha1 `cc7d0326…`, = pret/pokeyellow's build) | ✅ (`Gen1Reader`: big-endian party_struct, internal species → Dex via PokedexOrder) | ⚠️ both battlers (wBattleMon / wEnemyMon) + a trainer's party - headless scripted wild battle (`yellow_battle`); no touch controls | ✅ one list, game order | ✅ its own town map from the ROM (`Gen1Art`: CompressedMap RLE) + the place's cell | ✅ its party icons from the ROM (MonPartySpritePointers, GBC colours) | — | Runs on mGBA's GB core (M_CORE_GB, SGB borders off). Tables from `scripts/gen_gen1_tables.py yellow` (pokeyellow.sym addresses); the companion sets its text in the game's own font (`Gen1Art` → `BitmapTtf`) and Gen 1 windows (`OptionColors` while YELLOW). |
 | **Pokémon Yellow** (Game Boy: Gelbe Edition, Version Jaune, Versione Gialla, Edición Amarilla) | the German / French / Italian / Spanish carts (sha1 `42f3714e…` / `0aceec0e…` / `05bb8e99…` / `1dc24203…`): English's code with their own text | ✅ (`GEN1_YELLOW_DE` .. `_ES`: English's RAM + 5 bytes from wBattleMon up, the same in all four; the English save loads) | ⚠️ as English (`yellow_<l>_battle*`); the battle menu's cursor columns are per language (`battleMenuLeftX` / `RightX`) | ✅ | ✅ English's town map (the same pixels), their own place names | ✅ English's icons, their own font (`Gen1Charset`) | ✅ their own text, metric (`Gen1DexTables.metric`) | Addresses from `scripts/port_gen1.py` (English's code matched in theirs, every table checked by contents); names from `scripts/gen_gen1_tables.py yellow_<l>` (`YellowText<Lang>Gen.kt`, a `GameText` by the cart's CGB code APSD / APSF / APSI / APSS). No item descriptions (ours are English). |
 | **Pokémon Red / Blue** (Game Boy, USA/Europe) | Gen 1 retail carts (sha1 `ea9bcae6…` / `d7037c83…`, = pret/pokered's `pokered` / `pokeblue` builds; Blue checked on the build) | ✅ (`GEN1_RED` / `GEN1_BLUE`: Yellow's reader, Yellow's RAM + 1 from wOnSGB up; `red` / `blue`: the user's Red save in both) | ⚠️ both battlers from a wild battle (`red_battle`, `blue_battle`); touch controls and the POKéMON switch as Yellow's (`red_battle_*`) | ✅ one list, game order | ✅ its town map from the ROM in the SGB's colours | ✅ its party icons from the ROM (14 icon loads a frame, no PIKACHU shape) | ✅ its own pages (Yellow rewrote them), SGB palettes, MEW apart in bank 1 | `GameKind.RED` / `.BLUE`. Yellow's tables (`gen_gen1_tables.py red` / `blue` check every table equals Yellow's). See below. |
+| **Pokémon PureRed / PureBlue** v2.7.6 (Game Boy, Vortyne's PureRGB) | a pret/pokered fork, open source: its `make red blue` (rgbds 1.0.3) is both releases byte for byte (sha1 `2e94d09c…` / `d419fe24…`), a Color cart (rgbfix -c) | ✅ (`GEN1_PURE_RED` / `GEN1_PURE_BLUE`: pokered.sym's RAM, WRAM bank 1 read by bank; `purered` / `pureblue`: the retail Red save through the game's own updater) | ⚠️ both battlers from a wild battle (`purered_battle`, `pureblue_battle`); touch controls and the POKéMON switch as Red's, its after-a-faint menu numbered 1 (`purered_battle_*`) | ✅ one list of 30 | ✅ its town map from the ROM in the Color's two-tone palette, its own place ids (SAFFRON is 7) | ✅ its own party icons (its 8-tile sheet, the ICONS option's OG set) | ✅ its own pages (fixed records by Dex number, the category apart), SGB palettes | `GameKind.PURE_RED` / `.PURE_BLUE`. Tables from `scripts/gen_gen1_tables.py purered` (one set, `*PureRgb.kt`; `pureblue` checks it equals PureRed's). See below. |
 | **Pokémon Crystal** (Game Boy Color: USA rev 0, USA/Europe rev 1, Australia) | Gen 2 retail carts (sha1 `f4cd194b…` / `f2f52230…` / `a0fc810f…`, = pret/pokecrystal's `crystal` / `crystal11` / `crystal_au` builds) | ✅ (`Gen2Reader`: big-endian 48-byte party_struct, species = Dex number, held item, gender from the DVs; `crystal` / `crystal_rev0` / `crystal_au`: one save in all three) | ⚠️ both battlers (wBattleMon / wEnemyMon, 32-byte battle_struct with its types) from a wild battle (`crystal_battle`); a trainer's party (wOTPartyMons) is read but no trainer battle was captured. Touch controls: the 2D menu's cursor (`readGen2BattleInput`), steered like Yellow's; a move and RUN checked headless | ✅ four pockets (ITEMS, BALLS, KEY ITEMS, the TM / HM quantities) | ✅ landmarks: each map header's landmark by (group, number), the POKéGEAR's Johto and Kanto maps from the ROM (`Gen2Art`) | ✅ its party icons from the ROM (IconPointers, PartyMenuOBPals), the held-item / Mail marks | ✅ 251, national order; SEEN 2 / OWN 2 = the game's own POKéDEX (flag poked on to look) | Runs on mGBA's GB core. Tables from `scripts/gen_gen2_tables.py crystal` (pokecrystal.sym addresses, the three releases checked byte for byte). WRAM bank 1 is read by bank (`wramx`), see below. |
 | **Pokémon Gold / Silver** (Game Boy Color, USA/Europe) | Gen 2 retail carts (sha1 `d8b8a360…` / `49b163f7…`, = pret/pokegold's `pokegold` / `pokesilver` builds) | ✅ Crystal's struct at their own RAM (`GEN2_GOLD` / `GEN2_SILVER`; `gold` / `silver`: one save played headless in Gold, loaded in both) | ⚠️ both battlers from wild battles (`gold_battle`, `silver_battle`) and a trainer's six (`gold_trainer`); touch controls and the POKéMON switch on Crystal's menus (`gold_battle_*`) | ✅ Crystal's four pockets, their own item names | ✅ their own 95 landmarks and maps, the POKéGEAR's Johto / Kanto maps (`Gen2Art`), the boy on them | ✅ their party icons from the ROM, Crystal's colours | ✅ 251, each version's own pages | `GameKind.GOLD` / `.SILVER`. Tables from `scripts/gen_gen2_tables.py gold_silver` (species, moves, types and chart checked equal to Crystal's with `--base`). See below. |
 | **Polished Crystal** 3.2.0 - 3.2.3 (normal, faithful, + debug: 16 builds) | Rangi42's open-source Crystal hack (GBC, 2 MB); every official release build, by SHA-1 | ✅ its own 48-byte party_struct (9-bit species + forms, gender bit), `GEN2_POLISHED_CRYSTAL` (`polished_crystal*`: a new game played headless) | ⚠️ both battlers (35-byte battle_struct) from a wild battle (`polished_crystal_battle`) and LYRA's (`polished_crystal_trainer`); touch controls and the POKéMON switch on its menus (`polished_crystal_battle_*`) | ✅ ITEMS / MEDICINE / BALLS / BERRIES, key items (their own ids), TMs a bit each | ✅ its 145 landmarks and 605 maps, Johto / Kanto / Orange Islands town maps (`Gen2Art`) | ✅ its party minis, each species' own colours | ✅ 289 in National order, metric | `GameKind.POLISHED_CRYSTAL`. Tables from `scripts/gen_polished_crystal_tables.py` (the releases' own .sym files). See below. |
@@ -397,6 +398,45 @@ from Yellow:
 - **Saves**: the user's Red save (Yellow's team, Nelson) loads in Blue, but its map's tileset pointers are Red's, which
   Blue keeps 0x10 lower, so Blue draws that Pokémon Center as garbage (`native-capture/boot/blue.txt` pokes Blue's pointers
   in for the fixtures). Not the companion's concern: what it reads is right either way.
+
+**PureRed and PureBlue v2.7.6** (Game Boy; Vortyne's PureRGB, `GEN1_PURE_RED` / `GEN1_PURE_BLUE`, `GameKind.PURE_RED` /
+`.PURE_BLUE`, `isPureRgb`, also `isGen1`): a pret/pokered fork, cloned at tag v2.7.6 into `$DECOMPS/purergb` and built with
+rgbds 1.0.3 in Docker (`make red blue`): both builds are the release ROMs byte for byte (its releases are BPS patches over
+retail Red / Blue), so pokered.sym / pokeblue.sym give every address. The two builds differ in banks 0x01 (from the save
+screen on), 0x1A (tilesets), 0x1D (credits) and 0x3D (title) only: one set of tables, RAM and code addresses for both.
+What's its own:
+- **A Color cart**: rgbfix -c, so mGBA runs it as a Game Boy Color, with WRAM bank 2 holding its palette buffers
+  (wGBCFullPalBuffer): D000-DFFF addresses are `wramx(1, ...)`, read and written by bank like Crystal's. It runs at GBC
+  double speed in the overworld (GBCSetCPU2xSpeed). Its COLORS option defaults to OG: the Color's own two-tone palettes
+  for the original carts (PureRed white / pink / dark red / black with green sprites, PureBlue white / light blue / blue /
+  black with pink ones), which the party icons, town map, player, party HP bar and windows (pure black ink) take, sampled
+  headless; the DEX pictures take its SuperPalettes (the per-Pokémon colours of its SGB1 / SGB2 modes).
+- **RAM**: pokered's structs (party_struct / battle_struct, CatchRate now a flags byte), most of the save data 8 bytes
+  later, the bag at 1:D542 with 30 slots (`Gen1Config.bagSlots`), wEnemyMon two bytes earlier (0xCFE3). Its party menu
+  types are renumbered: BATTLE_PARTY_MENU is 1 (`Gen1Config.battlePartyMenu`).
+- **Tables** (`gen_gen1_tables.py purered`): move and item names behind pointer tables, 35-byte base data (MEW in the main
+  table, the front pic's bank at +27), 5-byte InternalMapEntries, its own types (NONE for STRUGGLE, CRYSTAL, TRI,
+  FLOATING, MAGMA, and BONEMERANG's type that it names GROUND: `typeMatchups` lists one GROUND), items (HYPER BALL where
+  the TOWN MAP was, ...), moves (SLAM is FILTHY SLAM, POISON), places (SAFFRON moved to 7 for its FLY list) and 25
+  species on other growth curves (`gen1GrowthRatesPureRgb`). Its text has one-byte words from 0x33 ("the", "ing",
+  "#MON" ...: `Gen1Charset.PURE`). Its forms (FLOATING WEEZING, the spirits, HARDENED ONIX, ...) are internal species
+  carrying a base species' Dex number: the companion shows them as that species. No item descriptions but Yellow's for the
+  items it kept under the same name, and its own TMs' moves.
+- **Art** (`Gen1Art.PURE_RED` / `.PURE_BLUE`): its party icons are its own system (engine/gfx/mon_icons2.asm): MonPartyData
+  a byte per Dex number from MISSINGNO. at 0, each icon 8 tiles at PartyMonSprites1 (34:4000), frame 1 the left 16x16 and
+  frame 2 the right one; the font, town map and player are pokered's art at its own addresses.
+- **DEX**: DexEntryData is a fixed 8-byte record per Dex number (feet, inches, pounds x 10, a TX_FAR_END - 0x15, its
+  renumbered text commands), the category an index into DexCategoryStrings (PokemonCategoryMapping).
+- **STEADY FF music**: Red's sound engine and audio RAM, PlayMusic 0x21D1, Red's songs with EVOLUTION where SAFARI ZONE was
+  and bank 0x08 / 0x1F ids shifted; the park is 0x0DAE (the operand of a `jr` in bank 0: `18 FE`). Its added songs (bank
+  0x36 ...) start another way and play SPED-UP. Route 1 loops at 22.9 s, the wild battle at 31.3 s after 13.1 s.
+- **PC / FLY / WILD ENCOUNTERS** (`GB_FIELD_PURE_RGB`): see "PC, FLY and WILD ENCOUNTERS on the Game Boy".
+- **Saves**: its save layout isn't Red's, but CONTINUE on a Red / Blue save runs its own updater (engine/menus/
+  save_file_updater.asm: "Original Game", START), which converts and writes it. The user's Red save goes through it in
+  `native-capture/boot/purergb.txt`; that save keeps Red's map header and tileset pointers for its Pokémon Center, which
+  CONTINUE doesn't reload (wCurMapTileset bit 7), so the script clears the bit and says NO to the updater's warp to
+  Pallet (YES froze the game headless). The converted save is only in the capture's disposable copy.
+- **EXPAND**: not mapped (no `pk_wide_gb.c` row), like Red / Blue.
 
 **Pokémon Crystal** (Game Boy Color; `GEN2_CRYSTAL`, `GameKind.CRYSTAL`): pret/pokecrystal builds every English
 release byte for byte (`make crystal crystal11 crystal_au` with rgbds 1.0.4, its roms.sha1), and the three keep every RAM
@@ -780,6 +820,7 @@ games with a `PokedexTables` config get the tab:
 | Emerald Seaglass v3.0           | Hoenn (212) + National (430, TREECKO = No.1)                | SaveBlock1+0x28FC / +0x2932                      | Hoenn: seen 2 / own 1; poking bits gave 3 / 0                                  |
 | Too Many Types 2 v1.5.2         | Hoenn (398) + National (1052, CHIMCHAR = No.397)            | SaveBlock1+0x289C / +0x2920                      | Hoenn: seen 1 / own 1; poking No.913 showed SPRIGATITO as Hoenn #001           |
 | Recharged Yellow (all four)     | Kanto (151) + National                                      | SaveBlock2+0x18 (FireRed's struct Pokedex), no copies | seen 58 / owned 31 (the user's save, every release) |
+| PureRed / PureBlue v2.7.6       | one list of 151                                             | wPokedexOwned / wPokedexSeen (WRAM bank 1), 19 bytes, bit n-1 = No. n | SEEN 106 / OWN 10, the converted Red save's (the game's own continue screen says 10) |
 | Crystal (all three)             | one list of 251, national order (the game's New / Old modes order the same flags) | wPokedexCaught / wPokedexSeen (WRAM bank 1), 32 bytes, bit n-1 = No. n | SEEN 2 / OWN 2, the game's own POKéDEX (its flag poked on to open it) |
 | Crystal Clear (all four)        | one list of 251, national order                            | caught DA0E, seen DEB9 (WRAM bank 1), 32 bytes each | 2 caught / 3 seen on the headless save (MOM's HYPNO seen) |
 | Super Mariomon (all five)       | WORLD (152 in v1.5 / 151, PIRANHA P. = No.1) + National (155 / 153) | SaveBlock1+0x3790 / +0x37A4, 20 bytes each | TATTLEDEX SEEN 2 / OWN 1 (PIRANHA P., BOB-OMB); every bit poked on: SEEN 152 / 151, the list ending at TIPTRON / SONIC |
@@ -1855,6 +1896,10 @@ config and no other).
   running then, so the PC's call gives up and a flight is withdrawn.
 - Headless: mgba_dump's `gbpoke` (WRAM bank writes), `gbpeek` and `gbcallat AT FN A B HL` (the app's `pk_gb_call_at`).
   What was run is in docs/ROM_FEATURES.md's note 13.
+- **PureRed / PureBlue** (`GB_FIELD_PURE_RGB`, from pureRGB's pokered.sym): `GbField.Gen1` with its own banks (`pcBank` 0x33,
+  `wildBank` 0x2C) and WRAM bank 1 addresses. Its overworld loop has no frame wait of its own at OverworldLoopLessDelay (the
+  wait is OverworldLoop's `rst DelayFrame` just before it), so the PC is called at 0x03D7: `gbcallat 03d7 3297 0 33 46b5`.
+  FLY is Red's flags (its town map's pick sets the same: wDestinationMap, BIT_FLY_WARP, BIT_USED_FLY).
 
 ## Overlays
 

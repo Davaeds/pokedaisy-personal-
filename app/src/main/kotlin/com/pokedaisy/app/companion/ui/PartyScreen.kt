@@ -475,6 +475,20 @@ private val RedBluePartyPaletteNight = redBluePartyPalette(Color(0xFFE8E8E8), Co
 val RedBluePartyPalette: PartyPalette get() = if (OptionColors.dark) RedBluePartyPaletteNight else RedBluePartyPaletteLight
 
 /**
+ * PureRed / PureBlue on a Color (their default COLORS, OG: the Color's two-tone palettes, sampled headless): Yellow's
+ * slots in pure black and white, every HP bar the screen's dark colour - PureRed's dark red, PureBlue's blue.
+ */
+private fun purePartyPalette(ink: Color, paper: Color, cursor: Color, bar: Color) = yellowPartyPalette(ink, paper, cursor).copy(
+    hpGreen = HpBarColors(bar, bar), hpYellow = HpBarColors(bar, bar), hpRed = HpBarColors(bar, bar),
+)
+private val PureRedPartyPaletteLight = purePartyPalette(Color.Black, Color.White, Color(0xFFDCDCDC), Color(0xFF943939))
+private val PureRedPartyPaletteNight = purePartyPalette(Color(0xFFE8E8E8), Color(0xFF181818), Color(0xFF3A3A3A), Color(0xFFFF8484))
+private val PureBluePartyPaletteLight = purePartyPalette(Color.Black, Color.White, Color(0xFFDCDCDC), Color(0xFF0000FF))
+private val PureBluePartyPaletteNight = purePartyPalette(Color(0xFFE8E8E8), Color(0xFF181818), Color(0xFF3A3A3A), Color(0xFF63A5FF))
+val PureRedPartyPalette: PartyPalette get() = if (OptionColors.dark) PureRedPartyPaletteNight else PureRedPartyPaletteLight
+val PureBluePartyPalette: PartyPalette get() = if (OptionColors.dark) PureBluePartyPaletteNight else PureBluePartyPaletteLight
+
+/**
  * Pokémon Ghost Grey (headless, its party menu): four greys - white slots in a black line, the cursor's slot light grey,
  * black text with no shadow, the HP bar black on white under a white-on-black "HP", a grey ghost's face where FireRed has
  * its Poké Ball. Dark mode turns it round like Yellow's.
@@ -559,6 +573,8 @@ fun partyPaletteFor(game: GameKind): PartyPalette = when (game) {
     GameKind.SOULGOLD -> SoulGoldPartyPalette
     GameKind.YELLOW -> YellowPartyPalette
     GameKind.RED, GameKind.BLUE -> RedBluePartyPalette
+    GameKind.PURE_RED -> PureRedPartyPalette
+    GameKind.PURE_BLUE -> PureBluePartyPalette
     // Gold's and Silver's party menu is Crystal's, pixel for pixel (sampled headless in both).
     GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM, GameKind.GOLD, GameKind.SILVER -> CrystalPartyPalette
     GameKind.POLISHED_CRYSTAL -> PolishedCrystalPartyPalette
