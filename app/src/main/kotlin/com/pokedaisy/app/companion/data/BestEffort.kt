@@ -541,7 +541,8 @@ object BestEffortStore {
     class Entry(val sha1: String, val id: String, val full: Boolean, val off: Set<BestEffort.Part>, val source: Source = Source.AUTO, val verified: Boolean = true)
 
     @Volatile var dir: File? = null
-    /** Called (any thread) after [save] / [forget] with the SHA-1 changed: the library's verdict cache drops it. */
+    /** Called (any thread) after [save] / [decline] / [forget] with the SHA-1 changed: the library's verdict cache drops it.
+     * Always outside this store's lock: it takes RomFolder's, whose [RomFolder.scan] reads this store under it. */
     @Volatile var onChanged: ((String) -> Unit)? = null
 
     private fun file() = dir?.let { File(it, "best-effort.tsv") }
@@ -566,24 +567,21 @@ object BestEffortStore {
     /** The player said NONE OF THESE for this ROM. */
     fun declined(sha1: String?): Boolean = sha1 != null && rows()[sha1.lowercase()]?.source == Source.NONE
 
-    @Synchronized
     fun save(sha1: String, m: BestEffort.Match, source: Source = Source.AUTO, verified: Boolean = true) {
         val k = sha1.lowercase()
-        write(rows() + (k to Entry(k, m.candidate.id, m.full, m.off, source, verified)))
+        synchronized(this) { write(rows() + (k to Entry(k, m.candidate.id, m.full, m.off, source, verified))) }
         onChanged?.invoke(sha1)
     }
 
     /** NONE OF THESE: no match, and no asking again until the player opens the picker. */
-    @Synchronized
     fun decline(sha1: String) {
         val k = sha1.lowercase()
-        write(rows() + (k to Entry(k, "-", false, emptySet(), Source.NONE, true)))
+        synchronized(this) { write(rows() + (k to Entry(k, "-", false, emptySet(), Source.NONE, true))) }
         onChanged?.invoke(sha1)
     }
 
-    @Synchronized
     fun forget(sha1: String) {
-        write(rows() - sha1.lowercase())
+        synchronized(this) { write(rows() - sha1.lowercase()) }
         onChanged?.invoke(sha1)
     }
 
