@@ -2,6 +2,10 @@ package com.pokedaisy.app.companion.data
 
 import com.pokedaisy.app.MgbaCore
 
+/** Told once per game when the Poller has decided what it is (a GameKind's name, and a BEST EFFORT match's title):
+ * crash reports name it (CrashReports.gameIdentified, set up in PokeDaisyApp). */
+@Volatile var onGameIdentified: ((kind: String, how: String?) -> Unit)? = null
+
 /**
  * Builds a [SnapshotView] from the running core's memory. In-process replacement
  * for android-companion's UDP `telemetryFlow` — no sockets, no reconnect loop.
@@ -283,6 +287,7 @@ class TelemetrySampler {
             }
             if (kind != null && !itemTextChosen) {
                 itemTextChosen = true
+                onGameIdentified?.invoke(kind!!.name, beMatch?.candidate?.title)
                 PokedexSource.romChanged()
                 (nativeCfg?.language ?: gen1Cfg?.language)?.let { com.pokedaisy.app.companion.i18n.L10n.applyGameLanguage(it) }
                 RomItemText.use(itemTable(reader))

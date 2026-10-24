@@ -88,6 +88,11 @@ static struct {
     unsigned vw, vh;
     struct VFile* saveVf;
     bool saveReadOnly;                  // nothing we load can reach the file
+    // A GBA game's ROM file, mapped read-only for the companion's ROM reads (pk_read_rom_file): mGBA's own mapping
+    // can be swapped for a copy mid-game. Set and dropped under pk_coreLock's write lock, with the core.
+    struct VFile* romFileVf;
+    const uint8_t* romFile;
+    size_t romFileSize;
     int16_t audio[PK_AUDIO_SCRATCH_SAMPLES * 2];
     int audioAvail;                     // interleaved shorts ready in audio[]
     // REWIND (pk_rewind.c): a state every PK_REWIND_INTERVAL frames while rewindEntries > 0;
@@ -159,23 +164,26 @@ static void pkTeardown(void) {
     pk_nds_deinit();
     pkRewindOff();
     if (g.core) {
-        // The Game Boy core closes the save VFile itself (GBUnloadROM: sramRealVf->close); the
-        // GBA core leaves it to us. Closing it again here was a double close: fdsan's abort in
-        // _vfdClose, or a free of freed memory (Crashlytics, 1.2.1's Game Boy games).
-        bool coreClosesSave = !pk_is_gba(g.core);
         pk_cheats_clear(g.core);        // and forgets the ROM bytes it kept
         pk_cheats_unpatch(g.core);      // the game options' (REUSABLE TMS) too
         pk_cheats_unblock(g.core);      // and PLAYER LOOK's blocks
-        g.core->deinit(g.core);         // unloads ROM, flushes save VFile
+        g.core->deinit(g.core);         // unloads ROM, flushes and closes the save VFile
         g.core = NULL;
-        if (coreClosesSave) {
-            g.saveVf = NULL;
-        }
-    }
-    if (g.saveVf) {
-        g.saveVf->close(g.saveVf);
+        // Both cores close the save VFile they were given themselves (GBUnloadROM: sramRealVf;
+        // GBAUnloadROM: savedata.realVf), so closing it again here was a double close. With a
+        // bare VFileFD the GBA's second close usually just failed (close() on a dead fd, EBADF,
+        // and no free); a reused fd made it fdsan's abort in _vfdClose (1.2.1's Game Boy games).
+        // pk_save_vf's close frees whatever happens, so in 1.3.1 a GBA game's close was a double
+        // free: SIGABRT in pkSvClose (Crashlytics, 1.3.1 on the Thor).
         g.saveVf = NULL;
     }
+    if (g.romFileVf) {
+        if (g.romFile) g.romFileVf->unmap(g.romFileVf, (void*) g.romFile, g.romFileSize);
+        g.romFileVf->close(g.romFileVf);
+    }
+    g.romFileVf = NULL;
+    g.romFile = NULL;
+    g.romFileSize = 0;
     g.saveReadOnly = false;
     free(g.video);
     g.video = NULL;
@@ -284,6 +292,7 @@ Java_com_pokedaisy_app_MgbaCore_pkInit(JNIEnv* env, jobject thiz,
         return ok ? JNI_TRUE : JNI_FALSE;
     }
     struct VFile* rom = VFileOpen(romPath, O_RDONLY);
+    struct VFile* romFileVf = rom ? VFileOpen(romPath, O_RDONLY) : NULL;   // pk_read_rom_file's own handle
     (*env)->ReleaseStringUTFChars(env, jRomPath, romPath);
     if (!rom) {
         LOGE("cannot open ROM");
@@ -294,11 +303,13 @@ Java_com_pokedaisy_app_MgbaCore_pkInit(JNIEnv* env, jobject thiz,
     if (!core) {
         LOGE("mCoreFindVF: unrecognized ROM");
         rom->close(rom);
+        if (romFileVf) romFileVf->close(romFileVf);
         return JNI_FALSE;
     }
     if (!core->init(core)) {
         LOGE("core->init failed");
         rom->close(rom);
+        if (romFileVf) romFileVf->close(romFileVf);
         core->deinit(core);
         return JNI_FALSE;
     }
@@ -317,6 +328,7 @@ Java_com_pokedaisy_app_MgbaCore_pkInit(JNIEnv* env, jobject thiz,
     if (!core->loadROM(core, rom)) {
         LOGE("core->loadROM failed");
         rom->close(rom);
+        if (romFileVf) romFileVf->close(romFileVf);
         core->deinit(core);
         free(video);
         return JNI_FALSE;
@@ -352,8 +364,24 @@ Java_com_pokedaisy_app_MgbaCore_pkInit(JNIEnv* env, jobject thiz,
     pkHealRtc(core);
     pk_rest_reset();   // a new game: its own main loop depth
 
+    const uint8_t* romFile = NULL;
+    size_t romFileSize = 0;
+    if (romFileVf && pk_is_gba(core)) {
+        ssize_t size = romFileVf->size(romFileVf);
+        romFileSize = size > 0 ? ((size_t) size < SIZE_CART0 ? (size_t) size : SIZE_CART0) : 0;
+        romFile = romFileSize ? romFileVf->map(romFileVf, romFileSize, MAP_READ) : NULL;
+    }
+    if (!romFile && romFileVf) {
+        romFileVf->close(romFileVf);
+        romFileVf = NULL;
+        romFileSize = 0;
+    }
+
     pthread_rwlock_wrlock(&pk_coreLock);
     g.core = core;
+    g.romFileVf = romFileVf;
+    g.romFile = romFile;
+    g.romFileSize = romFileSize;
     g.video = video;
     g.vw = w;
     g.vh = h;
@@ -1185,6 +1213,24 @@ static bool pk_gb_read_banked(struct mCore* core, uint32_t addr, uint8_t* dst, i
     return true;
 }
 
+// A GBA cart range read from our own mapping of the ROM file instead of over the bus. mGBA reads the ROM through a
+// mapping of the file until something first writes to it (a cheat, a game option's patch, a game's AGBPrint on a
+// 32 MB ROM...), then swaps in a copy and unmaps the file (_pristineCow) - without our lock when it happens mid-frame,
+// so an IO thread's ROM read in flight faulted on the unmapped page (GBALoad32 from pkReadBytes, Crashlytics 1.3.1 on
+// the Thor and the Odin). This mapping only goes in pkTeardown, under the write lock. It holds the file's bytes, which
+// is what these reads want anyway (pk_cheats_overlay). False for anything else: past the file's end, not the cart.
+static bool pk_read_rom_file(uint32_t addr, uint8_t* dst, int len) {
+    if (!g.romFile || addr < BASE_CART0 || addr + (uint32_t) len > BASE_CART_SRAM || addr + (uint32_t) len < addr) {
+        return false;
+    }
+    uint32_t off = addr & (SIZE_CART0 - 1);
+    if ((size_t) off + (size_t) len > g.romFileSize) {
+        return false;
+    }
+    memcpy(dst, g.romFile + off, (size_t) len);
+    return true;
+}
+
 // pkReadBytes / pkReadInto: [len] bytes at [addr] into [dst], under the core lock; false with no core up.
 static bool pk_read_any(uint32_t addr, uint8_t* dst, int len) {
     pthread_rwlock_rdlock(&pk_coreLock);
@@ -1193,6 +1239,8 @@ static bool pk_read_any(uint32_t addr, uint8_t* dst, int len) {
         pk_nds_read(addr, dst, len);
     } else if (ok && pk_gb_read_banked(g.core, addr, dst, len)) {
         // a Color cart's WRAM bank, read by bank
+    } else if (ok && pk_read_rom_file(addr, dst, len)) {
+        // the ROM, from the file
     } else if (ok) {
         pk_read_range(g.core, addr, dst, len);
         // The ROM as the file has it, under any cheat's hook or ROM patch: the
@@ -1316,8 +1364,8 @@ Java_com_pokedaisy_app_MgbaCore_pkRomCode(JNIEnv* env, jobject thiz) {
         return (*env)->NewStringUTF(env, "");   // no GBA header (0xAC would be GB ROM bytes)
     }
     char code[5] = {0};
-    for (int i = 0; i < 4; i++) {
-        code[i] = (char) g.core->busRead8(g.core, 0x080000ACu + i);
+    if (!pk_read_any(0x080000ACu, (uint8_t*) code, 4)) {
+        return NULL;
     }
     return (*env)->NewStringUTF(env, code);
 }

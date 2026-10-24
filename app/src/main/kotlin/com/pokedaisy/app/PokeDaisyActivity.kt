@@ -1572,6 +1572,10 @@ class PokeDaisyActivity : Activity() {
         // An archive unpacks once (cached after) - ~0.5 s for 32 MiB, on the black screen.
         val r = RomArchive.playable(romFile, cacheDir) ?: romFile
         romData = r
+        CrashReports.gameStarted(
+            this, romFile, r,
+            intent?.getStringExtra(LibraryActivity.EXTRA_LAUNCHED_FROM) ?: if (fromFrontend) "frontend" else null,
+        )
         // ~50-150ms for a 16-32 MiB ROM; one-time, at launch, on the black screen.
         val crc = SaveStates.crc32(r)
         romKey = crc
@@ -1598,6 +1602,7 @@ class PokeDaisyActivity : Activity() {
         // A DS cart (melonDS, nds/pk_nds.cpp): none of the GBA scans either, and no Game Boy ones.
         val nds = RomIdentity.isNds(r)
         romIsNds = nds
+        if (::portraitPanel.isInitialized) portraitPanel.ds = nds
         dsWorld = if (!nds) null else when (RomIdentity.ndsGameCode(r)) {
             "CPUE" -> com.pokedaisy.app.companion.data.PLATINUM_WORLD
             "IPKE" -> com.pokedaisy.app.companion.data.HEARTGOLD_WORLD
@@ -1696,6 +1701,7 @@ class PokeDaisyActivity : Activity() {
                     runOnUiThread {
                         stage.aspect = w.toFloat() / h   // 3:2, or a Game Boy's 10:9
                         touchControls.shoulders = !gameBoy
+                        touchControls.dsButtons = romIsNds
                         syncTouchControls()   // a Game Boy's controls (no L / R) are shorter: EXPAND's strip follows
                     }
                 }
@@ -2587,7 +2593,7 @@ class PokeDaisyActivity : Activity() {
             val prefs = Prefs(this)
             val w = stage.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
             portraitPanel.padStrip = if (show && portraitPanel.enabled && portraitPanel.expand && prefs.portraitCompanionUnderGame)
-                com.pokedaisy.app.companion.ui.TouchGeometry.naturalHeight(style, w.toFloat(), resources.displayMetrics.density, !touchControls.shoulders)
+                com.pokedaisy.app.companion.ui.TouchGeometry.naturalHeight(style, w.toFloat(), resources.displayMetrics.density, !touchControls.shoulders, touchControls.dsButtons)
             else 0
         }
         syncHudClear()
@@ -2654,7 +2660,7 @@ class PokeDaisyActivity : Activity() {
         return com.pokedaisy.app.companion.TouchStage(
             w, h, resources.displayMetrics.density, portrait, game, area,
             companion = if (portrait) portraitPanel.companionBounds() else null,
-            gameAspect = aspect, gameBoy = !touchControls.shoulders,
+            gameAspect = aspect, gameBoy = !touchControls.shoulders, ds = touchControls.dsButtons,
         )
     }
 

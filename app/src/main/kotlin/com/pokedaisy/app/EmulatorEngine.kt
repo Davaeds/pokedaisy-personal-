@@ -901,9 +901,11 @@ class EmulatorEngine(
                 val reset = if (softResetFrames > 0) { softResetFrames--; SOFT_RESET_KEYS } else 0
                 var keys = input.mask or reset or (if ((frame++ / 2) % 2 == 0L) input.turboMask else 0)
                 // AUTO-RUN: B flipped while walking on the player's own field (holding it walks) - never in a script, a
-                // battle, a menu screen (B leaves it) or on a bike (the Acro Bike's wheelie is B).
-                if (autoRun && (gba || nds) && keys and DIRECTIONS != 0 && fieldState and AUTO_RUN_BLOCKERS == MgbaCore.FIELD_KNOWN &&
-                    fieldScreen
+                // battle, a menu screen (B leaves it) or on a bike (the Acro Bike's wheelie is B). Nor with A held: the
+                // expansion's DexNav creeps on A (Seaglass & co.), but checks B's run first, so a held B scared the
+                // Pokémon off. A while walking does nothing in the other games.
+                if (autoRun && (gba || nds) && keys and DIRECTIONS != 0 && keys and MgbaCore.Key.A == 0 &&
+                    fieldState and AUTO_RUN_BLOCKERS == MgbaCore.FIELD_KNOWN && fieldScreen
                 ) keys = keys xor MgbaCore.Key.B
                 MgbaCore.pkSetKeys(keys)
                 if (nds) {

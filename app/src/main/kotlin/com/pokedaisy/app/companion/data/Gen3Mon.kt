@@ -69,6 +69,10 @@ data class PartyMonLayout(
     /** Shiny when (OT ID's halves ^ PID's halves) is below this; 0 = not read. Only where the party menu draws shiny icons:
      * SoulGold (256 - its odds are 1 in 256, checked headless on v1.1.4 and v1.2: 255 shiny, 256 not). */
     val shinyBelow: Int = 0,
+    /** The byte holding the newer engine's shinyModifier (`u16 hpLost:14, shinyModifier:1`: bit 14, so 0x40 of the u16's
+     * high byte), which flips [shinyBelow]'s answer - the game's forced shinies (GitHub #267); 0 = none. SoulGold: +0x1F,
+     * checked headless on v1.2's party menu (the bit alone = shiny; on a shiny personality = not). */
+    val shinyModifier: Int = 0,
     /** The nickname's length at +8 and where the language byte is (SoulGold: 12 letters, language +0x14). */
     val nicknameLen: Int = 10,
     val language: Int = 0x12,
@@ -183,7 +187,7 @@ val QUETZAL_PARTY_MON = PartyMonLayout(
 )
 val SOULGOLD_PARTY_MON = PartyMonLayout(
     size = 96, status = 0x4C, level = 0x50, hp = 0x52, maxHp = 0x54, flags = 0x15, plainSpeciesMask = 0x07FF,
-    nicknameLen = 12, language = 0x14, shinyBelow = 256,
+    nicknameLen = 12, language = 0x14, shinyBelow = 256, shinyModifier = 0x1F,
     plainItemMask = 0x03FF,   // heldItem:10 - Cyndaquil's 0x0400 read as an "Item#1024" tag on its party slot
 )
 
@@ -242,7 +246,9 @@ fun decodePartyMon(raw: ByteArray, off: Int, layout: PartyMonLayout = VANILLA_PA
         stats = if (layout.hasStats) monStats(raw, off, layout, evs, ivWord) else null,
         heldItem = heldItem,
         nickname = gen3Nickname(raw, off, layout),
-        shiny = layout.shinyBelow > 0 && shinyValue(u32(raw, off), u32(raw, off + 4)) < layout.shinyBelow,
+        shiny = layout.shinyBelow > 0 &&
+            (shinyValue(u32(raw, off), u32(raw, off + 4)) < layout.shinyBelow) !=
+            (layout.shinyModifier > 0 && raw[off + layout.shinyModifier].toInt() and 0x40 != 0),
     )
 }
 

@@ -485,10 +485,18 @@ class Prefs(context: Context) {
         set(v) = p.edit().putBoolean("companion_tab", v).apply()
 
     /** A phone held upright: the companion right under the game, the touch controls at the screen's bottom, instead of
-     * the companion along the bottom (SETTINGS > COMPANION; see [PortraitPanel]). */
+     * the companion along the bottom (SETTINGS > COMPANION; see [PortraitPanel]). A DS game's touch screen takes the
+     * companion's place. On by default since 1.3.2 (the user's call): only a player who picked AT BOTTOM keeps it. */
     var portraitCompanionUnderGame: Boolean
-        get() = p.getBoolean("portrait_companion_under_game", false)
+        get() = p.getBoolean("portrait_companion_under_game", true)
         set(v) = p.edit().putBoolean("portrait_companion_under_game", v).apply()
+
+    /** A phone held upright in a DS game: the touch screen's slot (where the companion goes) as a ratio of the screen's
+     * width, kept apart from [portraitCompanionRatio]. 0.76: the DS screen (4:3) over its COMPANION switch, with the touch
+     * controls still getting the space below on a 18.5:9 phone (PortraitLayout.padInGap; 0.8 missed it by a few px). */
+    var portraitDsRatio: Float
+        get() = p.getFloat("portrait_ds_ratio", 0.76f)
+        set(v) = p.edit().putFloat("portrait_ds_ratio", v).apply()
 
     /** A phone held upright: the companion's height, as a ratio of the screen's width (see [PortraitPanel]). */
     var portraitCompanionRatio: Float

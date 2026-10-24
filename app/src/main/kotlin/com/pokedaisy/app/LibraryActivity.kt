@@ -1247,6 +1247,7 @@ class LibraryActivity : ComponentActivity() {
         // Opened on the bottom screen, the game still goes to the top one (Screens.mainDisplayLaunch).
         val onMain = Screens.mainDisplayLaunch(this)
         val intent = Intent(this, PokeDaisyActivity::class.java).putExtra(EXTRA_ROM, rom.absolutePath)
+            .putExtra(EXTRA_LAUNCHED_FROM, CrashReports.LAUNCHED_FROM_LIBRARY)
         if (onMain != null) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent, onMain)
     }
@@ -2202,6 +2203,8 @@ class LibraryActivity : ComponentActivity() {
         /** The options popup's subtle 1u frame. */
         private val MenuBorder get() = if (OptionColors.dark) Color(0xFF4A5262) else Color(0xFFA8A8B0)
         const val EXTRA_ROM = "rom"
+        /** Who opened the game, for crash reports ([CrashReports.gameStarted]): the library, or the app that sent it. */
+        const val EXTRA_LAUNCHED_FROM = "launchedFrom"
         /** The grid view's narrowest tile (GridCells.Adaptive's minimum). */
         private val GRID_TILE_MIN = 150.dp
         /** Keys the launcher's menu swallows (the launcher's own), so they don't act behind it. */

@@ -32,8 +32,8 @@ The row of coloured buttons under the header narrows the library down to one kin
 | `ALL` | Every game. |
 | `FAVORITES` | The games you starred (see [Sorting and favorites](#sorting-and-favorites)). |
 | `RECENT` | Every game you've played, the one you played last first, whatever the sort order. |
-| `GB` | Game Boy games. |
-| `GBC` | Game Boy Color only games. |
+| `GB` | Game Boy games, like Red, Blue and Yellow. |
+| `GBC` | Game Boy Color games, like Crystal, and the ones that also play on a Game Boy, like Gold and Silver. |
 | `GBA` | Game Boy Advance games. |
 | `DS` | Nintendo DS games. |
 | `HACKS` | ROM hacks. |

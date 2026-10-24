@@ -76,7 +76,7 @@ class GbaInput {
 
     /** The touch controls' GBA buttons held ([bits]) and their TURBO A / B ([turbo], pulsed like [turboMask]). */
     fun setTouchBits(bits: Int, turbo: Int = 0) {
-        touchBits = bits
+        touchBits = forCore(bits)   // the touch X / Y: the DS's own X / Y, else START / SELECT
         touchTurboBits = turbo
         recompute()
     }

@@ -190,17 +190,39 @@ object GameTitles {
     fun platform(context: Context, rom: File): RomCategory? =
         cache(context)[rom.absolutePath]?.takeIf { it.matches(rom) }?.platform
 
-    /** [rom]'s console from its header: [categoryOf] without the hack check. A dual-mode Game Boy cart (0x143 = 0x80)
-     * is GB, unless it's a Color game whose header says otherwise ([COLOR_ONLY], by [sha1]: hashed only for those). */
+    /** [rom]'s console from its header: [categoryOf] without the hack check. */
     internal fun platformOf(rom: File, sha1: () -> String?): RomCategory = when {
         RomIdentity.isNds(rom) -> RomCategory.NDS
-        RomIdentity.isGameBoy(rom) ->
-            if (RomIdentity.isGameBoyColor(rom) || sha1() in COLOR_ONLY) RomCategory.GBC else RomCategory.GB
+        RomIdentity.isGameBoy(rom) -> gameBoyPlatform(rom, sha1)
         else -> RomCategory.GBA
     }
 
-    /** Color games with a dual-mode header: Polished Crystal sets 0x80 but only runs on a Color (GitHub #237). */
-    private val COLOR_ONLY: Set<String> get() = com.pokedaisy.app.companion.data.TelemetrySampler.POLISHED_CRYSTAL_SHA1S
+    /**
+     * GB or GBC. The header's 0x143 says Color-only (0xC0: Crystal) or not at all (0x00: Red / Blue), but a dual-mode cart
+     * (0x80) can be either: Yellow is a Game Boy game with colours added, Gold / Silver are Color games that also run on
+     * the Game Boy (GitHub #271), and Polished Crystal sets 0x80 but only runs on a Color (#237). Known carts go by
+     * [sha1] ([COLOR_DUAL]); any other dual-mode cart by its file's extension, as the dump sets name them (No-Intro's
+     * "(GB Compatible).gbc" vs "(CGB+SGB Enhanced).gb").
+     */
+    private fun gameBoyPlatform(rom: File, sha1: () -> String?): RomCategory {
+        val flag = RomArchive.readAt(rom, 0x143L, 1)?.firstOrNull()?.toInt()?.and(0xFF)
+        return when {
+            flag == 0xC0 -> RomCategory.GBC
+            flag != 0x80 -> RomCategory.GB
+            sha1().let { it in COLOR_DUAL || it !in TelemetrySampler.SUPPORTED_GB_SHA1S && romExtension(rom) == "gbc" } ->
+                RomCategory.GBC
+            else -> RomCategory.GB
+        }
+    }
+
+    /** [rom]'s extension, or its ROM's inside an archive. */
+    private fun romExtension(rom: File): String =
+        (if (RomArchive.isArchive(rom)) RomArchive.romEntry(rom)?.name?.substringAfterLast('/') else rom.name)
+            ?.substringAfterLast('.', "")?.lowercase().orEmpty()
+
+    /** Color games with a dual-mode header (0x80) that the companion knows. Yellow says the same but is a GB game. */
+    private val COLOR_DUAL: Set<String>
+        get() = TelemetrySampler.POLISHED_CRYSTAL_SHA1S + TelemetrySampler.GOLD_SHA1 + TelemetrySampler.SILVER_SHA1
 
     /** [rom]'s [RomCategory] (reads its header; [sha1] when [identify] hashed it). A Pokémon cart hashed but known as
      * neither retail nor a hack is a hack too (an unsupported one); a cart nobody hashes is its platform's. */
@@ -208,8 +230,7 @@ object GameTitles {
         RomIdentity.isNds(rom) -> RomCategory.NDS
         sha1 != null && sha1 in HACKS -> RomCategory.HACK
         hashed && sha1 != null && sha1 !in RETAIL && sha1 !in RETAIL_PORT_TITLES -> RomCategory.HACK
-        RomIdentity.isGameBoy(rom) ->
-            if (RomIdentity.isGameBoyColor(rom) || sha1 in COLOR_ONLY) RomCategory.GBC else RomCategory.GB
+        RomIdentity.isGameBoy(rom) -> gameBoyPlatform(rom) { sha1 }
         else -> RomCategory.GBA
     }
 
@@ -290,9 +311,9 @@ object GameTitles {
     private val KNOWN = "#known\t" + Integer.toHexString(BY_SHA1.keys.sorted().hashCode())
 
     /** How [RomCategory] was decided when the cache was written: a cache from before asks every file again. */
-    private const val CATEGORIES = "#categories\t3"
-    /** The one before: only its GB platforms are asked again (Polished Crystal is GBC since 3). */
-    private const val CATEGORIES_2 = "#categories\t2"
+    private const val CATEGORIES = "#categories\t4"
+    /** The ones before: only their GB games are asked again (Polished Crystal is GBC since 3, Gold / Silver since 4). */
+    private val CATEGORIES_GB_STALE = setOf("#categories\t2", "#categories\t3")
 
     private fun load(context: Context): MutableMap<String, Entry> {
         val map = java.util.concurrent.ConcurrentHashMap<String, Entry>()
@@ -305,7 +326,7 @@ object GameTitles {
             f.forEachLine { line ->
                 if (line == KNOWN) stale = false
                 if (line == CATEGORIES) categoriesStale = false
-                if (line == CATEGORIES_2) { categoriesStale = false; gbStale = true }
+                if (line in CATEGORIES_GB_STALE) { categoriesStale = false; gbStale = true }
                 val p = line.split('\t')
                 // A 4-column line is from before categories: no category, so identify() reads it again. A 5-column
                 // one from before platforms: a hack's is read again (the others' platform is their category).
@@ -321,8 +342,11 @@ object GameTitles {
             if (stale) map.values.removeAll { it.title == null }
             // Categories decided another way (Yellow was GBC once): every file's is asked again.
             if (categoriesStale) map.replaceAll { _, e -> Entry(e.size, e.modified, e.title, null, null) }
-            // A GB platform from before Color games were known by hash: identify() reads its header (and hash) again.
-            else if (gbStale) map.replaceAll { _, e -> if (e.platform == RomCategory.GB) Entry(e.size, e.modified, e.title, e.category, null) else e }
+            // A GB game from before these Color games were known: identify() reads it again (a retail one's category
+            // is its platform, so both go).
+            else if (gbStale) map.replaceAll { _, e ->
+                if (e.platform == RomCategory.GB) Entry(e.size, e.modified, e.title, e.category.takeIf { it == RomCategory.HACK }, null) else e
+            }
         }
         return map
     }
