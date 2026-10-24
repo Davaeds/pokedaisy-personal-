@@ -73,9 +73,11 @@ data class PartyMonLayout(
      * high byte), which flips [shinyBelow]'s answer - the game's forced shinies (GitHub #267); 0 = none. SoulGold: +0x1F,
      * checked headless on v1.2's party menu (the bit alone = shiny; on a shiny personality = not). */
     val shinyModifier: Int = 0,
-    /** The nickname's length at +8 and where the language byte is (SoulGold: 12 letters, language +0x14). */
+    /** The nickname's length at [nicknameOff] and where the language byte is (SoulGold: 12 letters, language +0x14; -1 =
+     * none, the bit-packed structs of English-only hacks). */
     val nicknameLen: Int = 10,
     val language: Int = 0x12,
+    val nicknameOff: Int = 0x08,
     /** R.O.W.E.'s bit-packed struct ([ROWE_PARTY_MON], [decodeRoweMon]) rather than a box of substructs. */
     val rowe: Boolean = false,
     /** Elite Redux's bit-packed struct ([ELITE_REDUX_PARTY_MON], [decodeEliteReduxMon]). */
@@ -97,6 +99,7 @@ val VANILLA_PARTY_MON = PartyMonLayout()
  */
 val ROWE_PARTY_MON = PartyMonLayout(
     size = 0x4C, status = 0x38, level = 0x3C, hp = 0x3E, maxHp = 0x40, flags = 0x27, eggMask = 0x80, hasStats = true, rowe = true,
+    nicknameLen = 12, language = -1,
 )
 
 /**
@@ -109,7 +112,7 @@ val ROWE_PARTY_MON = PartyMonLayout(
  */
 val ELITE_REDUX_PARTY_MON = PartyMonLayout(
     size = 0x4C, status = 0x38, level = 0x3C, hp = 0x3E, maxHp = 0x40, flags = 0x15, eggMask = 0x80, hasStats = true,
-    eliteRedux = true,
+    eliteRedux = true, nicknameOff = 0x26, nicknameLen = 12, language = -1,
 )
 
 /**
@@ -145,6 +148,7 @@ private fun decodeEliteReduxMon(raw: ByteArray, off: Int): Mon? {
             stats = List(6) { u16(raw, off + 0x40 + 2 * it) },
         ),
         heldItem = (w14 and 0x3FF).toInt(),
+        nickname = gen3Nickname(raw, off, ELITE_REDUX_PARTY_MON),
     )
 }
 
@@ -169,6 +173,7 @@ private fun decodeRoweMon(raw: ByteArray, off: Int): Mon? {
             nature = ((raw[off + 0x27].toInt() and 0xFF) shr 2) and 0x1F,
             stats = List(6) { u16(raw, off + 0x40 + 2 * it) },
         ),
+        nickname = gen3Nickname(raw, off, ROWE_PARTY_MON),
     )
 }
 
@@ -257,14 +262,16 @@ internal fun shinyValue(personality: Long, otId: Long): Int =
     ((otId ushr 16) xor (otId and 0xFFFF) xor (personality ushr 16) xor (personality and 0xFFFF)).toInt()
 
 /**
- * The nickname at +8, as the party menu prints it; null when it can't be read as the game's text: a
+ * The nickname at [PartyMonLayout.nicknameOff] (+8 but in Elite Redux), as the party menu prints it; null when it can't be read as the game's text: a
  * Japanese Pokémon (language 1) in a Western game or the other way round (kana and letters share bytes),
  * or a byte the table doesn't know.
  */
 internal fun gen3Nickname(raw: ByteArray, off: Int, layout: PartyMonLayout): String? {
-    val japanese = (raw[off + layout.language].toInt() and 0xFF) == 1
-    if (japanese != (romLanguage == 'J')) return null
-    val s = Gen3Text.decode(raw, off + 8, layout.nicknameLen).trim()
+    if (layout.language >= 0) {
+        val japanese = (raw[off + layout.language].toInt() and 0xFF) == 1
+        if (japanese != (romLanguage == 'J')) return null
+    }
+    val s = Gen3Text.decode(raw, off + layout.nicknameOff, layout.nicknameLen).trim()
     return s.takeIf { it.isNotEmpty() && Gen3Text.UNKNOWN !in it }
 }
 
