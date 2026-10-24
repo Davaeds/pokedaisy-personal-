@@ -3,7 +3,7 @@ title: Battles
 summary: The BATTLE tab's touch buttons, move verdicts, the INFO and SUGGESTIONS pages, the foe's team and switching Pokémon.
 section: companion
 order: 4
-keywords: [battle, fight, combat, trainer, wild, effectiveness, super effective, type chart, matchup, switch, swap, run, flee, foe, enemy, opponent, ability, held item, stat stages, boosts, ivs, recommendation, best move, battle buttons, single screen, one screen, widescreen, side buttons]
+keywords: [battle, fight, combat, trainer, wild, effectiveness, super effective, type chart, matchup, switch, swap, run, flee, foe, enemy, opponent, ability, held item, stat stages, boosts, ivs, shiny, sparkle, recommendation, best move, battle buttons, single screen, one screen, widescreen, side buttons]
 ---
 
 In a battle the companion becomes your battle screen: big touch buttons for your turn, and the answers to the questions you'd otherwise look up mid-fight. Will this move hit hard? What is the foe weak to? Who should I send in?
@@ -76,6 +76,10 @@ Scroll down the foe's column for more:
 - Its moves, each with a verdict on what it does to *your* Pokémon. A `SUPER` here is a warning.
 
 To give the foe the whole page, tap the button with the corner arrows at the bottom right. Your side shrinks to a strip with your Pokémon's sprite and an upright HP bar, and the foe's facts and moves get the room. Tap it again to go back. PokeDaisy remembers your choice for the next battle.
+
+### Shiny foes
+
+When the wild Pokémon you're facing is shiny, the BATTLE tab says so with a gold `SHINY` plate at the top right, where a trainer's Poké Balls would be. On `INFO` its name gets a gold sparkle, and its icon shows in its shiny colours inside a gold frame. This works in the original FireRed, LeafGreen, Ruby, Sapphire and Emerald, in every language, and in the hacks [SHINY ODDS](controls.md#shiny-odds) lists, and goes well with it.
 
 ### Foe IVs
 

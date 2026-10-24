@@ -68,6 +68,18 @@ interface CompanionSettings {
     /** The game's own TMs never run out ([com.pokedaisy.app.companion.data.ReusableTms.BUILT_IN]): the row says so. */
     val reusableTmsBuiltIn: Boolean get() = false
 
+    /** NUZLOCKE ([Nuzlocke]): [nuzlockeSupported] = a GBA game whose party and battles are read; the switch is per game. */
+    val nuzlockeSupported: Boolean get() = false
+    val nuzlocke: Boolean get() = false
+    fun setNuzlocke(on: Boolean) {}
+    /** SHINY ODDS: a wild foe is shiny 1 in [shinyOdds] - see [com.pokedaisy.app.Prefs.shinyOdds]; [shinyOddsChoices] the
+     * pick-list's (a debug build's has 1 in 4 and 1 in 1); [shinyOddsSupported]: a version the Poller knows by
+     * its hash ([com.pokedaisy.app.companion.data.ShinyOdds.targetFor]). */
+    val shinyOdds: Int get() = com.pokedaisy.app.companion.data.ShinyOdds.NORMAL
+    fun setShinyOdds(odds: Int) {}
+    val shinyOddsChoices: List<Int> get() = com.pokedaisy.app.companion.data.ShinyOdds.CHOICES
+    val shinyOddsSupported: Boolean get() = false
+
     /** PLAYER LOOK ([com.pokedaisy.app.companion.data.PlayerLook]): [playerLookSupported] = a FireRed / LeafGreen /
      * Emerald game; [playerLooks] = the heroes it can wear now (another game's, kept from the player's own ROMs);
      * [playerLook] = the one worn, by name (null = the game's own). */
@@ -378,7 +390,7 @@ interface CompanionSettings {
  * battle runs) and SETTINGS (the way to the hidden ones) are always there.
  * CARD (the TRAINER CARD) and ACHIEVEMENTS (RetroAchievements) start off the
  * bar, under the MORE tab. */
-val COMPANION_TABS = listOf("PARTY", "DEX", "MAP", "ITEMS", "GUIDE", "CARD", "STATES", "ACHIEVEMENTS")
+val COMPANION_TABS = listOf("PARTY", "DEX", "MAP", "ITEMS", "GUIDE", "NUZLOCKE", "CARD", "STATES", "ACHIEVEMENTS")
 val DEFAULT_COMPANION_TABS = listOf("PARTY", "DEX", "MAP", "ITEMS", "GUIDE")
 
 /** Tabs next to SETTINGS: six chips in all is as many as fit. During a

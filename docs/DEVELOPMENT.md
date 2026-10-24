@@ -704,8 +704,9 @@ checks the result headlessly. What the port script does per ROM:
    0x439, English's 0x43D);
 4. reads the names (`GameText<Code>Gen.kt`), the probes (the dex's BULBASAUR
    category, the gym leader's name) and the FireReds' party art offsets, and writes
-   `RetailPortsGen.kt`: one config per game code + revision (`RETAIL_PORTS`, which
-   `TelemetrySampler.otherRetailConfig` consults first), titles by SHA1, the name sets.
+   `gamedata/gen3/ports/<game>.toml`: one config per game code + revision (`RETAIL_PORTS`
+   in the generated `NativeConfigsGen.kt`, which `TelemetrySampler.otherRetailConfig` consults
+   first; it runs `scripts/gen_gamedata.py` itself), and `RetailPortsGen.kt`: titles by SHA1, the name sets.
    `build/ports/ports.json` records how each address was found.
 
 `verify_ports.py` boots every ported ROM and its English one (pokedaisy-capture,
@@ -2073,7 +2074,8 @@ pushing a different file (only one at a time for now). SRAM persists to
 | `third_party/rcheevos/`                                 | RetroAchievements' rcheevos, git submodule @ `v12.5.0`                                                                                                             |
 | `app/src/main/cpp/`                                     | `CMakeLists.txt` + JNI bridge                                                                                                                                      |
 | `app/src/main/kotlin/com/pokedaisy/app/`               | app code                                                                                                                                                           |
-| `.../companion/data/NativeReader.kt`                    | Per-ROM `NativeConfig` address tables + decode logic — start here for "how is game X read" (each config has an extensive comment on how its addresses were found). |
+| `gamedata/gen3/`                                        | Per-ROM `NativeConfig` address tables (TOML, `gamedata/README.md`) — start here for "how is game X read" (each config has an extensive comment on how its addresses were found); `make gamedata` writes `NativeConfigsGen.kt` from them. |
+| `.../companion/data/NativeReader.kt`                    | The `NativeConfig` data class + the decode logic.                                                                                                                  |
 | `.../companion/data/ActiveTables.kt`                    | Picks which species/item/map-name tables and sprite source apply for the currently-detected `GameKind`.                                                            |
 | `.../companion/data/SpeciesNames*.kt`, `Poller.kt`      | Per-hack species tables and the SHA1 detection constants, respectively.                                                                                            |
 | `scripts/capture_fixture.sh`, `scripts/roms.conf`       | Captures a live EWRAM+IWRAM memory fixture for one ROM off the device.                                                                                             |

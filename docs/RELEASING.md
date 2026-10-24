@@ -14,6 +14,7 @@ Two GitHub Actions workflows guard `main` and the releases:
 ```bash
 git checkout main && git pull
 make bump V=1.2.0          # versionName 1.2.0, versionCode + 1
+# + the version's WHAT'S NEW in app/.../companion/WhatsNew.kt (a few lines; WhatsNewTest fails without them)
 git commit -am "Version 1.2.0" && git push   # or through a PR, like any change
 make release               # tags v1.2.0 on main and pushes the tag
 ```

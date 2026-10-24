@@ -48,6 +48,20 @@ carries `labelBadge = NewFeatures.badge(NewFeatures.<ID>)` (green, like the Libr
 `NewFeatures.ALL` (`companion/NewFeatures.kt`). The tag shows for 7 days from the first launch of a build that has the
 feature (dated at app start, `Prefs.newFeatureSince`), then goes by itself.
 
+## Per-game data lives in `gamedata/`
+
+The Gen 3 `NativeConfig`s are TOML in `gamedata/gen3/` (one file per game family, comments and all), shared by
+every platform: `make gamedata` (`scripts/gen_gamedata.py`) writes the app's `NativeConfigsGen.kt` from them, and
+`make check` / CI fail while it's stale. **A new config or a changed address goes in the TOML, never in Kotlin**;
+a new field goes in `NativeConfig` *and* `gamedata/schema/gen3_config.toml` (the generator checks they agree).
+`gamedata/README.md` has the format. The language ports are there too (`gamedata/gen3/ports/`, written by
+`port_retail.py`), with their dex / guide tables spelled out as sub-tables over a named Kotlin val
+(`[config.port_axpd0.pokedex]`, `base = 'POKEDEX_SAPPHIRE'`; `gamedata/schema/gen3_pokedex.toml` / `gen3_guide.toml`).
+Phase 1 of the plan: the 3DS port's C, the records themselves (`POKEDEX_*`, `GUIDE_TABLES_*`, layouts: still Kotlin
+vals the TOML names), the games' identity and the name tables come later. Until phase 1's gate passes,
+`GameDataMigrationTest` checks the generated configs equal the old Kotlin ones (`LegacyNativeConfigs.kt`,
+`LegacyRetailPorts.kt`, test sources; `scripts/convert_native_configs.py` made the first, a one-off).
+
 ## Relationship to the private ROM-hack repo
 
 PokeDaisy was split out of the user's **private** ROM-hack repo (local
@@ -97,7 +111,7 @@ species2/level2/item2 too, and zero padding is harmless since 0x00 is `nop`).
 ## 3DS port (`3ds/`, branch `port-3ds`)
 
 A homebrew 3DS build, early preview (see `3ds/README.md`): a portable C core (`3ds/core/`) re-implements
-the companion's reads (addresses from `NativeReader.kt`, decoding from `Gen3Mon.kt` - keep in sync) and
+the companion's reads (addresses from `gamedata/gen3/`, decoding from `Gen3Mon.kt` - keep in sync) and
 draws it at 320x240 in the OPTION look; `3ds/ctr/` runs it beside libmgba (the same submodule). Its
 tables, font, map layouts, guides (`Guide*.kt` + `GuideAreas*Gen.kt`, by a Kotlin-subset parser in
 `tools/gen_guide.py`) are generated from the app's (`make -C 3ds tables`). Look at UI changes with `make -C
@@ -1896,7 +1910,7 @@ the Western ones the slot art draws with).
 
 **Other-language FireRed / LeafGreen / Ruby / Sapphire** are generated, not hand-ported: `scripts/port_retail.py
 <roms dir>` maps each ROM's addresses from its English one (literal pools, code bytes, content fallbacks, layout
-detection) into `RetailPortsGen.kt` (`RETAIL_PORTS` by code + rev, consulted first by `otherRetailConfig`) +
+detection) into `gamedata/gen3/ports/*.toml` (`RETAIL_PORTS` by code + rev, consulted first by `otherRetailConfig`) +
 `GameText<Code>Gen.kt` (names), and `scripts/verify_ports.py` checks every one headlessly against English (the English
 saves load in them) -> `build/ports/report.md` / `fields.png`. Rerun both after touching a FireRed / LeafGreen / Ruby /
 Sapphire config. `GameText` (EmeraldLanguages.kt) is keyed by game code (`NativeConfig.gameCode` -> `romGameCode` ->

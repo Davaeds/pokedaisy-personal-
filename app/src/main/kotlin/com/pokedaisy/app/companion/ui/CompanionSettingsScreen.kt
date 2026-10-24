@@ -342,7 +342,7 @@ fun CompanionSettingsScreen(
                 sel.title, sel.options, sel.current, { it }, m,
                 onPick = { sel.onPick(it); selector = null; tick++ },
                 onDismiss = { selector = null },
-                badge = sel.badge,
+                badge = sel.badge, note = sel.note,
             )
         }
         confirm?.let { c ->
@@ -394,6 +394,8 @@ private class Selector(
     val badge: (String) -> String? = { null },
     /** PLAYER LOOK's tiles ([PlayerLookPicker]): [options] are OFF then the heroes' names. */
     val tiles: Boolean = false,
+    /** A few words above the options ([OptionSelector]'s note), or null. */
+    val note: String? = null,
     val onPick: (String) -> Unit,
 )
 
@@ -498,6 +500,29 @@ private fun homeRows(
             subtitle = if (s.reusableTmsBuiltIn) "This game's TMs never run out" else null,
         ) {
             if (s.reusableTmsSupported) { s.setReusableTms(!s.reusableTms); changed() }
+        },
+        // A new wild foe made shiny at these odds before its battle draws it (ShinyOdds.kt; the versions it knows by hash).
+        SettingRow(
+            tk("SHINY ODDS"), if (s.shinyOddsSupported) shinyOddsLabel(s.shinyOdds) else tk("N/A"),
+            enabled = s.shinyOddsSupported, labelBadge = NewFeatures.badge(NewFeatures.SHINY_ODDS),
+        ) {
+            if (s.shinyOddsSupported) {
+                val odds = s.shinyOddsChoices
+                val labels = odds.map(::shinyOddsLabel)
+                select(
+                    Selector(tk("SHINY ODDS"), labels, shinyOddsLabel(s.shinyOdds), note = SHINY_ODDS_NOTE) { l ->
+                        s.setShinyOdds(odds[labels.indexOf(l)])
+                    },
+                )
+            }
+        },
+        // The NUZLOCKE tab and its tracker for this game (Nuzlocke.kt): first encounter per area, fainted = out of the run.
+        SettingRow(
+            tk("NUZLOCKE"), if (s.nuzlockeSupported) onOff(s.nuzlocke) else tk("N/A"), enabled = s.nuzlockeSupported,
+            labelBadge = NewFeatures.badge(NewFeatures.NUZLOCKE),
+            subtitle = tk("Track a run: one catch per area, a faint is final"),
+        ) {
+            if (s.nuzlockeSupported) { s.setNuzlocke(!s.nuzlocke); changed() }
         },
         // B held for the player while walking on the field; holding it walks. Never on a bike or in a menu.
         SettingRow(tk("AUTO-RUN"), if (s.fieldReadable) onOff(s.autoRun) else tk("N/A"), enabled = s.fieldReadable) { if (s.fieldReadable) { s.setAutoRun(!s.autoRun); changed() } },
@@ -732,3 +757,10 @@ private fun KeyCapture.toggle(title: String, request: () -> KeyCapture.Request) 
 
 /** WILD ENCOUNTERS' value: ON (the game's own rate) or OFF. */
 internal fun wildEncountersLabel(percent: Int) = if (percent == 0) tk("OFF") else tk("ON")
+
+/** SHINY ODDS' value: NORMAL (the game's own 1 in 8192), else "1 IN n". */
+private fun shinyOddsLabel(odds: Int): String =
+    if (odds >= com.pokedaisy.app.companion.data.ShinyOdds.NORMAL) tk("NORMAL") else tr("1 IN {0}", odds)
+
+/** SHINY ODDS' pick-list disclaimer: what a save checker may say, and the achievements' pause. */
+private const val SHINY_ODDS_NOTE = "Save checkers may flag these shinies. Achievements pause."

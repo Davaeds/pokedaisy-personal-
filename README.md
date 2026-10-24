@@ -134,6 +134,9 @@ it. You can also check from **Settings > VERSION**.
   - **EVOLUTIONS**, plus **TIPS**, **WHERE IS** and **STUCK?** pages.
 - **CARD** - your trainer card, drawn exactly like the game's, front and back.
 - **STATES** - 10 save-state slots with screenshots.
+- **NUZLOCKE** (Settings > NUZLOCKE, per game, GBA games but Emerald Rogue) - keeps score of a Nuzlocke run: the first wild
+  encounter in each area (caught or missed), and every Pokémon that faints is out for good, with a gravestone on
+  its party slot. Notices on the game screen when an area is used up; anything can be fixed by hand.
 
 Pick which tabs sit in the tab bar in the companion's Settings; the rest wait as app icons in the MORE tab, left of the gear.
 

@@ -23,9 +23,28 @@ class TelemetrySampler {
     private var kind: GameKind? = null
     private var nativeCfg: NativeConfig? = null
         set(v) {
-            field = v
-            activeNativeConfig = v
+            // A hack gets the shiny marks, shiny icons and SHINY ODDS only by its hash, at its own shiny check (measured
+            // headless: ShinyOdds.HACK_SHINY_BELOW); retail's config comes with its own.
+            field = v?.let(::shinyMarked)
+            unmarkedCfg = v
+            activeNativeConfig = field
         }
+    // The config as detect() picked it: the builds' own tables go by identity (fireRedHackFor, soulGoldV12, ...), and a
+    // marked one is a copy.
+    private var unmarkedCfg: NativeConfig? = null
+
+    /** [c] with its hack's own shiny check when the ROM's hash is a verified hack's (ShinyOdds.HACK_SHINY_BELOW). */
+    private fun shinyMarked(c: NativeConfig): NativeConfig =
+        ShinyOdds.HACK_SHINY_BELOW[romSha1]?.takeIf { c.shinyBelow == 0 }?.let { c.copy(shinyBelow = it) } ?: c
+
+    // English Unbound reads through a fallback config (nativeCfg stays null): that one marked too.
+    private val unboundCfg: NativeConfig get() = shinyMarked(NATIVE_UNBOUND_WITH_DEX)
+    // The ROM's masked SHA-1 once detect() has hashed it (for the hacks' shiny check), and whether its code is the FireRed
+    // engine's (BPR* / BPG*: gEnemyParty right before gPlayerParty where a config doesn't name it).
+    private var romSha1: String? = null
+    private var fireRedEngine = false
+
+    private fun romHash(reader: MemoryReader, size: Long): String = sha1HexChunked(reader, 0x08000000L, size).also { romSha1 = it }
     // A Game Boy game's (Gen 1) addresses instead of [nativeCfg].
     private var gen1Cfg: Gen1Config? = null
     // A Game Boy Color game's (Gen 2) addresses instead.
@@ -293,7 +312,7 @@ class TelemetrySampler {
                 RomItemText.use(itemTable(reader))
             }
             activeGame = kind ?: GameKind.FIRERED
-            val base = baseCfg ?: nativeCfg
+            val base = baseCfg ?: unmarkedCfg
             soulGoldV12 = base === NATIVE_SOULGOLD_V1_2 || base === NATIVE_SOULGOLD_V1_2B || base === NATIVE_SOULGOLD_V1_2C
             amethystV141 = base === NATIVE_AMETHYST_V1_4_1
             eliteRedux265_3 = base === NATIVE_ELITE_REDUX_V2_65_3B
@@ -312,7 +331,7 @@ class TelemetrySampler {
 
             val telemetry = when (kind) {
                 // English Unbound leaves nativeCfg null (see detect()); its French translation sets its own.
-                GameKind.UNBOUND -> readNativeTelemetry(reader, nativeCfg ?: NATIVE_UNBOUND_WITH_DEX)
+                GameKind.UNBOUND -> readNativeTelemetry(reader, nativeCfg ?: unboundCfg)
                 GameKind.YELLOW, GameKind.RED, GameKind.BLUE -> readGen1Telemetry(reader, gen1Cfg ?: GEN1_YELLOW)
                 GameKind.CRYSTAL, GameKind.CRYSTAL_CLEAR, GameKind.PRISM, GameKind.GOLD, GameKind.SILVER, GameKind.POLISHED_CRYSTAL ->
                     readGen2Telemetry(reader, gen2Cfg ?: GEN2_CRYSTAL)
@@ -354,6 +373,8 @@ class TelemetrySampler {
         }
         val code = runCatching { MgbaCore.pkRomCode() }.getOrNull().orEmpty()
         val size = runCatching { MgbaCore.pkRomSize() }.getOrDefault(0L)
+        romSha1 = null
+        fireRedEngine = code.startsWith("BPR") || code.startsWith("BPG")
 
         // LeafGreen / Ruby / Sapphire / the other Emeralds: retail only, read
         // natively straight away. LeafGreen looks like FireRed, the rest like
@@ -366,14 +387,19 @@ class TelemetrySampler {
                 size > 0x1000000L -> unsupportedRom(reader, code, size, null,
                     "unrecognized $code-based ROM hack (${size / (1024 * 1024)} MB) - no known RAM addresses for this build")
                 cfg == null -> unsupportedRom(reader, code, size, null, "${gameLabel(code)} revision $rev isn't supported yet")
-                else -> { nativeCfg = withCheckedTables(reader, cfg); ramVerified = true }
+                else -> {
+                    // The shiny marks, shiny icons and SHINY ODDS: only on a ROM whose hash is retail's (ShinyOdds.RETAIL_SHA1S).
+                    val hash = runCatching { romHash(reader, size) }.getOrNull()
+                    nativeCfg = withCheckedTables(reader, cfg).let { if (hash in ShinyOdds.RETAIL_SHA1S) it.copy(shinyBelow = 8) else it }
+                    ramVerified = true
+                }
             }
             return
         }
 
         // Pokémon Ultra Violet: FireRed 1.0 under a game code of its own (PUVV) - by its hash.
         if (code == ULTRA_VIOLET_CODE) {
-            val hash = runCatching { sha1HexChunked(reader, 0x08000000L, size) }.getOrNull()
+            val hash = runCatching { romHash(reader, size) }.getOrNull()
             kind = GameKind.FIRERED
             if (hash == ULTRA_VIOLET_V1_22_SHA1) nativeCfg = NATIVE_ULTRA_VIOLET
             else unsupportedRom(reader, code, size, hash, "unrecognized Ultra Violet build (sha1 ${hash?.take(12) ?: "unknown"}…)")
@@ -395,7 +421,7 @@ class TelemetrySampler {
         // retail): hash once, like the small-BPEE check below. An unknown hash falls through to
         // the retail check at the end.
         if (code == "BPRE" && size <= 0x1000000L) {
-            val hash = runCatching { sha1HexChunked(reader, 0x08000000L, size) }.getOrNull()
+            val hash = runCatching { romHash(reader, size) }.getOrNull()
             if (hash == ORANGE_ISLANDS_UNVERSIONED_SHA1 || hash == ORANGE_ISLANDS_V5_7_BETA_SHA1) {
                 kind = GameKind.ORANGE_ISLANDS
                 nativeCfg = NATIVE_ORANGE_ISLANDS
@@ -434,7 +460,7 @@ class TelemetrySampler {
             // null), so a whole-ROM read here would silently fail for any
             // ROM past that (i.e. exactly the large hacks this check exists
             // for) and the hash would always come back null.
-            val hash = runCatching { sha1HexChunked(reader, 0x08000000L, size) }.getOrNull()
+            val hash = runCatching { romHash(reader, size) }.getOrNull()
             // FireRed 1.0 hacks edited in place past 16 MB (Ghost Grey): run as FireRed with their own names.
             fireRedHackConfig(hash)?.let {
                 kind = GameKind.FIRERED
@@ -479,7 +505,7 @@ class TelemetrySampler {
         // for why a hash, not a guess: a large BPEE ROM read with retail
         // Emerald's addresses would show silently wrong data for a real hack.
         if (code == "BPEE" && size > 0x1000000L) {
-            val hash = runCatching { sha1HexChunked(reader, 0x08000000L, size) }.getOrNull()
+            val hash = runCatching { romHash(reader, size) }.getOrNull()
             when (hash) {
                 HEART_AND_SOUL_V2_0_6_SHA1 -> { kind = GameKind.HEART_AND_SOUL; nativeCfg = NATIVE_HEART_AND_SOUL }
                 LAZARUS_V2_0_SHA1 -> { kind = GameKind.LAZARUS; nativeCfg = NATIVE_LAZARUS }
@@ -525,7 +551,7 @@ class TelemetrySampler {
         // Not every BPEE hack expands past 16 MB (Emerald Seaglass is exactly
         // 16 MB, same as retail) - hash those too, before the retail check below.
         if (code == "BPEE") {
-            val hash = runCatching { sha1HexChunked(reader, 0x08000000L, size) }.getOrNull()
+            val hash = runCatching { romHash(reader, size) }.getOrNull()
             if (hash == EMERALD_SEAGLASS_V3_0_SHA1) {
                 kind = GameKind.EMERALD_SEAGLASS
                 nativeCfg = NATIVE_EMERALD_SEAGLASS
@@ -573,7 +599,8 @@ class TelemetrySampler {
             // NATIVE_FIRERED_REV0 is the hacks' base too: only retail gets the card.
             else -> NATIVE_FIRERED_REV0.copy(trainerCard = TRAINER_CARD_FIRERED)
         }
-        nativeCfg = withCheckedTables(reader, cfg)
+        // The SHINY marks: retail's shiny check (8 of 65536), on this copy only.
+        nativeCfg = withCheckedTables(reader, cfg).copy(shinyBelow = 8)
         ramVerified = true
     }
 
@@ -671,6 +698,13 @@ class TelemetrySampler {
     /** The detected game's gPartyMenu + gPlayerParty when its config has them (SoulGold), or null. */
     val knownPartyMenu: Pair<Long, Long>?
         get() = nativeCfg?.takeIf { it.partyMenu != 0L }?.let { it.partyMenu to it.playerParty }
+
+    /** SHINY ODDS' foe party and player ID: on a config the Poller marked by its ROM's hash ([NativeConfig.shinyBelow]),
+     * never a hack on retail's RAM - CFRU's plaintext boxes would be scrambled by a re-encryption. */
+    val knownShinyTarget: ShinyOdds.Target?
+        get() = (nativeCfg ?: unboundCfg.takeIf { kind == GameKind.UNBOUND })?.takeIf { it.shinyBelow > 0 && beMatch == null }
+            ?.let { ShinyOdds.targetFor(it, fireRedFamily = fireRedEngine, plaintext = romSha1 in ShinyOdds.PLAINTEXT_SHA1S,
+                national = romSha1 in ShinyOdds.NATIONAL_SHA1S) }
 
     /** The detected game's own USE / GIVE / TAKE tables when its config has them (Recharged Emerald), or null. */
     val knownFieldItems: FieldItemFns?

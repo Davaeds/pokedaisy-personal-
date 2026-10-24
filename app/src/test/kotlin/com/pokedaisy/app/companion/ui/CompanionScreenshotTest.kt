@@ -206,6 +206,44 @@ open class CompanionScreenshotTest {
         CompanionScreen(SampleCompanion.snapshot.copy(party = party), SampleCompanion.Slots, SampleCompanion.Settings(), initialTab = "PARTY")
     }
 
+    /** The NUZLOCKE tab mid-run: HERE free, the team, encounters both ways and one Pokémon in the graveyard. */
+    @Test fun nuzlocke() = nuzlockeShot("NUZLOCKE")
+
+    /** NUZLOCKE's gravestone on a fainted-for-good Pokémon's party slot (healed since), beside a held item. */
+    @Test fun partyNuzlocke() = nuzlockeShot("PARTY")
+
+    /** NUZLOCKE on: its gravestone tile joins MORE. */
+    @Test fun moreNuzlocke() = nuzlockeShot("MORE")
+
+    /** NUZLOCKE on a full tab bar: the chip's label narrows to fit. */
+    @Test fun nuzlockeOnBar() = nuzlockeShot("NUZLOCKE", listOf("PARTY", "DEX", "MAP", "ITEMS", "NUZLOCKE"))
+
+    private fun nuzlockeShot(tab: String, barTabs: List<String> = com.pokedaisy.app.companion.DEFAULT_COMPANION_TABS) {
+        val party = SampleCompanion.snapshot.party.mapIndexed { i, m -> m.copy(personality = i + 1L, heldItemId = if (i == 1) 200 else 0) }
+        com.pokedaisy.app.companion.Nuzlocke.preview(
+            com.pokedaisy.app.companion.data.NuzlockeRun(
+                encounters = listOf(
+                    com.pokedaisy.app.companion.data.NuzlockeEncounter(89, "ROUTE 1", 16, com.pokedaisy.app.companion.data.NuzlockeOutcome.CAUGHT),
+                    com.pokedaisy.app.companion.data.NuzlockeEncounter(90, "ROUTE 2", 19, com.pokedaisy.app.companion.data.NuzlockeOutcome.MISSED),
+                    com.pokedaisy.app.companion.data.NuzlockeEncounter(117, "VIRIDIAN FOREST", 10, com.pokedaisy.app.companion.data.NuzlockeOutcome.CAUGHT),
+                ),
+                mons = party.mapIndexed { i, m ->
+                    com.pokedaisy.app.companion.data.NuzlockeMon(
+                        m.personality, m.species, m.shownName, m.level, areaName = if (i == 0) "" else "ROUTE 1",
+                        dead = i == 1, diedIn = if (i == 1) "VIRIDIAN FOREST" else "", diedLevel = if (i == 1) m.level else 0,
+                    )
+                },
+            ),
+        )
+        try {
+            snapshot {
+                CompanionScreen(SampleCompanion.snapshot.copy(party = party, regionMapSectionId = 88), SampleCompanion.Slots, SampleCompanion.Settings(barTabs), initialTab = tab)
+            }
+        } finally {
+            com.pokedaisy.app.companion.Nuzlocke.load(false, null, {}, {})
+        }
+    }
+
     /** SETTINGS > STATUS BAR > COMPANION: the game's status bar over the tabs. */
     @Test fun partyStatusBar() {
         CompanionStatusBar.shown = true

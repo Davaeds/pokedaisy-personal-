@@ -152,6 +152,21 @@ class PokeDaisyActivity : Activity() {
     private var fieldGame = WideScreen.OFF
     /** WILD ENCOUNTERS: the game's own switch, found in the ROM after it loads ([WildEncounters.find]; 0 = none). */
     @Volatile private var wildFlag = 0L
+    /** SHINY ODDS: the detected game's foe party and player ID ([com.pokedaisy.app.companion.data.ShinyOdds]), null = a
+     * game it doesn't know (the row shows N/A). Set once the game is detected. */
+    @Volatile private var shinyTarget: com.pokedaisy.app.companion.data.ShinyOdds.Target? = null
+
+    /** SHINY ODDS as saved, if this build offers it (a debug build's 1 in 4 / 1 in 1 are NORMAL in a release build). */
+    private fun shinyOddsPref(): Int = Prefs(this).shinyOdds
+        .takeIf { it in com.pokedaisy.app.companion.data.ShinyOdds.choices(BuildConfig.DEBUG) }
+        ?: com.pokedaisy.app.companion.data.ShinyOdds.NORMAL
+
+    /** RetroAchievements pause while SHINY ODDS is raised on a game it works in ("catch a shiny" sets). */
+    private fun syncShinyAchievements() {
+        val raised = shinyTarget != null && shinyOddsPref() < com.pokedaisy.app.companion.data.ShinyOdds.NORMAL
+        runCatching { com.pokedaisy.app.achievements.RetroAchievements.setShinyOddsActive(raised) }
+    }
+
     /** REUSABLE TMS: the ROM's spots that use a TM up ([com.pokedaisy.app.companion.data.ReusableTms]; empty = none). */
     private var tmSites: List<com.pokedaisy.app.companion.data.ReusableTms.Site> = emptyList()
     /** EXPAND's one-time offer is up on the companion ([CompanionSettings.expandOffer]). */
@@ -1051,6 +1066,17 @@ class PokeDaisyActivity : Activity() {
             if (::engine.isInitialized) engine.setReusableTms(tmSites, on)
         }
         override val reusableTmsSupported get() = tmSites.isNotEmpty()
+        override val nuzlockeSupported get() = telemetry.snapshot.value.let { !it.unsupported && com.pokedaisy.app.companion.Nuzlocke.supports(it.game) }
+        override val nuzlocke get() = com.pokedaisy.app.companion.Nuzlocke.on
+        override fun setNuzlocke(on: Boolean) = com.pokedaisy.app.companion.Nuzlocke.setOn(on)
+        override val shinyOdds get() = shinyOddsPref()
+        override fun setShinyOdds(odds: Int) {
+            Prefs(this@PokeDaisyActivity).shinyOdds = odds
+            if (::engine.isInitialized) engine.shinyOdds = odds
+            syncShinyAchievements()
+        }
+        override val shinyOddsChoices get() = com.pokedaisy.app.companion.data.ShinyOdds.choices(BuildConfig.DEBUG)
+        override val shinyOddsSupported get() = shinyTarget != null
         override val playerLookSupported get() = lookRunner.supported.value
         override val playerLooks get() = lookRunner.offered.value.map { it.name } + lookRunner.offeredMons.value.map { "MON:$it" }
         override val playerLook get() = lookRunner.picked.value?.name ?: lookRunner.pickedMon.value?.let { "MON:$it" }
@@ -1590,6 +1616,10 @@ class PokeDaisyActivity : Activity() {
         com.pokedaisy.app.companion.ui.CompanionTweaks.load { Prefs(this).tweak(it) }
         Prefs(this).let { prefs ->
             com.pokedaisy.app.companion.FavoriteItems.load(prefs.favoriteItemsFor(crc)) { prefs.setFavoriteItemsFor(crc, it) }
+            com.pokedaisy.app.companion.Nuzlocke.load(
+                prefs.nuzlockeFor(crc), prefs.nuzlockeRunFor(crc),
+                saveOn = { prefs.setNuzlockeFor(crc, it) }, saveRun = { prefs.setNuzlockeRunFor(crc, it) },
+            )
         }
         // RetroAchievements unlocks play the game's level-up fanfare, rendered the same way.
         unlockSound?.release()
@@ -1617,6 +1647,9 @@ class PokeDaisyActivity : Activity() {
         wildFlag = 0L
         tmSites = emptyList()
         if (::engine.isInitialized) engine.setReusableTms(tmSites, false)
+        shinyTarget = null
+        if (::engine.isInitialized) engine.setShinyTarget(null)
+        syncShinyAchievements()
         gbFieldCache = null
         if (::engine.isInitialized) engine.gbField = null
         if (gba) Thread({
@@ -1757,6 +1790,14 @@ class PokeDaisyActivity : Activity() {
                 telemetry.knownGMain()?.let { (addr, inBattleOff) -> FfMenuWatch.useKnownGMain(addr, inBattleOff) }
                 if (snap.connected) FfMenuWatch.notePosition(snap.x, snap.y, snap.mapGroup, snap.mapNum, snap.inBattle)
                 if (snap.connected) battleSwitchAddrs = switchAddrsFor(snap.game)
+                // SHINY ODDS: the foe party of a game it knows (retail FireRed / Emerald), handed to the engine.
+                if (snap.connected) telemetry.knownShinyTarget().let { t ->
+                    if (t != shinyTarget) {
+                        shinyTarget = t
+                        engine.setShinyTarget(t)
+                        syncShinyAchievements()
+                    }
+                }
                 // The menus' cursors, so a FIGHT / move tap goes straight to its cell (NativeConfig.actionCursor).
                 if (snap.connected) battleCursorAddrs = telemetry.knownCursorAddrs()
                     ?.let { (action, move) ->
@@ -1776,6 +1817,10 @@ class PokeDaisyActivity : Activity() {
                 // right then faithfully captures a real but useless "partyCount=0"
                 // moment. Bit the first fixture capture this existed for.
                 if (snap.connected && (snap.party.isNotEmpty() || forceFixtureDump)) dumpFixtureIfPending()
+                // NUZLOCKE: the run follows every sample; its notices go on the game screen.
+                com.pokedaisy.app.companion.Nuzlocke.onSample(snap).takeIf { it.isNotEmpty() }?.let { notes ->
+                    runOnUiThread { showHud(notes.joinToString("\n"), NUZLOCKE_NOTICE_MS) }
+                }
             }
             onSample = { startSample(this, afterSample) }   // runs on the emu thread
             // Every savestate carries the companion's data beside it, read fresh: a launch that
@@ -1828,6 +1873,8 @@ class PokeDaisyActivity : Activity() {
         e.wildFlag = wildFlag
         e.wildEncounters = p.wildEncounters
         e.setReusableTms(tmSites, p.reusableTms)
+        e.setShinyTarget(shinyTarget)
+        e.shinyOdds = shinyOddsPref()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -3155,11 +3202,11 @@ class PokeDaisyActivity : Activity() {
     /** REWIND's buffer: 600 states, one every 2 frames - the last ~20 s of play. */
     private fun rewindEntries(on: Boolean) = if (on && !romIsNds) 600 else 0   // a DS game has no rewind (MB-sized states)
 
-    private fun showHud(text: String) {
+    private fun showHud(text: String, millis: Long = 1800) {
         hud.text = text
         hud.visibility = View.VISIBLE
         hud.removeCallbacks(hideHud)
-        hud.postDelayed(hideHud, 1800)
+        hud.postDelayed(hideHud, millis)
     }
 
     private fun resolveRom(intent: Intent?): File? {
@@ -3340,6 +3387,8 @@ class PokeDaisyActivity : Activity() {
          *  CONTINUE already change it two or three times (Too Many Types 2 fills it in on the title), so a couple of
          *  steps more. */
         private const val PLAY_POSITIONS = 5
+        /** How long a NUZLOCKE notice stays on the game screen: long enough to read in a battle's opening. */
+        private const val NUZLOCKE_NOTICE_MS = 3500L
         private const val EXTRA_DUMP_FIXTURE = "dumpFixture"
         private const val EXTRA_DUMP_FIXTURE_FORCE = "dumpFixtureForce"
         private const val EWRAM_BASE = 0x02000000L

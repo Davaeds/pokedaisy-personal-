@@ -7,6 +7,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -201,5 +203,23 @@ fun DrawScope.drawLayeredBox(
             fill, Offset(inset, inset - top), Size(size.width + extraW - 2 * inset, size.height + extraH - 2 * inset),
             r.coerceAtLeast(0f),
         )
+    }
+}
+
+/**
+ * A one-line label wider than its room drawn narrower instead of cut short: its letters lose whole font pixels of width
+ * (4 wide -> 3 -> 2 -> 1, the height kept, like [FittedGbaText]), centred. A plain layout, so a row measuring its
+ * children's intrinsic sizes (the tab bar) can hold it.
+ */
+internal fun Modifier.narrowToFit(m: GbaTextMetrics): Modifier = layout { measurable, constraints ->
+    val p = measurable.measure(constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity))
+    val room = constraints.maxWidth
+    val scale = if (p.width <= room) 1f else {
+        val steps = (m.fontPixel.toInt() - 1 downTo 1).map { it / m.fontPixel }
+        steps.firstOrNull { p.width * it <= room } ?: (room.toFloat() / p.width)
+    }
+    val w = minOf(p.width, room).coerceAtLeast(constraints.minWidth)
+    layout(w, p.height) {
+        p.placeWithLayer((w - p.width) / 2, 0) { scaleX = scale }
     }
 }

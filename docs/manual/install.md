@@ -100,6 +100,8 @@ PokeDaisy checks for a new version each time you open the library. When there is
 
 Updating keeps everything: your library, saves, states and settings.
 
+The first time you open the library after an update, `WHAT'S NEW` shows the main changes in that version, once. `RELEASE PAGE` opens the full notes on GitHub and `OK` closes it.
+
 ![The UPDATE AVAILABLE window in the library, with release notes and LATER, RELEASE PAGE and UPDATE buttons](shots/library-update.png "An update offer")
 
 To check right now, open Settings and tap `VERSION` (in the `APP` group). It shows the version you have, and tapping it looks for a newer one.

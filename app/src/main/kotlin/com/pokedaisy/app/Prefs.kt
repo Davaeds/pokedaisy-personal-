@@ -152,6 +152,13 @@ class Prefs(context: Context) {
         get() = p.getBoolean("reusable_tms", false)
         set(v) = p.edit().putBoolean("reusable_tms", v).apply()
 
+    /** SHINY ODDS: a wild foe is shiny 1 in this many ([com.pokedaisy.app.companion.data.ShinyOdds]; NORMAL 8192 = the
+     * game's own odds). Read through [com.pokedaisy.app.companion.data.ShinyOdds.choices]: a debug build's 1 in 4 / 1 in 1
+     * count as NORMAL in a release build (PokeDaisyActivity.shinyOddsPref). */
+    var shinyOdds: Int
+        get() = p.getInt("shiny_odds", com.pokedaisy.app.companion.data.ShinyOdds.NORMAL)
+        set(v) = p.edit().putInt("shiny_odds", v).apply()
+
     /** PLAYER LOOK per ROM (keyed by CRC32): the hero the player wears ([com.pokedaisy.app.companion.data.LookChar]'s
      * name), null = the game's own. */
     fun playerLookFor(romKey: String): String? = p.getString("player_look_$romKey", null)
@@ -189,6 +196,12 @@ class Prefs(context: Context) {
         p.getString("favorite_items_$romKey", null)?.split(",")?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet()
     fun setFavoriteItemsFor(romKey: String, ids: Set<Int>) =
         p.edit().putString("favorite_items_$romKey", ids.sorted().joinToString(",")).apply()
+
+    /** SETTINGS > NUZLOCKE per ROM (keyed by CRC32), and its run ([com.pokedaisy.app.companion.data.NuzlockeRun.encode]). */
+    fun nuzlockeFor(romKey: String): Boolean = p.getBoolean("nuzlocke_$romKey", false)
+    fun setNuzlockeFor(romKey: String, on: Boolean) = p.edit().putBoolean("nuzlocke_$romKey", on).apply()
+    fun nuzlockeRunFor(romKey: String): String? = p.getString("nuzlocke_run_$romKey", null)
+    fun setNuzlockeRunFor(romKey: String, run: String) = p.edit().putString("nuzlocke_run_$romKey", run).apply()
 
     /** On-screen controls: 0 = auto (only if no gamepad), 1 = always, 2 = never. */
     var touchControlsMode: Int
@@ -589,6 +602,12 @@ class Prefs(context: Context) {
         set(v) = p.edit().putInt("app_open_count", v).apply()
 
     /** First-time setup finished or skipped; it only shows while this is false and the library is empty. */
+    /** The version whose WHAT'S NEW ([com.pokedaisy.app.companion.WhatsNew]) the Library last showed, or that was
+     *  installed fresh (nothing to tell then); null before any. */
+    var whatsNewSeen: String?
+        get() = p.getString("whats_new_seen", null)
+        set(v) = p.edit().putString("whats_new_seen", v).apply()
+
     /** The Library's one-time EXPAND introduction ([com.pokedaisy.app.companion.ui.ExpandIntro]) has been answered. */
     var expandIntroSeen: Boolean
         get() = p.getBoolean("expand_intro_seen", false)

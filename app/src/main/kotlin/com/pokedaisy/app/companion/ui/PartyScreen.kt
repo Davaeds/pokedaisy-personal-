@@ -66,7 +66,15 @@ private const val PARTY_MAX = 6
 @Composable
 fun PartyScreen(party: List<MonView>, onMonClick: (MonView) -> Unit) {
     PartyGrid(party, selected = 0, onSlotClick = onMonClick) { mon ->
-        if (mon.heldItemId != 0) HeldItemTag(mon.heldItemId, Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 8.dp))
+        // NUZLOCKE: a Pokémon that fainted once carries a gravestone beside what it holds.
+        val dead = com.pokedaisy.app.companion.Nuzlocke.isDead(mon.personality)
+        if (mon.heldItemId != 0 || dead) Row(
+            Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (dead) NuzlockeDeadTag()
+            if (mon.heldItemId != 0) HeldItemTag(mon.heldItemId)
+        }
     }
 }
 

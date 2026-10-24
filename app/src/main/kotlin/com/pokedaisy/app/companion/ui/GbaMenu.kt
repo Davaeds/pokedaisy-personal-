@@ -740,13 +740,16 @@ fun <T> OptionSelector(
     onDismiss: () -> Unit,
     /** An [OptionBadge] after an option's label. */
     badge: (T) -> String? = { null },
+    /** A few words above the options in the subtitles' grey (SHINY ODDS' disclaimer), or null. */
+    note: String? = null,
 ) {
     OptionOverlay(onDismiss, Modifier.widthIn(max = 480.dp)) {
         BoxWithConstraints {
             // Fit every option + CANCEL on screen when there's room (title
-            // window, gap and list frame take ~40u), else scroll.
+            // window, gap and list frame take ~40u, a note about two lines), else scroll.
             val u = m.u
-            val room = if (maxHeight == Dp.Infinity) m.rowHeight * 20 else maxHeight - u * 40 - m.lineHeight
+            val noteRoom = if (note != null) subtitleMetrics(m).lineHeight * 2 + u * 8 else 0.dp
+            val room = if (maxHeight == Dp.Infinity) m.rowHeight * 20 else maxHeight - u * 40 - m.lineHeight - noteRoom
             val rowHeight = (room / (options.size + 1)).coerceIn(m.rowHeight, m.rowHeight * 1.3f)
             // The D-pad's row (index, options.size = CANCEL): while it's on another one, the current choice keeps
             // its marker but not the white, so one row is lit.
@@ -756,6 +759,12 @@ fun <T> OptionSelector(
                 Spacer(Modifier.height(u * 4))
                 OptionListWindow(m, Modifier.fillMaxWidth()) {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
+                        note?.let {
+                            GbaText(
+                                tr(it), OptionColors.muted, OptionColors.mutedShadow, subtitleMetrics(m), maxLines = Int.MAX_VALUE,
+                                modifier = Modifier.padding(horizontal = u * 8, vertical = u * 4),
+                            )
+                        }
                         options.forEachIndexed { i, opt ->
                             val on = opt == selected
                             OptionLine(

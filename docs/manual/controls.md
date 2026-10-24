@@ -3,12 +3,12 @@ title: Controls, hotkeys and touch
 summary: Remap the game's buttons, set up turbo, change or turn off the hotkeys, set up the touch controls or an external controller, and what the BACK button does.
 section: player
 order: 2
-keywords: [remap, rebind, keybind, key bindings, buttons, mapping, controller, gamepad, joystick, bluetooth, 8bitdo, gamesir, xbox, keyboard, shortcut, chord, combo, turbo, autofire, rapid fire, triggers, l2, r2, on screen controls, virtual pad, touch pad, touch controls, layout editor, move buttons, resize buttons, opacity, haptics, vibration, wild encounters, encounter rate, random battles]
+keywords: [remap, rebind, keybind, key bindings, buttons, mapping, controller, gamepad, joystick, bluetooth, 8bitdo, gamesir, xbox, keyboard, shortcut, chord, combo, turbo, autofire, rapid fire, triggers, l2, r2, on screen controls, virtual pad, touch pad, touch controls, layout editor, move buttons, resize buttons, opacity, haptics, vibration, wild encounters, encounter rate, random battles, shiny, shiny odds, shiny hunting, rare colors]
 ---
 
 PokeDaisy works out of the box on handhelds like the AYN Thor: the face buttons, shoulders, START and SELECT are the GBA's, and a few button combinations do emulator things like saving a state. Everything here is about changing that: which button presses what, which shortcuts exist, and what happens when you plug in a controller or play by touch.
 
-The button settings live in the `CONTROLS` group, on both screens: the top screen's Settings (from the library) and the companion's `SETTINGS`. `AUTO-RUN`, `RUN INDOORS` and `WILD ENCOUNTERS` change the game itself, so they're in the companion's `GAMEPLAY` group, near the top.
+The button settings live in the `CONTROLS` group, on both screens: the top screen's Settings (from the library) and the companion's `SETTINGS`. `AUTO-RUN`, `RUN INDOORS`, `WILD ENCOUNTERS` and `SHINY ODDS` change the game itself, so they're in the companion's `GAMEPLAY` group, near the top.
 
 ## Game buttons
 
@@ -211,6 +211,21 @@ Both show `N/A` on a game PokeDaisy can't read the field of yet.
 Only random encounters change. Fishing, moves that lure wild Pokémon out and battles the story sets up still happen, and items that keep wild Pokémon away work as usual on top. The change applies at once, no restart needed.
 
 It works on the Game Boy Advance originals in every language and on almost every supported hack, including the ones rebuilt from newer source code like SoulGold, Lazarus and Recharged Yellow. On the Game Boy it works in Red, Blue, Yellow (in every language) and Crystal. On Emerald Rogue, Quetzal and the other Game Boy games it shows `N/A`.
+
+## SHINY ODDS
+
+`SHINY ODDS` sets how often a wild Pokémon is shiny. It's in the companion's `GAMEPLAY` group and opens a list:
+
+- **`NORMAL`** (the default) leaves the game's own odds, 1 in 8192 in the original games.
+- **`1 IN 4096`**, **`1 IN 1024`**, **`1 IN 512`** and **`1 IN 128`** make shinies more and more common.
+
+It counts for every wild Pokémon you meet, in grass, caves, water and from a rod, and for the special ones the story puts in your path. Trainers' Pokémon, gifts, eggs and trades stay as they are. The change applies to the next Pokémon you meet, no restart needed.
+
+A shiny one you catch stays shiny when you set the odds back to `NORMAL`, and the Pokémon you caught before are never touched. A shiny made this way keeps its nature, gender, ability, IVs and moves. The one thing that gives it away is a link between its hidden values that the game's own shinies have and save checkers look for, so a checker may flag it if you move it on to a newer game.
+
+While the odds are raised, [achievements](achievements.md) are paused, since some sets reward catching a shiny.
+
+It works in the original FireRed, LeafGreen, Ruby, Sapphire and Emerald, in every language and revision, and in these hacks: Unbound (French too), Radical Red, Gaia, Odyssey, Amethyst, Sword and Shield Ultimate Plus, GS Chronicles, Emerald Kaizo, Emerald Legacy, Recharged Emerald (Rebalanced too), Glazed, Ultra Violet, Orange Islands, FireRed Rocket Edition, Ash Gray, Recharged Yellow, Lazarus, Emerald Seaglass, Too Many Types 2, Emerald Imperium, Super Mariomon, SoulGold, Team Rocket Edition, Elite Redux and R.O.W.E. Many hacks have better odds of their own (1 in 4096 in Unbound, Glazed, the newer Amethyst and most of the hacks rebuilt from newer source code, about 1 in 1800 in Emerald Imperium, 1 in 256 in SoulGold, about 1 in 257 in Odyssey): there `NORMAL` keeps theirs, and a choice that isn't better changes nothing. Everywhere else, the Game Boy and DS games included, it shows `N/A`.
 
 ## External controllers
 

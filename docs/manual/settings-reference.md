@@ -151,6 +151,8 @@ At the top of SETTINGS, in a blue frame, in the games where any of it works.
 | --- | --- | --- | --- |
 | `WILD ENCOUNTERS` | **`ON`**, `OFF` | Wild Pokémon jumping out in grass, caves and water, or none. `N/A` in a game where it can't work. | [Controls](controls.md) |
 | `REUSABLE TMS` | `ON`, **`OFF`** | A TM stays in your bag after it teaches a move, like an HM. `ON` and greyed out where the game already keeps its TMs, `N/A` where it can't work. | [Bag](bag.md) |
+| `SHINY ODDS` | **`NORMAL`**, `1 IN 4096`, `1 IN 1024`, `1 IN 512`, `1 IN 128` | How often a wild Pokémon is shiny. Pauses achievements while raised. `N/A` where it can't work. | [Controls](controls.md#shiny-odds) |
+| `NUZLOCKE` | `ON`, **`OFF`** | Keeps score of a Nuzlocke run in this game: one catch per area, a faint is final. Adds the `NUZLOCKE` tab. `N/A` in the Game Boy and DS games, and in Emerald Rogue. | [Nuzlocke](nuzlocke.md) |
 | `AUTO-RUN` | `ON`, **`OFF`** | Walking on the field runs without holding B; holding B walks instead. | [Controls](controls.md) |
 | `RUN INDOORS` | `ON`, **`OFF`** | Lets you run inside buildings too. `N/A` on Ruby and Sapphire. | [Controls](controls.md) |
 | `CHEATS` | **`OFF`**, or how many are on (a page) | The master switch, then this game's cheats, each flipped live. Codes are added on the top screen. | [Cheats](cheats.md) |

@@ -233,6 +233,7 @@ fun CompanionScreen(
                 "GUIDE" -> guide != null || id in cachedTabs
                 "CARD" -> card != null && cardArt?.style == card.style || id in cachedTabs
                 "ACHIEVEMENTS" -> achievements != null
+                "NUZLOCKE" -> com.pokedaisy.app.companion.Nuzlocke.on && com.pokedaisy.app.companion.Nuzlocke.supports(game)
                 else -> true
             }
         }
@@ -527,6 +528,8 @@ fun CompanionScreen(
                                 onConfigure = { settingsUi.page = Page.TABS; openTab("SETTINGS") },
                                 usable = { !snapshot.unsupported || it == "ACHIEVEMENTS" },
                             )
+                        } else if (tab == "NUZLOCKE") {
+                            NuzlockeScreen(snapshot.regionMapSectionId, snapshot.location.mapSecName)
                         } else if (tab == "ACHIEVEMENTS") {
                             AchievementsScreen(achievements, focus = achievementFocus, onFocused = { achievementFocus = null })
                         } else if (tab == "STATES") {
@@ -685,6 +688,7 @@ internal fun companionTabLabel(id: String): String = when (id) {
     "DEX" -> tr("DEX")
     "MAP" -> tr("MAP")
     "GUIDE" -> tr("GUIDE")
+    "NUZLOCKE" -> tr("NUZLOCKE")
     "CARD" -> tr("CARD")
     "STATES" -> tr("STATES")
     "BATTLE" -> tr("BATTLE")
@@ -842,6 +846,8 @@ internal fun TabChip(label: String, selected: Boolean, modifier: Modifier = Modi
             if (selected) OptionColors.valueShadow else OptionColors.labelShadow,
             m,
             bold = gameBoldLabels(),
+            // A long label (NUZLOCKE on a full bar) narrows its letters rather than being cut short.
+            modifier = Modifier.narrowToFit(m),
         )
     }
 }

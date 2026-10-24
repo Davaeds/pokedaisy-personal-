@@ -311,6 +311,13 @@ class LibraryActivity : ComponentActivity() {
         ssIntro = ScreenScraperClient.enabled && !prefs.screenScraperAsked && prefs.screenScraperAccount == null
         // EXPAND's introduction, once: to everyone not already on it (first-time setup goes first).
         expandIntro = !prefs.expandIntroSeen && prefs.gameAspect != com.pokedaisy.app.companion.GameAspect.WIDE
+        // WHAT'S NEW, once after an update to a version with notes. A fresh install has nothing to tell: its version
+        // counts as seen, so the next update's notes are the first.
+        val updated = runCatching {
+            packageManager.getPackageInfo(packageName, 0).let { it.firstInstallTime != it.lastUpdateTime }
+        }.getOrDefault(false)
+        com.pokedaisy.app.companion.WhatsNew.due(BuildConfig.VERSION_NAME, prefs.whatsNewSeen, updated)?.let { whatsNew = it }
+        if (!updated) prefs.whatsNewSeen = BuildConfig.VERSION_NAME
 
         setContent {
             AppTheme { com.pokedaisy.app.companion.ui.CompactTextOnSmallWindows {
@@ -617,8 +624,19 @@ class LibraryActivity : ComponentActivity() {
 
             UpdateDialog(updates, m, small)
 
+            // After any update offer, before the other one-time windows: this update's news.
+            whatsNew?.takeIf { whatsNewShown }?.let { notes ->
+                // Shown = seen, whatever the answer: only once per version.
+                LaunchedEffect(notes) { prefs.whatsNewSeen = notes.version }
+                com.pokedaisy.app.companion.ui.WhatsNewWindow(
+                    notes, m, small,
+                    onReleasePage = { openUrl("${AppUpdater.RELEASES_PAGE}/tag/v${notes.version}") },
+                    onClose = { whatsNew = null },
+                )
+            }
+
             // After any update offer, never over setup (this screen isn't composed then).
-            if (crashAsk && updates.release == null) {
+            if (crashAsk && updates.release == null && !whatsNewShown) {
                 // Shown = asked, whatever the answer (or none, if the app goes away): only once.
                 LaunchedEffect(Unit) { prefs.crashReportsAsked = true }
                 OptionConfirm(
@@ -635,7 +653,7 @@ class LibraryActivity : ComponentActivity() {
             }
 
             // After the crash-reports question, one at a time.
-            if (expandIntro && setup == null && !crashAsk && updates.release == null) {
+            if (expandIntro && setup == null && !crashAsk && updates.release == null && !whatsNewShown) {
                 com.pokedaisy.app.companion.ui.ExpandIntro(
                     m, small,
                     onTurnOn = {
@@ -1295,6 +1313,8 @@ class LibraryActivity : ComponentActivity() {
     private var coverSaving by mutableStateOf(false)
     /** EXPAND's one-time introduction is up ([com.pokedaisy.app.companion.ui.ExpandIntro]). */
     private var expandIntro by mutableStateOf(false)
+    /** This update's WHAT'S NEW, until it's closed (internal for the ui-preview harness). */
+    internal var whatsNew by mutableStateOf<com.pokedaisy.app.companion.WhatsNew.Notes?>(null)
     private var coverError by mutableStateOf<String?>(null)
 
     /** Downloads the picked icon over [rom]'s cover (only swapped once it has
@@ -1566,7 +1586,7 @@ class LibraryActivity : ComponentActivity() {
     private val libraryDialogOpen
         get() = pickingSort || renaming != null || deleting != null || gameInfo != null || coverPickerFor != null ||
             pendingImport != null || saveLoad != null || backupPick != null || updates.release != null || crashAsk ||
-            (expandIntro && !crashAsk) || ssIntroShown
+            (expandIntro && !crashAsk) || ssIntroShown || whatsNewShown
 
     /** BACK for the library's windows (OptionOverlay & co.): the newest open one closes. */
     private val libraryBack = com.pokedaisy.app.companion.ui.CompanionBack()
@@ -1938,7 +1958,9 @@ class LibraryActivity : ComponentActivity() {
 
     /** The update's one-time "set up ScreenScraper?" window: wanted (set in onCreate), then shown once nothing else is up. */
     internal var ssIntro by mutableStateOf(false)
-    private val ssIntroShown get() = ssIntro && setup == null && !crashAsk && updates.release == null && !expandIntro
+    private val ssIntroShown get() = ssIntro && setup == null && !crashAsk && updates.release == null && !expandIntro && !whatsNewShown
+    /** WHAT'S NEW is up: after any update offer, never over setup. */
+    private val whatsNewShown get() = whatsNew != null && setup == null && updates.release == null
 
     /** The popup's sign-in (internal for ui-preview). */
     internal val ssLogin by lazy { ScreenScraperLogin.of(prefs) }

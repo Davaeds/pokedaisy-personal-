@@ -188,6 +188,12 @@ class FakeSettings(showHintsInitially: Boolean = true, initialTabs: List<String>
     override val reusableTms get() = reusableTmsOn
     override fun setReusableTms(on: Boolean) { reusableTmsOn = on }
     override val reusableTmsSupported get() = true
+    private var shinyOddsValue = com.pokedaisy.app.companion.data.ShinyOdds.NORMAL
+    override val shinyOdds get() = shinyOddsValue
+    override fun setShinyOdds(odds: Int) { shinyOddsValue = odds }
+    override val shinyOddsChoices get() = com.pokedaisy.app.companion.data.ShinyOdds.DEBUG_CHOICES
+    override val shinyOddsSupported get() = com.pokedaisy.app.companion.data.activeGame == com.pokedaisy.app.companion.data.GameKind.FIRERED ||
+        com.pokedaisy.app.companion.data.activeGame == com.pokedaisy.app.companion.data.GameKind.EMERALD
     override val reusableTmsBuiltIn get() = com.pokedaisy.app.companion.data.activeGame in com.pokedaisy.app.companion.data.ReusableTms.BUILT_IN
     // PLAYER LOOK: the other games' heroes kept, the player in their own.
     private var lookWorn: String? = null
@@ -497,6 +503,24 @@ fun battle(state: Int): SnapshotView {
         party = s.party.mapIndexed { i, m -> m.copy(personality = 0x1000L + i) },
     )
 }
+
+/** A real shiny battle, read the way the app reads it: the <game>_shiny_battle fixture (a foe SHINY ODDS made shiny,
+ * headless) through the retail config the Poller marks (shinyBelow 8). */
+fun realShinyBattle(state: Int): SnapshotView {
+    val (cfg, fixture) = if (activeGame == GameKind.EMERALD) NATIVE_EMERALD_RETAIL to "emerald_shiny_battle"
+        else NATIVE_FIRERED_REV1 to "firered_shiny_battle"
+    // The render task runs in app/src/main/assets.
+    val t = com.pokedaisy.app.companion.data.readNativeTelemetry(RamFixture(File("../../test/resources/fixtures/$fixture")), cfg.copy(shinyBelow = 8))
+    // buildSnapshotView points the icon loader at the ROM's tables (read through the core): keep the preview's own.
+    val icons = com.pokedaisy.app.companion.data.DecompIconSource.tables
+    val real = com.pokedaisy.app.companion.data.buildSnapshotView(t)
+    com.pokedaisy.app.companion.data.DecompIconSource.tables = icons
+    // The preview's own battle (connected, its game, its party) with the real battlers in it.
+    return battle(state).copy(battlePlayer = real.battlePlayer, battleOpponent = real.battleOpponent)
+}
+
+/** The wild foe shiny (SHINY ODDS' marks). */
+fun SnapshotView.shinyFoe(): SnapshotView = copy(battleOpponent = battleOpponent.map { it.copy(shiny = true) })
 
 /** A trainer battle (Brock-like): the party's lead against an Onix, a fainted
  * Geodude and a third, unseen Pokémon behind it - move verdicts computed for real. */
@@ -823,6 +847,9 @@ fun trade(setup: com.pokedaisy.app.companion.ui.TradeState.() -> Unit = {}): () 
     }
     content
 }
+
+/** The Library just after an update, its WHAT'S NEW up with 1.3.2's notes. */
+fun whatsNewLibrary() = LibraryActivity().apply { whatsNew = com.pokedaisy.app.companion.WhatsNew.notesFor("1.3.2") }
 
 /** The activity [activity] made last (a shot's action presses its keys). */
 var lastActivity: androidx.activity.ComponentActivity? = null
@@ -1312,13 +1339,34 @@ fun main(args: Array<String>) {
         },
         Shot("$g-battle-party-open", bw, bh, bd, companion("PARTY") { battle(BATTLE_INPUT_PARTY_OPEN) }),
         Shot("$g-battle-busy", bw, bh, bd, companion("PARTY", busy = true) { battle(BATTLE_INPUT_ACTION_SELECT) }),
+        // A shiny wild foe: the battle screen's SHINY plate, INFO's SHINY pill and a double battle's sparkle.
+        Shot("$g-battle-shiny", bw, bh, bd, companion("PARTY") { battle(BATTLE_INPUT_ACTION_SELECT).shinyFoe() }),
+        Shot("$g-battle-info-shiny", bw, bh, bd, companion("PARTY") { battle(BATTLE_INPUT_ACTION_SELECT).shinyFoe() }) {
+            onNodeWithText("INFO").performClick()
+        },
+        Shot("$g-battle-info-shiny-double", bw, bh, bd, companion("PARTY") {
+            val t = trainerBattle(BATTLE_INPUT_ACTION_SELECT)
+            val foes = t.enemyParty.drop(1).mapIndexed { i, f -> f.copy(shiny = i == 0) }
+            t.copy(isDoubleBattle = true, battlePlayer = listOf(t.party[0], t.party[1]), battleOpponent = foes, enemyParty = emptyList(), enemyActive = -1)
+        }),
         Shot("$g-battle-info", bw, bh, bd, companion("PARTY") { battle(BATTLE_INPUT_ACTION_SELECT) }) {
             onNodeWithText("INFO").performClick()
         },
         Shot("$g-battle-info-trainer", bw, bh, bd, companion("PARTY") { trainerBattle(BATTLE_INPUT_ACTION_SELECT) }) {
             onNodeWithText("INFO").performClick()
         },
-        Shot("$g-battle-info-trainer6", bw, bh, bd, companion("PARTY") { trainerBattle(BATTLE_INPUT_ACTION_SELECT, six = true) }) {
+        // The real thing: a headless battle's shiny foe, read from its RAM (FireRed / Emerald).
+        Shot("$g-battle-shiny-real", bw, bh, bd, companion("PARTY") { realShinyBattle(BATTLE_INPUT_ACTION_SELECT) }),
+        Shot("$g-battle-info-shiny-real", bw, bh, bd, companion("PARTY") { realShinyBattle(BATTLE_INPUT_ACTION_SELECT) }) {
+            onNodeWithText("INFO").performClick()
+        },
+        // SHINY beside a ten-letter name and a status.
+        Shot("$g-battle-info-shiny-long", bw, bh, bd, companion("PARTY") {
+            battle(BATTLE_INPUT_ACTION_SELECT).shinyFoe().let { t -> t.copy(battleOpponent = t.battleOpponent.map { it.copy(name = "MASQUERAIN") }) }
+        }) {
+            onNodeWithText("INFO").performClick()
+        },
+        Shot("$g-battle-info-trainer6",bw, bh, bd, companion("PARTY") { trainerBattle(BATTLE_INPUT_ACTION_SELECT, six = true) }) {
             onNodeWithText("INFO").performClick()
         },
         Shot("$g-battle-info-trainer6-tapped", bw, bh, bd, companion("PARTY") { trainerBattle(BATTLE_INPUT_ACTION_SELECT, six = true) }) {
@@ -1488,6 +1536,13 @@ fun main(args: Array<String>) {
         },
         Shot("$g-settings-player-look-pick", bw, bh, bd, companion("SETTINGS")) {
             onNodeWithText(com.pokedaisy.app.companion.i18n.tr("PLAYER LOOK")).performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        },
+        // SHINY ODDS under REUSABLE TMS, then its pick-list (the debug build's, with 1 IN 4 and 1 IN 1).
+        Shot("$g-settings-shiny-odds", bw, bh, bd, companion("SETTINGS")) {
+            onNodeWithText(com.pokedaisy.app.companion.i18n.tr("CHEATS")).performScrollTo()
+        },
+        Shot("$g-settings-shiny-odds-pick", bw, bh, bd, companion("SETTINGS")) {
+            onNodeWithText(com.pokedaisy.app.companion.i18n.tr("SHINY ODDS")).performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         },
         Shot("$g-settings-wild", bw, bh, bd, companion("SETTINGS")) {
             onNodeWithText("WILD ENCOUNTERS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
@@ -1734,6 +1789,14 @@ fun main(args: Array<String>) {
         Shot("library-expand-intro", tw, th, td, activity(expandIntro = true) { LibraryActivity() }),
         // A phone held upright (a Galaxy S9's 1080x2220 at 3x): the smaller text, the picture over the words, the buttons on screen.
         Shot("library-expand-intro-phone", 1080, 2220, 3f, activity(expandIntro = true) { LibraryActivity() }),
+        // WHAT'S NEW after an update (1.3.2's notes): the Thor's top screen, phones both ways, the Duo Lite's and the RG DS's
+        // 4:3 screens, a tablet.
+        Shot("library-whats-new", tw, th, td, activity { whatsNewLibrary() }),
+        Shot("library-whats-new-phone", 1080, 2400, 2.625f, activity { whatsNewLibrary() }),
+        Shot("library-whats-new-phone-side", 2400, 1080, 2.625f, activity { whatsNewLibrary() }),
+        Shot("library-whats-new-4x3", 1280, 960, 2f, activity { whatsNewLibrary() }),
+        Shot("library-whats-new-rgds", 640, 480, 1.5f, activity { whatsNewLibrary() }),
+        Shot("library-whats-new-tablet", 2560, 1600, 2f, activity { whatsNewLibrary() }),
         Shot("settings-phone", 1080, 2220, 3f, activity { SettingsActivity() }),
         // TOUCH CONTROLS: the page with its preview, on a phone both ways, and EDIT LAYOUT over the stand-in.
         Shot("settings-touch", tw, th, td, activity { SettingsActivity() }) {

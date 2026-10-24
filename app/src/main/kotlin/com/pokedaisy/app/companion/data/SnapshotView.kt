@@ -49,6 +49,8 @@ data class MonView(
     val statStages: List<Int>? = null,
     /** Party mons: the nickname as the game stores it ([Mon.nickname]); null = not read. */
     val nickname: String? = null,
+    /** Shiny (the battle screen's and INFO's SHINY marks). */
+    val shiny: Boolean = false,
 ) {
     /** What the game's party menu prints: the nickname where it was read, else the species ([name]). */
     val shownName: String get() = nickname ?: name
@@ -213,6 +215,8 @@ data class SnapshotView(
     val enemyParty: List<MonView> = emptyList(),
     /** [enemyParty] index of the foe that's out; -1 = unknown. */
     val enemyActive: Int = -1,
+    /** [Telemetry.isTrainerBattle]: in a battle, whether it's a trainer's (null = not read). */
+    val isTrainerBattle: Boolean? = null,
     /** The foe the trainer is about to send in ("... is about to use X"):
      * set only while the one that's out has fainted; -1 = none. */
     val enemyNext: Int = -1,
@@ -338,6 +342,7 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
             stats = if (isEgg) null else m.stats,
             heldItemId = m.heldItem,
             nickname = if (isEgg) null else m.nickname,
+            shiny = m.shiny && !isEgg,
             weaknesses = matchups.weaknesses,
             resistances = matchups.resistances,
             immunities = matchups.immunities,
@@ -382,7 +387,7 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
                 species = b.species, name = speciesName(b.species), level = b.level,
                 hp = b.hp, maxHp = b.maxHp, status = statusLabel(b.status1),
                 types = monTypes(b.type1, b.type2),
-                iconAsset = spriteAsset("pokemon", b.species),
+                iconAsset = if (b.shiny) shinyIconAsset(b.species) else spriteAsset("pokemon", b.species),
                 moves = moves,
                 stats = statsFor(b, t.party, usedParty),
             )
@@ -395,7 +400,7 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
                 species = b.species, name = speciesName(b.species), level = b.level,
                 hp = b.hp, maxHp = b.maxHp, status = statusLabel(b.status1),
                 types = monTypes(b.type1, b.type2),
-                iconAsset = spriteAsset("pokemon", b.species),
+                iconAsset = if (b.shiny) shinyIconAsset(b.species) else spriteAsset("pokemon", b.species),
                 // The foe's moveset (battle INFO's FOE MOVES); verdicts against
                 // the player's battlers are worked out where they're shown.
                 moves = moveViews(b.moves, b.pp),
@@ -407,6 +412,7 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
                 resistances = matchups.resistances,
                 immunities = matchups.immunities,
                 stats = statsFor(b, t.battleFoes, usedFoes, prefer),
+                shiny = b.shiny,
             )
         }
 
@@ -475,6 +481,7 @@ fun buildSnapshotView(t: Telemetry): SnapshotView {
             )
         },
         enemyActive = t.enemyActive,
+        isTrainerBattle = t.isTrainerBattle,
         // Only meaningful once the foe that's out is down and a live one is picked.
         enemyNext = t.enemyNext.takeIf { next ->
             next != t.enemyActive && t.enemyParty.getOrNull(next)?.hp?.let { it > 0 } == true &&

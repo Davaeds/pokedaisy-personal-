@@ -195,6 +195,17 @@ object PixelIcons {
         ".11...11.",
     )
 
+    /** A four-point sparkle: a shiny Pokémon (the battle screen's and INFO's SHINY marks). The pixel font's cap height. */
+    val sparkle = listOf(
+        "...1...",
+        "...1...",
+        "..111..",
+        "1111111",
+        "..111..",
+        "...1...",
+        "...1...",
+    )
+
     /** A clock face at ten past: the library's RECENT view. [star]'s size. */
     val clock = listOf(
         "..11111..",

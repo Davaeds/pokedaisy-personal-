@@ -724,7 +724,7 @@ private fun HudMonRow(mon: MonView, m: GbaTextMetrics, lead: Boolean, onClick: (
     }
 }
 
-/** The party icon; fainted ones faded with FNT on them, a status chip (PSN, SLP, ...) over its top. */
+/** The party icon; fainted ones faded with FNT on them, a status chip (PSN, SLP, ...) over its top, NUZLOCKE's gravestone. */
 @Composable
 internal fun HudMonIcon(mon: MonView, size: Dp, u: Dp) {
     val density = LocalDensity.current
@@ -738,6 +738,10 @@ internal fun HudMonIcon(mon: MonView, size: Dp, u: Dp) {
             Box(Modifier.align(Alignment.TopCenter).wrapContentSize(unbounded = true).offset(y = -u * 2)) {
                 HudStatusChip(status, u, slotTextMetrics(density, max(1, (upx * 0.6f).roundToInt())))
             }
+        }
+        // NUZLOCKE: out of the run, healed or not - a small gravestone in its bottom-right corner.
+        if (com.pokedaisy.app.companion.Nuzlocke.isDead(mon.personality)) {
+            PixelArt(TabIcons.grave.bitmap, TabIcons.grave.palette, Modifier.align(Alignment.BottomEnd).size(size * 0.45f))
         }
     }
 }
