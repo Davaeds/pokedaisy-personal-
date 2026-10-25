@@ -1,5 +1,5 @@
 # FlyFns's fields (Fly.kt), checked against it by scripts/gen_gamedata.py.
-# type: long | int | bool | char | string | item_descs | int_range | long_list | int_list | int_set | int_map |
+# type: long | int | bool | char | string | item_descs | int_range | long_list | int_list | int_set | long_set | int_map |
 # ref (a Kotlin val's name, or a record in gamedata/gen3/records/); record names the schema of the record a ref
 # names (its defaults stand in where there is none).
 

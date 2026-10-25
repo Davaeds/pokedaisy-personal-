@@ -58,7 +58,7 @@ a new field goes in `NativeConfig` *and* `gamedata/schema/gen3_config.toml` (the
 `port_retail.py`), with their dex / guide tables spelled out as sub-tables over a named Kotlin val
 (`[config.port_axpd0.pokedex]`, `base = 'POKEDEX_SAPPHIRE'`; `gamedata/schema/gen3_pokedex.toml` / `gen3_guide.toml`).
 Phase 2: the records the 3DS / Linux companion reads are in `gamedata/gen3/records/` (retail FireRed / LeafGreen /
-Emerald's `POKEDEX_*`, `GUIDE_TABLES_*`, `TRAINER_CARD_*`, `*_DEX_FLAGS`, `*_BAG_POCKET_ORDER`, `FLY_*` + `HEAL_WARP_EMERALD`: `GameDataRecordsGen.kt`,
+Emerald's `POKEDEX_*`, `GUIDE_TABLES_*`, `TRAINER_CARD_*`, `*_DEX_FLAGS`, `*_BAG_POCKET_ORDER`, `FIELD_ITEMS_*` (+ `PARTY_ITEMS_*`, `PC_*`, `FLY_*`, `HEAL_WARP_EMERALD`): `GameDataRecordsGen.kt`,
 lazy vals), and the 3DS port's `struct pd_config`s are generated too (`3ds/core/pd_configs_gen.h`, from
 `gamedata/targets/3ds.toml`: per config, which parts the port reads). The other records (hacks', other languages',
 layouts: still Kotlin vals the TOML names), the games' identity and the name tables come later. Until phase 1's gate passes,
@@ -150,11 +150,17 @@ from `DATA/gamecontrollerdb.txt` or `SDL_GAMECONTROLLERCONFIG`); `package.py --p
 make a PortMaster port (ROCKNIX & co., untried on a device; `test_portmaster.py` runs it against a stand-in PortMaster). Y opens
 the QUICK MENU (`linux/quick_menu.c`: QuickMenu.kt's RING / GLASS look, drawn into an ARGB canvas over the running game):
 WILD ENCOUNTERS (the game's own switch, found by `linux/wild.c` - a C port of `WildEncounters.find`'s agbcc / CFRU
-shapes - and held by pk_wide.c's `pk_field_state`; `settings.wildOff`), SAVE / LOAD STATE, FF, COMPANION and FLY
-(`linux/fly.c`, Fly.kt in C: pd_config's `fly*` fields from the `FLY_*` records - the target's `records = { fly = ... }`
-- and the game's own functions through `pk_call`, moved out of pokedaisy_jni.c into `app/src/main/cpp/pk_call.c` for
-both; the party from the snapshot, "on the field" from pk_wide's scene, which the host now reads in ORIGINAL too).
-`linux-runtime-test` flies on FireRed (teaching the lead the move first), LeafGreen and Emerald. It adds no game data of its own (addresses come from `3ds/core/`). Build and test in a Linux container or
+shapes - and held by pk_wide.c's `pk_field_state`; `settings.wildOff`), SAVE / LOAD STATE, FF, COMPANION, and PC /
+FLY / REPEL / BIKE (`linux/fly.c`, `linux/field_items.c`: Fly.kt, FieldItems.kt's useFieldItem, Pc.kt and KeyItems.kt
+in C over pd_config's `fly*` / `field*` / `pc*` fields from the `FIELD_ITEMS_*` records - the target's `records = {
+items = ... }` - and the game's own functions through `pk_call`, moved out of pokedaisy_jni.c into
+`app/src/main/cpp/pk_call.c` for both; the party / bag from the snapshot, "on the field" from pk_wide's scene, which the
+host reads in ORIGINAL too; BIKE presses SELECT for the game). `linux-runtime-test` uses each on FireRed, LeafGreen
+and Emerald and checks the result (a Repel / FLY taught to the save through the game's AddBagItem / SetMonData where it
+lacks one). The HUD (`linux/hud.c`, SETTINGS > HUD, `settings.hud` / `hudHidden`) is FieldHud's CORNERS / GLASS with only
+the parts a player reads (PARTY, MINIMAP, POKé BALLS, REPEL STEPS: the buttons are the quick menu's without touch),
+redrawn only when `hud_key` changes. TAB BAR (`settings.tabBar`, at most 5, the rest under a MORE chip; CARD also
+from SETTINGS) and the scrolling SETTINGS list are the core's, so the 3DS has them too. It adds no game data of its own (addresses come from `3ds/core/`). Build and test in a Linux container or
 VM: `cmake -S linux -B linux/build && cmake --build linux/build && ctest --test-dir linux/build`; `linux-runtime-test
 ROM DATA OUT` boots a real ROM + save (DATA/saves/<rom file name>.sav) to the field and screenshots PARTY / the
 summary. Saves are backed up into `saves/pokedaisy-backups/` like Android's (`pocket_save_backup`, newest 10

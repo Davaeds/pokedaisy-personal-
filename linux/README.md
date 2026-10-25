@@ -42,13 +42,31 @@ Tab=companion, F=quick menu, Escape=game menu. In the companion use
 D-pad to focus, A to choose, B to go back and L/R to change tabs.
 Save/load/quit confirmations are cancel-first. Fast-forward has no audio.
 
-Y (F on a keyboard) opens the QUICK MENU over the running game: FLY (retail
-English FireRed, LeafGreen and Emerald, once a Pokemon in the party knows the
-move: a list of the towns you have been to, then the game's own flight), WILD
-ENCOUNTERS on or off (saved in DATA/settings.ini; GBA games whose switch `wild.c` finds:
-retail FireRed / LeafGreen / Emerald / Ruby / Sapphire in every language and the
-CFRU hacks), SAVE STATE, LOAD STATE, FF and COMPANION. The D-pad picks a tile,
-A runs it, B or Y closes it; the game's buttons wait meanwhile.
+Y (F on a keyboard) opens the QUICK MENU over the running game. In retail
+English FireRed, LeafGreen and Emerald: PC (the game's own PC, anywhere on the
+field), FLY (once a Pokemon in the party knows the move: a list of the towns
+you have been to, then the game's own flight), REPEL (the bag's; a list when it
+holds more than one kind, dimmed with the steps left while one works) and BIKE
+(GET OFF while riding: the bike goes into the game's SELECT slot for a moment,
+yours is put back). Then WILD ENCOUNTERS on or off (saved in DATA/settings.ini;
+GBA games whose switch `wild.c` finds: retail FireRed / LeafGreen / Emerald /
+Ruby / Sapphire in every language and the CFRU hacks), SAVE STATE, LOAD STATE,
+FF and COMPANION. The D-pad picks a tile, A runs it, B or Y closes it; the
+game's buttons wait meanwhile. Each calls the game's own functions between
+frames, at the addresses in `gamedata/` (the app's `FLY_*` / `FIELD_ITEMS_*`
+records), and only where the ROM's code is where they say.
+
+The HUD (companion SETTINGS > HUD, on by default) shows over the overworld, the
+app's CORNERS layout in its glass look: the party bottom left (level, HP,
+status), the region map around you top right, then REPEL STEPS and your Poke
+Balls bottom right. Each part can be switched off. The app's HUD buttons (BAG,
+PC, WILD) aren't there: without a touch screen the quick menu has them. It goes
+away in text boxes, menus and battles, and comes back after a moment of
+walking. With EXPAND it uses the screen's corners, else the game's picture.
+
+SETTINGS > TAB BAR picks which tabs sit on the companion's bar (at most five);
+the others open from the MORE chip next to fast-forward. SETTINGS scrolls where
+its rows don't fit.
 
 SDL GameController mappings take priority. The right face button acts as game
 A; the bottom button acts as game B. A controller can be plugged in or pulled

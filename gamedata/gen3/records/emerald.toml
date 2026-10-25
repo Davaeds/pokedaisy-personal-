@@ -108,3 +108,47 @@ special = [[15, 11], [58, 22]]
 genderMapsec = 0
 maleHeal = 12
 femaleHeal = 13
+
+# USE / GIVE / TAKE, the Repels, FLY and PC anywhere (FieldItems.kt's FieldItemFns): retail Emerald (BPEE). Its
+# functions sit where the pinned pokeemerald build has them (Emerald Kaizo's too, retail edited in place). Every
+# address from pret's pokeemerald built clean (byte for byte retail, SHA1 f3ae0881...) and its ELF. Emerald has no
+# PokemonItemUseNoEffect: the no-effect check is its party menu's own, ExecuteTableBasedItemEffect, on the Pokémon
+# and then undone (PartyItemFns.itemNoEffect).
+[record.FIELD_ITEMS_EMERALD]
+schema = 'gen3_field_items'
+varGet = 0x0809D694
+varSet = 0x0809D6B0
+checkBagHasItem = 0x080D6724
+removeBagItem = 0x080D6AA4
+fieldControlsLocked = 0x08098E6C
+repelVar = 0x4021
+items = 0x085839A0
+codeCrcs = [0x7D0D07B6, 0x519C39C0, 0x312F6576, 0x379EF742, 0x2532A407]
+party = 'PARTY_ITEMS_EMERALD'
+fly = 'FLY_EMERALD'
+pc = 'PC_EMERALD'
+
+[record.PARTY_ITEMS_EMERALD]
+schema = 'gen3_party_items'
+getMonData = 0x0806A518
+setMonData = 0x0806ACAC
+itemNoEffect = 'none'
+itemEffect = 0x0806BD04
+addBagItem = 0x080D6928
+party = 0x020244EC
+partyCount = 0x020244E9
+# EWRAM's last symbol (sRayScene) ends at 0x0203CF64; nothing writes past it (EWRAM_END is defined, never used).
+scratch = 0x0203FFF0
+itemCount = 377
+unholdablePockets = [5, 3] # POCKET_KEY_ITEMS, POCKET_TM_HM
+codeCrcs = [0x9670EBDE, 0x8D555FF8, 0xEADAC6C9, 0x75BC5970]
+# ItemUseOutOfBattle_Medicine, _PPRecovery, _PPUp, _Repel
+useFuncs = [0x080FDEA0, 0x080FDEF4, 0x080FDF10, 0x080FE0BC]
+
+[record.PC_EMERALD]
+schema = 'gen3_pc'
+setupScript = 0x08098EF8
+special = 63
+specials = 0x081DBA64
+pcFn = 0x080C7579
+codeCrcs = [0xEF3698BA, 0x81188148]

@@ -20,4 +20,8 @@ bool pd_draw_mon_icon(struct pd_canvas* c, const struct pd_game* g, int species,
 bool pd_draw_mon_icon_scaled(struct pd_canvas* c, const struct pd_game* g, int species, int x, int y, int scale,
                              bool faded);
 
+// An item's bag icon (24x24, from the ROM's item icon table) with its top-left at (x, y); faded = dimmed (45%).
+#define PD_ITEM_ICON 24
+bool pd_draw_item_icon(struct pd_canvas* c, const struct pd_game* g, int item, int x, int y, bool faded);
+
 #endif

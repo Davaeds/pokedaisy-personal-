@@ -62,7 +62,9 @@ unknown. Target the **New 3DS / New 3DS XL / New 2DS XL** first; the original
     order (the save's own, or the other with a tap); an entry has the game's
     picture, category, types, height / weight, text, base stats and ability.
   - **SETTINGS** (the gear): place, money, file and speed, then SCREEN and
-    FAST-FORWARD (pick-lists), SAVE STATE / LOAD STATE / LEAVE GAME (confirmed).
+    FAST-FORWARD (pick-lists), TAB BAR (which tabs sit on the bar, at most five;
+    the rest open from a MORE chip), SAVE STATE / LOAD STATE / LEAVE GAME
+    (confirmed). The list scrolls (a drag) where it doesn't fit.
   - **TRAINER CARD** (the button in SETTINGS' title, like the app's TOOLS): the
     game's own card, drawn from your ROM's art pixel for pixel - name, ID,
     money, POKéDEX, play time with its blinking colon, badges, stars, the

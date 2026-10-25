@@ -3,7 +3,7 @@ title: Linux handheld foundation
 summary: Build and try the initial Linux host with physical controls and the existing portable companion.
 section: start
 order: 90
-keywords: [linux, handheld, trimui, brick, smart pro, sdl, quick menu, wild encounters, fly]
+keywords: [linux, handheld, trimui, brick, smart pro, sdl, quick menu, wild encounters, fly, pc, bike, hud, tab bar]
 ---
 
 You can build the initial Linux host from source. It runs Game Boy, Game Boy
@@ -18,11 +18,18 @@ folder while testing. Existing emulator saves are never imported automatically.
 The game and the companion both fit your screen at a sharp whole number scale,
 so text stays about the same size on a 640x480, 720x720 or 1280x720 handheld.
 
-Press Y while you play to open the quick menu over the game: fly to a town
-you have been to, turn wild encounters off or back on, save or load a state,
-fast forward or open the companion. Pick a tile with the D-pad and press A; B
-closes it. Flying needs a Pokémon in your party that knows the move and the
-badge the game asks for, just like in the game's own menu.
+Press Y while you play to open the quick menu over the game: open the PC from
+wherever you stand, fly to a town you have been to, use the keep-away spray
+from your bag, get on or off your bike, turn wild encounters off or back on,
+save or load a state, fast forward or open the companion. Pick a tile with the
+D-pad and press A; B closes it. Flying needs a Pokémon in your party that knows
+the move and the badge the game asks for, just like in the game's own menu.
+
+The HUD shows your party, a small map around you, the steps left on the spray
+and your balls over the overworld, out of the way of the game's own text. Turn
+it or any of its parts off in the companion's `SETTINGS` > `HUD`. In
+`SETTINGS` > `TAB BAR` you pick which tabs sit on the bar; the rest open from
+`MORE`.
 
 Press the companion button to pause the game and open its companion. Use the
 D-pad to focus an option, A to choose it and B to go back. The shoulder buttons

@@ -313,6 +313,26 @@ int main(void) {
         { sizeof(((struct pd_config*) 0)->flyGenderMapsec) },
         { sizeof(((struct pd_config*) 0)->flyMaleHeal) },
         { sizeof(((struct pd_config*) 0)->flyFemaleHeal) },
+        // The bag's icons and REPEL / PC anywhere: new to the port too (NativeConfig's, FieldItems.kt / Pc.kt records).
+        { sizeof(((struct pd_config*) 0)->itemIconTable) },
+        { sizeof(((struct pd_config*) 0)->itemIconStride) },
+        { sizeof(((struct pd_config*) 0)->fieldVarGet) },
+        { sizeof(((struct pd_config*) 0)->fieldVarSet) },
+        { sizeof(((struct pd_config*) 0)->fieldCheckBag) },
+        { sizeof(((struct pd_config*) 0)->fieldRemoveBag) },
+        { sizeof(((struct pd_config*) 0)->fieldLocked) },
+        { sizeof(((struct pd_config*) 0)->fieldCrcs) },
+        { sizeof(((struct pd_config*) 0)->repelVar) },
+        { sizeof(((struct pd_config*) 0)->repelItems) },
+        { sizeof(((struct pd_config*) 0)->gItems) },
+        { sizeof(((struct pd_config*) 0)->itemNameLen) },
+        { sizeof(((struct pd_config*) 0)->itemParamOffset) },
+        { sizeof(((struct pd_config*) 0)->pcSetupScript) },
+        { sizeof(((struct pd_config*) 0)->pcSpecial) },
+        { sizeof(((struct pd_config*) 0)->pcSpecials) },
+        { sizeof(((struct pd_config*) 0)->pcFn) },
+        { sizeof(((struct pd_config*) 0)->pcCrcs) },
+        { sizeof(((struct pd_config*) 0)->pcScript) },
     };
     size_t sum = 0;
     for (size_t i = 0; i < sizeof(fields) / sizeof(*fields); i++) sum += fields[i].size;

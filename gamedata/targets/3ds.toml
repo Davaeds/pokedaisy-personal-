@@ -54,11 +54,13 @@ battlerPartyIndexes = 'battlerPartyIndexes'
 battleStructPtr = 'battleStructPtr'
 monToSwitchIntoOff = 'monToSwitchIntoOff'
 
-# The party menu's icons.
+# The party menu's icons and the bag's.
 [part.icons]
 monIconTable = 'monIconTable'
 monIconPaletteIndices = 'monIconPaletteIndices'
 monIconPaletteTable = 'monIconPaletteTable'
+itemIconTable = 'itemIconTable'
+itemIconStride = 'itemIconStride'
 
 # POKéDEX.
 [part.dex]
@@ -95,31 +97,53 @@ frontierSymbolFlag = { path = 'trainerCard.frontierSymbolFlag', none = -1 }
 museumWinnersOff = { path = 'trainerCard.museumWinnersOff', none = -1 }
 frontierBpOff = { path = 'trainerCard.frontierBpOff', none = -1 }
 
-# FLY: from the config's `fly` record (its `records`, `@fly.`): the app's FlyFns and its HealWarp.
+# FLY: from the config's field-item record (its `records`, `@items.`): the app's FlyFns and its HealWarp.
 [part.fly]
-flyFlagGet = '@fly.flagGet'
-flySetUp = '@fly.setUpFieldMoveFly'
-flyGetMapsecType = '@fly.getMapsecType'
-flyFade = '@fly.fadeScreen'
-flyLock = '@fly.lockControls'
-flyUnlock = '@fly.unlockControls'
-flyWarp = '@fly.setFlyWarpDestination'
-flyBadgeFlag = '@fly.badgeFlag'
-flyPartySlot = '@fly.partyMenuSlotId'
-flyDestinations = '@fly.destinations'
-flyFirstMapsec = '@fly.firstMapsec'
-flyCount = '@fly.count'
-flyCrcs = '@fly.codeCrcs'
-flyTypes = '@fly.flyTypes'
-flyExtra = '@fly.extraMapsecs'
-flyHealTo = '@fly.healWarp.toHealLocation'
-flyMapWarp = '@fly.healWarp.toMapWarp'
-flyReturn = '@fly.healWarp.returnToField'
-flySaveBlock2Ptr = '@fly.healWarp.saveBlock2Ptr'
-flySpecial = '@fly.healWarp.special'
-flyGenderMapsec = '@fly.healWarp.genderMapsec'
-flyMaleHeal = '@fly.healWarp.maleHeal'
-flyFemaleHeal = '@fly.healWarp.femaleHeal'
+flyFlagGet = '@items.fly.flagGet'
+flySetUp = '@items.fly.setUpFieldMoveFly'
+flyGetMapsecType = '@items.fly.getMapsecType'
+flyFade = '@items.fly.fadeScreen'
+flyLock = '@items.fly.lockControls'
+flyUnlock = '@items.fly.unlockControls'
+flyWarp = '@items.fly.setFlyWarpDestination'
+flyBadgeFlag = '@items.fly.badgeFlag'
+flyPartySlot = '@items.fly.partyMenuSlotId'
+flyDestinations = '@items.fly.destinations'
+flyFirstMapsec = '@items.fly.firstMapsec'
+flyCount = '@items.fly.count'
+flyCrcs = '@items.fly.codeCrcs'
+flyTypes = '@items.fly.flyTypes'
+flyExtra = '@items.fly.extraMapsecs'
+flyHealTo = '@items.fly.healWarp.toHealLocation'
+flyMapWarp = '@items.fly.healWarp.toMapWarp'
+flyReturn = '@items.fly.healWarp.returnToField'
+flySaveBlock2Ptr = '@items.fly.healWarp.saveBlock2Ptr'
+flySpecial = '@items.fly.healWarp.special'
+flyGenderMapsec = '@items.fly.healWarp.genderMapsec'
+flyMaleHeal = '@items.fly.healWarp.maleHeal'
+flyFemaleHeal = '@items.fly.healWarp.femaleHeal'
+
+# The Repels and PC anywhere: the same record's VarGet / VarSet / CheckBagHasItem / RemoveBagItem /
+# ArePlayerFieldControlsLocked (fieldCrcs: their first 32 bytes' CRC32, in that order), VAR_REPEL_STEP_COUNT,
+# gItems (struct Item: holdEffectParam itemNameLen + 5 in, unless itemParamOffset) and the PC's PcFns.
+[part.field]
+fieldVarGet = '@items.varGet'
+fieldVarSet = '@items.varSet'
+fieldCheckBag = '@items.checkBagHasItem'
+fieldRemoveBag = '@items.removeBagItem'
+fieldLocked = '@items.fieldControlsLocked'
+fieldCrcs = '@items.codeCrcs'
+repelVar = '@items.repelVar'
+repelItems = '@items.repelItems'
+gItems = '@items.items'
+itemNameLen = '@items.itemNameLen'
+itemParamOffset = '@items.itemParamOffset'
+pcSetupScript = '@items.pc.setupScript'
+pcSpecial = '@items.pc.special'
+pcSpecials = '@items.pc.specials'
+pcFn = '@items.pc.pcFn'
+pcCrcs = '@items.pc.codeCrcs'
+pcScript = '@items.pc.script'
 
 # The configs, each with the parts the port reads for it so far (`name` is the C's: PD_CONFIG_<name>) and the
 # records `@name.` paths start from (`records`).
@@ -128,8 +152,8 @@ flyFemaleHeal = '@fly.healWarp.femaleHeal'
 # are known for rev 1 only.
 [config.firered_rev1]
 name = 'FIRERED_REV1'
-parts = ['ram', 'foes', 'icons', 'dex', 'guide', 'card', 'fly']
-records = { fly = 'FLY_FIRERED_REV1' }
+parts = ['ram', 'foes', 'icons', 'dex', 'guide', 'card', 'fly', 'field']
+records = { items = 'FIELD_ITEMS_FIRERED_REV1' }
 
 [config.firered_rev0]
 name = 'FIRERED_REV0'
@@ -137,15 +161,15 @@ parts = ['ram', 'icons']
 
 [config.leafgreen_rev0]
 name = 'LEAFGREEN_REV0'
-parts = ['ram', 'icons', 'card', 'fly']
-records = { fly = 'FLY_LEAFGREEN_REV0' }
+parts = ['ram', 'icons', 'card', 'fly', 'field']
+records = { items = 'FIELD_ITEMS_LEAFGREEN_REV0' }
 
 [config.leafgreen_rev1]
 name = 'LEAFGREEN_REV1'
-parts = ['ram', 'foes', 'icons', 'card', 'fly']
-records = { fly = 'FLY_LEAFGREEN_REV1' }
+parts = ['ram', 'foes', 'icons', 'card', 'fly', 'field']
+records = { items = 'FIELD_ITEMS_LEAFGREEN_REV1' }
 
 [config.emerald_retail]
 name = 'EMERALD'
-parts = ['ram', 'foes', 'icons', 'dex', 'guide', 'card', 'fly']
-records = { fly = 'FLY_EMERALD' }
+parts = ['ram', 'foes', 'icons', 'dex', 'guide', 'card', 'fly', 'field']
+records = { items = 'FIELD_ITEMS_EMERALD' }

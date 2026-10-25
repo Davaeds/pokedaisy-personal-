@@ -6,7 +6,9 @@
 #include "pd_ui.h"
 #include "pd_ui_internal.h"
 #include "host_io.h"
+#include "field_items.h"
 #include "fly.h"
+#include "hud.h"
 #include "../app/src/main/cpp/pk_call.h"
 #include "quick_menu.h"
 #include "wild.h"
@@ -506,6 +508,51 @@ static void present_game(unsigned gw, unsigned gh) {
   if (render_game(gw, gh))
     timed_present();
 }
+/* The HUD over the overworld (hud.c): the screen with EXPAND (its corners), else the game's own picture, at the
+ * companion's canvas scale. Its texture is redrawn only when what it shows changed (hud_key). */
+static uint32_t hudPixels[CANVAS_MAX_W * CANVAS_MAX_H];
+static SDL_Texture *hudTexture;
+static uint32_t hudDrawnKey;
+static int hudW, hudH;
+static bool hudShown;
+static void present_hud_game(const struct pd_game *g, const struct pd_snapshot *s, const struct hud_state *h,
+                             int hidden, unsigned gw, unsigned gh) {
+  if (!render_game(gw, gh))
+    return;
+  int ow, oh;
+  SDL_GetRendererOutputSize(renderer, &ow, &oh);
+  int scale = ow / canvasW < oh / canvasH ? ow / canvasW : oh / canvasH;
+  if (scale < 1)
+    scale = 1;
+  SDL_Rect area = wideReady ? (SDL_Rect){0, 0, ow, oh} : lastGameRect;
+  int w = area.w / scale, hh = area.h / scale;
+  if (w > CANVAS_MAX_W)
+    w = CANVAS_MAX_W;
+  if (hh > CANVAS_MAX_H)
+    hh = CANVAS_MAX_H;
+  if (!hudTexture) {
+    hudTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, CANVAS_MAX_W,
+                                   CANVAS_MAX_H);
+    if (hudTexture)
+      SDL_SetTextureBlendMode(hudTexture, SDL_BLENDMODE_BLEND);
+  }
+  uint32_t key = hud_key(s, h, hidden) ^ (uint32_t)(w * 65599 + hh);
+  if (hudTexture && (key != hudDrawnKey || w != hudW || hh != hudH)) {
+    struct pd_canvas hc;
+    pd_canvas_init(&hc, w, hh, hudPixels);
+    hudShown = hud_draw(&hc, g, s, h, hidden);
+    quick_finish(&hc);
+    SDL_UpdateTexture(hudTexture, &(SDL_Rect){0, 0, w, hh}, hudPixels, w * 4);
+    hudDrawnKey = key;
+    hudW = w;
+    hudH = hh;
+  }
+  if (hudTexture && hudShown) {
+    SDL_Rect at = {area.x + (area.w - w * scale) / 2, area.y + (area.h - hh * scale) / 2, w * scale, hh * scale};
+    SDL_RenderCopy(renderer, hudTexture, &(SDL_Rect){0, 0, w, hh}, &at);
+  }
+  timed_present();
+}
 /* The game menu (resume, states, quit): an OPTION window over the game's
  * picture, EXPAND's edges and all, dimmed behind it - the companion's canvas
  * scale, its windows only (pd_menu.overlay), drawn into a texture whose
@@ -525,7 +572,8 @@ static bool overlay_texture(void) {
 }
 /* The QUICK MENU over the running game: a light dim, the ring at the companion's canvas scale. */
 static void present_quick(const struct pd_game *g, const struct quick_item *items, int n, int sel,
-                          const char *const *rows, int rowCount, int rowSel, unsigned gw, unsigned gh) {
+                          const char *title, const char *const *rows, int rowCount, int rowSel, unsigned gw,
+                          unsigned gh) {
   if (!render_game(gw, gh) || !overlay_texture())
     return;
   int ow, oh;
@@ -536,7 +584,7 @@ static void present_quick(const struct pd_game *g, const struct quick_item *item
   struct pd_canvas qc;
   pd_canvas_init(&qc, canvasW, canvasH, menuPixels);
   if (rows)
-    quick_list_draw(&qc, "FLY", rows, rowCount, rowSel);
+    quick_list_draw(&qc, title, rows, rowCount, rowSel);
   else if (!quick_draw(&qc, g, items, n, sel))
     return;
   quick_finish(&qc);
@@ -643,7 +691,7 @@ static void focus_new_screen(void) { lastScreen.tab = -1; }
 // What the cursor can land on: not the tab bar, nor a scrim or a list's drag area.
 static bool focusable(int id) {
   return !(id >= HIT_TAB && id < HIT_TAB + PD_TAB_COUNT) && id != HIT_FF && id != HIT_SCRIM &&
-         id != HIT_BAG_LIST && id != HIT_DEX_LIST && id != HIT_GUIDE_LIST;
+         id != HIT_BAG_LIST && id != HIT_DEX_LIST && id != HIT_GUIDE_LIST && id != HIT_SETTINGS_LIST;
 }
 static int focus_index(const struct pd_ui *u, int id) {
   for (int i = 0; i < u->hitCount; i++)
@@ -692,7 +740,7 @@ static void focus_move(struct pd_ui *u, int direction) {
       continue;
     struct pd_hit *t = &u->hits[i];
     if (t->id == HIT_SCRIM || t->id == HIT_BAG_LIST || t->id == HIT_DEX_LIST ||
-        t->id == HIT_GUIDE_LIST)
+        t->id == HIT_GUIDE_LIST || t->id == HIT_SETTINGS_LIST)
       continue;
     int dx = (t->x + t->w / 2) - (h->x + h->w / 2),
         dy = (t->y + t->h / 2) - (h->y + h->h / 2);
@@ -719,6 +767,8 @@ static void focus_move(struct pd_ui *u, int direction) {
       u->dexScroll += d;
     else if (u->tab == PD_TAB_GUIDE)
       u->guideScroll += d;
+    else if (u->tab == PD_TAB_SETTINGS && u->overlay == PD_OVERLAY_NONE)
+      u->settingsScroll += d;
   }
 }
 static void focus_draw(struct pd_ui *u, int focus) {
@@ -939,10 +989,28 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
   int flyAsk = 0, flySel = 0, flyStage = 0, flyMapsec = 0, flyWait = 0, fieldFlags = 0;
   bool flyList = false;
   uint32_t flyCallback = 0;
+  // REPEL, BIKE and PC anywhere (field_items.c): offered where the ROM's code is the config's. A job waits for
+  // two frames the game's code can be called between; BIKE then presses SELECT for the game (gameKeys), watches
+  // the riding state flip (or the field lock) and puts the player's own registered item back 20 frames later.
+  bool itemsOk = game.cfg && field_items_supported(game.cfg, romdata, (size_t)len);
+  bool pcOk = itemsOk && pc_supported(game.cfg, romdata, (size_t)len);
+  bool bikeOk = itemsOk && bike_supported(game.cfg);
+  enum { JOB_NONE, JOB_PC, JOB_REPEL, JOB_BIKE, JOB_BIKE_WAIT, JOB_BIKE_RESTORE } job = JOB_NONE;
+  int jobItem = 0, jobFrames = 0, jobTries = 0, repelSel = 0, repelKinds[REPEL_KINDS], repelKindCount = 0;
+  bool repelList = false, bikeWasRiding = false, bikeTook = false;
+  uint16_t bikeOld = 0;
+  unsigned gameKeys = 0;
+  int gameKeyFrames = 0;
+  // The HUD: on after 20 frames of the plain field (FieldHud's rule), off at once.
+  struct hud_state hudState = {0, 0};
+  int hudFieldFrames = 0;
+  hudDrawnKey = 0;
+  char repelRows[REPEL_KINDS][48];
+  const char *repelNames[REPEL_KINDS];
   struct pd_ui ui;
   pd_ui_init(&ui, &settings);
   struct pd_snapshot snap = {0};
-  struct pd_host_info host = {.hideScreenMode = true, .hasExpand = true,
+  struct pd_host_info host = {.hideScreenMode = true, .hasExpand = true, .hasHud = c->platform(c) == mPLATFORM_GBA,
                               .expandGame = wideSupported, .count = 1, .labels = {"HOST"}};
   snprintf(host.values[0], 40, "PokeDaisy Linux");
   const char *opts[] = {"Resume game",
@@ -987,26 +1055,68 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
         SDL_ClearQueuedAudio(audio);
     }
     // Y: the QUICK MENU over the running game (its keys withheld meanwhile).
+    // In the app's order (QuickAction): PC, FLY, REPEL, BIKE, WILD, SAVE / LOAD STATE, FF, COMPANION; each only
+    // where the game can, dimmed with why when not now.
     struct quick_item quick[QUICK_COUNT];
     int quickN = 0;
+    char repelWhy[32] = "";
+    if (pcOk)
+      quick[quickN++] = (struct quick_item){QUICK_PC, false, false, NULL, 0, 0, NULL};
     if (flyCfg) {
       int flyer = fly_flyer(&snap);
       quick[quickN++] = (struct quick_item){QUICK_FLY, false, false,
                                             flyer < 0 ? "No one in your party knows FLY" : NULL,
-                                            flyer < 0 ? 0 : snap.party[flyer].species};
+                                            flyer < 0 ? 0 : snap.party[flyer].species, 0, NULL};
+    }
+    if (itemsOk) {
+      // The strongest kind held for the icon; dimmed while one works (the steps left).
+      repelKindCount = 0;
+      for (int k = 0; k < REPEL_KINDS; k++)
+        if (bag_count(&snap, repel_kinds[k][0]) > 0)
+          repelKinds[repelKindCount++] = repel_kinds[k][0];
+      int left = repel_steps(c, game.cfg);
+      if (left)
+        snprintf(repelWhy, sizeof repelWhy, "%d steps left", left);
+      quick[quickN++] = (struct quick_item){QUICK_REPEL, false, false,
+                                            left ? repelWhy : repelKindCount ? NULL : "No REPEL in your bag", 0,
+                                            repelKindCount ? repelKinds[repelKindCount - 1] : repel_kinds[0][0], NULL};
+    }
+    if (bikeOk) {
+      int bike = bag_bike(&snap);
+      bool riding = (fieldFlags & PK_FIELD_AVATAR) && (fieldFlags & PK_FIELD_BIKE);
+      quick[quickN++] = (struct quick_item){QUICK_BIKE, false, false, bike ? NULL : "No bike in your bag", 0,
+                                            bike ? bike : 360, riding ? "GET OFF" : NULL};
     }
     quick[quickN++] = (struct quick_item){QUICK_WILD, settings.wildOff, false,
-                                          wildSwitch ? NULL : "Not in this game", 0};
-    quick[quickN++] = (struct quick_item){QUICK_SAVE_STATE, false, false, NULL, 0};
+                                          wildSwitch ? NULL : "Not in this game", 0, 0, NULL};
+    quick[quickN++] = (struct quick_item){QUICK_SAVE_STATE, false, false, NULL, 0, 0, NULL};
     quick[quickN++] = (struct quick_item){QUICK_LOAD_STATE, false, false,
-                                          access(ss, F_OK) == 0 ? NULL : "No state saved yet", 0};
-    quick[quickN++] = (struct quick_item){QUICK_FF, false, ff, NULL, 0};
-    quick[quickN++] = (struct quick_item){QUICK_COMPANION, false, false, NULL, 0};
+                                          access(ss, F_OK) == 0 ? NULL : "No state saved yet", 0, 0, NULL};
+    quick[quickN++] = (struct quick_item){QUICK_FF, false, ff, NULL, 0, 0, NULL};
+    quick[quickN++] = (struct quick_item){QUICK_COMPANION, false, false, NULL, 0, 0, NULL};
+    if (quickSel >= quickN)
+      quickSel = 0;
     if (down(Y) && !companion) {
       quickOpen = !quickOpen;
-      flyList = false;
+      flyList = repelList = false;
       flyAsk = 0;
       c->setKeys(c, 0);
+    } else if (quickOpen && repelList) {
+      // REPEL's kinds in the bag: UP / DOWN, A uses one, B back to the ring.
+      if (down(UP))
+        repelSel = (repelSel + repelKindCount - 1) % repelKindCount;
+      if (down(DOWN))
+        repelSel = (repelSel + 1) % repelKindCount;
+      if (down(B))
+        repelList = false;
+      else if (down(MENU))
+        quickOpen = repelList = false;
+      else if (down(A)) {
+        quickOpen = repelList = false;
+        job = JOB_REPEL;
+        jobItem = repelKinds[repelSel];
+        jobFrames = 0;
+      }
     } else if (quickOpen && flyList) {
       // FLY's places: UP / DOWN, A flies, B back to the ring.
       if (down(UP) && flyT.count)
@@ -1031,9 +1141,37 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
         quickSel = quick_step(quickN, quickSel, dx, dy, canvasW, canvasH);
       if (down(A) && !quick[quickSel].why && quick[quickSel].action == QUICK_FLY) {
         flyAsk = 1; // answered below, between two frames
+      } else if (down(A) && !quick[quickSel].why && quick[quickSel].action == QUICK_REPEL && repelKindCount > 1) {
+        // More than one kind: their list (QuickMenu.kt's RepelKinds), each with how many and its steps.
+        for (int k = 0; k < repelKindCount; k++) {
+          int steps = 0;
+          for (int r = 0; r < REPEL_KINDS; r++)
+            if (repel_kinds[r][0] == repelKinds[k])
+              steps = repel_kinds[r][1];
+          snprintf(repelRows[k], sizeof repelRows[k], "%s x%d  %d steps", pd_item_name(&game, repelKinds[k]),
+                   bag_count(&snap, repelKinds[k]), steps);
+          repelNames[k] = repelRows[k];
+        }
+        repelList = true;
+        repelSel = repelKindCount - 1;
       } else if (down(A) && !quick[quickSel].why) {
         quickOpen = false;
         switch (quick[quickSel].action) {
+        case QUICK_PC:
+          job = JOB_PC;
+          jobFrames = 0;
+          break;
+        case QUICK_REPEL:
+          job = JOB_REPEL;
+          jobItem = repelKinds[0];
+          jobFrames = 0;
+          break;
+        case QUICK_BIKE:
+          job = JOB_BIKE;
+          jobItem = bag_bike(&snap);
+          jobFrames = 0;
+          jobTries = 15; // PokeDaisyActivity's SELECT_TRIES
+          break;
         case QUICK_WILD:
           settings.wildOff = !settings.wildOff;
           pd_settings_save(&settings, config);
@@ -1172,12 +1310,14 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
       }
     } else {
       muted = ff;
-      c->setKeys(c, quickOpen ? 0 : held & 1023);
+      c->setKeys(c, (quickOpen ? 0 : held & 1023) | (gameKeyFrames > 0 ? gameKeys : 0));
       int count = ff ? settings.ffSpeed : 1;
       audio_rate(c, hz);
       for (int i = 0; i < count; i++) {
         uint64_t t = SDL_GetPerformanceCounter();
         c->runFrame(c);
+        if (gameKeyFrames > 0 && --gameKeyFrames == 0)
+          c->setKeys(c, quickOpen ? 0 : held & 1023);
         if (c->platform(c) == mPLATFORM_GBA)
           pk_rest_note(c);
         if (fieldKnown)
@@ -1236,8 +1376,62 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
       if (!fly_finish(c, flyCfg, romdata, (size_t)len, flyMapsec, &flyT, fly_main_callback(c, flyCfg) != flyCallback))
         notice(fly_reason(FLY_FAILED));
     }
+    bool safe = job != JOB_NONE && !companion && pk_call_safe(c);
+    if (job == JOB_PC && safe) {
+      job = JOB_NONE;
+      enum item_result r = pc_open(c, game.cfg, romdata, (size_t)len, flyBusy, flyBattle);
+      if (r != ITEM_USED)
+        notice(item_reason(r));
+    } else if (job == JOB_REPEL && safe) {
+      job = JOB_NONE;
+      int steps = 0;
+      enum item_result r = repel_use(c, game.cfg, romdata, (size_t)len, jobItem, flyBusy, flyBattle, &steps);
+      if (r == ITEM_USED) {
+        char msg[48];
+        snprintf(msg, sizeof msg, "Used! It lasts %d steps.", steps);
+        notice(msg);
+      } else
+        notice(item_reason(r));
+    } else if (job == JOB_BIKE && safe) {
+      enum item_result r = bike_register(c, game.cfg, romdata, (size_t)len, jobItem, flyBusy, flyBattle, &bikeOld);
+      if (r == ITEM_USED) {
+        gameKeys = 1u << SELECT;
+        gameKeyFrames = 2;
+        bikeWasRiding = fieldFlags & PK_FIELD_BIKE;
+        bikeTook = false;
+        job = JOB_BIKE_WAIT;
+        jobFrames = 0;
+      } else {
+        job = JOB_NONE;
+        notice(item_reason(r));
+      }
+    } else if (job == JOB_BIKE_WAIT && !companion) {
+      // SELECT again if the game dropped it (a bike rolling at full speed ignores it), but only where taking it
+      // shows for sure: the riding state flips, or the field's controls stay held (PokeDaisyActivity.pressSelect).
+      if (((fieldFlags & PK_FIELD_BIKE) != 0) != bikeWasRiding || (fieldFlags & PK_FIELD_LOCKED))
+        bikeTook = true;
+      if (++jobFrames >= 10) {
+        if (bikeTook || !(fieldFlags & PK_FIELD_AVATAR) || --jobTries <= 0) {
+          job = JOB_BIKE_RESTORE;
+        } else {
+          gameKeys = 1u << SELECT;
+          gameKeyFrames = 2;
+        }
+        jobFrames = 0;
+      }
+    } else if (job == JOB_BIKE_RESTORE && ++jobFrames >= 20) {
+      job = JOB_NONE;
+      bike_restore(c, game.cfg, jobItem, bikeOld);
+    } else if ((job == JOB_PC || job == JOB_REPEL || job == JOB_BIKE) && !companion && ++jobFrames > 120) {
+      job = JOB_NONE;
+      notice(item_reason(ITEM_FAILED));
+    }
     if (quickOpen && !companion) {
-      present_quick(&game, quick, quickN, quickSel, flyList ? flyNames : NULL, flyT.count, flySel, gw, gh);
+      companion_canvas();
+      const char *const *rows = flyList ? flyNames : repelList ? repelNames : NULL;
+      present_quick(&game, quick, quickN, quickSel, flyList ? "FLY" : "REPEL", rows,
+                    flyList ? flyT.count : repelKindCount,
+                    flyList ? flySel : repelSel, gw, gh);
     } else if (companion && menuOpen && menuOpen != 4) {
       present_menu(menuOpen == 1 ? &gameMenu : &confirmMenu, gw, gh);
     } else if (companion) {
@@ -1259,7 +1453,21 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
       }
       present();
     } else {
-      present_game(gw, gh);
+      bool field = (fieldFlags & PK_FIELD_KNOWN) && !(fieldFlags & (PK_FIELD_LOCKED | PK_FIELD_BATTLE)) &&
+                   (!wideSupported || pk_wide_scene() == PK_WIDE_SCENE_FIELD) && flyStage == 0;
+      hudFieldFrames = field ? hudFieldFrames + 1 : 0;
+      if (settings.hud && game.cfg && c->platform(c) == mPLATFORM_GBA && hudFieldFrames >= 20) {
+        int steps = repel_steps(c, game.cfg);
+        if (steps <= 0)
+          hudState.repelFull = 0;
+        else if (!hudState.repelFull || steps > hudState.repelFull)
+          hudState.repelFull = hud_repel_full(steps);
+        hudState.repel = steps > 0 ? steps : 0;
+        companion_canvas();
+        present_hud_game(&game, &snap, &hudState, settings.hudHidden, gw, gh);
+      } else {
+        present_game(gw, gh);
+      }
     }
 #ifdef POCKET_TEST
     test_frame(c, companion, frames, &ui, &snap);
@@ -1444,6 +1652,9 @@ int main(int argc, char **argv) {
   if (menuTexture)
     SDL_DestroyTexture(menuTexture);
   menuTexture = NULL;
+  if (hudTexture)
+    SDL_DestroyTexture(hudTexture);
+  hudTexture = NULL;
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();

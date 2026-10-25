@@ -10,7 +10,7 @@
 #include <string.h>
 
 #define TILE_W 74
-#define TILE_H 52
+#define TILE_H 42
 #define GLASS_FILL 0xB8121620u // FieldHud.kt's GLASS_FILL / _EDGE (ARGB)
 #define GLASS_EDGE 0x66FFFFFFu
 #define FOCUS 0x00FF7331u      // AppColors.focusRing
@@ -38,6 +38,13 @@ static const char *const FF[] = {
     "1.....1.....", "11....11....", "111...111...", "1111..1111..", "11111.11111.", "111111111111",
     "11111.11111.", "1111..1111..", "111...111...", "11....11....", "1.....1.....", NULL,
 };
+// FieldHud.kt's PC_ICON.
+static const char *const PC[] = {
+    "................", ".KKKKKKKKKKKKKK.", ".KLLLLLLLLLLLLK.", ".KLKKKKKKKKKKLK.", ".KLKSSSSSSHHKLK.",
+    ".KLKSSSSSHHSKLK.", ".KLKSSSSHHSSKLK.", ".KLKSSSSSSSSKLK.", ".KLKKKKKKKKKKLK.", ".KLLLLLLLLLLGLK.",
+    ".KDDDDDDDDDDDDK.", ".KKKKKKKKKKKKKK.", "......KDDK......", "....KKKKKKKK....", "...KLLLLLLLLK...",
+    "...KKKKKKKKKK...", NULL,
+};
 static const char *const COMPANION[] = {
     "......11", ".....11.", "....11..", "...11...", "..11....", ".11.....", "11......",
     ".11.....", "..11....", "...11...", "....11..", ".....11.", "......11", NULL,
@@ -45,7 +52,10 @@ static const char *const COMPANION[] = {
 
 const char *quick_label(enum quick_action a) {
   switch (a) {
+  case QUICK_PC: return "PC";
   case QUICK_FLY: return "FLY";
+  case QUICK_REPEL: return "REPEL";
+  case QUICK_BIKE: return "BIKE";
   case QUICK_WILD: return "WILD";
   case QUICK_SAVE_STATE: return "SAVE STATE";
   case QUICK_LOAD_STATE: return "LOAD STATE";
@@ -58,6 +68,9 @@ const char *quick_label(enum quick_action a) {
 static uint32_t icon_color(enum quick_action a, char ch) {
   if (a == QUICK_WILD)
     return ch == 'K' ? 0x183818 : ch == 'G' ? 0x389838 : 0x78D058;
+  if (a == QUICK_PC)
+    return ch == 'K' ? 0x202838 : ch == 'L' ? 0xD8D8E0 : ch == 'D' ? 0x9098A8 : ch == 'S' ? 0x3070C8
+         : ch == 'H' ? 0x90C8F8 : 0x40D040;
   if (a == QUICK_SAVE_STATE || a == QUICK_LOAD_STATE)
     return ch == 'K' ? 0x202838 : ch == 'D' ? 0x4870C0 : ch == 'L' ? 0xE8ECF4 : 0xF8C030;
   return INK;
@@ -65,7 +78,7 @@ static uint32_t icon_color(enum quick_action a, char ch) {
 
 // An icon centred at (cx, cy), `scale` canvas pixels a pixel; dim: at half strength over the glass.
 static void icon(struct pd_canvas *c, enum quick_action a, int cx, int cy, int scale, bool dim) {
-  const char *const *rows = a == QUICK_WILD ? GRASS : a == QUICK_SAVE_STATE ? SAVE_STATE
+  const char *const *rows = a == QUICK_PC ? PC : a == QUICK_WILD ? GRASS : a == QUICK_SAVE_STATE ? SAVE_STATE
                           : a == QUICK_LOAD_STATE ? LOAD_STATE : a == QUICK_FF ? FF : COMPANION;
   int h = 0, w = (int)strlen(rows[0]);
   while (rows[h])
@@ -91,11 +104,12 @@ static void glass(struct pd_canvas *c, int x, int y, int w, int h) {
 // Where tile i sits: round an ellipse that fits the canvas (a circle where it can be), the first at the top.
 static void place(int n, int i, int w, int h, int *x, int *y) {
   double rx = (w - TILE_W) / 2.0 - 4, ry = (h - TILE_H) / 2.0 - 4;
-  // Close round the middle's hint, not out at the screen's edges (QuickMenu.kt's ring).
-  if (ry > 78)
-    ry = 78;
-  if (rx > ry * 1.35)
-    rx = ry * 1.35;
+  // Close round the middle's hint, not out at the screen's edges (QuickMenu.kt's ring); wide enough that
+  // nine tiles don't touch.
+  if (ry > 90)
+    ry = 90;
+  if (rx > ry * 1.6)
+    rx = ry * 1.6;
   double a = -M_PI / 2 + 2 * M_PI * i / (n > 0 ? n : 1);
   *x = (int)lround(w / 2.0 + rx * cos(a)) - TILE_W / 2;
   *y = (int)lround(h / 2.0 + ry * sin(a)) - TILE_H / 2;
@@ -130,13 +144,18 @@ bool quick_draw(struct pd_canvas *c, const struct pd_game *g, const struct quick
       pd_round_rect(c, x - 2, y - 2, TILE_W + 4, TILE_H + 4, 5, FOCUS);
     glass(c, x, y, TILE_W, TILE_H);
     bool dim = items[i].why != NULL;
-    if (items[i].action == QUICK_FLY) // the Pokémon that would FLY, as QuickIcon draws it
-      pd_draw_mon_icon(c, g, items[i].species, x + (TILE_W - PD_ICON) / 2, y + 1, dim);
-    else
-      icon(c, items[i].action, x + TILE_W / 2, y + 18, 2, dim || items[i].off);
-    const char *label = quick_label(items[i].action);
+    // The game's own art where there is some (the Pokémon that would FLY, the bag's item), pixel art otherwise,
+    // as QuickIcon draws them.
+    bool art = false;
+    if (items[i].action == QUICK_FLY)
+      art = pd_draw_mon_icon(c, g, items[i].species, x + (TILE_W - PD_ICON) / 2, y - 3, dim);
+    else if (items[i].item)
+      art = pd_draw_item_icon(c, g, items[i].item, x + (TILE_W - PD_ITEM_ICON) / 2, y + 2, dim);
+    if (!art && items[i].action != QUICK_FLY)
+      icon(c, items[i].action, x + TILE_W / 2, y + 14, 1, dim || items[i].off);
+    const char *label = items[i].label ? items[i].label : quick_label(items[i].action);
     int lw = pd_text_width(label);
-    pd_text(c, x + (TILE_W - lw) / 2, y + TILE_H - 17, label, dim ? MUTED : items[i].lit ? FOCUS : INK,
+    pd_text(c, x + (TILE_W - lw) / 2, y + TILE_H - 16, label, dim ? MUTED : items[i].lit ? FOCUS : INK,
             INK_SHADOW);
     if (items[i].off) { // WILD switched off: an OFF tag on its corner
       int tw = pd_text_width("OFF") + 6;
@@ -147,7 +166,7 @@ bool quick_draw(struct pd_canvas *c, const struct pd_game *g, const struct quick
   // The middle: the highlighted one's name, and why it's dimmed (or WILD's state).
   if (sel >= 0 && sel < n) {
     const struct quick_item *it = &items[sel];
-    const char *name = it->action == QUICK_WILD ? "WILD ENCOUNTERS" : quick_label(it->action);
+    const char *name = it->action == QUICK_WILD ? "WILD ENCOUNTERS" : it->label ? it->label : quick_label(it->action);
     const char *note = it->why ? it->why : it->action == QUICK_WILD ? (it->off ? "OFF" : "ON")
                      : it->action == QUICK_FF ? (it->lit ? "ON" : "OFF") : NULL;
     int nw = pd_text_width(name), ow = note ? pd_text_width(note) : 0;

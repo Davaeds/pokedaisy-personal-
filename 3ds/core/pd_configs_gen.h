@@ -10,7 +10,7 @@
 // FireRed rev 0 and LeafGreen: the tabs that read RAM (and the MAP, whose art is found by fingerprint)
 // and the party icons; their POKéDEX and GUIDE tables aren't ported yet. The FOE TEAM's addresses
 // are known for rev 1 only.
-// gamedata/gen3/retail/firered.toml: firered_rev1 (ram, foes, icons, dex, guide, card, fly)
+// gamedata/gen3/retail/firered.toml: firered_rev1 (ram, foes, icons, dex, guide, card, fly, field)
 static const struct pd_config PD_CONFIG_FIRERED_REV1 = {
     .playerParty = 0x02024284,
     .playerPartyCount = 0x02024029,
@@ -40,6 +40,8 @@ static const struct pd_config PD_CONFIG_FIRERED_REV1 = {
     .monIconTable = 0x083D3810,
     .monIconPaletteIndices = 0x083D3EF0,
     .monIconPaletteTable = 0x083D40A8,
+    .itemIconTable = 0x083D4304,
+    .itemIconStride = 8,
     .dexEntries = 0x0844E8B0,
     .dexEntryStride = 0x24,
     .speciesInfo = 0x082547F4,
@@ -89,6 +91,23 @@ static const struct pd_config PD_CONFIG_FIRERED_REV1 = {
     .flyGenderMapsec = 0,
     .flyMaleHeal = 0,
     .flyFemaleHeal = 0,
+    .fieldVarGet = 0x0806E57C,
+    .fieldVarSet = 0x0806E598,
+    .fieldCheckBag = 0x08099F54,
+    .fieldRemoveBag = 0x0809A1EC,
+    .fieldLocked = 0x0806996C,
+    .fieldCrcs = { 0xE6DE47BA, 0x6E7CC2BE, 0xD30D656E, 0xC40BF208, 0x9C26CCA4 },
+    .repelVar = 0x4020,
+    .repelItems = { 86, 83, 84 },
+    .gItems = 0x083DB098,
+    .itemNameLen = 14,
+    .itemParamOffset = 0,
+    .pcSetupScript = 0x08069AF8,
+    .pcSpecial = 60,
+    .pcSpecials = 0x0815FDD8,
+    .pcFn = 0x0808C6BD,
+    .pcCrcs = { 0xAAC00946, 0x9662F022 },
+    .pcScript = 0x0203FFF4,
 };
 
 // gamedata/gen3/retail/firered.toml: firered_rev0 (ram, icons)
@@ -117,9 +136,11 @@ static const struct pd_config PD_CONFIG_FIRERED_REV0 = {
     .monIconTable = 0x083D37A0,
     .monIconPaletteIndices = 0x083D3E80,
     .monIconPaletteTable = 0x083D4038,
+    .itemIconTable = 0x083D4294,
+    .itemIconStride = 8,
 };
 
-// gamedata/gen3/retail/leafgreen.toml: leafgreen_rev0 (ram, icons, card, fly)
+// gamedata/gen3/retail/leafgreen.toml: leafgreen_rev0 (ram, icons, card, fly, field)
 static const struct pd_config PD_CONFIG_LEAFGREEN_REV0 = {
     .playerParty = 0x02024284,
     .playerPartyCount = 0x02024029,
@@ -145,6 +166,8 @@ static const struct pd_config PD_CONFIG_LEAFGREEN_REV0 = {
     .monIconTable = 0x083D35DC,
     .monIconPaletteIndices = 0x083D3CBC,
     .monIconPaletteTable = 0x083D3E74,
+    .itemIconTable = 0x083D40D0,
+    .itemIconStride = 8,
     .cardStyle = PD_CARD_KANTO,
     .gameStatsOff = 0x1200,
     .badgeFlag = 0x820,
@@ -179,9 +202,26 @@ static const struct pd_config PD_CONFIG_LEAFGREEN_REV0 = {
     .flyGenderMapsec = 0,
     .flyMaleHeal = 0,
     .flyFemaleHeal = 0,
+    .fieldVarGet = 0x0806E568,
+    .fieldVarSet = 0x0806E584,
+    .fieldCheckBag = 0x08099F14,
+    .fieldRemoveBag = 0x0809A1AC,
+    .fieldLocked = 0x08069958,
+    .fieldCrcs = { 0xE6DE47BA, 0x6E7CC2BE, 0xD30D656E, 0xC40BF208, 0x9C26CCA4 },
+    .repelVar = 0x4020,
+    .repelItems = { 86, 83, 84 },
+    .gItems = 0x083DAE64,
+    .itemNameLen = 14,
+    .itemParamOffset = 0,
+    .pcSetupScript = 0x08069AE4,
+    .pcSpecial = 60,
+    .pcSpecials = 0x0815FD3C,
+    .pcFn = 0x0808C67D,
+    .pcCrcs = { 0xAAC00946, 0x5333E53E },
+    .pcScript = 0x0203FFF4,
 };
 
-// gamedata/gen3/retail/leafgreen.toml: leafgreen_rev1 (ram, foes, icons, card, fly)
+// gamedata/gen3/retail/leafgreen.toml: leafgreen_rev1 (ram, foes, icons, card, fly, field)
 static const struct pd_config PD_CONFIG_LEAFGREEN_REV1 = {
     .playerParty = 0x02024284,
     .playerPartyCount = 0x02024029,
@@ -211,6 +251,8 @@ static const struct pd_config PD_CONFIG_LEAFGREEN_REV1 = {
     .monIconTable = 0x083D364C,
     .monIconPaletteIndices = 0x083D3D2C,
     .monIconPaletteTable = 0x083D3EE4,
+    .itemIconTable = 0x083D4140,
+    .itemIconStride = 8,
     .cardStyle = PD_CARD_KANTO,
     .gameStatsOff = 0x1200,
     .badgeFlag = 0x820,
@@ -245,9 +287,26 @@ static const struct pd_config PD_CONFIG_LEAFGREEN_REV1 = {
     .flyGenderMapsec = 0,
     .flyMaleHeal = 0,
     .flyFemaleHeal = 0,
+    .fieldVarGet = 0x0806E57C,
+    .fieldVarSet = 0x0806E598,
+    .fieldCheckBag = 0x08099F28,
+    .fieldRemoveBag = 0x0809A1C0,
+    .fieldLocked = 0x0806996C,
+    .fieldCrcs = { 0xE6DE47BA, 0x6E7CC2BE, 0xD30D656E, 0xC40BF208, 0x9C26CCA4 },
+    .repelVar = 0x4020,
+    .repelItems = { 86, 83, 84 },
+    .gItems = 0x083DAED4,
+    .itemNameLen = 14,
+    .itemParamOffset = 0,
+    .pcSetupScript = 0x08069AF8,
+    .pcSpecial = 60,
+    .pcSpecials = 0x0815FDB4,
+    .pcFn = 0x0808C691,
+    .pcCrcs = { 0xAAC00946, 0x5333E53E },
+    .pcScript = 0x0203FFF4,
 };
 
-// gamedata/gen3/retail/emerald.toml: emerald_retail (ram, foes, icons, dex, guide, card, fly)
+// gamedata/gen3/retail/emerald.toml: emerald_retail (ram, foes, icons, dex, guide, card, fly, field)
 static const struct pd_config PD_CONFIG_EMERALD = {
     .playerParty = 0x020244EC,
     .playerPartyCount = 0x020244E9,
@@ -277,6 +336,8 @@ static const struct pd_config PD_CONFIG_EMERALD = {
     .monIconTable = 0x0857BCA8,
     .monIconPaletteIndices = 0x0857C388,
     .monIconPaletteTable = 0x0857C540,
+    .itemIconTable = 0x08614410,
+    .itemIconStride = 8,
     .dexEntries = 0x0856B5B0,
     .dexEntryStride = 0x20,
     .speciesInfo = 0x083203CC,
@@ -326,6 +387,23 @@ static const struct pd_config PD_CONFIG_EMERALD = {
     .flyGenderMapsec = 0,
     .flyMaleHeal = 12,
     .flyFemaleHeal = 13,
+    .fieldVarGet = 0x0809D694,
+    .fieldVarSet = 0x0809D6B0,
+    .fieldCheckBag = 0x080D6724,
+    .fieldRemoveBag = 0x080D6AA4,
+    .fieldLocked = 0x08098E6C,
+    .fieldCrcs = { 0x7D0D07B6, 0x519C39C0, 0x312F6576, 0x379EF742, 0x2532A407 },
+    .repelVar = 0x4021,
+    .repelItems = { 86, 83, 84 },
+    .gItems = 0x085839A0,
+    .itemNameLen = 14,
+    .itemParamOffset = 0,
+    .pcSetupScript = 0x08098EF8,
+    .pcSpecial = 63,
+    .pcSpecials = 0x081DBA64,
+    .pcFn = 0x080C7579,
+    .pcCrcs = { 0xEF3698BA, 0x81188148 },
+    .pcScript = 0x0203FFF4,
 };
 
 #endif

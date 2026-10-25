@@ -7,7 +7,8 @@ each platform's code, and that code is committed.
 
 So far this holds the Gen 3 `NativeConfig`s (phase 1) and the records the 3DS / Linux companion
 reads (phase 2: retail FireRed / LeafGreen / Emerald's Pokédex, guide, trainer-card and dex-flag
-tables, their bag orders and FLY's functions, `FLY_*`). The outputs:
+tables, their bag orders and the field items' functions: `FIELD_ITEMS_*` with their `PARTY_ITEMS_*`, `PC_*`
+and `FLY_*`). The outputs:
 
 - the app's `app/src/main/kotlin/com/pokedaisy/app/companion/data/NativeConfigsGen.kt` (the configs) and
   `GameDataRecordsGen.kt` (the records);
@@ -115,8 +116,8 @@ are FireRed's). `{ path = '...', none = -1 }` writes 0 for the value that means 
 `[names]` gives the C for Kotlin names a value holds (`POCKET_ITEMS`, `[names.CardStyle]`).
 
 A record the config itself doesn't name (FLY's: the app picks those by the ROM's code, not the config)
-comes in through the target: `records = { fly = 'FLY_EMERALD' }` on the `[config.*]`, and a path that
-starts `@fly.` starts from that record (`@fly.healWarp.toHealLocation`). A list field writes a C array
+comes in through the target: `records = { items = 'FIELD_ITEMS_EMERALD' }` on the `[config.*]`, and a path
+that starts `@items.` starts from that record (`@items.fly.healWarp.toHealLocation`). A list field writes a C array
 (`{ 0x07BEBC3A, ... }`, `{ { 15, 11 }, ... }` for an `int_map`), zero-filled to the struct's size.
 
 A field the port starts reading goes in the struct (`3ds/core/pd_game.h`) and in a part here; a game
@@ -135,7 +136,7 @@ are the Kotlin ones. What a value can be depends on the field's `type` in the sc
 | `item_descs` | `{ preset = 'vanilla', base = 0x083DB028 }` or `{ base = ..., stride = 0x2C, descOff = -8 }` | `vanillaItems(...)`, `ItemDescTable(...)` |
 | `int_range` | `[34, 35]` | `34..35` |
 | `long_list`, `int_list` | `[0x5F8, 0x3A18]` | `listOf(0x5F8L, 0x3A18L)` |
-| `int_set` | `[2, 4]` | `setOf(2, 4)` |
+| `int_set`, `long_set` | `[2, 4]`, `[0x080A16F4]` | `setOf(2, 4)`, `setOf(0x080A16F4L)` |
 | `int_map` | `[[15, 11], [58, 22]]` (TOML's keys can't be numbers) | `mapOf(15 to 11, 58 to 22)` |
 
 Any nullable field takes `'none'` (Kotlin `null`). Any field also takes:
@@ -151,7 +152,8 @@ gamedata/ (a `ref` to a record in `gen3/records/` is data already).
 ## The schemas
 
 `schema/gen3_config.toml` lists `NativeConfig`'s fields, `gen3_pokedex.toml` / `gen3_guide.toml`
-those of `PokedexTables` / `GuideTables`, `gen3_fly.toml` / `gen3_heal_warp.toml` `FlyFns` / `HealWarp`. Each names its Kotlin class (`kotlin_class`,
+those of `PokedexTables` / `GuideTables`, `gen3_fly.toml` / `gen3_heal_warp.toml` `FlyFns` / `HealWarp`, `gen3_field_items.toml` / `gen3_party_items.toml` /
+`gen3_pc.toml` `FieldItemFns` / `PartyItemFns` / `PcFns`. Each names its Kotlin class (`kotlin_class`,
 `kotlin_file`) and the generator checks the two agree, so a new field means adding it to both
 (with a default, or every config without a base has to set it). A schema for another class
 starts with `python3 scripts/gen_gamedata.py --new-schema <name> <File.kt> <Class>`. `version`

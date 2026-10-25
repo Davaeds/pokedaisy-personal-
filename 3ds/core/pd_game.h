@@ -39,6 +39,9 @@ struct pd_config {
     // species), gMonIconPaletteIndices (u8) and gMonIconPaletteTable
     // ({data, tag}, 8 bytes). 0 = none.
     uint32_t monIconTable, monIconPaletteIndices, monIconPaletteTable;
+    // The bag's icons: sItemIconTable, {tiles, palette} (both LZ77) every itemIconStride bytes. 0 = none.
+    uint32_t itemIconTable;
+    int itemIconStride;
     // gBagPockets: five {slots pointer, capacity} pairs, 8 bytes apart;
     // bagOrder[i] is the pocket (PD_POCKET_*) the game keeps at index i.
     uint32_t bagPockets;
@@ -97,6 +100,20 @@ struct pd_config {
     uint32_t flyHealTo, flyMapWarp, flyReturn, flySaveBlock2Ptr; // gSaveBlock2Ptr: playerGender at +8
     int flySpecial[4][2]; // {map section, heal location} taken before the table's
     int flyGenderMapsec, flyMaleHeal, flyFemaleHeal; // the home town: by the player's gender
+
+    // REPEL and PC anywhere (the app's FieldItemFns / PcFns, FieldItems.kt / Pc.kt): VarGet, VarSet,
+    // CheckBagHasItem, RemoveBagItem and ArePlayerFieldControlsLocked (fieldCrcs, in that order), VAR_REPEL_STEP_COUNT
+    // and the Repels' ids, gItems (holdEffectParam = a Repel's steps, itemNameLen + 5 into struct Item unless
+    // itemParamOffset); ScriptContext_SetupScript, ShowPokemonStorageSystemPC's index in gSpecials (whose entry is
+    // pcFn), their CRCs and where the PC's script goes. fieldVarGet 0 = none.
+    uint32_t fieldVarGet, fieldVarSet, fieldCheckBag, fieldRemoveBag, fieldLocked;
+    uint32_t fieldCrcs[5];
+    int repelVar, repelItems[4];
+    uint32_t gItems;
+    int itemNameLen, itemParamOffset;
+    uint32_t pcSetupScript;
+    int pcSpecial;
+    uint32_t pcSpecials, pcFn, pcCrcs[2], pcScript;
 };
 
 enum pd_card_style { PD_CARD_NONE, PD_CARD_KANTO, PD_CARD_HOENN };

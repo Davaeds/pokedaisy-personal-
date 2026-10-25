@@ -35,7 +35,7 @@ GROUP_ORDER = ["retail", "ports", "hacks"]
 RETAIL_ORDER = ["firered", "leafgreen", "emerald", "ruby_sapphire"]
 META_KEYS = {"base", "private", "lazy", "port"}
 TYPES = {"long", "int", "bool", "char", "string", "item_descs", "int_range", "long_list", "int_list", "int_set",
-         "int_map", "ref"}
+         "long_set", "int_map", "ref"}
 KOTLIN_TYPES = {"Long": "long", "Int": "int", "Boolean": "bool", "Char": "char", "String": "string",
                 "ItemDescTable": "item_descs", "IntRange": "int_range"}
 ITEM_DESC_FIELDS = {"preset": "string", "base": "long", "stride": "int", "descOff": "int", "idOff": "int",
@@ -259,7 +259,7 @@ def toml_default(kotlin_value, ftype):
 def new_schema(name, kt_file, cls):
     out = [f"# {cls}'s fields ({kt_file}), checked against it by scripts/gen_gamedata.py.",
            "# type: long | int | bool | char | string | item_descs | int_range | long_list | int_list | int_set |",
-           "# int_map | ref (a Kotlin val's name);",
+           "# long_set | int_map | ref (a Kotlin val's name);",
            "# record names the schema of a value a config may spell out as a sub-table.",
            "", f"version = {SCHEMA_VERSION}", f"kotlin_class = '{cls}'", f"kotlin_file = '{kt_file}'"]
     for f in kotlin_class_fields(kt_file, cls):
@@ -453,6 +453,8 @@ def check_value(value, ftype, nullable, where, name):
         "int_list": lambda v: isinstance(v, list) and all(isinstance(x, int) and not isinstance(x, bool) for x in v),
         "int_set": lambda v: isinstance(v, list) and all(isinstance(x, int) and not isinstance(x, bool) for x in v)
         and len(set(v)) == len(v),
+        "long_set": lambda v: isinstance(v, list) and all(isinstance(x, int) and not isinstance(x, bool) for x in v)
+        and len(set(v)) == len(v),
         # a Map<Int, Int> as [[key, value], ...] (TOML's table keys can't be numbers)
         "int_map": lambda v: isinstance(v, list) and all(isinstance(p, list) and len(p) == 2 and all(
             isinstance(x, int) and not isinstance(x, bool) for x in p) for p in v) and len({p[0] for p in v}) == len(v),
@@ -536,8 +538,10 @@ def kt_value(value, ftype, field, indent):
         return "emptyList()" if not value else \
             "listOf(" + ", ".join(kt_int(v, ftype == "long_list") + ("L" if ftype == "long_list" and "x" not in
                                                                          kt_int(v, False) else "") for v in value) + ")"
-    if ftype == "int_set":
-        return "emptySet()" if not value else "setOf(" + ", ".join(kt_int(v, False) for v in value) + ")"
+    if ftype in ("int_set", "long_set"):
+        return "emptySet()" if not value else "setOf(" + ", ".join(
+            kt_int(v, ftype == "long_set") + ("L" if ftype == "long_set" and "x" not in kt_int(v, False) else "")
+            for v in value) + ")"
     if ftype == "int_map":
         return "emptyMap()" if not value else \
             "mapOf(" + ", ".join(f"{kt_int(k, False)} to {kt_int(v, False)}" for k, v in value) + ")"
@@ -624,8 +628,10 @@ def load_records():
             kind, name = m.groups()
             if name in records:
                 fail(where, f"{name} is also in {records[name]['file']}")
-            meta = {e[0]: e[1] for e in tab["entries"] if e[0] in ("schema", "base", "of", "items")}
-            entries = [e for e in tab["entries"] if e[0] not in ("schema", "base", "of", "items")]
+            # `of` / `items` are a list's own keys; a record's `items` is a field (FieldItemFns.items).
+            keys = ("schema", "base", "of", "items") if kind == "list" else ("schema", "base")
+            meta = {e[0]: e[1] for e in tab["entries"] if e[0] in keys}
+            entries = [e for e in tab["entries"] if e[0] not in keys]
             r = {"name": name, "kind": kind, "file": rel, "where": where, "rank": (rel, i),
                  "lead": tab["lead"], "end": tab["end"], "entries": entries, "base": meta.get("base")}
             if kind == "list":
@@ -771,9 +777,9 @@ class Resolver:
 
 
 def c_value(v, f, names, lists, where, none):
-    if f["type"] in ("long_list", "int_list", "int_set", "int_map") and (not isinstance(v, list) or not v):
+    if f["type"] in ("long_list", "int_list", "int_set", "long_set", "int_map") and (not isinstance(v, list) or not v):
         return "{ { 0 } }" if f["type"] == "int_map" else "{ 0 }"
-    if f["type"] in ("long_list", "int_list", "int_set", "int_map") and isinstance(v, list):
+    if f["type"] in ("long_list", "int_list", "int_set", "long_set", "int_map") and isinstance(v, list):
         return "{ " + ", ".join(c_value(i, {"type": "int"}, names, lists, where, None) if not isinstance(i, list)
                                 else "{ " + ", ".join(str(int(x)) for x in i) + " }" for i in v) + " }"
     if isinstance(v, dict):

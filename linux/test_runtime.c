@@ -60,7 +60,7 @@ static void test_fly(struct mCore* c,struct pd_game* game,const uint8_t* rom,siz
   int to=-1;
   for(int i=t.count-1;i>=0 && to<0;i--)if(t.towns[i]!=snap->mapsec)to=t.towns[i];
   assert(to>=0);
-  present_quick(game,NULL,0,0,names,t.count,t.count>1?1:0,gw,gh);shot("fly-list");
+  present_quick(game,NULL,0,0,"FLY",names,t.count,t.count>1?1:0,gw,gh);shot("fly-list");
   for(int i=0;i<300 && !pk_call_safe(c);i++)flags=fly_frame(c,s);
   assert(fly_start(c,cfg,rom,len,snap,to,&t,false,false)==FLY_OK);
   uint32_t cb=fly_main_callback(c,cfg);
@@ -78,6 +78,82 @@ static void test_fly(struct mCore* c,struct pd_game* game,const uint8_t* rom,siz
          pd_mapsec_name(game,snap->mapsec),f,to);
   assert(free>=60 && snap->mapsec==to);
   present_game(gw,gh);shot("fly-landed");
+}
+static void wait_safe(struct mCore* c,const struct pd_settings* s,int* flags) {
+  for(int i=0;i<300 && !pk_call_safe(c);i++)*flags=fly_frame(c,s);
+  assert(pk_call_safe(c));
+}
+// REPEL, BIKE and PC as the quick menu runs them (main.c's jobs), on the real game. Once a run.
+static bool itemsOnce;
+static void test_field_items(struct mCore* c,struct pd_game* game,const uint8_t* rom,size_t len,
+                             struct pd_snapshot* snap,const struct pd_settings* s,unsigned gw,unsigned gh) {
+  const struct pd_config* cfg=game->cfg;
+  if(itemsOnce)return;
+  itemsOnce=true;
+  if(!cfg||!cfg->fieldVarGet){printf("%s ITEMS: none in this config\n",liveName);return;}
+  assert(field_items_supported(cfg,rom,len) && pc_supported(cfg,rom,len) && bike_supported(cfg));
+  int flags=0;
+  for(int i=0;i<60;i++)flags=fly_frame(c,s);
+  pd_snapshot_read(snap,game,read_memory,c);
+  // REPEL: the strongest kind held, else nothing to check (the save has none).
+  int repel=0;
+  for(int k=0;k<REPEL_KINDS;k++)if(bag_count(snap,repel_kinds[k][0])>0)repel=repel_kinds[k][0];
+  // None in the bag: one REPEL put in with the game's own AddBagItem (FieldItems.kt's PartyItemFns.addBagItem).
+  uint32_t addBagItem=!strcmp(game->code,"BPEE")?0x080D6928:!strcmp(game->code,"BPGE")?(game->revision?0x0809A06C:0x0809A058)
+                     :!strcmp(game->code,"BPRE")&&game->revision==1?0x0809A098:0;
+  if(!repel && addBagItem) {
+    wait_safe(c,s,&flags);
+    const uint32_t args[4]={86,1,0,0};uint32_t ok=0;
+    assert(pk_call(c,addBagItem,args,&ok) && ok==1);
+    for(int i=0;i<4;i++)flags=fly_frame(c,s);
+    pd_snapshot_read(snap,game,read_memory,c);
+    repel=86;
+  }
+  if(repel) {
+    int before=bag_count(snap,repel),steps=0;
+    assert(repel_steps(c,cfg)==0);
+    wait_safe(c,s,&flags);
+    assert(repel_use(c,cfg,rom,len,repel,false,false,&steps)==ITEM_USED && steps>=100);
+    assert(repel_steps(c,cfg)==steps);
+    wait_safe(c,s,&flags);
+    assert(repel_use(c,cfg,rom,len,repel,false,false,&steps)==ITEM_STILL_ACTIVE);
+    for(int i=0;i<4;i++)flags=fly_frame(c,s);
+    pd_snapshot_read(snap,game,read_memory,c);
+    assert(bag_count(snap,repel)==before-1);
+    printf("%s REPEL: item %d used, %d steps, %d left in the bag\n",liveName,repel,repel_steps(c,cfg),before-1);
+  } else printf("%s REPEL: none in the bag\n",liveName);
+  // BIKE: SELECT with the bike registered; on, then off again.
+  int bike=bag_bike(snap);
+  if(bike) {
+    for(int round=0;round<2;round++) {
+      bool was=flags&PK_FIELD_BIKE;uint16_t old=0;
+      wait_safe(c,s,&flags);
+      assert(bike_register(c,cfg,rom,len,bike,false,false,&old)==ITEM_USED);
+      bool took=false;
+      for(int tries=0;tries<15 && !took;tries++) {
+        c->setKeys(c,1u<<SELECT);for(int i=0;i<2;i++)flags=fly_frame(c,s);c->setKeys(c,0);
+        for(int i=0;i<40 && !took;i++){flags=fly_frame(c,s);took=((flags&PK_FIELD_BIKE)!=0)!=was;}
+      }
+      for(int i=0;i<20;i++)flags=fly_frame(c,s);
+      bike_restore(c,cfg,bike,old);
+      assert(took);
+      printf("%s BIKE: %s (item %d), the register put back to %d\n",liveName,was?"got off":"got on",bike,old);
+      if(!round){present_game(gw,gh);shot("bike");}
+      for(int i=0;i<60;i++)flags=fly_frame(c,s);
+    }
+  } else printf("%s BIKE: none in the bag\n",liveName);
+  // PC: the game's own PC menu opens (the field's controls held by its script), B backs out of it.
+  wait_safe(c,s,&flags);
+  assert(pc_open(c,cfg,rom,len,false,false)==ITEM_USED);
+  for(int i=0;i<90;i++)flags=fly_frame(c,s);
+  assert(flags&PK_FIELD_LOCKED);
+  present_game(gw,gh);shot("pc");
+  for(int k=0;k<12 && (flags&PK_FIELD_LOCKED);k++) {
+    c->setKeys(c,1u<<B);for(int i=0;i<4;i++)flags=fly_frame(c,s);c->setKeys(c,0);
+    for(int i=0;i<40;i++)flags=fly_frame(c,s);
+  }
+  assert(!(flags&PK_FIELD_LOCKED));
+  printf("%s PC: opened and closed, the field free again\n",liveName);
 }
 static void test_frame(struct mCore* c,bool companion,int frame,struct pd_ui* ui,struct pd_snapshot* snap) {
   if(live) {
@@ -177,11 +253,26 @@ static void test_frame(struct mCore* c,bool companion,int frame,struct pd_ui* ui
       present_menu(&m,gw,gh);shot("menu");
       assert(lastGameRect.w>=ow-2*(lastGameRect.w/(int)wideW) && wideReady);
       // The QUICK MENU over the game, a dimmed tile with its reason in the middle.
-      struct quick_item q[]={{QUICK_FLY,false,false,NULL,snap->party[0].species},{QUICK_WILD,true,false,NULL,0},{QUICK_SAVE_STATE,false,false,NULL,0},
-                             {QUICK_LOAD_STATE,false,false,"No state saved yet",0},{QUICK_FF,false,true,NULL,0},
-                             {QUICK_COMPANION,false,false,NULL,0}};
-      present_quick(&game,q,6,0,NULL,0,0,gw,gh);shot("quick");
-      present_quick(&game,q,6,3,NULL,0,0,gw,gh);shot("quick-dim");
+      // The QUICK MENU over the game: all nine tiles (the bag's own REPEL / BIKE icons), a dimmed one with its reason.
+      struct quick_item q[]={{.action=QUICK_PC},{.action=QUICK_FLY,.species=snap->party[0].species},
+                             {.action=QUICK_REPEL,.item=84,.why="80 steps left"},{.action=QUICK_BIKE,.item=360},
+                             {.action=QUICK_WILD,.off=true},{.action=QUICK_SAVE_STATE},
+                             {.action=QUICK_LOAD_STATE,.why="No state saved yet"},{.action=QUICK_FF,.lit=true},
+                             {.action=QUICK_COMPANION}};
+      present_quick(&game,q,9,1,NULL,NULL,0,0,gw,gh);shot("quick");
+      present_quick(&game,q,9,2,NULL,NULL,0,0,gw,gh);shot("quick-dim");
+      const char* kinds[]={"REPEL x2  100 steps","MAX REPEL x1  250 steps"};
+      present_quick(&game,q,9,2,"REPEL",kinds,2,1,gw,gh);shot("quick-repel");
+      // The HUD over EXPAND (the screen's corners) and over the game's own picture, a Repel working.
+      if(companionGame) {
+        struct hud_state hs={80,100};
+        pd_snapshot_read(snap,&game,read_memory,c);
+        companion_canvas();hudDrawnKey=0;
+        present_hud_game(&game,snap,&hs,0,gw,gh);shot("hud");assert(hudShown);
+        s->aspect=PD_ASPECT_ORIGINAL;wideReady=false;hudDrawnKey=0;
+        present_hud_game(&game,snap,&hs,0,gw,gh);shot("hud-original");assert(hudShown);
+        s->aspect=PD_ASPECT_EXPAND;for(int i=0;i<4;i++){c->runFrame(c);wide_tick(c,false,s);}
+      }
       s->aspect=keep;wideReady=false;
     }
     if(!companionGame) {
@@ -198,9 +289,33 @@ static void test_frame(struct mCore* c,bool companion,int frame,struct pd_ui* ui
     assert(found && ui->summarySlot==0);
     pd_ui_draw(ui,&canvas,&game,snap,&host);present();shot("summary");
     assert(pd_ui_back(ui) && ui->summarySlot==-1);
+    // SETTINGS with HUD and TAB BAR, their pages, then GUIDE taken off the bar: MORE opens it.
+    // As the host has it: no SCREEN row, ASPECT with AUTO ZOOM IN (ZOOM OUT), the HUD; scrolled to its end too.
+    host.hasHud=true;host.hideScreenMode=true;host.hasExpand=true;host.expandGame=wideSupported;host.count=1;
+    host.labels[0]="HOST";snprintf(host.values[0],40,"PokeDaisy Linux");
+    int keepAspect=ui->settings->aspect;ui->settings->aspect=PD_ASPECT_ZOOM_OUT;ui->tab=PD_TAB_SETTINGS;
+    pd_ui_draw(ui,&canvas,&game,snap,&host);present();shot("settings");
+    bool leaveShown=false;
+    for(int i=0;i<ui->hitCount;i++)leaveShown|=ui->hits[i].id==HIT_SETTING+SETTING_LEAVE;
+    ui->settingsScroll=1000;pd_ui_draw(ui,&canvas,&game,snap,&host);present();shot("settings-end");
+    bool leaveNow=false;
+    for(int i=0;i<ui->hitCount;i++)leaveNow|=ui->hits[i].id==HIT_SETTING+SETTING_LEAVE;
+    assert(leaveNow);printf("%s SETTINGS: LEAVE GAME %s, after scrolling shown\n",liveName,leaveShown?"shown":"below");
+    ui->settingsScroll=0;ui->settings->aspect=keepAspect;
+    ui->overlay=PD_OVERLAY_HUD;pd_ui_draw(ui,&canvas,&game,snap,&host);present();shot("settings-hud");
+    ui->overlay=PD_OVERLAY_TAB_BAR;pd_ui_draw(ui,&canvas,&game,snap,&host);present();shot("settings-tabbar");
+    int keepTabs=ui->settings->tabBar;
+    ui->settings->tabBar&=~(1<<PD_TAB_GUIDE);ui->overlay=PD_OVERLAY_MORE;
+    pd_ui_draw(ui,&canvas,&game,snap,&host);present();shot("more");
+    bool more=false;
+    for(int i=0;i<ui->hitCount;i++)if(ui->hits[i].id==HIT_OPTION){struct pd_hit h=ui->hits[i];pd_ui_touch(ui,h.x+1,h.y+1,true);pd_ui_touch(ui,h.x+1,h.y+1,false);more=true;break;}
+    assert(more && ui->tab==PD_TAB_GUIDE && ui->overlay==PD_OVERLAY_NONE);
+    pd_ui_draw(ui,&canvas,&game,snap,&host);present();shot("guide-from-more");
+    ui->settings->tabBar=keepTabs;ui->tab=PD_TAB_PARTY;
     uint32_t before=c->frameCounter(c);
     assert(state(c,"integration.ss",true));drive(c,0,20);assert(state(c,"integration.ss",false));
     assert(c->frameCounter(c)==before);unlink("integration.ss");
+    test_field_items(c,&game,rom,len,snap,ui->settings,gw,gh);
     test_fly(c,&game,rom,len,snap,ui->settings,gw,gh);
     free(rom);
     printf("PASS real GBA save, party=%d, companion Summary/back and state reload\n",snap->partyCount);
