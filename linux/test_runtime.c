@@ -188,9 +188,32 @@ static void test_companion_size(void) {
     assert(w==cases[i].w&&h==cases[i].h);
   }
 }
+// A pad plugged in and out while running (SDL's virtual joystick, which SDL
+// maps as a game controller): opened on its own, its buttons are the game's
+// (SDL's B, the right face button, is the game's A), and pulling it lets go.
+static void test_controller_hotplug(void) {
+#if SDL_VERSION_ATLEAST(2, 24, 0)
+  assert(!SDL_Init(SDL_INIT_JOYSTICK|SDL_INIT_GAMECONTROLLER));
+  controller=NULL;held=pressed=0;
+  SDL_VirtualJoystickDesc desc={.version=SDL_VIRTUAL_JOYSTICK_DESC_VERSION,.type=SDL_JOYSTICK_TYPE_GAMECONTROLLER,
+    .naxes=SDL_CONTROLLER_AXIS_MAX,.nbuttons=SDL_CONTROLLER_BUTTON_MAX,.name="PokeDaisy test pad"};
+  int index=SDL_JoystickAttachVirtualEx(&desc);assert(index>=0);
+  events();assert(controller);
+  SDL_Joystick* js=SDL_GameControllerGetJoystick(controller);
+  assert(!SDL_JoystickSetVirtualButton(js,SDL_CONTROLLER_BUTTON_B,1));
+  events();assert(down(A) && (held&(1u<<A)));
+  assert(!SDL_JoystickSetVirtualAxis(js,SDL_CONTROLLER_AXIS_TRIGGERRIGHT,32767));
+  events();assert(held&(1u<<R2));
+  assert(!SDL_JoystickDetachVirtual(index));
+  events();assert(!controller && !held);
+  SDL_QuitSubSystem(SDL_INIT_JOYSTICK|SDL_INIT_GAMECONTROLLER);
+  puts("PASS controller plugged in and out, its buttons the game's");
+#endif
+}
 int main(int argc,char** argv) {
   test_wide_window();
   test_companion_size();
+  if(argc<4)test_controller_hotplug();
   if(argc==4 || argc==5) {
     // ROM DATA OUT [WxH,WxH,...]: once per window size (default 512x384).
     char sizes[256];snprintf(sizes,sizeof sizes,"%s",argc==5?argv[4]:"");

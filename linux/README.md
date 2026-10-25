@@ -43,10 +43,14 @@ D-pad to focus, A to choose, B to go back and L/R to change tabs.
 Save/load/quit confirmations are cancel-first. Fast-forward has no audio.
 
 SDL GameController mappings take priority. The right face button acts as game
-A; the bottom button acts as game B. Unmapped devices are ignored unless you
-explicitly set `POCKET_RAW_TRIMUI=1`, which enables the existing TrimUI raw
-button layout. Connect the controller before starting. Other controllers can
-supply SDL_GAMECONTROLLERCONFIG; they are not claimed hardware support.
+A; the bottom button acts as game B. A controller can be plugged in or pulled
+out while the game runs: the first one SDL has a mapping for is used, from SDL's
+own database, `DATA/gamecontrollerdb.txt` (the community file's format) or
+`SDL_GAMECONTROLLERCONFIG` (which PortMaster sets for the device it runs on).
+An unmapped device is named in the log with its GUID, to write it a mapping. It
+is otherwise ignored unless you explicitly set `POCKET_RAW_TRIMUI=1`, which
+enables the existing TrimUI raw button layout. Other controllers are not
+claimed hardware support.
 
 `POCKET_FULLSCREEN=1` uses SDL's current display mode; no Brick panel size is
 assumed. Gameplay uses centered whole-pixel scaling. The companion's canvas
@@ -77,6 +81,17 @@ companion. GB/GBC games, including Crystal and Polished Crystal, are emulation
 only in this foundation. Do not mistake the downstream Polished companion or
 Emerald Summary enhancements for features included here. Unsupported games
 keep the existing core's unsupported-companion message.
+
+## PortMaster (ROCKNIX, Knulli, muOS ...)
+
+`python3 linux/package.py --portmaster <aarch64 binary> <out>` lays the build
+out as a PortMaster port: `PokeDaisy.sh` (`linux/portmaster/`, PortMaster's usual
+launcher: its `control.txt`, the device's controller mapping, `gptokeyb` for the
+exit hotkey) beside a `pokedaisy/` folder with the binary, licenses and empty
+`roms/`, `saves/` and `states/` once it has run. Copy both into the firmware's
+`ports` folder and your games into `pokedaisy/roms/`. It fills the screen and
+uses the firmware's own SDL2. CTest's `portmaster-launcher` runs the launcher
+against a stand-in PortMaster (native builds). Not yet tried on a device.
 
 ## TrimUI cross-build and launcher
 

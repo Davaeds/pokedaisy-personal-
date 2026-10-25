@@ -204,12 +204,49 @@ static void key(int k, bool down) {
   } else
     held &= ~bit;
 }
+/* Controllers come and go (a USB or Bluetooth pad, a handheld whose built-in
+ * one shows up late): SDL reports the ones it has a mapping for as game
+ * controllers (its own database, DATA/gamecontrollerdb.txt, or
+ * SDL_GAMECONTROLLERCONFIG, which PortMaster sets). The first one is used; an
+ * unmapped device is named in the log so a mapping can be added. */
+static void controller_added(int index) {
+  if (!SDL_IsGameController(index)) {
+    char guid[64];
+    SDL_JoystickGetGUIDString(SDL_JoystickGetDeviceGUID(index), guid, sizeof guid);
+    fprintf(stderr, "Controller without a mapping: %s (%s); add one to "
+            "DATA/gamecontrollerdb.txt or SDL_GAMECONTROLLERCONFIG\n",
+            SDL_JoystickNameForIndex(index) ? SDL_JoystickNameForIndex(index) : "?", guid);
+    return;
+  }
+  if (controller)
+    return;
+  controller = SDL_GameControllerOpen(index);
+  if (controller)
+    fprintf(stderr, "Controller: %s\n", SDL_GameControllerName(controller));
+}
+static void controller_removed(SDL_JoystickID id) {
+  if (!controller ||
+      SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller)) != id)
+    return;
+  SDL_GameControllerClose(controller);
+  controller = NULL;
+  held = 0; // nothing stays pressed on a pad that's gone
+  for (int i = 0; i < SDL_NumJoysticks() && !controller; i++)
+    if (SDL_IsGameController(i))
+      controller_added(i);
+}
 static void events(void) {
   pressed = 0;
   SDL_Event e;
   while (SDL_PollEvent(&e)) {
     if (e.type == SDL_QUIT)
       running = 0;
+    if (e.type == SDL_JOYDEVICEADDED && !SDL_IsGameController(e.jdevice.which))
+      controller_added(e.jdevice.which);
+    if (e.type == SDL_CONTROLLERDEVICEADDED)
+      controller_added(e.cdevice.which);
+    if (e.type == SDL_CONTROLLERDEVICEREMOVED)
+      controller_removed(e.cdevice.which);
     if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) {
       if (!e.key.repeat)
         key(keyboard(e.key.keysym.sym), e.type == SDL_KEYDOWN);
@@ -908,8 +945,14 @@ int main(int argc, char **argv) {
   else
     fprintf(stderr, "Audio unavailable: %s\n", SDL_GetError());
   rawTrimui=getenv("POCKET_RAW_TRIMUI") && !strcmp(getenv("POCKET_RAW_TRIMUI"),"1");
-  for(int i=0;i<SDL_NumJoysticks() && !controller;i++)
-    if(SDL_IsGameController(i))controller=SDL_GameControllerOpen(i);
+  snprintf(path, sizeof path, "%s/gamecontrollerdb.txt", root);
+  if (access(path, R_OK) == 0) {
+    int added = SDL_GameControllerAddMappingsFromFile(path);
+    fprintf(stderr, "Controller mappings from %s: %d\n", path, added);
+  }
+  for (int i = 0; i < SDL_NumJoysticks() && !controller; i++)
+    if (SDL_IsGameController(i))
+      controller_added(i);
   SDL_Joystick *js = !controller && rawTrimui && SDL_NumJoysticks() ? SDL_JoystickOpen(0) : NULL;
   if (rom)
     run_game(rom, frames, shot);

@@ -51,8 +51,10 @@ jobs:
             -DCMAKE_CROSSCOMPILING_EMULATOR="qemu-aarch64-static;-L;$NEXTUI_TOOLCHAIN/aarch64-nextui-linux-gnu/libc"
           cmake --build linux/build-arm -j2
           ctest --test-dir linux/build-arm --output-on-failure
-      - name: Package TrimUI artifact
-        run: python3 linux/package.py linux/build-arm/pokedaisy-linux "$RUNNER_TEMP/linux-artifacts"
+      - name: Package TrimUI and PortMaster artifacts
+        run: |
+          python3 linux/package.py linux/build-arm/pokedaisy-linux "$RUNNER_TEMP/linux-artifacts"
+          python3 linux/package.py --portmaster linux/build-arm/pokedaisy-linux "$RUNNER_TEMP/linux-artifacts"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pokedaisy-linux-aarch64

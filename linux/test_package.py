@@ -21,4 +21,16 @@ with tempfile.TemporaryDirectory(prefix='pd-linux-package-') as d:
     before=archive.read_bytes()
     result=subprocess.run([sys.executable,str(script),str(binary),d],capture_output=True,text=True)
     assert result.returncode!=0 and archive.read_bytes()==before
-print('PASS architecture-specific package, actual executable, license/source records and overwrite refusal')
+# The PortMaster layout: PokeDaisy.sh beside pokedaisy/, which holds the rest.
+pm='pokedaisy-portmaster-'+{62:'x86_64',183:'aarch64'}[arch]
+with tempfile.TemporaryDirectory(prefix='pd-linux-package-') as d:
+    result=subprocess.run([sys.executable,str(script),'--portmaster',str(binary),d],capture_output=True,text=True)
+    assert result.returncode==0,result.stderr
+    with zipfile.ZipFile(Path(d)/(pm+'.zip')) as z:
+        names=z.namelist();assert len(names)==10,names
+        assert z.getinfo(pm+'/PokeDaisy.sh').external_attr>>16 & 0o111
+        assert z.read(pm+'/pokedaisy/pokedaisy-linux')==binary.read_bytes()
+        assert z.getinfo(pm+'/pokedaisy/pokedaisy-linux').external_attr>>16 & 0o111
+        assert not any(n.endswith('launch.sh') for n in names)
+        assert all(n==pm+'/PokeDaisy.sh' or n.startswith(pm+'/pokedaisy/') for n in names)
+print('PASS architecture-specific package, actual executable, license/source records, overwrite refusal and the PortMaster layout')

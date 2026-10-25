@@ -145,7 +145,9 @@ has much more: Polished Crystal, the summary pages, NextUI power handling): the 
 C companion (`3ds/core/`), so a companion change for 3DS shows here too and the other way round. Its canvas follows
 the screen (`companion_size`: the largest whole scale keeping 320x240, so 426x240 at 3x on 1280x720); PARTY is
 Android's `PartySlot` ported (`pd_ui_party.c`), and the host's D-pad focus reaches the core as `pd_ui.focusId` so a
-slot shows its own selected look instead of the focus ring. It adds no game data of its own (addresses come from `3ds/core/`). Build and test in a Linux container or
+slot shows its own selected look instead of the focus ring. Controllers hotplug (`controller_added` / `_removed`, mappings
+from `DATA/gamecontrollerdb.txt` or `SDL_GAMECONTROLLERCONFIG`); `package.py --portmaster` + `linux/portmaster/PokeDaisy.sh`
+make a PortMaster port (ROCKNIX & co., untried on a device; `test_portmaster.py` runs it against a stand-in PortMaster). It adds no game data of its own (addresses come from `3ds/core/`). Build and test in a Linux container or
 VM: `cmake -S linux -B linux/build && cmake --build linux/build && ctest --test-dir linux/build`; `linux-runtime-test
 ROM DATA OUT` boots a real ROM + save (DATA/saves/<rom file name>.sav) to the field and screenshots PARTY / the
 summary. Saves are backed up into `saves/pokedaisy-backups/` like Android's (`pocket_save_backup`, newest 10

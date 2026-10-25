@@ -28,6 +28,10 @@ game, for the games EXPAND knows on Android. `ZOOM OUT` shows even more of it,
 one scale smaller. Battles and menus stay as the game draws them, and with
 `AUTO ZOOM IN` on, so do text boxes.
 
+On firmwares that run PortMaster (ROCKNIX, Knulli, muOS and others), the
+PortMaster build goes in your `ports` folder like any other port, with your
+games in its `roms` folder. Controllers can be plugged in while you play.
+
 This early version does not include the Polished Crystal companion, the longer
 summaries or firmware power handling. Earlier
 builds ran on the Brick and Smart Pro, but this separated foundation still
