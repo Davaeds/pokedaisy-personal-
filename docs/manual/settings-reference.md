@@ -151,7 +151,7 @@ At the top of SETTINGS, in a blue frame, in the games where any of it works.
 | --- | --- | --- | --- |
 | `WILD ENCOUNTERS` | **`ON`**, `OFF` | Wild Pokémon jumping out in grass, caves and water, or none. `N/A` in a game where it can't work. | [Controls](controls.md) |
 | `REUSABLE TMS` | `ON`, **`OFF`** | A TM stays in your bag after it teaches a move, like an HM. `ON` and greyed out where the game already keeps its TMs, `N/A` where it can't work. | [Bag](bag.md) |
-| `MENU SOUNDS` | **`ON`**, `OFF` | `OFF` silences the game's own beep when you move or pick in its menus. Cries, music and every other sound stay. `N/A` where it can't work. | |
+| `MENU SOUNDS` | **`ON`**, `OFF` | `OFF` silences the game's own beep when you move or pick in its menus. Cries, music and every other sound stay. `N/A` in games other than the GBA Pokemon games and their hacks. | |
 | `AUTO-RUN` | `ON`, **`OFF`** | Walking on the field runs without holding B; holding B walks instead. | [Controls](controls.md) |
 | `RUN INDOORS` | `ON`, **`OFF`** | Lets you run inside buildings too. `N/A` on Ruby and Sapphire. | [Controls](controls.md) |
 | `CHEATS` | **`OFF`**, or how many are on (a page) | The master switch, then this game's cheats, each flipped live. Codes are added on the top screen. | [Cheats](cheats.md) |

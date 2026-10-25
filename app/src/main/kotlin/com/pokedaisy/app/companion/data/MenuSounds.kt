@@ -5,7 +5,7 @@ import java.io.File
 /**
  * MENU SOUNDS (SETTINGS > GAMEPLAY): the game's menu beep off, everything else heard as before.
  *
- * Moving a menu's cursor and picking from it both play SE_SELECT, song 5 in every Gen 3 song table (the click
+ * Moving a menu's cursor and picking from it both play SE_SELECT, song 5 in every Gen 3 Pokémon song table (the click
  * [com.pokedaisy.app.GameClickSound] renders). A game's own SOUND option silences it only by silencing the cries too, so
  * this points song 5's `gSongTable` entry ([M4aSongs.songTable], 8-byte `{SongHeader*, u16 ms, u16 me}` entries) at a
  * song with no tracks: the game still asks for the beep, `m4aSongNumStart` starts nothing. Cries never go through the
@@ -38,7 +38,14 @@ object MenuSounds {
         return found
     }
 
+    /** Only the Gen 3 Pokémon engines (by the header's game code: FireRed / LeafGreen / Emerald / Ruby / Sapphire and
+     * the hacks on them, which keep the code, plus Ultra Violet's PUVV): other GBA games use the same sound engine, but
+     * their song 5 can be any sound. */
+    fun isPokemonCode(code: String): Boolean = listOf("BPR", "BPG", "BPE", "AXV", "AXP", "PUV").any { code.startsWith(it) }
+
     fun find(rom: ByteArray): Patch? {
+        if (rom.size < 0xB0) return null
+        if (!isPokemonCode(String(rom, 0xAC, 4, Charsets.US_ASCII))) return null
         val songs = M4aSongs.locate(rom) ?: return null
         val table = (songs.songTable - ROM).toInt()
         fun headerOf(n: Int): Long? {
