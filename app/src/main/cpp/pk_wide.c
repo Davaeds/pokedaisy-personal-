@@ -1979,9 +1979,130 @@ static uint32_t glowAt(const uint32_t* frame, int X, int Y, const int reach[4], 
     return v | alpha;
 }
 
+// --- ambient light, above and below ------------------------------------------------------------------
+
+// Off the map (battles, the title, menu screens) the rows above and below the game have nothing of the game's to show:
+// they used to repeat its top / bottom pixel down every column, which a tall window (a phone held upright) showed as
+// stripes. There it's ambient light instead: the colours of the picture's top / bottom part, spread out and dimmed
+// towards the window's edge, with a slow shimmer and a few motes of light drifting away from the game. Only above and
+// below: the sides keep the drawn scene.
+
+#define AMB_BAND 24          // rows the light's colours are taken from, at the top / bottom of the picture
+#define AMB_ORBS 7           // motes per side
+
+static int32_t ambAcc[2][PK_WIDE_W][3];       // per column, x16, eased over frames
+static int32_t preA[2][PK_WIDE_W + 1][3];
+static bool ambAccOk;
+static int ambTick;
+static int8_t sinTab[256];
+static bool sinOk;
+
+struct AmbOrb { int x, y, r2, a; };
+static struct AmbOrb orbs[2][AMB_ORBS];
+static int norbs[2];
+
+static void sinInit(void) {
+    if (sinOk) return;
+    for (int i = 0; i < 256; i++) {
+        // Bhaskara's sine (no libm): good to ~0.2%.
+        int half = i & 127;
+        double th = half * 180.0 / 128.0, s = 4 * th * (180 - th) / (40500 - th * (180 - th));
+        sinTab[i] = (int8_t) ((i < 128 ? 1 : -1) * (int) (s * 127 + 0.5));
+    }
+    sinOk = true;
+}
+
+static void ambientLightPrepare(const uint32_t* frame) {
+    for (int side = 0; side < 2; side++) {
+        int y0 = side ? PK_WIDE_H - AMB_BAND : 0;
+        for (int c = 0; c < 3; c++) preA[side][0][c] = 0;
+        for (int x = 0; x < PK_WIDE_W; x++) {
+            int32_t sum[3] = { 0, 0, 0 };
+            for (int y = y0; y < y0 + AMB_BAND; y++) {
+                uint32_t v = frame[y * PK_WIDE_W + x];
+                for (int c = 0; c < 3; c++) sum[c] += (v >> (8 * c)) & 0xFF;
+            }
+            for (int c = 0; c < 3; c++) {
+                int32_t now = sum[c] * 16 / AMB_BAND;
+                // A fifth of the way each frame: a move's flash or a sprite passing still shows, but softly.
+                ambAcc[side][x][c] = ambAccOk ? ambAcc[side][x][c] + (now - ambAcc[side][x][c]) / 5 : now;
+                preA[side][x + 1][c] = preA[side][x][c] + ambAcc[side][x][c];
+            }
+        }
+    }
+    ambAccOk = true;
+}
+
+/** The motes for this frame: each drifts away from the game over its life, swaying, fading in and out. */
+static void ambientOrbs(struct PkWideView v, const int reach[4]) {
+    for (int side = 0; side < 2; side++) {
+        norbs[side] = 0;
+        int span = reach[2 + side];
+        if (span < 16) continue;
+        for (int k = 0; k < AMB_ORBS; k++) {
+            uint32_t h = (uint32_t) (k + 1 + side * 17) * 2654435761u;
+            h ^= h >> 13;
+            int period = 540 + (int) (h % 420);                     // 9 to 16 s a life
+            int p = (int) (((uint32_t) ambTick + h) % (uint32_t) period) * 256 / period;
+            int dist = 2 + p * (span - 2) / 256;
+            int sway = sinTab[(ambTick / 3 + (int) (h >> 8)) & 255] * 10 / 127;
+            int x = v.x + (int) ((h >> 10) % (uint32_t) v.w) + sway;
+            int r = 6 + (int) ((h >> 20) % 9);
+            if (r > span / 3) r = span / 3;
+            if (r < 3) continue;
+            int life = sinTab[p >> 1];                              // 0 -> 1 -> 0 over its life
+            struct AmbOrb* o = &orbs[side][norbs[side]++];
+            o->x = x;
+            o->y = side ? PK_WIDE_H - 1 + dist : -dist;
+            o->r2 = r * r;
+            o->a = life * (60 + (int) ((h >> 4) % 50)) / 127;       // at most ~0.4
+        }
+    }
+}
+
+/** The light at screen pixel (X, Y), above (Y < 0) or below (Y >= PK_WIDE_H) the frame. */
+static uint32_t ambientAt(int X, int Y, const int reach[4], uint32_t alpha) {
+    int side = Y >= PK_WIDE_H;
+    int d = side ? Y - PK_WIDE_H + 1 : -Y;
+    int far = reach[2 + side] > 1 ? reach[2 + side] : 1;
+    int t = d * 256 / far;
+    if (t > 256) t = 256;
+    int at = clampi(X, 0, PK_WIDE_W - 1);
+    int r = 6 + d;                                                  // the colours spread as they go out
+    int lo = at - r < 0 ? 0 : at - r, hi = at + r >= PK_WIDE_W ? PK_WIDE_W - 1 : at + r;
+    int dim = t * t >> 8;
+    int bright = 256 - dim * 170 / 256;                             // 1.0 at the game -> ~0.34 at the window's edge
+    int wave = sinTab[(X * 2 - d * 3 + ambTick / 2) & 255] + sinTab[(X - d * 2 - ambTick / 3 + 90) & 255];
+    bright += bright * wave / (127 * 14);                           // a slow shimmer, about +-14%
+    int light = 0;
+    for (int k = 0; k < norbs[side]; k++) {
+        const struct AmbOrb* o = &orbs[side][k];
+        int dx = X - o->x, dy = Y - o->y, d2 = dx * dx + dy * dy;
+        if (d2 >= o->r2) continue;
+        int f = 256 - d2 * 256 / o->r2;
+        light += o->a * (f * f >> 8) >> 8;
+    }
+    if (light > 200) light = 200;
+    uint32_t out = 0;
+    for (int c = 0; c < 3; c++) {
+        int32_t blur = (preA[side][hi + 1][c] - preA[side][lo][c]) / (hi - lo + 1) / 16;
+        int32_t avg = preA[side][PK_WIDE_W][c] / PK_WIDE_W / 16;
+        int32_t col = (blur * (256 - t) + avg * t) >> 8;            // further out, the picture's overall colour
+        col = col * bright >> 8;
+        if (light) {
+            int32_t lit = col * 3 / 2 + 56;                         // a mote: the same colour, lit up
+            if (lit > 255) lit = 255;
+            col += (lit - col) * light >> 8;
+        }
+        out |= (uint32_t) clampi(col, 0, 255) << (8 * c);
+    }
+    return out | alpha;
+}
+
 // --- the frame ---------------------------------------------------------------------------------------
 
 static int mix;                     // 0..256: how much of the window is the drawn scene (the rest is the ambient glow)
+static bool rawIsMap;               // raw holds the map (drawRegion), not a battle / menu screen
 static int lastScore = -1;
 static int lastTorn;
 static int lastMode;                // PK_WIDE_MODE_*
@@ -2767,6 +2888,7 @@ static int viewInner(struct mCore* core, const uint32_t* frame, uint32_t* out, s
     }
 
     if (valid || battle || menu) {
+        rawIsMap = valid;
         if (valid) {
             const struct Snap* s = &snaps[bestSnap];
             drawRegion(s, bestCx, bestCy, bestH, bestV, v.x, v.y, v.x + v.w, v.y + v.h, true, &raw[0][0], BUF_W, alpha);
@@ -2790,6 +2912,16 @@ static int viewInner(struct mCore* core, const uint32_t* frame, uint32_t* out, s
     if (mix < 256) ambientPrepare(frame);
     else edgeAccOk = false;    // the glow starts from the edges as they are when it's next needed
     int reach[4] = { -v.x, v.x + v.w - PK_WIDE_W, -v.y, v.y + v.h - PK_WIDE_H };
+    // Off the map, above and below the game is ambient light (see ambientAt).
+    bool ambient = !valid && (reach[2] > 0 || reach[3] > 0);
+    if (ambient) {
+        sinInit();
+        ambTick++;
+        ambientLightPrepare(frame);
+        ambientOrbs(v, reach);
+    } else {
+        ambAccOk = false;
+    }
 
     for (int j = 0; j < v.h; j++) {
         int Y = v.y + j;
@@ -2822,7 +2954,15 @@ static int viewInner(struct mCore* core, const uint32_t* frame, uint32_t* out, s
             } else {
                 m = 0;   // the window moved off what was last drawn: the glow
             }
-            uint32_t o = m >= 256 ? scene : lerp(glowAt(frame, X, Y, reach, alpha), scene, m);
+            uint32_t o;
+            if (ambient && (Y < 0 || Y >= PK_WIDE_H)) {
+                // A battle's / menu's rows here are only its edge repeated: light instead. A map left frozen (a fade
+                // off the field) still dissolves into it.
+                if (!rawIsMap) m = 0;
+                o = m >= 256 ? scene : lerp(ambientAt(X, Y, reach, alpha), scene, m);
+            } else {
+                o = m >= 256 ? scene : lerp(glowAt(frame, X, Y, reach, alpha), scene, m);
+            }
             row[i] = overlayDim ? dimmed(o, overlayDim) : o;
         }
     }
