@@ -11,7 +11,8 @@ static void tap(SDL_Keycode code) {
   SDL_Event e={.type=SDL_KEYDOWN};e.key.keysym.sym=code;
   assert(SDL_PushEvent(&e)==1);e.type=SDL_KEYUP;assert(SDL_PushEvent(&e)==1);
 }
-static char liveName[16]="live";
+static char liveName[48]="live";
+static char liveSize[16]="";
 static void shot(const char* name) {
   char path[1200];snprintf(path,sizeof path,"%s/%s-%s.png",output,liveName,name);
   assert(capture_frame(path,NULL));
@@ -21,19 +22,91 @@ static void drive(struct mCore* c, unsigned keys, int n) {
 }
 static void test_frame(struct mCore* c,bool companion,int frame,struct pd_ui* ui,struct pd_snapshot* snap) {
   if(live) {
-    assert(frame==0 && c->platform(c)==mPLATFORM_GBA);
+    assert(frame==0);
+    bool isGba=c->platform(c)==mPLATFORM_GBA;
     // A copy: mGBA swaps its ROM mapping for a writable one once the game touches
     // the cartridge's GPIO registers (FireRed does), so the block's pointer goes stale.
-    size_t len=0;const unsigned char* block=c->getMemoryBlock(c,0x08,&len);
-    unsigned char* rom=malloc(len);assert(rom);memcpy(rom,block,len);
-    struct pd_game game;pd_game_detect(&game,rom,len);game.rom=rom;game.romSize=len;
-    snprintf(liveName,sizeof liveName,"live-%s",game.code);
-    for(int i=0;i<120 && (!snap->valid || snap->partyCount==0 || !snap->posOk);i++) {
-      drive(c,1,8);drive(c,0,40);pd_snapshot_read(snap,&game,read_memory,c);
+    size_t len=0;const unsigned char* block=isGba?c->getMemoryBlock(c,0x08,&len):NULL;
+    unsigned char* rom=malloc(len?len:1);assert(rom);if(len)memcpy(rom,block,len);
+    struct pd_game game={0};
+    if(isGba){pd_game_detect(&game,rom,len);game.rom=rom;game.romSize=len;}
+    char crcName[16];uint32_t crc=0;c->checksum(c,&crc,mCHECKSUM_CRC32);snprintf(crcName,sizeof crcName,"%08x",crc);
+    snprintf(liveName,sizeof liveName,"live-%s%s",isGba?game.code:crcName,liveSize);
+    bool companionGame=isGba && game.cfg;
+    // native-capture/boot/default.txt's way in: START, then A on CONTINUE and
+    // through the recap pages, then B (FireRed's quest log), until the field
+    // has been up for a second. The party alone isn't enough: Emerald reads it
+    // from the save before its intro.
+    struct pd_settings probe=*ui->settings;probe.aspect=PD_ASPECT_EXPAND;
+    int fieldFrames=0,step=0;
+    for(int f=0;f<6000 && fieldFrames<60;f++) {
+      unsigned keys=0;
+      if(f==120)keys=1<<3;                              // START
+      else if(f>150 && fieldFrames==0 && f%30==0)keys=++step<=40?1:2; // A, then B
+      c->setKeys(c,keys);c->runFrame(c);wide_tick(c,false,&probe);c->setKeys(c,0);
+        bool field=wideSupported?pk_wide_scene()==PK_WIDE_SCENE_FIELD:f>1500;
+      fieldFrames=field?fieldFrames+1:0;
     }
-    assert(snap->valid && snap->partyCount>0 && snap->posOk);
+    assert(fieldFrames>=60);
+    if(companionGame){
+      pd_snapshot_read(snap,&game,read_memory,c);
+      assert(snap->valid && snap->partyCount>0 && snap->posOk);
+    }
     drive(c,0,120);pd_snapshot_read(snap,&game,read_memory,c);
-    present_game(240,160);shot("game");
+    unsigned gw,gh;c->desiredVideoDimensions(c,&gw,&gh);
+    present_game(gw,gh);shot("game");
+    if(wideSupported) {
+      // EXPAND and ZOOM OUT while walking: the window's middle must be the
+      // game's own frame, pixel for pixel, on every frame it shows (frames the
+      // game wrote VRAM in mid-draw can't be redrawn and don't count).
+      struct pd_settings* s=ui->settings;int keep=s->aspect;
+      int ow,oh;assert(!SDL_GetRendererOutputSize(renderer,&ow,&oh));
+      unsigned fw=(unsigned)pk_wide_frame_w(),fh=(unsigned)pk_wide_frame_h();
+      assert(fw==gw && fh==gh);
+      int fieldShots=0;
+      for(int a=PD_ASPECT_EXPAND;a<=PD_ASPECT_ZOOM_OUT;a++) {
+        s->aspect=a;int shown=0,checked=0;
+        for(int i=0;i<240;i++) {
+          c->setKeys(c,(i/24)%2?1<<5:1<<4); // walk LEFT / RIGHT
+          c->runFrame(c);wide_tick(c,false,s);
+          if(!wideReady)continue;
+          shown++;
+          if(pk_wide_last_vram_torn())continue;
+          if(!isGba && pk_wide_gb_last_torn())continue;
+          checked++;
+          int mx=(int)(wideW-fw)/2,my=(int)(wideH-fh)/2;
+          for(unsigned y=0;y<fh;y++)for(unsigned x=0;x<fw;x++)
+            assert(wideFrame[(y+my)*wideW+x+mx]==wideSource[y*fw+x]);
+        }
+        // Walking can step through a door: let the next map come up.
+        c->setKeys(c,0);
+        for(int i=0;i<600 && (i<30 || !wideReady);i++){c->runFrame(c);wide_tick(c,false,s);}
+        fprintf(stderr,"%s %s: %ux%u window, %d of 240 frames expanded, %d checked exact (scene %d, mode %d, fault %d)\n",
+                liveName,pd_aspect_name(a),wideW,wideH,shown,checked,pk_wide_scene(),pk_wide_last_mode(),pk_wide_fault());
+        assert(shown>=30 && checked>=20);
+        if(!wideReady) {
+          // Walking found a wild Pokemon (or a menu): what was shown checked out.
+          fprintf(stderr,"%s %s: left the field (scene %d)\n",liveName,pd_aspect_name(a),pk_wide_scene());
+          continue;
+        }
+        fieldShots|=1<<a;
+        unsigned w,h;wide_window(ow,oh,fw,fh,a,&w,&h);assert(w==wideW && h==wideH);
+        present_game(gw,gh);shot(a==PD_ASPECT_EXPAND?"expand":"zoomout");
+        // The window reaches the screen's edges: what's left is under two scale
+        // steps (one for the division, one for keeping the margins even).
+        int scale=lastGameRect.w/(int)wideW;
+        assert(scale>=1 && lastGameRect.h==(int)wideH*scale);
+        assert(ow-lastGameRect.w<2*scale || wideW>=PK_WIDE_MAX_VIEW_W);
+        assert(oh-lastGameRect.h<2*scale || wideH>=PK_WIDE_MAX_VIEW_H);
+      }
+      assert(fieldShots); // at least one mode was checked through to its screenshot
+      s->aspect=keep;wideReady=false;
+    }
+    if(!companionGame) {
+      free(rom);
+      printf("PASS %s: boots to the field, emulation%s\n",liveName,wideSupported?" and EXPAND":" only");
+      running=0;return;
+    }
     struct pd_host_info host={0};ui->tab=PD_TAB_PARTY;
     pd_ui_draw(ui,&canvas,&game,snap,&host);present();shot("party");
     bool found=false;
@@ -78,11 +151,45 @@ static void test_frame(struct mCore* c,bool companion,int frame,struct pd_ui* ui
     rawTrimui=true;assert(SDL_PushEvent(&e)==1);events();assert(down(A));held=pressed=0;
   } else if(frame==5)assert(c->frameCounter(c)>pausedAt);
 }
+// The EXPAND window on common handheld panels: the game's own scale, the
+// screen's shape, even margins; ZOOM OUT one scale less.
+static void test_wide_window(void) {
+  static const struct {int ow,oh;unsigned fw,fh;int aspect;unsigned w,h;} cases[]={
+    {1024,768,240,160,PD_ASPECT_EXPAND,256,192}, // TrimUI Brick: 4x
+    {1280,720,240,160,PD_ASPECT_EXPAND,320,180}, // Smart Pro: 4x, full screen
+    {1280,720,240,160,PD_ASPECT_ZOOM_OUT,426,240},
+    {640,480,240,160,PD_ASPECT_EXPAND,320,240},  // RG35XX / RGB20 class: 2x
+    {720,720,240,160,PD_ASPECT_EXPAND,240,240},  // RGB30 / Cube: 3x, square
+    {750,560,240,160,PD_ASPECT_EXPAND,250,186},  // Miyoo Mini v4: 3x
+    {960,544,240,160,PD_ASPECT_EXPAND,320,180},  // RG503: 3x
+    {1920,1080,240,160,PD_ASPECT_EXPAND,320,180},// RG556 / desktop: 6x
+    {1920,1080,240,160,PD_ASPECT_ZOOM_OUT,384,216},
+    {320,240,240,160,PD_ASPECT_ZOOM_OUT,320,240},// 1x can't go lower
+    {1280,720,160,144,PD_ASPECT_EXPAND,256,144}, // Game Boy: 5x
+    {1024,768,160,144,PD_ASPECT_EXPAND,204,152},
+    {4096,2160,240,160,PD_ASPECT_ZOOM_OUT,340,180},
+  };
+  for(unsigned i=0;i<sizeof cases/sizeof*cases;i++) {
+    unsigned w,h;wide_window(cases[i].ow,cases[i].oh,cases[i].fw,cases[i].fh,cases[i].aspect,&w,&h);
+    if(w!=cases[i].w || h!=cases[i].h)fprintf(stderr,"%dx%d: %ux%u\n",cases[i].ow,cases[i].oh,w,h);
+    assert(w==cases[i].w && h==cases[i].h);
+    assert((w-cases[i].fw)%2==0 && (h-cases[i].fh)%2==0);
+  }
+}
 int main(int argc,char** argv) {
-  if(argc==4) {
-    live=true;output=argv[3];running=1;
-    char* args[]={"pokedaisy-linux","--data",argv[2],"--frames","1",argv[1],NULL};
-    return linux_app_main(6,args);
+  test_wide_window();
+  if(argc==4 || argc==5) {
+    // ROM DATA OUT [WxH,WxH,...]: once per window size (default 512x384).
+    char sizes[256];snprintf(sizes,sizeof sizes,"%s",argc==5?argv[4]:"");
+    char* next=sizes;int result=0;
+    do {
+      char* size=strsep(&next,",");
+      if(*size){setenv("POCKET_WINDOW",size,1);snprintf(liveSize,sizeof liveSize,"-%s",size);}
+      live=true;output=argv[3];running=1;
+      char* args[]={"pokedaisy-linux","--data",argv[2],"--frames","1",argv[1],NULL};
+      result|=linux_app_main(6,args);
+    } while(next);
+    return result;
   }
   char dir[]="/tmp/pd-linux-runtime-XXXXXX";assert(mkdtemp(dir));
   char* args[]={"pokedaisy-linux","--data",dir,"--frames","8","diagnostic.gb",NULL};

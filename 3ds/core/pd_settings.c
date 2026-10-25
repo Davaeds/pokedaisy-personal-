@@ -8,6 +8,8 @@ void pd_settings_defaults(struct pd_settings* s) {
     s->screenMode = PD_SCREEN_SHARP;
     s->ffSpeed = PD_FF_MIN;
     s->guideNotice = 0;
+    s->aspect = PD_ASPECT_ORIGINAL;
+    s->autoZoom = true;
 }
 
 static bool int_in(const char* v, int lo, int hi, int* out) {
@@ -32,6 +34,11 @@ bool pd_settings_load(struct pd_settings* s, const char* path) {
         if (!strcmp(key, "screen")) int_in(value, 0, PD_SCREEN_MODES - 1, &s->screenMode);
         else if (!strcmp(key, "ff")) int_in(value, PD_FF_MIN, PD_FF_MAX, &s->ffSpeed);
         else if (!strcmp(key, "guide")) int_in(value, 0, 0xFFFF, &s->guideNotice);
+        else if (!strcmp(key, "aspect")) int_in(value, 0, PD_ASPECTS - 1, &s->aspect);
+        else if (!strcmp(key, "autozoom")) {
+            int on;
+            if (int_in(value, 0, 1, &on)) s->autoZoom = on;
+        }
     }
     fclose(f);
     return true;
@@ -40,6 +47,7 @@ bool pd_settings_load(struct pd_settings* s, const char* path) {
 bool pd_settings_save(const struct pd_settings* s, const char* path) {
     FILE* f = fopen(path, "w");
     if (!f) return false;
-    fprintf(f, "screen=%d\nff=%d\nguide=%d\n", s->screenMode, s->ffSpeed, s->guideNotice);
+    fprintf(f, "screen=%d\nff=%d\nguide=%d\naspect=%d\nautozoom=%d\n", s->screenMode, s->ffSpeed, s->guideNotice,
+            s->aspect, s->autoZoom ? 1 : 0);
     return fclose(f) == 0;
 }

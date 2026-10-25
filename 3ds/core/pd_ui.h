@@ -40,6 +40,15 @@ enum pd_screen_mode {
     PD_SCREEN_MODES,
 };
 
+// How the game fills a host's screen, where the host can draw past the game's
+// edges (pd_host_info.hasExpand; the Linux host: the app's ASPECT > EXPAND).
+enum pd_aspect {
+    PD_ASPECT_ORIGINAL, // the game's own picture, centred
+    PD_ASPECT_EXPAND,   // the overworld rebuilt to the screen's edges, same scale
+    PD_ASPECT_ZOOM_OUT, // EXPAND one whole scale smaller: more of the map
+    PD_ASPECTS,
+};
+
 #define PD_FF_MIN 2
 #define PD_FF_MAX 4
 
@@ -48,6 +57,8 @@ struct pd_settings {
     int screenMode; // enum pd_screen_mode
     int ffSpeed;    // PD_FF_MIN..PD_FF_MAX
     int guideNotice; // a bit per game kind whose GUIDE notice was accepted
+    int aspect;      // enum pd_aspect (hosts with hasExpand only)
+    bool autoZoom;   // AUTO ZOOM IN: text boxes go back to the game's picture
 };
 
 enum pd_action {
@@ -67,6 +78,8 @@ struct pd_host_info {
     int count;
     bool ffOn;
     bool hideScreenMode; // Optional: host owns display scaling. Zero keeps the 3DS row.
+    bool hasExpand;      // Optional: the host can EXPAND (ASPECT / AUTO ZOOM IN rows) ...
+    bool expandGame;     // ... and does for this game (else ASPECT reads N/A)
     bool hasState;      // a save state exists for LOAD STATE
     char stateWhen[24]; // when it was made, shown beside LOAD STATE
 };
@@ -87,6 +100,7 @@ enum pd_overlay {
     PD_OVERLAY_CONFIRM_LEAVE,
     PD_OVERLAY_PLACES,       // the MAP's list of places
     PD_OVERLAY_GUIDE_NOTICE, // the GUIDE's "AI-written, may be wrong" notice
+    PD_OVERLAY_PICK_ASPECT,
 };
 
 struct pd_ui {
@@ -153,5 +167,6 @@ enum pd_action pd_ui_take_action(struct pd_ui* ui);
 bool pd_ui_tick(struct pd_ui* ui, unsigned ms);
 
 const char* pd_screen_mode_name(int mode);
+const char* pd_aspect_name(int aspect);
 
 #endif

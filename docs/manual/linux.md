@@ -19,7 +19,13 @@ Press the companion button to pause the game and open its companion. Use the
 D-pad to focus an option, A to choose it and B to go back. The shoulder buttons
 change tabs. Your game menu has cancel-first save, load and quit confirmations.
 
-This initial host does not include expanded overworlds, the downstream Polished
-Crystal companion, enhanced summaries or firmware power handling. Earlier
+To see more of the map, set `ASPECT` in the companion's `SETTINGS` to `EXPAND`:
+the overworld reaches the edges of your screen at the same sharp scale as the
+game, for the games EXPAND knows on Android. `ZOOM OUT` shows even more of it,
+one scale smaller. Battles and menus stay as the game draws them, and with
+`AUTO ZOOM IN` on, so do text boxes.
+
+This early version does not include the Polished Crystal companion, the longer
+summaries or firmware power handling. Earlier
 builds ran on the Brick and Smart Pro, but this separated foundation still
 needs fresh device testing. Other Linux handhelds are not verified.

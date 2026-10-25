@@ -6,6 +6,7 @@
 #include "pd_ui.h"
 #include "pd_ui_internal.h"
 #include "host_io.h"
+#include "../app/src/main/cpp/pk_wide.h"
 #include <SDL.h>
 #include <dirent.h>
 #include <errno.h>
@@ -34,6 +35,14 @@ static SDL_Renderer *renderer;
 static SDL_Texture *texture, *gameTexture;
 static uint32_t gamePixels[256 * 256];
 static SDL_Rect lastGameRect;
+/* EXPAND (the app's pk_wide.c): the overworld rebuilt past the game's edges
+ * into a window the screen's shape, at the scale the game's own picture gets
+ * (ZOOM OUT: one whole scale less), so the original pixels stay where they were. */
+static SDL_Texture *wideTexture;
+static uint32_t wideSource[240 * 160], wideFrame[PK_WIDE_MAX_VIEW_W * PK_WIDE_MAX_VIEW_H],
+    widePixels[PK_WIDE_MAX_VIEW_W * PK_WIDE_MAX_VIEW_H];
+static bool wideSupported, wideReady;
+static unsigned wideW, wideH;
 static SDL_AudioDeviceID audio;
 static volatile sig_atomic_t running = 1;
 static bool muted;
@@ -252,6 +261,51 @@ static void present(void) {
   }
   SDL_RenderPresent(renderer);
 }
+/* The EXPAND window for an ow x oh screen and a fw x fh game: the screen's
+ * size over the game's whole scale (one less for ZOOM OUT), within pk_wide's
+ * largest view, never smaller than the game, with even margins so the game's
+ * own pixels sit exactly in the middle. */
+static void wide_window(int ow, int oh, unsigned fw, unsigned fh, int aspect,
+                        unsigned *w, unsigned *h) {
+  int scale = ow / (int)fw < oh / (int)fh ? ow / (int)fw : oh / (int)fh;
+  if (aspect == PD_ASPECT_ZOOM_OUT)
+    scale--;
+  if (scale < 1)
+    scale = 1;
+  unsigned x = (unsigned)ow / scale, y = (unsigned)oh / scale;
+  x = x > PK_WIDE_MAX_VIEW_W ? PK_WIDE_MAX_VIEW_W : x < fw ? fw : x;
+  y = y > PK_WIDE_MAX_VIEW_H ? PK_WIDE_MAX_VIEW_H : y < fh ? fh : y;
+  *w = x - ((x - fw) & 1);
+  *h = y - ((y - fh) & 1);
+}
+/* After every frame while EXPAND can run: a frame nobody sees (fast-forward)
+ * only keeps pk_wide's RAM history. wideReady = this frame shows the window:
+ * the plain overworld (text boxes too with AUTO ZOOM IN off), its edges all
+ * map; anything else (battles, menus, transitions) shows the game's picture. */
+static void wide_tick(struct mCore *c, bool skip, const struct pd_settings *s) {
+  wideReady = false;
+  if (!wideSupported)
+    return;
+  unsigned fw = (unsigned)pk_wide_frame_w(), fh = (unsigned)pk_wide_frame_h();
+  for (unsigned y = 0; y < fh; y++)
+    memcpy(wideSource + y * fw, video + y * 256, fw * sizeof *wideSource);
+  if (skip || s->aspect == PD_ASPECT_ORIGINAL) {
+    pk_wide_skip(c, wideSource);
+    return;
+  }
+  int ow = W, oh = H;
+  if (SDL_GetRendererOutputSize(renderer, &ow, &oh) < 0 || ow <= 0 || oh <= 0)
+    ow = W, oh = H;
+  wide_window(ow, oh, fw, fh, s->aspect, &wideW, &wideH);
+  struct PkWideView v = {((int)fw - (int)wideW) / 2, ((int)fh - (int)wideH) / 2,
+                         (int)wideW, (int)wideH};
+  int mix = pk_wide_view(c, wideSource, wideFrame, v, NULL);
+  int scene = pk_wide_scene();
+  wideReady = mix == 256 && pk_wide_last_mode() == PK_WIDE_MODE_MAP &&
+              !pk_wide_fault() &&
+              (scene == PK_WIDE_SCENE_FIELD ||
+               (!s->autoZoom && scene == PK_WIDE_SCENE_TEXT));
+}
 // Gameplay scales in physical panel pixels; the companion keeps its 512x384
 // grid.
 static void present_game(unsigned gw, unsigned gh) {
@@ -277,9 +331,30 @@ static void present_game(unsigned gw, unsigned gh) {
     notice(SDL_GetError());
     return;
   }
+  SDL_Texture *drawn = gameTexture;
+  if (wideReady) {
+    // The same scale: the window's middle lands on the game's own picture.
+    gw = wideW;
+    gh = wideH;
+    scale = ow / (int)gw < oh / (int)gh ? ow / (int)gw : oh / (int)gh;
+    if (scale < 1)
+      scale = 1;
+    lastGameRect = (SDL_Rect){(ow - (int)gw * scale) / 2, (oh - (int)gh * scale) / 2,
+                              (int)gw * scale, (int)gh * scale};
+    for (unsigned i = 0; i < gw * gh; i++) {
+      uint32_t n = wideFrame[i];
+      widePixels[i] = ((n & 255) << 16) | (n & 0xff00) | ((n >> 16) & 255);
+    }
+    if (SDL_UpdateTexture(wideTexture, &(SDL_Rect){0, 0, (int)gw, (int)gh},
+                          widePixels, (int)gw * 4) < 0) {
+      notice(SDL_GetError());
+      return;
+    }
+    drawn = wideTexture;
+  }
   SDL_RenderClear(renderer);
   SDL_Rect src = {0, 0, (int)gw, (int)gh};
-  if (SDL_RenderCopy(renderer, gameTexture, &src, &lastGameRect) < 0) {
+  if (SDL_RenderCopy(renderer, drawn, &src, &lastGameRect) < 0) {
     notice(SDL_GetError());
     return;
   }
@@ -316,6 +391,10 @@ static bool state(struct mCore *c, const char *path, bool save) {
   bool ok = save ? mCoreSaveStateNamed(c, f, SAVESTATE_RTC)
                  : mCoreLoadStateNamed(c, f, SAVESTATE_RTC);
   if(!f->close(f))ok=false;
+  if (ok && !save) {
+    pk_wide_reset(); // EXPAND's RAM history is from before the jump
+    wideReady = false;
+  }
   if (save) {
     if (ok)
       ok = rename(tmp, path) == 0;
@@ -457,6 +536,10 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
   for (int i = 0; i < 2; i++)
     blip_set_rates(c->getAudioChannel(c, i), c->frequency(c), 32768);
   c->reset(c);
+  uint32_t crc = 0;
+  c->checksum(c, &crc, mCHECKSUM_CRC32);
+  wideSupported = pk_wide_configure(crc) != 0;
+  wideReady = false;
   unsigned gw, gh;
   c->desiredVideoDimensions(c, &gw, &gh);
   struct pd_game game;
@@ -472,7 +555,8 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
   struct pd_ui ui;
   pd_ui_init(&ui, &settings);
   struct pd_snapshot snap = {0};
-  struct pd_host_info host = {.hideScreenMode = true, .count = 1, .labels = {"HOST"}};
+  struct pd_host_info host = {.hideScreenMode = true, .hasExpand = true,
+                              .expandGame = wideSupported, .count = 1, .labels = {"HOST"}};
   snprintf(host.values[0], 40, "PokeDaisy Linux");
   const char *opts[] = {"Resume game",
                         "Party",
@@ -626,8 +710,11 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
     } else {
       muted = ff;
       c->setKeys(c, held & 1023);
-      for (int i = 0; i < (ff ? settings.ffSpeed : 1); i++)
+      int count = ff ? settings.ffSpeed : 1;
+      for (int i = 0; i < count; i++) {
         c->runFrame(c);
+        wide_tick(c, i < count - 1, &settings);
+      }
     }
     if(!companion || !snap.valid)pd_snapshot_read(&snap, &game, read_memory, c);
     if (companion) {
@@ -675,6 +762,8 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
   if (audio)
     SDL_ClearQueuedAudio(audio);
 cleanup:
+  pk_wide_configure(0);
+  wideSupported = wideReady = false;
   c->unloadROM(c);
   if(saveStatus.failed)appError=1;
   mCoreConfigDeinit(&c->config);
@@ -716,8 +805,15 @@ int main(int argc, char **argv) {
   SDL_DisplayMode display = {0};
   bool fullscreen = getenv("POCKET_FULLSCREEN") != NULL;
   if(fullscreen && SDL_GetCurrentDisplayMode(0,&display))fullscreen=false;
+  // POCKET_WINDOW=WxH: a window the size of a device's panel, for trying a
+  // layout on a desktop (1280x720 Smart Pro, 640x480, 720x720 ...).
+  int winW = W, winH = H;
+  const char *size = getenv("POCKET_WINDOW");
+  if (size && (sscanf(size, "%dx%d", &winW, &winH) != 2 || winW < 160 ||
+               winH < 144 || winW > 8192 || winH > 8192))
+    winW = W, winH = H;
   window = SDL_CreateWindow("PokeDaisy Linux", SDL_WINDOWPOS_CENTERED,
-      SDL_WINDOWPOS_CENTERED, fullscreen?display.w:W, fullscreen?display.h:H,
+      SDL_WINDOWPOS_CENTERED, fullscreen?display.w:winW, fullscreen?display.h:winH,
       fullscreen?SDL_WINDOW_FULLSCREEN:SDL_WINDOW_RESIZABLE);
   renderer = window ? SDL_CreateRenderer(window, -1, 0) : NULL;
   if (!renderer) {
@@ -735,12 +831,16 @@ int main(int argc, char **argv) {
                               SDL_TEXTUREACCESS_STREAMING, W, H);
   gameTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888,
                                   SDL_TEXTUREACCESS_STREAMING, 256, 256);
-  if (!texture || !gameTexture) {
+  wideTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888,
+                                  SDL_TEXTUREACCESS_STREAMING, PK_WIDE_MAX_VIEW_W,
+                                  PK_WIDE_MAX_VIEW_H);
+  if (!texture || !gameTexture || !wideTexture) {
     fprintf(stderr, "Texture: %s\n", SDL_GetError());
     return 1;
   }
   SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_NONE);
   SDL_SetTextureBlendMode(gameTexture, SDL_BLENDMODE_NONE);
+  SDL_SetTextureBlendMode(wideTexture, SDL_BLENDMODE_NONE);
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
   pd_canvas_init(&canvas, W, H, pixels);
   SDL_AudioSpec want = {0};
@@ -809,6 +909,7 @@ int main(int argc, char **argv) {
     SDL_CloseAudioDevice(audio);
   SDL_DestroyTexture(texture);
   SDL_DestroyTexture(gameTexture);
+  SDL_DestroyTexture(wideTexture);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();

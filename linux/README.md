@@ -4,8 +4,8 @@ SDL2 host for the pinned mGBA library and the existing portable companion in
 `3ds/core/`. The host is isolated here beside `3ds/`. It does not introduce
 another emulator, companion decoder, game-address table or data generator.
 
-This first contribution deliberately excludes the downstream Polished adapter,
-expanded overworlds, enhanced summaries, filters, automatic recovery and
+It has EXPAND (below). It leaves out the downstream Polished adapter,
+enhanced summaries, filters, automatic recovery and
 firmware suspend/shutdown. Those implementations remain on the development
 branches of keeganwhitacre/pokedaisy-brick. This branch is not an update of the installed
 Brick development package. Use a separate data directory when evaluating it.
@@ -53,6 +53,20 @@ assumed. Gameplay uses centered whole-pixel scaling, and the companion uses
 its existing 512x384 logical canvas. The 3DS screen-mode setting is hidden by
 an optional host capability; fast-forward and state settings stay available.
 Audio-device failure is logged and leaves silent gameplay available.
+`POCKET_WINDOW=WxH` opens the window at a device's panel size instead (1280x720,
+640x480, 720x720 ...), to try a layout on a desktop.
+
+### EXPAND
+
+The companion's SETTINGS has ASPECT: ORIGINAL, EXPAND or ZOOM OUT, with AUTO ZOOM
+IN under it (saved in DATA/settings.ini). EXPAND is the Android app's: the app's
+`pk_wide.c` / `pk_wide_gb.c` rebuild the overworld past the game's edges for every
+game in `pk_wide_games.h` (GBA by ROM CRC, and the Game Boy games it knows). The
+window follows the screen: the game keeps the whole-number scale its own picture
+gets and the map fills the rest (320x180 at 4x on 1280x720, 256x192 on 1024x768,
+240x240 on 720x720); ZOOM OUT is one scale less. Battles, menus, transitions and,
+with AUTO ZOOM IN on, text boxes show the game's own picture. Other games read
+ASPECT N/A.
 
 The existing portable core provides the supported retail English Gen 3
 companion. GB/GBC games, including Crystal and Polished Crystal, are emulation
@@ -88,7 +102,8 @@ in-game saves, state load, exit and firmware power behavior on both devices.
 ## Tests and CI artifacts
 
 CTest runs save mapping/error-injection tests and the actual SDL/mGBA host
-on original GB/GBA diagnostic programs. Runtime tests cover companion pause,
+on original GB/GBA diagnostic programs, and checks EXPAND's window size on
+common handheld panels. Runtime tests cover companion pause,
 menu/back, controller isolation, save/state roundtrips and a battery marker.
 The diagnostics contain no commercial ROM or game data. The shared host-display
 capability has a separate `make -C 3ds test-host-display` regression test.
@@ -96,8 +111,11 @@ capability has a separate `make -C 3ds test-host-display` regression test.
 The workflow builds/tests x86_64 and AArch64 under QEMU and uploads the executable,
 license notices and source revision. The ARM SDK's offscreen SDL software driver
 is used under QEMU. This is not physical hardware or remote CI validation by
-itself. Private integration can use `linux-runtime-test ROM DATA CAPTURES`, with
-an isolated copy of a compatible raw battery save. No private ROM, save, capture
+itself. Private integration can use `linux-runtime-test ROM DATA CAPTURES [WxH,...]`, with
+an isolated copy of a compatible raw battery save: it boots to the field, walks,
+and checks that EXPAND and ZOOM OUT keep the game's own frame pixel for pixel in
+the middle of the window at each size, then (for a companion game) opens PARTY
+and a summary. No private ROM, save, capture
 or extracted artwork is included in commits or install artifacts.
 
 GPL-3.0, preserving Lidor Itzhari's attribution. Existing dependency/font notices

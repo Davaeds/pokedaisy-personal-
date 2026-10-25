@@ -11,6 +11,11 @@
 #define LIST_Y (CONTENT_Y + TITLE_H + 4)
 
 static const char* const SCREEN_NAMES[PD_SCREEN_MODES] = { "PIXEL 1x", "SHARP 1.5x", "STRETCH" };
+static const char* const ASPECT_NAMES[PD_ASPECTS] = { "ORIGINAL", "EXPAND", "ZOOM OUT" };
+
+const char* pd_aspect_name(int aspect) {
+    return aspect >= 0 && aspect < PD_ASPECTS ? ASPECT_NAMES[aspect] : "";
+}
 
 const char* pd_screen_mode_name(int mode) {
     return mode >= 0 && mode < PD_SCREEN_MODES ? SCREEN_NAMES[mode] : "";
@@ -71,6 +76,20 @@ void ui_settings_tab(struct pd_ui* ui, struct pd_canvas* c, const struct pd_game
         setting(ui, c, ix, &y, iw, SETTING_SCREEN, "SCREEN", pd_screen_mode_name(ui->settings->screenMode));
     snprintf(buf, sizeof(buf), "%dx", ui->settings->ffSpeed);
     setting(ui, c, ix, &y, iw, SETTING_FF, "FAST-FORWARD", buf);
+    if (host && host->hasExpand) {
+        if (host->expandGame) {
+            setting(ui, c, ix, &y, iw, SETTING_ASPECT, "ASPECT", pd_aspect_name(ui->settings->aspect));
+            // Two values: flips in place (the app's rule for pick-lists is more than two).
+            if (ui->settings->aspect != PD_ASPECT_ORIGINAL)
+                setting(ui, c, ix, &y, iw, SETTING_AUTO_ZOOM, "AUTO ZOOM IN", ui->settings->autoZoom ? "ON" : "OFF");
+        } else {
+            // This game's overworld can't be rebuilt: shown, not tappable.
+            pd_text(c, ix, pd_text_y(y, ROW_H), "ASPECT", PD_MUTED, PD_MUTED_SHADOW);
+            pd_text(c, ix + iw * 42 / 100, pd_text_y(y, ROW_H), "N/A", PD_MUTED,
+                    PD_MUTED_SHADOW);
+            y += ROW_H;
+        }
+    }
     setting(ui, c, ix, &y, iw, SETTING_SAVE_STATE, "SAVE STATE", NULL);
     if (host && host->hasState) {
         setting(ui, c, ix, &y, iw, SETTING_LOAD_STATE, "LOAD STATE", host->stateWhen);
@@ -134,6 +153,9 @@ void ui_overlay(struct pd_ui* ui, struct pd_canvas* c) {
     switch (ui->overlay) {
     case PD_OVERLAY_PICK_SCREEN:
         pick_list(ui, c, "SCREEN", SCREEN_NAMES, PD_SCREEN_MODES, ui->settings->screenMode);
+        break;
+    case PD_OVERLAY_PICK_ASPECT:
+        pick_list(ui, c, "ASPECT", ASPECT_NAMES, PD_ASPECTS, ui->settings->aspect);
         break;
     case PD_OVERLAY_PICK_FF:
         pick_list(ui, c, "FAST-FORWARD", FF, PD_FF_MAX - PD_FF_MIN + 1, ui->settings->ffSpeed - PD_FF_MIN);

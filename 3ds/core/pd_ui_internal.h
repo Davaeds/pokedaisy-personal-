@@ -55,6 +55,8 @@ enum setting_row {
     SETTING_SAVE_STATE,
     SETTING_LOAD_STATE,
     SETTING_LEAVE,
+    SETTING_ASPECT,    // hosts with hasExpand
+    SETTING_AUTO_ZOOM,
 };
 
 void ui_add_hit(struct pd_ui* ui, int x, int y, int w, int h, int id);
