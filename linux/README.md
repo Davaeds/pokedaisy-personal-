@@ -42,8 +42,10 @@ Tab=companion, F=quick menu, Escape=game menu. In the companion use
 D-pad to focus, A to choose, B to go back and L/R to change tabs.
 Save/load/quit confirmations are cancel-first. Fast-forward has no audio.
 
-Y (F on a keyboard) opens the QUICK MENU over the running game: WILD ENCOUNTERS
-on or off (saved in DATA/settings.ini; GBA games whose switch `wild.c` finds:
+Y (F on a keyboard) opens the QUICK MENU over the running game: FLY (retail
+English FireRed, LeafGreen and Emerald, once a Pokemon in the party knows the
+move: a list of the towns you have been to, then the game's own flight), WILD
+ENCOUNTERS on or off (saved in DATA/settings.ini; GBA games whose switch `wild.c` finds:
 retail FireRed / LeafGreen / Emerald / Ruby / Sapphire in every language and the
 CFRU hacks), SAVE STATE, LOAD STATE, FF and COMPANION. The D-pad picks a tile,
 A runs it, B or Y closes it; the game's buttons wait meanwhile.

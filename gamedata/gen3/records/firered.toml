@@ -103,3 +103,48 @@ nationalFlag = 0x840
 dexFlags = 'FIRERED_DEX_FLAGS'
 regionalDex = { kotlin = 'IntArray(151) { it + 1 }' }
 stickerVar = 0x4049
+
+# FLY (Fly.kt's FlyFns): retail FireRed rev 1, pret's pokefirered built clean as firered_rev1 (byte for byte
+# retail) and its ELF.
+[record.FLY_FIRERED_REV1]
+schema = 'gen3_fly'
+flagGet = 0x0806E6E4
+badgeFlag = 0x822
+setUpFieldMoveFly = 0x08124B04
+getMapsecType = 0x080C35F0
+fadeScreen = 0x0807A82C
+lockControls = 0x08069954
+unlockControls = 0x08069960
+setFlyWarpDestination = 0x080C5290
+partyMenuSlotId = 0x0203B0A9
+destinations = 0x083F2F50
+firstMapsec = 0x58
+count = 108
+codeCrcs = [0x07BEBC3A, 0xCD8961DF, 0x348C5B9F, 0xF9959006, 0x0111A86E, 0xBAB654BA, 0x70EA1DFC]
+
+# Retail LeafGreen rev 0 / rev 1: built clean as leafgreen / leafgreen_rev1.
+[record.FLY_LEAFGREEN_REV0]
+schema = 'gen3_fly'
+base = 'FLY_FIRERED_REV1'
+flagGet = 0x0806E6D0
+setUpFieldMoveFly = 0x08124A64
+getMapsecType = 0x080C35B0
+fadeScreen = 0x0807A7EC
+lockControls = 0x08069940
+unlockControls = 0x0806994C
+setFlyWarpDestination = 0x080C5250
+destinations = 0x083F2D1C
+codeCrcs = [0x07BEBC3A, 0x5B68C93A, 0xE4D65E08, 0xF9959006, 0x0111A86E, 0xBAB654BA, 0x059815BF]
+
+[record.FLY_LEAFGREEN_REV1]
+schema = 'gen3_fly'
+base = 'FLY_FIRERED_REV1'
+flagGet = 0x0806E6E4
+setUpFieldMoveFly = 0x08124ADC
+getMapsecType = 0x080C35C4
+fadeScreen = 0x0807A800
+lockControls = 0x08069954
+unlockControls = 0x08069960
+setFlyWarpDestination = 0x080C5264
+destinations = 0x083F2D8C
+codeCrcs = [0x07BEBC3A, 0xDBE480BD, 0x50C0C136, 0xF9959006, 0x0111A86E, 0xBAB654BA, 0x059815BF]

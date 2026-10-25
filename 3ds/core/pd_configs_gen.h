@@ -5,11 +5,12 @@
 
 #include "pd_game.h"
 
-// The configs, each with the parts the port reads for it so far (`name` is the C's: PD_CONFIG_<name>).
+// The configs, each with the parts the port reads for it so far (`name` is the C's: PD_CONFIG_<name>) and the
+// records `@name.` paths start from (`records`).
 // FireRed rev 0 and LeafGreen: the tabs that read RAM (and the MAP, whose art is found by fingerprint)
 // and the party icons; their POKéDEX and GUIDE tables aren't ported yet. The FOE TEAM's addresses
 // are known for rev 1 only.
-// gamedata/gen3/retail/firered.toml: firered_rev1 (ram, foes, icons, dex, guide, card)
+// gamedata/gen3/retail/firered.toml: firered_rev1 (ram, foes, icons, dex, guide, card, fly)
 static const struct pd_config PD_CONFIG_FIRERED_REV1 = {
     .playerParty = 0x02024284,
     .playerPartyCount = 0x02024029,
@@ -65,6 +66,29 @@ static const struct pd_config PD_CONFIG_FIRERED_REV1 = {
     .frontierSymbolFlag = 0,
     .museumWinnersOff = 0,
     .frontierBpOff = 0,
+    .flyFlagGet = 0x0806E6E4,
+    .flySetUp = 0x08124B04,
+    .flyGetMapsecType = 0x080C35F0,
+    .flyFade = 0x0807A82C,
+    .flyLock = 0x08069954,
+    .flyUnlock = 0x08069960,
+    .flyWarp = 0x080C5290,
+    .flyBadgeFlag = 0x822,
+    .flyPartySlot = 0x0203B0A9,
+    .flyDestinations = 0x083F2F50,
+    .flyFirstMapsec = 0x58,
+    .flyCount = 108,
+    .flyCrcs = { 0x07BEBC3A, 0xCD8961DF, 0x348C5B9F, 0xF9959006, 0x0111A86E, 0xBAB654BA, 0x70EA1DFC },
+    .flyTypes = { 2 },
+    .flyExtra = { 0 },
+    .flyHealTo = 0,
+    .flyMapWarp = 0,
+    .flyReturn = 0,
+    .flySaveBlock2Ptr = 0,
+    .flySpecial = { { 0 } },
+    .flyGenderMapsec = 0,
+    .flyMaleHeal = 0,
+    .flyFemaleHeal = 0,
 };
 
 // gamedata/gen3/retail/firered.toml: firered_rev0 (ram, icons)
@@ -95,7 +119,7 @@ static const struct pd_config PD_CONFIG_FIRERED_REV0 = {
     .monIconPaletteTable = 0x083D4038,
 };
 
-// gamedata/gen3/retail/leafgreen.toml: leafgreen_rev0 (ram, icons, card)
+// gamedata/gen3/retail/leafgreen.toml: leafgreen_rev0 (ram, icons, card, fly)
 static const struct pd_config PD_CONFIG_LEAFGREEN_REV0 = {
     .playerParty = 0x02024284,
     .playerPartyCount = 0x02024029,
@@ -132,9 +156,32 @@ static const struct pd_config PD_CONFIG_LEAFGREEN_REV0 = {
     .frontierSymbolFlag = 0,
     .museumWinnersOff = 0,
     .frontierBpOff = 0,
+    .flyFlagGet = 0x0806E6D0,
+    .flySetUp = 0x08124A64,
+    .flyGetMapsecType = 0x080C35B0,
+    .flyFade = 0x0807A7EC,
+    .flyLock = 0x08069940,
+    .flyUnlock = 0x0806994C,
+    .flyWarp = 0x080C5250,
+    .flyBadgeFlag = 0x822,
+    .flyPartySlot = 0x0203B0A9,
+    .flyDestinations = 0x083F2D1C,
+    .flyFirstMapsec = 0x58,
+    .flyCount = 108,
+    .flyCrcs = { 0x07BEBC3A, 0x5B68C93A, 0xE4D65E08, 0xF9959006, 0x0111A86E, 0xBAB654BA, 0x059815BF },
+    .flyTypes = { 2 },
+    .flyExtra = { 0 },
+    .flyHealTo = 0,
+    .flyMapWarp = 0,
+    .flyReturn = 0,
+    .flySaveBlock2Ptr = 0,
+    .flySpecial = { { 0 } },
+    .flyGenderMapsec = 0,
+    .flyMaleHeal = 0,
+    .flyFemaleHeal = 0,
 };
 
-// gamedata/gen3/retail/leafgreen.toml: leafgreen_rev1 (ram, foes, icons, card)
+// gamedata/gen3/retail/leafgreen.toml: leafgreen_rev1 (ram, foes, icons, card, fly)
 static const struct pd_config PD_CONFIG_LEAFGREEN_REV1 = {
     .playerParty = 0x02024284,
     .playerPartyCount = 0x02024029,
@@ -175,9 +222,32 @@ static const struct pd_config PD_CONFIG_LEAFGREEN_REV1 = {
     .frontierSymbolFlag = 0,
     .museumWinnersOff = 0,
     .frontierBpOff = 0,
+    .flyFlagGet = 0x0806E6E4,
+    .flySetUp = 0x08124ADC,
+    .flyGetMapsecType = 0x080C35C4,
+    .flyFade = 0x0807A800,
+    .flyLock = 0x08069954,
+    .flyUnlock = 0x08069960,
+    .flyWarp = 0x080C5264,
+    .flyBadgeFlag = 0x822,
+    .flyPartySlot = 0x0203B0A9,
+    .flyDestinations = 0x083F2D8C,
+    .flyFirstMapsec = 0x58,
+    .flyCount = 108,
+    .flyCrcs = { 0x07BEBC3A, 0xDBE480BD, 0x50C0C136, 0xF9959006, 0x0111A86E, 0xBAB654BA, 0x059815BF },
+    .flyTypes = { 2 },
+    .flyExtra = { 0 },
+    .flyHealTo = 0,
+    .flyMapWarp = 0,
+    .flyReturn = 0,
+    .flySaveBlock2Ptr = 0,
+    .flySpecial = { { 0 } },
+    .flyGenderMapsec = 0,
+    .flyMaleHeal = 0,
+    .flyFemaleHeal = 0,
 };
 
-// gamedata/gen3/retail/emerald.toml: emerald_retail (ram, foes, icons, dex, guide, card)
+// gamedata/gen3/retail/emerald.toml: emerald_retail (ram, foes, icons, dex, guide, card, fly)
 static const struct pd_config PD_CONFIG_EMERALD = {
     .playerParty = 0x020244EC,
     .playerPartyCount = 0x020244E9,
@@ -233,6 +303,29 @@ static const struct pd_config PD_CONFIG_EMERALD = {
     .frontierSymbolFlag = 0x8C4,
     .museumWinnersOff = 0x2F90,
     .frontierBpOff = 0xEBA,
+    .flyFlagGet = 0x0809D790,
+    .flySetUp = 0x081B5884,
+    .flyGetMapsecType = 0x08123D58,
+    .flyFade = 0x080ABCD0,
+    .flyLock = 0x08098E54,
+    .flyUnlock = 0x08098E60,
+    .flyWarp = 0,
+    .flyBadgeFlag = 0x86C,
+    .flyPartySlot = 0x0203CED1,
+    .flyDestinations = 0x085A1E3C,
+    .flyFirstMapsec = 0,
+    .flyCount = 50,
+    .flyCrcs = { 0xBCF97BF3, 0x13BE1A7A, 0x4B625BC4, 0xF9959006, 0xB9FB85A7, 0xB037C8AF, 0x74DBCE3A, 0x2F1D18CA, 0xA284286D },
+    .flyTypes = { 2, 4 },
+    .flyExtra = { 58 },
+    .flyHealTo = 0x08084CCC,
+    .flyMapWarp = 0x08084C28,
+    .flyReturn = 0x080B69DC,
+    .flySaveBlock2Ptr = 0x03005D90,
+    .flySpecial = { { 15, 11 }, { 58, 22 } },
+    .flyGenderMapsec = 0,
+    .flyMaleHeal = 12,
+    .flyFemaleHeal = 13,
 };
 
 #endif

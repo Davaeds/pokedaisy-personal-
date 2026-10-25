@@ -34,7 +34,8 @@ CONFIG_SCHEMA = "gen3_config"
 GROUP_ORDER = ["retail", "ports", "hacks"]
 RETAIL_ORDER = ["firered", "leafgreen", "emerald", "ruby_sapphire"]
 META_KEYS = {"base", "private", "lazy", "port"}
-TYPES = {"long", "int", "bool", "char", "string", "item_descs", "int_range", "long_list", "int_list", "ref"}
+TYPES = {"long", "int", "bool", "char", "string", "item_descs", "int_range", "long_list", "int_list", "int_set",
+         "int_map", "ref"}
 KOTLIN_TYPES = {"Long": "long", "Int": "int", "Boolean": "bool", "Char": "char", "String": "string",
                 "ItemDescTable": "item_descs", "IntRange": "int_range"}
 ITEM_DESC_FIELDS = {"preset": "string", "base": "long", "stride": "int", "descOff": "int", "idOff": "int",
@@ -257,7 +258,8 @@ def toml_default(kotlin_value, ftype):
 
 def new_schema(name, kt_file, cls):
     out = [f"# {cls}'s fields ({kt_file}), checked against it by scripts/gen_gamedata.py.",
-           "# type: long | int | bool | char | string | item_descs | int_range | ref (a Kotlin val's name);",
+           "# type: long | int | bool | char | string | item_descs | int_range | long_list | int_list | int_set |",
+           "# int_map | ref (a Kotlin val's name);",
            "# record names the schema of a value a config may spell out as a sub-table.",
            "", f"version = {SCHEMA_VERSION}", f"kotlin_class = '{cls}'", f"kotlin_file = '{kt_file}'"]
     for f in kotlin_class_fields(kt_file, cls):
@@ -449,6 +451,11 @@ def check_value(value, ftype, nullable, where, name):
         "int_range": lambda v: isinstance(v, list) and len(v) == 2 and all(isinstance(x, int) for x in v),
         "long_list": lambda v: isinstance(v, list) and all(isinstance(x, int) and not isinstance(x, bool) for x in v),
         "int_list": lambda v: isinstance(v, list) and all(isinstance(x, int) and not isinstance(x, bool) for x in v),
+        "int_set": lambda v: isinstance(v, list) and all(isinstance(x, int) and not isinstance(x, bool) for x in v)
+        and len(set(v)) == len(v),
+        # a Map<Int, Int> as [[key, value], ...] (TOML's table keys can't be numbers)
+        "int_map": lambda v: isinstance(v, list) and all(isinstance(p, list) and len(p) == 2 and all(
+            isinstance(x, int) and not isinstance(x, bool) for x in p) for p in v) and len({p[0] for p in v}) == len(v),
         "item_descs": lambda v: isinstance(v, dict),
     }[ftype](value)
     if not ok:
@@ -529,6 +536,11 @@ def kt_value(value, ftype, field, indent):
         return "emptyList()" if not value else \
             "listOf(" + ", ".join(kt_int(v, ftype == "long_list") + ("L" if ftype == "long_list" and "x" not in
                                                                          kt_int(v, False) else "") for v in value) + ")"
+    if ftype == "int_set":
+        return "emptySet()" if not value else "setOf(" + ", ".join(kt_int(v, False) for v in value) + ")"
+    if ftype == "int_map":
+        return "emptyMap()" if not value else \
+            "mapOf(" + ", ".join(f"{kt_int(k, False)} to {kt_int(v, False)}" for k, v in value) + ")"
     if ftype == "item_descs":
         args = {k: kt_value(v, ITEM_DESC_FIELDS[k], k, indent) for k, v in value.items() if k != "preset"}
         if value.get("preset"):
@@ -689,6 +701,7 @@ class Resolver:
 
     def __init__(self, configs, records, schema):
         self.configs, self.records, self.schema = configs, records, schema
+        self.attached = {}  # {config: {name: record}}: a target's `records`, which `@name.` paths start from
 
     def config_fields(self, key):
         c = self.configs[key]
@@ -720,13 +733,19 @@ class Resolver:
     def walk(self, key, path, where):
         fields, schema = self.config_fields(key), self.schema
         parts = path.split(".")
+        if parts[0].startswith("@"):
+            record = self.attached.get(key, {}).get(parts[0][1:])
+            if record is None:
+                fail(where, f"{path}: the target gives {key} no `{parts[0][1:]}` record (its `records`)")
+            fields, schema = self.record_fields(record, where)
+            parts = parts[1:]
         for depth, part in enumerate(parts):
             last = depth == len(parts) - 1
             if isinstance(fields, list):
                 if not part.isdigit():
                     fail(where, f"{path}: `{part}` indexes a list")
                 i = int(part)
-                return (fields[i] if i < len(fields) else None), {"type": ftype}
+                return (fields[i] if i < len(fields) else None), {"type": "long" if ftype == "long_list" else "int"}
             v, f = self.value(fields, schema, part, where, key)
             if last:
                 return v, f
@@ -752,6 +771,11 @@ class Resolver:
 
 
 def c_value(v, f, names, lists, where, none):
+    if f["type"] in ("long_list", "int_list", "int_set", "int_map") and (not isinstance(v, list) or not v):
+        return "{ { 0 } }" if f["type"] == "int_map" else "{ 0 }"
+    if f["type"] in ("long_list", "int_list", "int_set", "int_map") and isinstance(v, list):
+        return "{ " + ", ".join(c_value(i, {"type": "int"}, names, lists, where, None) if not isinstance(i, list)
+                                else "{ " + ", ".join(str(int(x)) for x in i) + " }" for i in v) + " }"
     if isinstance(v, dict):
         fail(where, f"{v} is Kotlin; the C needs the value in gamedata/")
     if v is None or v == NONE or (none is not None and v == none):
@@ -798,11 +822,16 @@ def c_target(path, configs, records, schema):
             for p in entries.get("parts", ([], 0))[0]:
                 if p not in parts:
                     fail(where, f"no [part.{p}]")
-            wanted.append((key, entries["name"][0], entries["parts"][0], tab["lead"], where))
+            attached = entries.get("records", ({}, 0))[0]
+            for name in attached.values():
+                if records.get(name, {}).get("kind") != "record":
+                    fail(where, f"{name} isn't a record in gamedata/gen3/records/")
+            wanted.append((key, entries["name"][0], entries["parts"][0], tab["lead"], where, attached))
         else:
             fail(where, f"unexpected [{tab['name']}]")
     lists = {n: r for n, r in records.items() if r["kind"] == "list"}
     res = Resolver(configs, records, schema)
+    res.attached = {w[0]: w[5] for w in wanted}
     out = [
         f"// Generated by scripts/gen_gamedata.py from gamedata/ ({rel}) - don't edit by hand: change",
         "// the TOML there and run `make gamedata` (gamedata/README.md). Included by pd_game.c only.",
@@ -811,7 +840,7 @@ def c_target(path, configs, records, schema):
         "",
         f'#include "pd_game.h"',
     ]
-    for key, cname, want, lead, where in wanted:
+    for key, cname, want, lead, where, _ in wanted:
         c = configs[key]
         out.append("")
         out += kt_comments(lead, "")

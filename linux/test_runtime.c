@@ -20,6 +20,65 @@ static void shot(const char* name) {
 static void drive(struct mCore* c, unsigned keys, int n) {
   c->setKeys(c,keys);while(n-->0)c->runFrame(c);c->setKeys(c,0);
 }
+// One frame of the host's loop as FLY sees it: the game, pk_call's main loop depth, the field read, the scene.
+static int fly_frame(struct mCore* c,const struct pd_settings* s) {
+  c->runFrame(c);pk_rest_note(c);int f=pk_field_state(c,0,100);wide_tick(c,false,s);return f;
+}
+// FLY as the quick menu runs it (main.c's flyAsk / flyStage), on the real game: its towns, a flight to one, the
+// landing there with the field the player's again. Once a run (the first window size).
+static bool flownOnce;
+static void test_fly(struct mCore* c,struct pd_game* game,const uint8_t* rom,size_t len,struct pd_snapshot* snap,
+                     const struct pd_settings* s,unsigned gw,unsigned gh) {
+  const struct pd_config* cfg=game->cfg;
+  if(flownOnce)return;
+  flownOnce=true;
+  if(!cfg||!cfg->flyFlagGet){printf("%s FLY: none in this config\n",liveName);return;}
+  assert(fly_supported(cfg,rom,len)); // the generated addresses and CRCs fit the retail ROM
+  int flags=0;
+  for(int i=0;i<120;i++)flags=fly_frame(c,s);
+  for(int i=0;i<300 && !pk_call_safe(c);i++)flags=fly_frame(c,s);
+  assert(pk_call_safe(c));
+  pd_snapshot_read(snap,game,read_memory,c);
+  struct fly_targets t;
+  bool busy=(flags&PK_FIELD_LOCKED) || pk_wide_scene()!=PK_WIDE_SCENE_FIELD;
+  fly_targets(c,cfg,rom,len,snap,busy,snap->inBattle,&t);
+  if(t.result==FLY_NO_FLYER && !strcmp(game->code,"BPRE") && game->revision==1) {
+    // The FireRed save's party knows no FLY: teach it to the lead as the first move, with the game's own
+    // SetMonData (FieldItems.kt's FireRed rev 1 table: SetMonData, gPlayerParty, its scratch word; MON_DATA_MOVE1 13).
+    c->busWrite16(c,0x0203FFF0,19);
+    const uint32_t args[4]={0x02024284,13,0x0203FFF0,0};
+    assert(pk_call(c,0x08040390,args,NULL));
+    c->busWrite16(c,0x0203FFF0,0);
+    pd_snapshot_read(snap,game,read_memory,c);
+    fly_targets(c,cfg,rom,len,snap,busy,snap->inBattle,&t);
+  }
+  printf("%s FLY (flags %x, scene %d): %s, %d towns, flyer slot %d\n",liveName,flags,pk_wide_scene(),t.result==FLY_OK?"ready":fly_reason(t.result),t.count,t.flyerSlot);
+  if(t.result!=FLY_OK)return; // this save can't fly (no badge / nobody knows it): nothing more to check
+  assert(t.count>0 && t.flyerSlot>=0);
+  const char* names[FLY_MAX_TOWNS];
+  for(int i=0;i<t.count;i++){const char* n=pd_mapsec_name(game,t.towns[i]);names[i]=n&&*n?n:"?";printf("  %02X %s\n",t.towns[i],names[i]);}
+  int to=-1;
+  for(int i=t.count-1;i>=0 && to<0;i--)if(t.towns[i]!=snap->mapsec)to=t.towns[i];
+  assert(to>=0);
+  present_quick(game,NULL,0,0,names,t.count,t.count>1?1:0,gw,gh);shot("fly-list");
+  for(int i=0;i<300 && !pk_call_safe(c);i++)flags=fly_frame(c,s);
+  assert(fly_start(c,cfg,rom,len,snap,to,&t,false,false)==FLY_OK);
+  uint32_t cb=fly_main_callback(c,cfg);
+  for(int i=0;i<FLY_FADE_FRAMES;i++)flags=fly_frame(c,s);
+  for(int i=0;i<300 && !pk_call_safe(c);i++)flags=fly_frame(c,s);
+  assert(fly_finish(c,cfg,rom,len,to,&t,fly_main_callback(c,cfg)!=cb));
+  // The game's own cut-in, flight and landing, then the field free for a second.
+  int free=0,f=0;
+  for(;f<1500 && free<60;f++){
+    flags=fly_frame(c,s);
+    free=!(flags&PK_FIELD_LOCKED) && pk_wide_scene()==PK_WIDE_SCENE_FIELD?free+1:0;
+  }
+  pd_snapshot_read(snap,game,read_memory,c);
+  printf("%s FLY: landed in %02X %s after %d frames (asked for %02X)\n",liveName,snap->mapsec,
+         pd_mapsec_name(game,snap->mapsec),f,to);
+  assert(free>=60 && snap->mapsec==to);
+  present_game(gw,gh);shot("fly-landed");
+}
 static void test_frame(struct mCore* c,bool companion,int frame,struct pd_ui* ui,struct pd_snapshot* snap) {
   if(live) {
     assert(frame==0);
@@ -118,11 +177,11 @@ static void test_frame(struct mCore* c,bool companion,int frame,struct pd_ui* ui
       present_menu(&m,gw,gh);shot("menu");
       assert(lastGameRect.w>=ow-2*(lastGameRect.w/(int)wideW) && wideReady);
       // The QUICK MENU over the game, a dimmed tile with its reason in the middle.
-      struct quick_item q[]={{QUICK_WILD,true,false,NULL},{QUICK_SAVE_STATE,false,false,NULL},
-                             {QUICK_LOAD_STATE,false,false,"No state saved yet"},{QUICK_FF,false,true,NULL},
-                             {QUICK_COMPANION,false,false,NULL}};
-      present_quick(q,5,0,gw,gh);shot("quick");
-      present_quick(q,5,2,gw,gh);shot("quick-dim");
+      struct quick_item q[]={{QUICK_FLY,false,false,NULL,snap->party[0].species},{QUICK_WILD,true,false,NULL,0},{QUICK_SAVE_STATE,false,false,NULL,0},
+                             {QUICK_LOAD_STATE,false,false,"No state saved yet",0},{QUICK_FF,false,true,NULL,0},
+                             {QUICK_COMPANION,false,false,NULL,0}};
+      present_quick(&game,q,6,0,NULL,0,0,gw,gh);shot("quick");
+      present_quick(&game,q,6,3,NULL,0,0,gw,gh);shot("quick-dim");
       s->aspect=keep;wideReady=false;
     }
     if(!companionGame) {
@@ -142,6 +201,7 @@ static void test_frame(struct mCore* c,bool companion,int frame,struct pd_ui* ui
     uint32_t before=c->frameCounter(c);
     assert(state(c,"integration.ss",true));drive(c,0,20);assert(state(c,"integration.ss",false));
     assert(c->frameCounter(c)==before);unlink("integration.ss");
+    test_fly(c,&game,rom,len,snap,ui->settings,gw,gh);
     free(rom);
     printf("PASS real GBA save, party=%d, companion Summary/back and state reload\n",snap->partyCount);
     running=0;return;

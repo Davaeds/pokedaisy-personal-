@@ -64,6 +64,10 @@ class GameDataMigrationTest {
         assertEquals(LEGACY_GUIDE_TABLES_EMERALD, GUIDE_TABLES_EMERALD)
         assertEquals(LEGACY_FIRERED_BAG_POCKET_ORDER, FIRERED_BAG_POCKET_ORDER)
         assertEquals(LEGACY_EMERALD_BAG_POCKET_ORDER, EMERALD_BAG_POCKET_ORDER)
+        assertEquals(LEGACY_FLY_FIRERED_REV1, FLY_FIRERED_REV1)
+        assertEquals(LEGACY_FLY_LEAFGREEN_REV0, FLY_LEAFGREEN_REV0)
+        assertEquals(LEGACY_FLY_LEAFGREEN_REV1, FLY_LEAFGREEN_REV1)
+        assertEquals(LEGACY_FLY_EMERALD, FLY_EMERALD)
         // A data class compares its arrays by identity: compare those by content, the rest as values.
         for ((old, new) in listOf(LEGACY_TRAINER_CARD_FIRERED to TRAINER_CARD_FIRERED, LEGACY_TRAINER_CARD_EMERALD to TRAINER_CARD_EMERALD)) {
             assertTrue(old.regionalDex.contentEquals(new.regionalDex))

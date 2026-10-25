@@ -6,6 +6,8 @@
 #include "pd_ui.h"
 #include "pd_ui_internal.h"
 #include "host_io.h"
+#include "fly.h"
+#include "../app/src/main/cpp/pk_call.h"
 #include "quick_menu.h"
 #include "wild.h"
 #include "../app/src/main/cpp/pk_wide.h"
@@ -425,8 +427,14 @@ static void wide_tick(struct mCore *c, bool skip, const struct pd_settings *s) {
   unsigned fw = (unsigned)pk_wide_frame_w(), fh = (unsigned)pk_wide_frame_h();
   for (unsigned y = 0; y < fh; y++)
     memcpy(wideSource + y * fw, video + y * 256, fw * sizeof *wideSource);
-  if (skip || s->aspect == PD_ASPECT_ORIGINAL) {
+  if (skip) {
     pk_wide_skip(c, wideSource);
+    return;
+  }
+  if (s->aspect == PD_ASPECT_ORIGINAL) {
+    // Nothing past the picture, but the scene still read (FLY's "on the field"): a one-pixel window.
+    static uint32_t px;
+    pk_wide_view(c, wideSource, &px, (struct PkWideView){0, 0, 1, 1}, NULL);
     return;
   }
   // ZOOM OUT steps back in to EXPAND's window off the plain overworld (a text
@@ -516,7 +524,8 @@ static bool overlay_texture(void) {
   return true;
 }
 /* The QUICK MENU over the running game: a light dim, the ring at the companion's canvas scale. */
-static void present_quick(const struct quick_item *items, int n, int sel, unsigned gw, unsigned gh) {
+static void present_quick(const struct pd_game *g, const struct quick_item *items, int n, int sel,
+                          const char *const *rows, int rowCount, int rowSel, unsigned gw, unsigned gh) {
   if (!render_game(gw, gh) || !overlay_texture())
     return;
   int ow, oh;
@@ -526,7 +535,9 @@ static void present_quick(const struct quick_item *items, int n, int sel, unsign
     scale = 1;
   struct pd_canvas qc;
   pd_canvas_init(&qc, canvasW, canvasH, menuPixels);
-  if (!quick_draw(&qc, items, n, sel))
+  if (rows)
+    quick_list_draw(&qc, "FLY", rows, rowCount, rowSel);
+  else if (!quick_draw(&qc, g, items, n, sel))
     return;
   quick_finish(&qc);
   SDL_UpdateTexture(menuTexture, &(SDL_Rect){0, 0, canvasW, canvasH}, menuPixels, canvasW * 4);
@@ -899,8 +910,10 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
   wideReady = false;
   // WILD ENCOUNTERS: the game's own switch (wild.c finds it), held by pk_wide's field read every frame.
   uint32_t wildSwitch = 0;
-  if (c->platform(c) == mPLATFORM_GBA && pk_field_configure(crc))
+  bool fieldKnown = c->platform(c) == mPLATFORM_GBA && pk_field_configure(crc);
+  if (fieldKnown)
     wildSwitch = pk_wild_switch_find(romdata, (size_t)len);
+  pk_rest_reset(); // pk_call (FLY) learns this game's main loop depth
   unsigned gw, gh;
   c->desiredVideoDimensions(c, &gw, &gh);
   struct pd_game game;
@@ -917,6 +930,15 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
     pk_field_wild(wildSwitch, settings.wildOff);
   bool quickOpen = false;
   int quickSel = 0;
+  // FLY (fly.c): the config's FLY where the ROM's code matches. flyAsk = its destinations wanted (asked for between
+  // two frames the game's code can be called in), flyList = the menu shows them; flyStage 1 = start the flight,
+  // 2 = the fade, then finish it.
+  const struct pd_config *flyCfg = game.cfg && fly_supported(game.cfg, romdata, (size_t)len) ? game.cfg : NULL;
+  struct fly_targets flyT = {0};
+  const char *flyNames[FLY_MAX_TOWNS];
+  int flyAsk = 0, flySel = 0, flyStage = 0, flyMapsec = 0, flyWait = 0, fieldFlags = 0;
+  bool flyList = false;
+  uint32_t flyCallback = 0;
   struct pd_ui ui;
   pd_ui_init(&ui, &settings);
   struct pd_snapshot snap = {0};
@@ -967,23 +989,49 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
     // Y: the QUICK MENU over the running game (its keys withheld meanwhile).
     struct quick_item quick[QUICK_COUNT];
     int quickN = 0;
+    if (flyCfg) {
+      int flyer = fly_flyer(&snap);
+      quick[quickN++] = (struct quick_item){QUICK_FLY, false, false,
+                                            flyer < 0 ? "No one in your party knows FLY" : NULL,
+                                            flyer < 0 ? 0 : snap.party[flyer].species};
+    }
     quick[quickN++] = (struct quick_item){QUICK_WILD, settings.wildOff, false,
-                                          wildSwitch ? NULL : "Not in this game"};
-    quick[quickN++] = (struct quick_item){QUICK_SAVE_STATE, false, false, NULL};
+                                          wildSwitch ? NULL : "Not in this game", 0};
+    quick[quickN++] = (struct quick_item){QUICK_SAVE_STATE, false, false, NULL, 0};
     quick[quickN++] = (struct quick_item){QUICK_LOAD_STATE, false, false,
-                                          access(ss, F_OK) == 0 ? NULL : "No state saved yet"};
-    quick[quickN++] = (struct quick_item){QUICK_FF, false, ff, NULL};
-    quick[quickN++] = (struct quick_item){QUICK_COMPANION, false, false, NULL};
+                                          access(ss, F_OK) == 0 ? NULL : "No state saved yet", 0};
+    quick[quickN++] = (struct quick_item){QUICK_FF, false, ff, NULL, 0};
+    quick[quickN++] = (struct quick_item){QUICK_COMPANION, false, false, NULL, 0};
     if (down(Y) && !companion) {
       quickOpen = !quickOpen;
+      flyList = false;
+      flyAsk = 0;
       c->setKeys(c, 0);
+    } else if (quickOpen && flyList) {
+      // FLY's places: UP / DOWN, A flies, B back to the ring.
+      if (down(UP) && flyT.count)
+        flySel = (flySel + flyT.count - 1) % flyT.count;
+      if (down(DOWN) && flyT.count)
+        flySel = (flySel + 1) % flyT.count;
+      if (down(B))
+        flyList = false;
+      else if (down(MENU))
+        quickOpen = flyList = false;
+      else if (down(A) && flyT.count) {
+        quickOpen = flyList = false;
+        flyMapsec = flyT.towns[flySel];
+        flyStage = 1;
+        flyWait = 0;
+      }
     } else if (quickOpen && (down(B) || down(MENU))) {
       quickOpen = false;
     } else if (quickOpen) {
       int dx = down(RIGHT) - down(LEFT), dy = down(DOWN) - down(UP);
       if (dx || dy)
         quickSel = quick_step(quickN, quickSel, dx, dy, canvasW, canvasH);
-      if (down(A) && !quick[quickSel].why) {
+      if (down(A) && !quick[quickSel].why && quick[quickSel].action == QUICK_FLY) {
+        flyAsk = 1; // answered below, between two frames
+      } else if (down(A) && !quick[quickSel].why) {
         quickOpen = false;
         switch (quick[quickSel].action) {
         case QUICK_WILD:
@@ -1130,8 +1178,10 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
       for (int i = 0; i < count; i++) {
         uint64_t t = SDL_GetPerformanceCounter();
         c->runFrame(c);
-        if (wildSwitch)
-          pk_field_state(c, 0, settings.wildOff ? 0 : 100);
+        if (c->platform(c) == mPLATFORM_GBA)
+          pk_rest_note(c);
+        if (fieldKnown)
+          fieldFlags = pk_field_state(c, 0, wildSwitch && settings.wildOff ? 0 : 100);
         emuMs += ms_since(t);
         t = SDL_GetPerformanceCounter();
         wide_tick(c, i < count - 1, &settings);
@@ -1143,8 +1193,51 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
     if (!snap.valid || (companion && !companionWas) || (!companion && frames % 30 == 0))
       pd_snapshot_read(&snap, &game, read_memory, c);
     companionWas = companion;
+    // FLY's steps, each between two frames the game's own code can be called in (pk_call_safe), as the app's
+    // field-item jobs wait for one.
+    bool flyBattle = snap.inBattle || (fieldFlags & PK_FIELD_BATTLE);
+    bool flyBusy = companion || (fieldFlags & PK_FIELD_LOCKED) ||
+                   (wideSupported && pk_wide_scene() != PK_WIDE_SCENE_FIELD);
+    if (flyCfg && flyAsk && quickOpen && !companion) {
+      if (pk_call_safe(c)) {
+        pd_snapshot_read(&snap, &game, read_memory, c);
+        fly_targets(c, flyCfg, romdata, (size_t)len, &snap, flyBusy, flyBattle, &flyT);
+        flyAsk = 0;
+        if (flyT.result == FLY_OK && flyT.count) {
+          for (int i = 0; i < flyT.count; i++) {
+            const char *name = pd_mapsec_name(&game, flyT.towns[i]);
+            flyNames[i] = name && *name ? name : "?";
+          }
+          flyList = true;
+          flySel = 0;
+        } else {
+          quickOpen = false;
+          notice(flyT.result == FLY_OK ? "You haven't been anywhere to FLY to yet." : fly_reason(flyT.result));
+        }
+      } else if (++flyAsk > 120) {
+        flyAsk = 0;
+        quickOpen = false;
+        notice(fly_reason(FLY_FAILED));
+      }
+    }
+    if (flyCfg && flyStage == 1 && !companion && pk_call_safe(c)) {
+      pd_snapshot_read(&snap, &game, read_memory, c);
+      enum fly_result r = fly_start(c, flyCfg, romdata, (size_t)len, &snap, flyMapsec, &flyT, flyBusy, flyBattle);
+      if (r == FLY_OK) {
+        flyStage = 2;
+        flyWait = 0;
+        flyCallback = fly_main_callback(c, flyCfg);
+      } else {
+        flyStage = 0;
+        notice(fly_reason(r));
+      }
+    } else if (flyCfg && flyStage == 2 && !companion && ++flyWait >= FLY_FADE_FRAMES && pk_call_safe(c)) {
+      flyStage = 0;
+      if (!fly_finish(c, flyCfg, romdata, (size_t)len, flyMapsec, &flyT, fly_main_callback(c, flyCfg) != flyCallback))
+        notice(fly_reason(FLY_FAILED));
+    }
     if (quickOpen && !companion) {
-      present_quick(quick, quickN, quickSel, gw, gh);
+      present_quick(&game, quick, quickN, quickSel, flyList ? flyNames : NULL, flyT.count, flySel, gw, gh);
     } else if (companion && menuOpen && menuOpen != 4) {
       present_menu(menuOpen == 1 ? &gameMenu : &confirmMenu, gw, gh);
     } else if (companion) {

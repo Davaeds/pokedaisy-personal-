@@ -95,13 +95,41 @@ frontierSymbolFlag = { path = 'trainerCard.frontierSymbolFlag', none = -1 }
 museumWinnersOff = { path = 'trainerCard.museumWinnersOff', none = -1 }
 frontierBpOff = { path = 'trainerCard.frontierBpOff', none = -1 }
 
-# The configs, each with the parts the port reads for it so far (`name` is the C's: PD_CONFIG_<name>).
+# FLY: from the config's `fly` record (its `records`, `@fly.`): the app's FlyFns and its HealWarp.
+[part.fly]
+flyFlagGet = '@fly.flagGet'
+flySetUp = '@fly.setUpFieldMoveFly'
+flyGetMapsecType = '@fly.getMapsecType'
+flyFade = '@fly.fadeScreen'
+flyLock = '@fly.lockControls'
+flyUnlock = '@fly.unlockControls'
+flyWarp = '@fly.setFlyWarpDestination'
+flyBadgeFlag = '@fly.badgeFlag'
+flyPartySlot = '@fly.partyMenuSlotId'
+flyDestinations = '@fly.destinations'
+flyFirstMapsec = '@fly.firstMapsec'
+flyCount = '@fly.count'
+flyCrcs = '@fly.codeCrcs'
+flyTypes = '@fly.flyTypes'
+flyExtra = '@fly.extraMapsecs'
+flyHealTo = '@fly.healWarp.toHealLocation'
+flyMapWarp = '@fly.healWarp.toMapWarp'
+flyReturn = '@fly.healWarp.returnToField'
+flySaveBlock2Ptr = '@fly.healWarp.saveBlock2Ptr'
+flySpecial = '@fly.healWarp.special'
+flyGenderMapsec = '@fly.healWarp.genderMapsec'
+flyMaleHeal = '@fly.healWarp.maleHeal'
+flyFemaleHeal = '@fly.healWarp.femaleHeal'
+
+# The configs, each with the parts the port reads for it so far (`name` is the C's: PD_CONFIG_<name>) and the
+# records `@name.` paths start from (`records`).
 # FireRed rev 0 and LeafGreen: the tabs that read RAM (and the MAP, whose art is found by fingerprint)
 # and the party icons; their POKéDEX and GUIDE tables aren't ported yet. The FOE TEAM's addresses
 # are known for rev 1 only.
 [config.firered_rev1]
 name = 'FIRERED_REV1'
-parts = ['ram', 'foes', 'icons', 'dex', 'guide', 'card']
+parts = ['ram', 'foes', 'icons', 'dex', 'guide', 'card', 'fly']
+records = { fly = 'FLY_FIRERED_REV1' }
 
 [config.firered_rev0]
 name = 'FIRERED_REV0'
@@ -109,12 +137,15 @@ parts = ['ram', 'icons']
 
 [config.leafgreen_rev0]
 name = 'LEAFGREEN_REV0'
-parts = ['ram', 'icons', 'card']
+parts = ['ram', 'icons', 'card', 'fly']
+records = { fly = 'FLY_LEAFGREEN_REV0' }
 
 [config.leafgreen_rev1]
 name = 'LEAFGREEN_REV1'
-parts = ['ram', 'foes', 'icons', 'card']
+parts = ['ram', 'foes', 'icons', 'card', 'fly']
+records = { fly = 'FLY_LEAFGREEN_REV1' }
 
 [config.emerald_retail]
 name = 'EMERALD'
-parts = ['ram', 'foes', 'icons', 'dex', 'guide', 'card']
+parts = ['ram', 'foes', 'icons', 'dex', 'guide', 'card', 'fly']
+records = { fly = 'FLY_EMERALD' }

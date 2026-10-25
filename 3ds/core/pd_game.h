@@ -80,6 +80,23 @@ struct pd_config {
     int stickerVar;
     int frontierSymbolFlag;
     uint32_t museumWinnersOff, frontierBpOff; // in SaveBlock1 / SaveBlock2
+
+    // FLY (the app's FlyFns / HealWarp, Fly.kt): the game's own functions, called between frames (the Linux host's
+    // quick menu). FlagGet, SetUpFieldMove_Fly, GetMapsecType, FadeScreen, Lock- / UnlockPlayerFieldControls and
+    // SetFlyWarpDestination - or, Emerald's way (flyHealTo set), SetWarpDestinationToHealLocation /
+    // SetWarpDestinationToMapWarp + ReturnToFieldFromFlyMapSelect; flyCrcs = CRC32 of each one's first 32 bytes, in
+    // that order. gPartyMenu.slotId (the cut-in's Pokémon), sMapFlyDestinations ({group, num, heal} per map section
+    // from flyFirstMapsec), the GetMapsecType answers that fly and the sections past the table that do (0 = none).
+    // flyFlagGet 0 = no FLY.
+    uint32_t flyFlagGet, flySetUp, flyGetMapsecType, flyFade, flyLock, flyUnlock, flyWarp;
+    int flyBadgeFlag;
+    uint32_t flyPartySlot, flyDestinations;
+    int flyFirstMapsec, flyCount;
+    uint32_t flyCrcs[9];
+    int flyTypes[4], flyExtra[4];
+    uint32_t flyHealTo, flyMapWarp, flyReturn, flySaveBlock2Ptr; // gSaveBlock2Ptr: playerGender at +8
+    int flySpecial[4][2]; // {map section, heal location} taken before the table's
+    int flyGenderMapsec, flyMaleHeal, flyFemaleHeal; // the home town: by the player's gender
 };
 
 enum pd_card_style { PD_CARD_NONE, PD_CARD_KANTO, PD_CARD_HOENN };

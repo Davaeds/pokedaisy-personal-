@@ -2,6 +2,7 @@
  * highlighted one's name in the middle, with why it's dimmed. GPL-3.0, see ../NOTICE. */
 #include "quick_menu.h"
 
+#include "pd_icon.h"
 #include "pd_style.h"
 #include <math.h>
 #include <stdlib.h>
@@ -44,6 +45,7 @@ static const char *const COMPANION[] = {
 
 const char *quick_label(enum quick_action a) {
   switch (a) {
+  case QUICK_FLY: return "FLY";
   case QUICK_WILD: return "WILD";
   case QUICK_SAVE_STATE: return "SAVE STATE";
   case QUICK_LOAD_STATE: return "LOAD STATE";
@@ -116,7 +118,7 @@ int quick_step(int n, int sel, int dx, int dy, int w, int h) {
   return best;
 }
 
-bool quick_draw(struct pd_canvas *c, const struct quick_item *items, int n, int sel) {
+bool quick_draw(struct pd_canvas *c, const struct pd_game *g, const struct quick_item *items, int n, int sel) {
   if (c->w < 3 * TILE_W || c->h < 3 * TILE_H)
     return false;
   for (int i = 0; i < c->w * c->h; i++)
@@ -128,7 +130,10 @@ bool quick_draw(struct pd_canvas *c, const struct quick_item *items, int n, int 
       pd_round_rect(c, x - 2, y - 2, TILE_W + 4, TILE_H + 4, 5, FOCUS);
     glass(c, x, y, TILE_W, TILE_H);
     bool dim = items[i].why != NULL;
-    icon(c, items[i].action, x + TILE_W / 2, y + 18, 2, dim || items[i].off);
+    if (items[i].action == QUICK_FLY) // the Pokémon that would FLY, as QuickIcon draws it
+      pd_draw_mon_icon(c, g, items[i].species, x + (TILE_W - PD_ICON) / 2, y + 1, dim);
+    else
+      icon(c, items[i].action, x + TILE_W / 2, y + 18, 2, dim || items[i].off);
     const char *label = quick_label(items[i].action);
     int lw = pd_text_width(label);
     pd_text(c, x + (TILE_W - lw) / 2, y + TILE_H - 17, label, dim ? MUTED : items[i].lit ? FOCUS : INK,
@@ -154,6 +159,41 @@ bool quick_draw(struct pd_canvas *c, const struct quick_item *items, int n, int 
       pd_text(c, x + (w - ow) / 2, y + 20, note, it->why ? MUTED : FOCUS, INK_SHADOW);
   }
   return true;
+}
+
+void quick_list_draw(struct pd_canvas *c, const char *title, const char *const *rows, int n, int sel) {
+  for (int i = 0; i < c->w * c->h; i++)
+    c->px[i] = QUICK_CLEAR;
+  enum { ROW = 16, PAD = 6 };
+  int widest = pd_text_width(title);
+  for (int i = 0; i < n; i++)
+    if (pd_text_width(rows[i]) > widest)
+      widest = pd_text_width(rows[i]);
+  int w = widest + 4 * PAD + 6, maxRows = (c->h - 2 * PAD - ROW - 16) / ROW;
+  if (w > c->w - 8)
+    w = c->w - 8;
+  int shown = n < maxRows ? n : maxRows;
+  int top = sel - shown / 2;
+  if (top > n - shown)
+    top = n - shown;
+  if (top < 0)
+    top = 0;
+  int h = PAD + ROW + 4 + shown * ROW + PAD, x = (c->w - w) / 2, y = (c->h - h) / 2;
+  glass(c, x, y, w, h);
+  pd_text(c, x + (w - pd_text_width(title)) / 2, y + PAD - 2, title, FOCUS, INK_SHADOW);
+  for (int r = 0; r < shown; r++) {
+    int i = top + r, ry = y + PAD + ROW + 4 + r * ROW;
+    if (i == sel)
+      pd_round_rect(c, x + PAD, ry, w - 2 * PAD, ROW, 3, FOCUS);
+    pd_text(c, x + 2 * PAD + 3, ry - 1, rows[i], INK, i == sel ? 0x00803010u : INK_SHADOW);
+  }
+  // More above / below: a small arrow at the edge (Pixel Operator has no arrow glyphs).
+  for (int k = 0; k < 3; k++) {
+    if (top > 0)
+      pd_fill(c, x + w / 2 - k, y + PAD + ROW + 1 - (2 - k), 2 * k + 1, 1, MUTED);
+    if (top + shown < n)
+      pd_fill(c, x + w / 2 - k, y + h - 3 - k, 2 * k + 1, 1, MUTED);
+  }
 }
 
 void quick_finish(struct pd_canvas *c) {

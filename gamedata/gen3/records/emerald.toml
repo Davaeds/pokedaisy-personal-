@@ -73,3 +73,38 @@ regionalDex = 'HOENN_TO_NATIONAL'
 frontierSymbolFlag = 0x8C4
 museumWinnersOff = 0x2F90  # 0x2E90 + 8 * 32
 frontierBpOff = 0xEBA
+
+# FLY (Fly.kt's FlyFns): retail Emerald, pret's pokeemerald built clean (byte for byte retail) and its ELF.
+# sMapHealLocations covers map sections 0..49; Ever Grande flies to the city (the game's League spot needs the
+# cursor's top tile).
+[record.FLY_EMERALD]
+schema = 'gen3_fly'
+flagGet = 0x0809D790
+badgeFlag = 0x86C
+setUpFieldMoveFly = 0x081B5884
+getMapsecType = 0x08123D58
+fadeScreen = 0x080ABCD0
+lockControls = 0x08098E54
+unlockControls = 0x08098E60
+setFlyWarpDestination = 0
+partyMenuSlotId = 0x0203CED1
+destinations = 0x085A1E3C
+firstMapsec = 0
+count = 50
+codeCrcs = [0xBCF97BF3, 0x13BE1A7A, 0x4B625BC4, 0xF9959006, 0xB9FB85A7, 0xB037C8AF, 0x74DBCE3A, 0x2F1D18CA, 0xA284286D]
+flyTypes = [2, 4]
+extraMapsecs = [58]
+healWarp = 'HEAL_WARP_EMERALD'
+
+# Emerald's CB_ExitFlyMap: the heal location, Littleroot by the player's gender, else the map warp.
+[record.HEAL_WARP_EMERALD]
+schema = 'gen3_heal_warp'
+toHealLocation = 0x08084CCC
+toMapWarp = 0x08084C28
+returnToField = 0x080B69DC
+saveBlock2Ptr = 0x03005D90
+# MAPSEC_EVER_GRANDE_CITY, MAPSEC_BATTLE_FRONTIER (HEAL_LOCATION_EVER_GRANDE_CITY, _BATTLE_FRONTIER_OUTSIDE_EAST)
+special = [[15, 11], [58, 22]]
+genderMapsec = 0
+maleHeal = 12
+femaleHeal = 13

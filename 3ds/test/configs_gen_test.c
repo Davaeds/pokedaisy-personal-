@@ -288,6 +288,31 @@ int main(void) {
         { sizeof(((struct pd_config*) 0)->regionName) },
         { sizeof(((struct pd_config*) 0)->probeName) },
         { sizeof(((struct pd_config*) 0)->bagOrder) },
+        // FLY's: new to the port (no hand-written copy to compare), the app's Fly.kt records. The Linux host's
+        // test flies with them on the real games.
+        { sizeof(((struct pd_config*) 0)->flyFlagGet) },
+        { sizeof(((struct pd_config*) 0)->flySetUp) },
+        { sizeof(((struct pd_config*) 0)->flyGetMapsecType) },
+        { sizeof(((struct pd_config*) 0)->flyFade) },
+        { sizeof(((struct pd_config*) 0)->flyLock) },
+        { sizeof(((struct pd_config*) 0)->flyUnlock) },
+        { sizeof(((struct pd_config*) 0)->flyWarp) },
+        { sizeof(((struct pd_config*) 0)->flyBadgeFlag) },
+        { sizeof(((struct pd_config*) 0)->flyPartySlot) },
+        { sizeof(((struct pd_config*) 0)->flyDestinations) },
+        { sizeof(((struct pd_config*) 0)->flyFirstMapsec) },
+        { sizeof(((struct pd_config*) 0)->flyCount) },
+        { sizeof(((struct pd_config*) 0)->flyCrcs) },
+        { sizeof(((struct pd_config*) 0)->flyTypes) },
+        { sizeof(((struct pd_config*) 0)->flyExtra) },
+        { sizeof(((struct pd_config*) 0)->flyHealTo) },
+        { sizeof(((struct pd_config*) 0)->flyMapWarp) },
+        { sizeof(((struct pd_config*) 0)->flyReturn) },
+        { sizeof(((struct pd_config*) 0)->flySaveBlock2Ptr) },
+        { sizeof(((struct pd_config*) 0)->flySpecial) },
+        { sizeof(((struct pd_config*) 0)->flyGenderMapsec) },
+        { sizeof(((struct pd_config*) 0)->flyMaleHeal) },
+        { sizeof(((struct pd_config*) 0)->flyFemaleHeal) },
     };
     size_t sum = 0;
     for (size_t i = 0; i < sizeof(fields) / sizeof(*fields); i++) sum += fields[i].size;
