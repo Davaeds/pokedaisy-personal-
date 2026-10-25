@@ -334,6 +334,6 @@ class PortraitPanel(
         /** Between the grip and its X. */
         const val CLOSE_GAP_DP = 8
         /** Put away, how far the touch controls' strip drops toward the screen's bottom: 0 = where it was, 1 = all the way. */
-        const val HIDDEN_PAD_DROP = 0.5f
+        const val HIDDEN_PAD_DROP = 0.6f
     }
 }
