@@ -112,7 +112,7 @@ Hold a phone upright and the game sits across the top of the screen, with the co
 
 - **Change its height:** drag the grip on the companion's top edge up or down. It snaps to the default size (the shape of the Thor's bottom screen) and to the largest size (everything under the game).
 - **Step through sizes:** tap the grip to go from small, to the default, to everything under the game, and round again.
-- **Put it away:** tap the X beside the grip. The companion slides down off the screen and the game gets the whole screen, the way it does held sideways. To bring it back, tap the tab with the up arrow at the bottom of the screen, or press `BACK`. PokeDaisy remembers which way you left it. A DS game's touch screen can't be put away.
+- **Put it away:** tap the X beside the grip. The companion slides down off the screen and the game gets the whole screen, the way it does held sideways. The touch controls move down only part of the way, so they stay within reach. To bring it back, tap the tab with the up arrow at the bottom of the screen, or press `BACK`. PokeDaisy remembers which way you left it. A DS game's touch screen can't be put away.
 - **Touch controls:** they get the space at the bottom of the screen, under the companion. With the companion `AT BOTTOM` (below) they go in the gap between the game and the companion when there's room, and lie over the game when there isn't. The phone held upright has its own layout, and `POSITION` on the `TOUCH CONTROLS` page puts the buttons at the top, middle or bottom of their space; see [Touch controls](controls.md#touch-controls).
 
 The `COMPANION` setting (on the `DISPLAY OPTIONS` page of the `SCREEN` group, on single-screen devices) picks where the companion sits on a phone held upright:

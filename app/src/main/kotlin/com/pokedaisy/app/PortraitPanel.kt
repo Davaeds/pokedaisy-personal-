@@ -194,6 +194,10 @@ class PortraitPanel(
 
     private var sliding = false
 
+    /** The touch controls' strip (top, bottom px) the last time the companion was up: put away, they move only part
+     * of the way down from there ([HIDDEN_PAD_DROP]) instead of to the screen's bottom. */
+    private var shownPad: Pair<Int, Int>? = null
+
     /** The X: slides the companion (and its grip) down off the screen, then gives the game the whole screen. */
     private fun hide() {
         if (!enabled || hidden || ds) return
@@ -244,7 +248,11 @@ class PortraitPanel(
             openTab?.visibility = View.VISIBLE
             root.centered = true
             setMargins(game, 0, 0)
-            setMargins(touchControls, 0, 0)
+            // The touch controls keep near where they were: their strip's bottom goes only part of the way to the
+            // screen's bottom (their layout is anchored to it), not all the way.
+            val (padTop, padBottom) = shownPad ?: arrangement().let { it.padTop to it.padBottom }
+            val bottom = (padBottom + (h - padBottom) * HIDDEN_PAD_DROP).toInt().coerceIn(padBottom, h)
+            setMargins(touchControls, padTop, h - bottom)
             return
         }
         for (v in listOfNotNull(panel, gripView)) v.visibility = View.VISIBLE
@@ -269,6 +277,7 @@ class PortraitPanel(
         }
         setMargins(game, 0, h - a.gameAreaBottom)
         setMargins(touchControls, a.padTop, h - a.padBottom)
+        shownPad = a.padTop to a.padBottom
     }
 
     private fun setFrame(v: View, top: Int, height: Int) {
@@ -324,5 +333,7 @@ class PortraitPanel(
         const val SLIDE_MS = 160L
         /** Between the grip and its X. */
         const val CLOSE_GAP_DP = 8
+        /** Put away, how far the touch controls' strip drops toward the screen's bottom: 0 = where it was, 1 = all the way. */
+        const val HIDDEN_PAD_DROP = 0.5f
     }
 }
