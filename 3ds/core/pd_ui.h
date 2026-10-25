@@ -58,7 +58,8 @@ struct pd_settings {
     int ffSpeed;    // PD_FF_MIN..PD_FF_MAX
     int guideNotice; // a bit per game kind whose GUIDE notice was accepted
     int aspect;      // enum pd_aspect (hosts with hasExpand only)
-    bool autoZoom;   // AUTO ZOOM IN: text boxes go back to the game's picture
+    bool autoZoom;   // AUTO ZOOM IN: ZOOM OUT steps back in off the plain overworld
+    bool wildOff;    // WILD ENCOUNTERS off (hosts that can: the Linux host's quick menu)
 };
 
 enum pd_action {

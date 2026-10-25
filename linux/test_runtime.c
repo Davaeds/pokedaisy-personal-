@@ -53,6 +53,17 @@ static void test_frame(struct mCore* c,bool companion,int frame,struct pd_ui* ui
       assert(snap->valid && snap->partyCount>0 && snap->posOk);
     }
     drive(c,0,120);pd_snapshot_read(snap,&game,read_memory,c);
+    // WILD ENCOUNTERS: OFF holds the game's switch at 1 while the field is free, ON puts it back.
+    uint32_t wild=isGba&&pk_field_configure(crc)?pk_wild_switch_find(rom,len):0;
+    if(wild) {
+      pk_field_wild(wild,false);
+      uint8_t on=0;
+      for(int i=0;i<4;i++){c->runFrame(c);pk_field_state(c,0,0);}
+      on=c->busRead8(c,wild);assert(on==1);
+      for(int i=0;i<4;i++){c->runFrame(c);pk_field_state(c,0,100);}
+      on=c->busRead8(c,wild);assert(on==0);
+      printf("%s WILD ENCOUNTERS switch 0x%08X held off and back\n",liveName,wild);
+    }
     unsigned gw,gh;c->desiredVideoDimensions(c,&gw,&gh);
     present_game(gw,gh);shot("game");
     if(wideSupported) {
@@ -106,6 +117,12 @@ static void test_frame(struct mCore* c,bool companion,int frame,struct pd_ui* ui
       s->aspect=PD_ASPECT_EXPAND;for(int i=0;i<4;i++){c->runFrame(c);wide_tick(c,false,s);}
       present_menu(&m,gw,gh);shot("menu");
       assert(lastGameRect.w>=ow-2*(lastGameRect.w/(int)wideW) && wideReady);
+      // The QUICK MENU over the game, a dimmed tile with its reason in the middle.
+      struct quick_item q[]={{QUICK_WILD,true,false,NULL},{QUICK_SAVE_STATE,false,false,NULL},
+                             {QUICK_LOAD_STATE,false,false,"No state saved yet"},{QUICK_FF,false,true,NULL},
+                             {QUICK_COMPANION,false,false,NULL}};
+      present_quick(q,5,0,gw,gh);shot("quick");
+      present_quick(q,5,2,gw,gh);shot("quick-dim");
       s->aspect=keep;wideReady=false;
     }
     if(!companionGame) {

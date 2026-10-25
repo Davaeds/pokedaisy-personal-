@@ -10,6 +10,7 @@ void pd_settings_defaults(struct pd_settings* s) {
     s->guideNotice = 0;
     s->aspect = PD_ASPECT_ORIGINAL;
     s->autoZoom = true;
+    s->wildOff = false;
 }
 
 static bool int_in(const char* v, int lo, int hi, int* out) {
@@ -38,6 +39,9 @@ bool pd_settings_load(struct pd_settings* s, const char* path) {
         else if (!strcmp(key, "autozoom")) {
             int on;
             if (int_in(value, 0, 1, &on)) s->autoZoom = on;
+        } else if (!strcmp(key, "wildoff")) {
+            int on;
+            if (int_in(value, 0, 1, &on)) s->wildOff = on;
         }
     }
     fclose(f);
@@ -47,7 +51,7 @@ bool pd_settings_load(struct pd_settings* s, const char* path) {
 bool pd_settings_save(const struct pd_settings* s, const char* path) {
     FILE* f = fopen(path, "w");
     if (!f) return false;
-    fprintf(f, "screen=%d\nff=%d\nguide=%d\naspect=%d\nautozoom=%d\n", s->screenMode, s->ffSpeed, s->guideNotice,
-            s->aspect, s->autoZoom ? 1 : 0);
+    fprintf(f, "screen=%d\nff=%d\nguide=%d\naspect=%d\nautozoom=%d\nwildoff=%d\n", s->screenMode, s->ffSpeed,
+            s->guideNotice, s->aspect, s->autoZoom ? 1 : 0, s->wildOff ? 1 : 0);
     return fclose(f) == 0;
 }

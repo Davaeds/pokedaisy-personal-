@@ -58,9 +58,9 @@ int main(void) {
     FILE* old=fopen(path,"w");fputs("screen=1\nff=3\nguide=0\n",old);fclose(old);
     assert(pd_settings_load(&back,path) && back.aspect==PD_ASPECT_ORIGINAL && back.autoZoom && back.ffSpeed==3);
     remove(path);
-    // PARTY at a Linux canvas size: Android's slot, edge to edge, two columns. The
-    // selected look (orange outline) follows the host's D-pad focus, else slot 0;
-    // empty slots are faint and take no taps.
+    // PARTY at a Linux canvas size: Android's slot, edge to edge, three columns past 2:1 (426x240's tab).
+    // The selected look (orange outline) follows the host's D-pad focus, else slot 0; empty slots are
+    // faint and take no taps.
     static uint32_t partyPx[426*240];
     pd_canvas_init(&c,426,240,partyPx);
     struct pd_snapshot party={.valid=true,.partyCount=3};
@@ -69,15 +69,19 @@ int main(void) {
     uint8_t header[0xC0]={0};memcpy(header+0xAC,"BPRE",4);header[0xBC]=1;
     struct pd_game fr;pd_game_detect(&fr,header,0x1000000);assert(fr.cfg);
     ui.tab=PD_TAB_PARTY;ui.summarySlot=-1;ui.focusId=-1;
-    // Slot i's frame top edge: cells from (MARGIN, CONTENT_Y - 2), 209 x 70 here; the frame 8 / 6 px in.
-    #define FRAME_TOP(i) partyPx[(26+210*((i)/2)/3+6)*426+MARGIN+209*((i)%2)+8+12]
     pd_ui_draw(&ui,&c,&fr,&party,&noHost);
-    int slots=0;for(int i=0;i<ui.hitCount;i++)slots+=ui.hits[i].id>=HIT_SLOT&&ui.hits[i].id<HIT_SLOT+6;
-    assert(slots==3);
+    struct pd_hit cell[3];int slots=0;
+    for(int i=0;i<ui.hitCount;i++)if(ui.hits[i].id>=HIT_SLOT&&ui.hits[i].id<HIT_SLOT+3)cell[ui.hits[i].id-HIT_SLOT]=ui.hits[i],slots++;
+    assert(slots==3 && cell[1].y==cell[0].y && cell[2].y==cell[0].y && cell[1].x>cell[0].x && cell[2].x>cell[1].x);
+    assert(cell[2].x+cell[2].w-cell[0].x>426*9/10); // edge to edge (less the Poke Ball overhang)
+    // Slot i's frame top edge (a slot's hit is its frame).
+    #define FRAME_TOP(i) partyPx[cell[i].y*426+cell[i].x+20]
     assert(FRAME_TOP(0)==0xFF7331 && FRAME_TOP(2)==0x4A4A63);
     ui.focusId=HIT_SLOT+2;pd_ui_draw(&ui,&c,&fr,&party,&noHost);
     assert(FRAME_TOP(0)==0x4A4A63 && FRAME_TOP(2)==0xFF7331);
-    // An empty slot's outline is blended into the backdrop, not drawn solid.
-    assert(FRAME_TOP(4)!=0x4A4A63 && FRAME_TOP(4)!=PD_BACKDROP_A && FRAME_TOP(4)!=PD_BACKDROP_B);
+    // The empty row's outlines are blended into the backdrop, never drawn solid.
+    int solid=0;
+    for(int y=cell[0].y+cell[0].h;y<240;y++)for(int x=0;x<426;x++)solid+=partyPx[y*426+x]==0x4A4A63;
+    assert(solid==0);
     puts("PASS default/null host, optional scaling row, remaining settings and FF interaction, EXPAND rows, party grid");
 }

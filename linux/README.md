@@ -38,9 +38,15 @@ forced termination cannot do that. Keep using in-game saves.
 ## Controls and display
 
 Keyboard: arrows, Z=A, X=B, Enter=Start, Backspace=Select, Q/E=L/R,
-Tab=companion, F=fast-forward, Escape=game menu. In the companion use
+Tab=companion, F=quick menu, Escape=game menu. In the companion use
 D-pad to focus, A to choose, B to go back and L/R to change tabs.
 Save/load/quit confirmations are cancel-first. Fast-forward has no audio.
+
+Y (F on a keyboard) opens the QUICK MENU over the running game: WILD ENCOUNTERS
+on or off (saved in DATA/settings.ini; GBA games whose switch `wild.c` finds:
+retail FireRed / LeafGreen / Emerald / Ruby / Sapphire in every language and the
+CFRU hacks), SAVE STATE, LOAD STATE, FF and COMPANION. The D-pad picks a tile,
+A runs it, B or Y closes it; the game's buttons wait meanwhile.
 
 SDL GameController mappings take priority. The right face button acts as game
 A; the bottom button acts as game B. A controller can be plugged in or pulled

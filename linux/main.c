@@ -6,6 +6,8 @@
 #include "pd_ui.h"
 #include "pd_ui_internal.h"
 #include "host_io.h"
+#include "quick_menu.h"
+#include "wild.h"
 #include "../app/src/main/cpp/pk_wide.h"
 #include <SDL.h>
 #include <dirent.h>
@@ -503,6 +505,40 @@ static void present_game(unsigned gw, unsigned gh) {
 #define MENU_KEY 0x00FF00FFu
 static uint32_t menuPixels[CANVAS_MAX_W * CANVAS_MAX_H];
 static SDL_Texture *menuTexture;
+static bool overlay_texture(void) {
+  if (!menuTexture) {
+    menuTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
+                                    CANVAS_MAX_W, CANVAS_MAX_H);
+    if (!menuTexture)
+      return false;
+    SDL_SetTextureBlendMode(menuTexture, SDL_BLENDMODE_BLEND);
+  }
+  return true;
+}
+/* The QUICK MENU over the running game: a light dim, the ring at the companion's canvas scale. */
+static void present_quick(const struct quick_item *items, int n, int sel, unsigned gw, unsigned gh) {
+  if (!render_game(gw, gh) || !overlay_texture())
+    return;
+  int ow, oh;
+  SDL_GetRendererOutputSize(renderer, &ow, &oh);
+  int scale = ow / canvasW < oh / canvasH ? ow / canvasW : oh / canvasH;
+  if (scale < 1)
+    scale = 1;
+  struct pd_canvas qc;
+  pd_canvas_init(&qc, canvasW, canvasH, menuPixels);
+  if (!quick_draw(&qc, items, n, sel))
+    return;
+  quick_finish(&qc);
+  SDL_UpdateTexture(menuTexture, &(SDL_Rect){0, 0, canvasW, canvasH}, menuPixels, canvasW * 4);
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0x55);
+  SDL_RenderFillRect(renderer, NULL);
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+  SDL_Rect at = {(ow - canvasW * scale) / 2, (oh - canvasH * scale) / 2, canvasW * scale, canvasH * scale};
+  SDL_RenderCopy(renderer, menuTexture, &(SDL_Rect){0, 0, canvasW, canvasH}, &at);
+  timed_present();
+}
 static void present_menu(struct pd_menu *m, unsigned gw, unsigned gh) {
   if (!render_game(gw, gh))
     return;
@@ -515,13 +551,8 @@ static void present_menu(struct pd_menu *m, unsigned gw, unsigned gh) {
   int h = 24 + 4 + m->count * 18 + 2 * 7 + 8 + 2 * MARGIN;
   if (h > canvasH)
     h = canvasH;
-  if (!menuTexture) {
-    menuTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
-                                    CANVAS_MAX_W, CANVAS_MAX_H);
-    if (!menuTexture)
-      return;
-    SDL_SetTextureBlendMode(menuTexture, SDL_BLENDMODE_BLEND);
-  }
+  if (!overlay_texture())
+    return;
   struct pd_canvas mc;
   pd_canvas_init(&mc, w, h, menuPixels);
   for (int i = 0; i < w * h; i++)
@@ -866,6 +897,10 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
   c->checksum(c, &crc, mCHECKSUM_CRC32);
   wideSupported = pk_wide_configure(crc) != 0;
   wideReady = false;
+  // WILD ENCOUNTERS: the game's own switch (wild.c finds it), held by pk_wide's field read every frame.
+  uint32_t wildSwitch = 0;
+  if (c->platform(c) == mPLATFORM_GBA && pk_field_configure(crc))
+    wildSwitch = pk_wild_switch_find(romdata, (size_t)len);
   unsigned gw, gh;
   c->desiredVideoDimensions(c, &gw, &gh);
   struct pd_game game;
@@ -878,6 +913,10 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
   snprintf(config, sizeof config, "%s/settings.ini", root);
   struct pd_settings settings;
   pd_settings_load(&settings, config);
+  if (wildSwitch)
+    pk_field_wild(wildSwitch, settings.wildOff);
+  bool quickOpen = false;
+  int quickSel = 0;
   struct pd_ui ui;
   pd_ui_init(&ui, &settings);
   struct pd_snapshot snap = {0};
@@ -925,8 +964,52 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
       if (audio)
         SDL_ClearQueuedAudio(audio);
     }
-    if (down(Y) && !companion)
-      ff = !ff;
+    // Y: the QUICK MENU over the running game (its keys withheld meanwhile).
+    struct quick_item quick[QUICK_COUNT];
+    int quickN = 0;
+    quick[quickN++] = (struct quick_item){QUICK_WILD, settings.wildOff, false,
+                                          wildSwitch ? NULL : "Not in this game"};
+    quick[quickN++] = (struct quick_item){QUICK_SAVE_STATE, false, false, NULL};
+    quick[quickN++] = (struct quick_item){QUICK_LOAD_STATE, false, false,
+                                          access(ss, F_OK) == 0 ? NULL : "No state saved yet"};
+    quick[quickN++] = (struct quick_item){QUICK_FF, false, ff, NULL};
+    quick[quickN++] = (struct quick_item){QUICK_COMPANION, false, false, NULL};
+    if (down(Y) && !companion) {
+      quickOpen = !quickOpen;
+      c->setKeys(c, 0);
+    } else if (quickOpen && (down(B) || down(MENU))) {
+      quickOpen = false;
+    } else if (quickOpen) {
+      int dx = down(RIGHT) - down(LEFT), dy = down(DOWN) - down(UP);
+      if (dx || dy)
+        quickSel = quick_step(quickN, quickSel, dx, dy, canvasW, canvasH);
+      if (down(A) && !quick[quickSel].why) {
+        quickOpen = false;
+        switch (quick[quickSel].action) {
+        case QUICK_WILD:
+          settings.wildOff = !settings.wildOff;
+          pd_settings_save(&settings, config);
+          notice(settings.wildOff ? "Wild encounters off" : "Wild encounters on");
+          break;
+        case QUICK_SAVE_STATE:
+          notice(state(c, ss, true) ? "State saved" : "State save failed");
+          break;
+        case QUICK_LOAD_STATE:
+          notice(state(c, ss, false) ? "State loaded" : "State load failed");
+          break;
+        case QUICK_FF:
+          ff = !ff;
+          break;
+        case QUICK_COMPANION:
+          companion = true;
+          if (audio)
+            SDL_ClearQueuedAudio(audio);
+          break;
+        default:
+          break;
+        }
+      }
+    }
     if (companion) {
       companion_canvas();
       if (menuOpen) {
@@ -1041,12 +1124,14 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
       }
     } else {
       muted = ff;
-      c->setKeys(c, held & 1023);
+      c->setKeys(c, quickOpen ? 0 : held & 1023);
       int count = ff ? settings.ffSpeed : 1;
       audio_rate(c, hz);
       for (int i = 0; i < count; i++) {
         uint64_t t = SDL_GetPerformanceCounter();
         c->runFrame(c);
+        if (wildSwitch)
+          pk_field_state(c, 0, settings.wildOff ? 0 : 100);
         emuMs += ms_since(t);
         t = SDL_GetPerformanceCounter();
         wide_tick(c, i < count - 1, &settings);
@@ -1058,7 +1143,9 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
     if (!snap.valid || (companion && !companionWas) || (!companion && frames % 30 == 0))
       pd_snapshot_read(&snap, &game, read_memory, c);
     companionWas = companion;
-    if (companion && menuOpen && menuOpen != 4) {
+    if (quickOpen && !companion) {
+      present_quick(quick, quickN, quickSel, gw, gh);
+    } else if (companion && menuOpen && menuOpen != 4) {
       present_menu(menuOpen == 1 ? &gameMenu : &confirmMenu, gw, gh);
     } else if (companion) {
       if (menuOpen) {
@@ -1256,11 +1343,14 @@ int main(int argc, char **argv) {
   if(controller) {SDL_GameControllerClose(controller);controller=NULL;}
   if (audio)
     SDL_CloseAudioDevice(audio);
+  // NULLed: the runtime test runs the app again in a new window.
   SDL_DestroyTexture(texture);
+  texture = NULL;
   SDL_DestroyTexture(gameTexture);
   SDL_DestroyTexture(wideTexture);
   if (menuTexture)
     SDL_DestroyTexture(menuTexture);
+  menuTexture = NULL;
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
