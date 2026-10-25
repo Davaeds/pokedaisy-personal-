@@ -46,6 +46,9 @@ object NewFeatures {
     /** SETTINGS > REUSABLE TMS: a TM stays in the bag after it teaches a move (companion.data.ReusableTms). */
     const val REUSABLE_TMS = "reusable_tms"
 
+    /** SETTINGS > MENU SOUNDS: the game's menu beep off, cries kept (companion.data.MenuSounds). */
+    const val MENU_SOUNDS = "menu_sounds"
+
     /** SETTINGS > SHADERS > UNLIT SCREEN: the GBA's screen with no light of its own (ScreenShaders.UNLIT). */
     const val UNLIT_SCREEN = "unlit_screen"
 
@@ -77,7 +80,7 @@ object NewFeatures {
     val ALL = listOf(
         HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB, TOUCH_CONTROLS,
         COMPANION_TAB, REUSABLE_TMS, UNLIT_SCREEN, LIGHT_COMPANION, X_COMPANION, PLAYER_LOOK, RIVAL_LOOK, TEXT_LOOK, DAY_NIGHT,
-        FOLLOWER, COMPANION_HOTKEY,
+        FOLLOWER, COMPANION_HOTKEY, MENU_SOUNDS,
     )
 
     private const val DAYS = 7

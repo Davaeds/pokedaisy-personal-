@@ -499,6 +499,16 @@ private fun homeRows(
         ) {
             if (s.reusableTmsSupported) { s.setReusableTms(!s.reusableTms); changed() }
         },
+        // The game's menu beep on / off; cries and every other sound stay (MenuSounds.kt: song 5 pointed at a silent song).
+        SettingRow(
+            tk("MENU SOUNDS"),
+            if (s.menuSoundsSupported) onOff(s.menuSounds) else tk("N/A"),
+            enabled = s.menuSoundsSupported,
+            labelBadge = NewFeatures.badge(NewFeatures.MENU_SOUNDS),
+            subtitle = "The game's beep in its menus",
+        ) {
+            if (s.menuSoundsSupported) { s.setMenuSounds(!s.menuSounds); changed() }
+        },
         // B held for the player while walking on the field; holding it walks. Never on a bike or in a menu.
         SettingRow(tk("AUTO-RUN"), if (s.fieldReadable) onOff(s.autoRun) else tk("N/A"), enabled = s.fieldReadable) { if (s.fieldReadable) { s.setAutoRun(!s.autoRun); changed() } },
         // Every map lets the player run (buildings too); FireRed / Emerald engines.

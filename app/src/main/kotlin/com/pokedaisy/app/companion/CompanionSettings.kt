@@ -68,6 +68,12 @@ interface CompanionSettings {
     /** The game's own TMs never run out ([com.pokedaisy.app.companion.data.ReusableTms.BUILT_IN]): the row says so. */
     val reusableTmsBuiltIn: Boolean get() = false
 
+    /** MENU SOUNDS - see [com.pokedaisy.app.Prefs.menuSounds]; [menuSoundsSupported]: the game's song table and a
+     * silent song were found ([com.pokedaisy.app.companion.data.MenuSounds]). */
+    val menuSounds: Boolean get() = true
+    fun setMenuSounds(on: Boolean) {}
+    val menuSoundsSupported: Boolean get() = false
+
     /** PLAYER LOOK ([com.pokedaisy.app.companion.data.PlayerLook]): [playerLookSupported] = a FireRed / LeafGreen /
      * Emerald game; [playerLooks] = the heroes it can wear now (another game's, kept from the player's own ROMs);
      * [playerLook] = the one worn, by name (null = the game's own). */

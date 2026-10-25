@@ -150,6 +150,7 @@ val SETTING_KEYWORDS: Map<String, String> = mapOf(
     "TEXT LOOK" to "text look text box textbox dialogue dialog box message box window frame font letters typeface firered emerald",
     "RIVAL LOOK" to "rival look rival costume outfit skin sprite appearance dress up brendan may other hero opponent",
     "PLAYER LOOK" to "player look hero heroine character protagonist trainer costume outfit skin sprite appearance swap play as another game red leaf brendan may",
+    "MENU SOUNDS" to "menu sound sounds beep beeping noise click clicks cursor select scroll mute quiet silence sfx sound effect",
     "REUSABLE TMS" to "reusable tm tms technical machine machines reuse infinite unlimited keep tm single use consumed used up teach moves",
     "WILD ENCOUNTERS" to "wild encounters encounter rate random battles grass caves repel no encounters fewer battles",
 )

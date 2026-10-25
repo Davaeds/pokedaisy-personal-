@@ -152,6 +152,12 @@ class Prefs(context: Context) {
         get() = p.getBoolean("reusable_tms", false)
         set(v) = p.edit().putBoolean("reusable_tms", v).apply()
 
+    /** MENU SOUNDS: the game's menu beep (moving and picking in its menus) plays (true, the default) or is silenced,
+     * cries and every other sound kept (companion.data.MenuSounds). */
+    var menuSounds: Boolean
+        get() = p.getBoolean("menu_sounds", true)
+        set(v) = p.edit().putBoolean("menu_sounds", v).apply()
+
     /** PLAYER LOOK per ROM (keyed by CRC32): the hero the player wears ([com.pokedaisy.app.companion.data.LookChar]'s
      * name), null = the game's own. */
     fun playerLookFor(romKey: String): String? = p.getString("player_look_$romKey", null)

@@ -154,6 +154,8 @@ class PokeDaisyActivity : Activity() {
     @Volatile private var wildFlag = 0L
     /** REUSABLE TMS: the ROM's spots that use a TM up ([com.pokedaisy.app.companion.data.ReusableTms]; empty = none). */
     private var tmSites: List<com.pokedaisy.app.companion.data.ReusableTms.Site> = emptyList()
+    /** MENU SOUNDS: the patch that silences this ROM's menu beep (null = not found). */
+    private var menuSoundsPatch: com.pokedaisy.app.companion.data.MenuSounds.Patch? = null
     /** EXPAND's one-time offer is up on the companion ([CompanionSettings.expandOffer]). */
     private val expandOfferUp = androidx.compose.runtime.mutableStateOf(false)
     private var states: SaveStates? = null
@@ -1054,6 +1056,12 @@ class PokeDaisyActivity : Activity() {
             if (::engine.isInitialized) engine.setReusableTms(tmSites, on)
         }
         override val reusableTmsSupported get() = tmSites.isNotEmpty()
+        override val menuSounds get() = Prefs(this@PokeDaisyActivity).menuSounds
+        override fun setMenuSounds(on: Boolean) {
+            Prefs(this@PokeDaisyActivity).menuSounds = on
+            if (::engine.isInitialized) engine.setMuteMenuSounds(menuSoundsPatch, !on)
+        }
+        override val menuSoundsSupported get() = menuSoundsPatch != null
         override val playerLookSupported get() = lookRunner.supported.value
         override val playerLooks get() = lookRunner.offered.value.map { it.name } + lookRunner.offeredMons.value.map { "MON:$it" }
         override val playerLook get() = lookRunner.picked.value?.name ?: lookRunner.pickedMon.value?.let { "MON:$it" }
@@ -1620,6 +1628,8 @@ class PokeDaisyActivity : Activity() {
         wildFlag = 0L
         tmSites = emptyList()
         if (::engine.isInitialized) engine.setReusableTms(tmSites, false)
+        menuSoundsPatch = null
+        if (::engine.isInitialized) engine.setMuteMenuSounds(null, false)
         gbFieldCache = null
         if (::engine.isInitialized) engine.gbField = null
         if (gba) Thread({
@@ -1628,12 +1638,17 @@ class PokeDaisyActivity : Activity() {
             // REUSABLE TMS: the spots that use a TM up, by their code (none = the row shows N/A).
             val tms = com.pokedaisy.app.companion.data.ReusableTms.find(r)
             Log.i("pokedaisy", "reusable TMs: ${tms.size} site(s)")
+            // MENU SOUNDS: the menu beep's song-table entry and a silent song (none = the row shows N/A).
+            val beep = com.pokedaisy.app.companion.data.MenuSounds.find(r)
+            Log.i("pokedaisy", "menu sounds: ${if (beep != null) "beep at %08X".format(beep.entry) else "not found"}")
             runOnUiThread {
                 if (romData != r) return@runOnUiThread
                 wildFlag = flag
                 if (::engine.isInitialized) engine.wildFlag = flag
                 tmSites = tms
                 if (::engine.isInitialized) engine.setReusableTms(tms, Prefs(this).reusableTms)
+                menuSoundsPatch = beep
+                if (::engine.isInitialized) engine.setMuteMenuSounds(beep, !Prefs(this).menuSounds)
             }
         }, "wild-encounters").start()
         Prefs(this).let { p ->
@@ -1831,6 +1846,7 @@ class PokeDaisyActivity : Activity() {
         e.wildFlag = wildFlag
         e.wildEncounters = p.wildEncounters
         e.setReusableTms(tmSites, p.reusableTms)
+        e.setMuteMenuSounds(menuSoundsPatch, !p.menuSounds)
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -126,6 +126,17 @@ class EmulatorEngine(
         tmPatchDirty = true
     }
 
+    /** MENU SOUNDS off: the song-table patch that silences the menu beep ([com.pokedaisy.app.companion.data.MenuSounds];
+     * null = not found) and whether it's in; goes in with REUSABLE TMS' patches on the next frame boundary. */
+    @Volatile private var menuSoundsPatch: com.pokedaisy.app.companion.data.MenuSounds.Patch? = null
+    @Volatile private var muteMenuSounds = false
+
+    fun setMuteMenuSounds(patch: com.pokedaisy.app.companion.data.MenuSounds.Patch?, on: Boolean) {
+        menuSoundsPatch = patch
+        muteMenuSounds = on
+        tmPatchDirty = true
+    }
+
     /** PLAYER LOOK ([com.pokedaisy.app.companion.data.PlayerLook]): the patch to wear - its blocks into the ROM, then its
      * palettes swapped where the game has them loaded - on the next frame boundary ([setPlayerLook]); its palettes again
      * after every state load (a state made in another look). Null = nothing to do. */
@@ -1403,14 +1414,22 @@ class EmulatorEngine(
     private fun applyTmPatch() {
         tmPatchDirty = false
         MgbaCore.pkRomUnpatch()
+        if (!gba) return
         val sites = tmSites
-        if (!gba || !reusableTms || sites.isEmpty()) return
-        val all = sites.all {
-            MgbaCore.pkRomPatch(it.at, it.expect, it.branch, com.pokedaisy.app.companion.data.ReusableTms.ALWAYS_SKIP)
+        if (reusableTms && sites.isNotEmpty()) {
+            val all = sites.all {
+                MgbaCore.pkRomPatch(it.at, it.expect, it.branch, com.pokedaisy.app.companion.data.ReusableTms.ALWAYS_SKIP)
+            }
+            // All or none: a ROM that only matched in part would still use TMs up on the other paths.
+            if (!all) MgbaCore.pkRomUnpatch()
+            Log.i("pokedaisy", "reusable TMs: ${if (all) "${sites.size} site(s) patched" else "code didn't match"}")
         }
-        // All or none: a ROM that only matched in part would still use TMs up on the other paths.
-        if (!all) MgbaCore.pkRomUnpatch()
-        Log.i("pokedaisy", "reusable TMs: ${if (all) "${sites.size} site(s) patched" else "code didn't match"}")
+        // MENU SOUNDS off, after the TMs (their all-or-none undo takes every option patch out).
+        val beep = menuSoundsPatch
+        if (muteMenuSounds && beep != null) {
+            val ok = MgbaCore.pkRomPatch(beep.entry, beep.beep, beep.entry, beep.silent)
+            Log.i("pokedaisy", "menu sounds: ${if (ok) "beep silenced" else "table didn't match"}")
+        }
     }
 
     /** PLAYER LOOK onto the ROM (emu thread): the last look's blocks out, this one's in (all or none), then the palettes. */
