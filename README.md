@@ -457,3 +457,8 @@ are trademarks of Nintendo. Device names (AYN Thor, Retroid, Anbernic) belong to
 makers, and RetroAchievements and SteamGridDB are independent services; none of them
 endorse PokeDaisy. ROM hacks belong to their creators. No games, BIOS or game art are
 included: use your own legally dumped ROMs.
+
+## Linux handheld foundation
+
+A separate SDL2 host reuses the pinned mGBA library and portable C companion.
+See [linux/README.md](linux/README.md) for build, CI, data paths and current limits.
