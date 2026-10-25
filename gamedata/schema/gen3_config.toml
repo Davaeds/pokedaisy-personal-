@@ -373,6 +373,7 @@ default = 0x439
 [field.trainerCard]
 kotlin = 'TrainerCardSave?'
 type = 'ref'
+record = 'gen3_card'
 default = 'none'
 
 # The ROM's language letter (game code BPE<S|D|F|I>): a European Emerald's

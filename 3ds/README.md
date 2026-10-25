@@ -188,8 +188,9 @@ make tables        # regenerate core/*_gen.c and ctr/icon.png from the app
 | `test/` | The fixture ROM, the decomp build and the Azahar script |
 | `tools/` | The generators |
 
-Keep in sync with the app: `core/pd_game.c`'s addresses come from
-`NativeReader.kt`, `pd_snapshot.c` mirrors `Gen3Mon.kt` / `readNativeTelemetry`,
+Keep in sync with the app: `core/pd_configs_gen.h`'s addresses are generated from
+`gamedata/` with the app's (`make gamedata`; `gamedata/targets/3ds.toml` picks what
+this port reads), `pd_snapshot.c` mirrors `Gen3Mon.kt` / `readNativeTelemetry`,
 and the tables are regenerated (`make tables`) whenever the app's change.
 
 GPU notes (found in Azahar): textures are written by the CPU straight into

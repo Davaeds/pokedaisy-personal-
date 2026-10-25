@@ -114,9 +114,10 @@ DEX_WORDING = {
 # --- Kotlin configs ---------------------------------------------------------------
 def kotlin_blocks():
     out = {}
-    for f in ("NativeConfigsGen.kt", "Pokedex.kt", "GuideRom.kt"):
+    for f in ("NativeConfigsGen.kt", "GameDataRecordsGen.kt", "Pokedex.kt", "GuideRom.kt"):
         s = open(os.path.join(DATA, f), encoding="utf-8").read()
-        for m in re.finditer(r"^val (\w+) = (?:(\w+)\.copy\(|\w+\()\n(.*?)^\)", s, re.S | re.M):  # one-line vals have no block
+        # `val X = Cls(` ... `)`, or the records' `val X: Cls by lazy {` + the same, indented (one-line vals have no block)
+        for m in re.finditer(r"^val (\w+)(?:: \w+ by lazy \{\n    | = )(?:(\w+)\.copy\(|\w+\()\n(.*?)^(?:    )?\)", s, re.S | re.M):
             body = re.sub(r"//[^\n]*", "", m.group(3))
             out[m.group(1)] = (m.group(2), {k: int(v, 16) for k, v in re.findall(r"(\w+) = (0x[0-9A-Fa-f]+)L?", body)},
                                {k: int(v) for k, v in re.findall(r"(\w+) = (\d+)\b,", body)})

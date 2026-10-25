@@ -114,53 +114,6 @@ const val TRAINER_TABLE_SHIFT = 16
 /** pokeemerald-expansion's struct TrainerMon: moves (u16 x4), species, held item, level. */
 data class TrainerMonLayout(val stride: Int, val movesOff: Int, val speciesOff: Int, val itemOff: Int, val levelOff: Int)
 
-val GUIDE_TABLES_FIRERED_REV1 = GuideTables(
-    trainers = 0x0823EB38L,
-    learnsets = 0x0825D824L,
-    wildHeaders = 0x083C9D28L,
-    mapGroups = 0x08352718L,
-)
-
-// LeafGreen, from pret/pokefirered's `leafgreen` / `leafgreen_rev1` maps (both
-// builds byte-identical to retail): same layouts, its own addresses and data
-// (version-exclusive wild encounters).
-val GUIDE_TABLES_LEAFGREEN_REV0 = GuideTables(
-    trainers = 0x0823EAA4L,
-    learnsets = 0x0825D794L,
-    wildHeaders = 0x083C9AF4L,
-    guide = GuideId.LEAFGREEN,
-    mapGroups = 0x08352688L,
-)
-
-val GUIDE_TABLES_LEAFGREEN_REV1 = GuideTables(
-    trainers = 0x0823EB14L,
-    learnsets = 0x0825D804L,
-    wildHeaders = 0x083C9B64L,
-    guide = GuideId.LEAFGREEN,
-    mapGroups = 0x083526F8L,
-)
-
-/**
- * Retail Emerald, from the pinned pokeemerald commit built unpatched with
- * agbcc - byte-identical to retail (sha1 f3ae0881…) - and its ELF
- * (arm-none-eabi-nm). The tables have FireRed's layouts (struct Trainer is
- * the same 0x28 bytes, same party structs, learnsets and wild headers);
- * SaveBlock1.flags / .vars sit at 0x1270 / 0x139C (offsetof, compiled with
- * agbcc) with 300 flag bytes. Trainer 265 is ROXANNE.
- */
-val GUIDE_TABLES_EMERALD = GuideTables(
-    trainers = 0x08310030L,
-    learnsets = 0x0832937CL,
-    wildHeaders = 0x08552D48L,
-    sb1FlagsOff = 0x1270,
-    sb1VarsOff = 0x139C,
-    flagBytes = 0x12C,
-    probeTrainer = 265,
-    probeName = "ROXANNE",
-    guide = GuideId.EMERALD,
-    mapGroups = 0x08486578L,
-)
-
 // The European Emerald releases: English's tables, moved (found through the
 // literal pools of English's code); ROXANNE is each game's own name for her.
 val GUIDE_TABLES_EMERALD_ES = GUIDE_TABLES_EMERALD.copy(

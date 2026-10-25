@@ -8,15 +8,6 @@ import java.nio.ByteOrder
  * every GBA game is read. Kotlin port of tools/telemetry-viewer/native.go - keep in sync.
  */
 
-// FireRed's own gBagPockets[] index order (item.c: gBagPockets[POCKET_X-1] =
-// ...). Every FireRed-engine config below (rev0/rev1/Unbound/Gaia/Radical Red)
-// shares this - none of them are known to reorder the bag pockets array.
-val FIRERED_BAG_POCKET_ORDER = listOf(POCKET_ITEMS, POCKET_KEY_ITEMS, POCKET_POKE_BALLS, POCKET_TM_HM, POCKET_BERRIES)
-
-// Emerald's own item.c: gBagPockets[ITEMS_POCKET=0/BALLS_POCKET=1/
-// TMHM_POCKET=2/BERRIES_POCKET=3/KEYITEMS_POCKET=4] - a different order.
-val EMERALD_BAG_POCKET_ORDER = listOf(POCKET_ITEMS, POCKET_POKE_BALLS, POCKET_TM_HM, POCKET_BERRIES, POCKET_KEY_ITEMS)
-
 // pokeemerald-expansion's enum Pocket (include/constants/item.h, built with
 // I_COMBINE_BAG_POCKETS=TRUE - confirmed from Heart and Soul v2.0.6's own
 // source, and live: Potions in pocket 1, key items in 5): POCKET_ITEMS=0/POCKET_MEDICINE=1/POCKET_POKE_BALLS=2/POCKET_TM_HM=3/

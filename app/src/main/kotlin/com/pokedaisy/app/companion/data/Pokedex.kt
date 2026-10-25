@@ -41,8 +41,6 @@ data class DexFlags(
 
 /** struct Pokedex in SaveBlock2 (+0x18: owned[52] at +0x10, seen[52] at +0x44) + SaveBlock1's copies. */
 private fun vanillaDexFlags(seen1: Long, seen2: Long) = DexFlags(DexFlagBlock.SAVE_BLOCK_2, 0x5C, 0x28, 52, listOf(seen1, seen2))
-val FIRERED_DEX_FLAGS = vanillaDexFlags(0x5F8, 0x3A18)
-val EMERALD_DEX_FLAGS = vanillaDexFlags(0x988, 0x3B24)
 
 /**
  * pokeemerald-expansion keeps a species' whole dex page in its gSpeciesInfo
@@ -217,19 +215,6 @@ data class BaseStatsLayout(
 
 val VANILLA_BASE_STATS = BaseStatsLayout()
 
-val POKEDEX_FIRERED_REV1 = PokedexTables(
-    entries = 0x0844E8B0L,
-    frontPics = 0x0823511CL,
-    palettes = 0x0823737CL,
-    speciesInfo = 0x082547F4L,
-    speciesToNational = 0x0825205EL,
-    abilityNames = 0x0824FCB0L,
-    footprints = 0x0843FB20L,
-    evolutions = 0x082597C4L,
-    tmhmLearnsets = 0x08252C38L,
-    tmhmMoves = 0x0845A604L,
-)
-
 /**
  * CFRU moves the flags out of struct Pokedex into SaveBlock1 (the old bag
  * area): seen at +0x310, owned at +0x38D, 1000 bits each, no anti-cheat copies.
@@ -281,33 +266,6 @@ val POKEDEX_UNBOUND_FR = POKEDEX_UNBOUND.copy(
     probeCategory = "Graine",
 )
 
-/** LeafGreen: FireRed's layout, its own tables (and dex text). */
-val POKEDEX_LEAFGREEN_REV0 = PokedexTables(
-    entries = 0x0844E270L,
-    frontPics = 0x08235088L,
-    palettes = 0x082372E8L,
-    speciesInfo = 0x08254760L,
-    speciesToNational = 0x08251FCAL,
-    abilityNames = 0x0824FC1CL,
-    footprints = 0x0843F8ECL,
-    evolutions = 0x08259734L,
-    tmhmLearnsets = 0x08252BA4L,
-    tmhmMoves = 0x08459FC4L,
-)
-
-val POKEDEX_LEAFGREEN_REV1 = PokedexTables(
-    entries = 0x0844E2E0L,
-    frontPics = 0x082350F8L,
-    palettes = 0x08237358L,
-    speciesInfo = 0x082547D0L,
-    speciesToNational = 0x0825203AL,
-    abilityNames = 0x0824FC8CL,
-    footprints = 0x0843F95CL,
-    evolutions = 0x082597A4L,
-    tmhmLearnsets = 0x08252C14L,
-    tmhmMoves = 0x0845A034L,
-)
-
 /** Ruby (rev 1 and rev 2 share every address): Emerald's flag rules,
  * seen copies at SaveBlock1+0x938/+0x3A8C, two-page dex text. */
 val POKEDEX_RUBY = PokedexTables(
@@ -343,26 +301,6 @@ val POKEDEX_SAPPHIRE = POKEDEX_RUBY.copy(
     regionalOrder = 0x081FC7F4L,
     tmhmLearnsets = 0x081FD098L,
     tmhmMoves = 0x083764ACL,
-)
-
-val POKEDEX_EMERALD = PokedexTables(
-    entries = 0x0856B5B0L,
-    frontPics = 0x0830A18CL,
-    palettes = 0x08303678L,
-    speciesInfo = 0x083203CCL,
-    speciesToNational = 0x0831DC82L,
-    abilityNames = 0x0831B6DBL,
-    footprints = 0x0856E694L,
-    entryStride = 0x20,
-    regionalCount = 202, // HOENN_DEX_COUNT (Jirachi and Deoxys included)
-    regionName = "HOENN",
-    regionalOrder = 0x0831DFB8L,
-    flags = EMERALD_DEX_FLAGS,
-    nationalMagicOff = 2,
-    nationalMagic = 0xDA,
-    evolutions = 0x0832531CL,
-    tmhmLearnsets = 0x0831E898L,
-    tmhmMoves = 0x08615B94L,
 )
 
 /*

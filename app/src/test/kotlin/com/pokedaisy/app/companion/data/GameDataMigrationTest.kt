@@ -10,7 +10,9 @@ import org.junit.Test
  * ones NativeReader.kt used to write by hand (LegacyNativeConfigs.kt), value for value. Every config of
  * both files is found by reflection, private ones included, so a config dropped or added on one side
  * fails too; the language ports (gamedata/gen3/ports/) against the RETAIL_PORTS port_retail.py used to
- * write (LegacyRetailPorts.kt). This test and the Legacy*.kt files go once the gate has passed.
+ * write (LegacyRetailPorts.kt). Phase 2: the records moved to gamedata/gen3/records/ (GameDataRecordsGen.kt)
+ * against the ones written by hand (LegacyRecords.kt). This test and the Legacy*.kt files go once the gate
+ * has passed.
  */
 class GameDataMigrationTest {
     private fun configs(fileClass: String, prefix: String): Map<String, NativeConfig> =
@@ -46,6 +48,34 @@ class GameDataMigrationTest {
         assertEquals(LEGACY_RETAIL_PORTS.keys.sorted(), RETAIL_PORTS.keys.sorted())
         val differ = LEGACY_RETAIL_PORTS.keys.sorted().filter { LEGACY_RETAIL_PORTS.getValue(it)() != RETAIL_PORTS.getValue(it)() }
         assertTrue("generated ports that differ: $differ", differ.isEmpty())
+    }
+
+    @Test
+    fun `every moved record equals the hand-written one`() {
+        assertEquals(LEGACY_FIRERED_DEX_FLAGS, FIRERED_DEX_FLAGS)
+        assertEquals(LEGACY_EMERALD_DEX_FLAGS, EMERALD_DEX_FLAGS)
+        assertEquals(LEGACY_POKEDEX_FIRERED_REV1, POKEDEX_FIRERED_REV1)
+        assertEquals(LEGACY_POKEDEX_LEAFGREEN_REV0, POKEDEX_LEAFGREEN_REV0)
+        assertEquals(LEGACY_POKEDEX_LEAFGREEN_REV1, POKEDEX_LEAFGREEN_REV1)
+        assertEquals(LEGACY_POKEDEX_EMERALD, POKEDEX_EMERALD)
+        assertEquals(LEGACY_GUIDE_TABLES_FIRERED_REV1, GUIDE_TABLES_FIRERED_REV1)
+        assertEquals(LEGACY_GUIDE_TABLES_LEAFGREEN_REV0, GUIDE_TABLES_LEAFGREEN_REV0)
+        assertEquals(LEGACY_GUIDE_TABLES_LEAFGREEN_REV1, GUIDE_TABLES_LEAFGREEN_REV1)
+        assertEquals(LEGACY_GUIDE_TABLES_EMERALD, GUIDE_TABLES_EMERALD)
+        assertEquals(LEGACY_FIRERED_BAG_POCKET_ORDER, FIRERED_BAG_POCKET_ORDER)
+        assertEquals(LEGACY_EMERALD_BAG_POCKET_ORDER, EMERALD_BAG_POCKET_ORDER)
+        // A data class compares its arrays by identity: compare those by content, the rest as values.
+        for ((old, new) in listOf(LEGACY_TRAINER_CARD_FIRERED to TRAINER_CARD_FIRERED, LEGACY_TRAINER_CARD_EMERALD to TRAINER_CARD_EMERALD)) {
+            assertTrue(old.regionalDex.contentEquals(new.regionalDex))
+            assertTrue(old.achievementIds.contentEquals(new.achievementIds))
+            assertEquals(old.allCaughtStar?.toList(), new.allCaughtStar?.toList())
+            val none = IntArray(0)
+            assertEquals(old.copy(regionalDex = none, achievementIds = none, allCaughtStar = null),
+                new.copy(regionalDex = none, achievementIds = none, allCaughtStar = null))
+        }
+        // The configs that name them get the generated ones.
+        assertTrue(NATIVE_EMERALD_RETAIL.pokedex === POKEDEX_EMERALD && NATIVE_FIRERED_REV1.trainerCard === TRAINER_CARD_FIRERED)
+        assertEquals(EMERALD_BAG_POCKET_ORDER, NATIVE_EMERALD.bagPocketOrder)
     }
 
     @Test

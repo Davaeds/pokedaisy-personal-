@@ -177,6 +177,7 @@ default = 'none'
 [field.flags]
 kotlin = 'DexFlags'
 type = 'ref'
+record = 'gen3_dexflags'
 default = 'FIRERED_DEX_FLAGS'
 
 # The flags' SaveBlock2 struct Pokedex, whose nationalMagic says the National Dex is unlocked.

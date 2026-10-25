@@ -5,10 +5,17 @@ addresses, offsets and layouts, so a new game or a new field reaches every platf
 the same commit. Nothing reads these files at run time: `scripts/gen_gamedata.py` turns them into
 each platform's code, and that code is committed.
 
-So far (phase 1) this holds the Gen 3 `NativeConfig`s, and the only output is the app's
-`app/src/main/kotlin/com/pokedaisy/app/companion/data/NativeConfigsGen.kt`. The 3DS port's C comes
-next, then the nested records (Pokédex / guide tables, layouts), the games' identity (SHA-1s,
-codes, titles) and the name tables.
+So far this holds the Gen 3 `NativeConfig`s (phase 1) and the records the 3DS / Linux companion
+reads (phase 2: retail FireRed / LeafGreen / Emerald's Pokédex, guide, trainer-card and dex-flag
+tables and their bag orders). The outputs:
+
+- the app's `app/src/main/kotlin/com/pokedaisy/app/companion/data/NativeConfigsGen.kt` (the configs) and
+  `GameDataRecordsGen.kt` (the records);
+- `3ds/core/pd_configs_gen.h`, the 3DS port's `struct pd_config`s, which the Linux host builds too
+  (`targets/3ds.toml`).
+
+The other records (the hacks' and the other languages' tables, layouts), the games' identity
+(SHA-1s, codes, titles) and the name tables come later.
 
 ```
 gamedata/
@@ -17,16 +24,19 @@ gamedata/
   gen3/retail/*.toml        FireRed, LeafGreen, Emerald, Ruby / Sapphire
   gen3/ports/*.toml         their other-language releases (written by scripts/port_retail.py)
   gen3/hacks/*.toml         one file per hack, every release of it
+  gen3/records/*.toml       named records ([record.POKEDEX_EMERALD]) and lists the configs name
+  targets/3ds.toml          what the 3DS / Linux companion's C gets, field by field
 ```
 
 ## Commands
 
 ```
-make gamedata                              # regenerate NativeConfigsGen.kt
+make gamedata                              # regenerate every output (Kotlin and C)
 python3 scripts/gen_gamedata.py --check    # fails if it's stale (make check and CI run this)
 ```
 
-Never edit `NativeConfigsGen.kt` by hand: the next `make gamedata` overwrites it and the check fails.
+Never edit a generated file by hand (`NativeConfigsGen.kt`, `GameDataRecordsGen.kt`,
+`pd_configs_gen.h`): the next `make gamedata` overwrites it and the check fails.
 
 ## Adding or changing a game
 
@@ -68,6 +78,45 @@ metric = true
 
 Without a `base`, the sub-table must set every field the record's schema has no default for.
 
+## Records and lists
+
+A config names a record by its Kotlin val's name (`pokedex = 'POKEDEX_EMERALD'`). When that record is
+in `gen3/records/`, it's data here too: the app gets it from `GameDataRecordsGen.kt` (built on first
+use, `by lazy`) and the C targets can follow it. One table each:
+
+```toml
+[record.POKEDEX_EMERALD]
+schema = 'gen3_pokedex'      # the record's class
+entries = 0x0856B5B0
+flags = 'EMERALD_DEX_FLAGS'  # another record
+
+[record.EMERALD_DEX_FLAGS]
+schema = 'gen3_dexflags'
+base = 'FIRERED_DEX_FLAGS'   # .copy() of another record
+seenCopies = [0x988, 0x3B24]
+
+[list.EMERALD_BAG_POCKET_ORDER]
+of = 'Int'
+items = ['POCKET_ITEMS', 'POCKET_POKE_BALLS', 'POCKET_TM_HM', 'POCKET_BERRIES', 'POCKET_KEY_ITEMS']
+```
+
+A record without a `base` sets every field its schema has no default for. Records still written in
+Kotlin can be named as before; a C target that needs one stops with a message saying it's not here
+yet: move it (its values, comments and all), delete the Kotlin val, `make gamedata`.
+
+## C targets
+
+`targets/3ds.toml` is the 3DS port's `struct pd_config`: which configs it gets (`[config.<key>]`,
+`name` = its C name after `PD_CONFIG_`, `parts` = which of the parts below it reads so far), each part
+a list of `pd_config` field = path. A path is a config field, then through a record that field names,
+that record's field (`pokedex.flags.seenCopies.0`, a list's index last). A config without the record
+gets the record schema's defaults there (FireRed rev 0 has no Pokédex tables, but its save offsets
+are FireRed's). `{ path = '...', none = -1 }` writes 0 for the value that means "not in this game".
+`[names]` gives the C for Kotlin names a value holds (`POCKET_ITEMS`, `[names.CardStyle]`).
+
+A field the port starts reading goes in the struct (`3ds/core/pd_game.h`) and in a part here; a game
+it starts supporting gets a `[config.*]` (and `pd_game.c` picks it).
+
 ## Values
 
 One `key = value` a line (TOML inline tables, arrays and strings stay on that line). Field names
@@ -80,6 +129,7 @@ are the Kotlin ones. What a value can be depends on the field's `type` in the sc
 | `ref` | the Kotlin val's name: `'POKEDEX_UNBOUND'` | `POKEDEX_UNBOUND` |
 | `item_descs` | `{ preset = 'vanilla', base = 0x083DB028 }` or `{ base = ..., stride = 0x2C, descOff = -8 }` | `vanillaItems(...)`, `ItemDescTable(...)` |
 | `int_range` | `[34, 35]` | `34..35` |
+| `long_list`, `int_list` | `[0x5F8, 0x3A18]` | `listOf(0x5F8L, 0x3A18L)` |
 
 Any nullable field takes `'none'` (Kotlin `null`). Any field also takes:
 
@@ -88,7 +138,8 @@ Any nullable field takes `'none'` (Kotlin `null`). Any field also takes:
 - `{ kotlin = 'Bag3Layout(...)' }`: a Kotlin expression, for the few records that aren't data
   here yet. Avoid it for anything new: it's what a platform other than the app can't read.
 
-`ref` and `kotlin` values point at Kotlin and go away as their records move into gamedata/.
+`kotlin` values, and `ref`s to Kotlin vals, point at Kotlin and go away as their records move into
+gamedata/ (a `ref` to a record in `gen3/records/` is data already).
 
 ## The schemas
 

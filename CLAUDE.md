@@ -57,10 +57,15 @@ a new field goes in `NativeConfig` *and* `gamedata/schema/gen3_config.toml` (the
 `gamedata/README.md` has the format. The language ports are there too (`gamedata/gen3/ports/`, written by
 `port_retail.py`), with their dex / guide tables spelled out as sub-tables over a named Kotlin val
 (`[config.port_axpd0.pokedex]`, `base = 'POKEDEX_SAPPHIRE'`; `gamedata/schema/gen3_pokedex.toml` / `gen3_guide.toml`).
-Phase 1 of the plan: the 3DS port's C, the records themselves (`POKEDEX_*`, `GUIDE_TABLES_*`, layouts: still Kotlin
-vals the TOML names), the games' identity and the name tables come later. Until phase 1's gate passes,
-`GameDataMigrationTest` checks the generated configs equal the old Kotlin ones (`LegacyNativeConfigs.kt`,
-`LegacyRetailPorts.kt`, test sources; `scripts/convert_native_configs.py` made the first, a one-off).
+Phase 2: the records the 3DS / Linux companion reads are in `gamedata/gen3/records/` (retail FireRed / LeafGreen /
+Emerald's `POKEDEX_*`, `GUIDE_TABLES_*`, `TRAINER_CARD_*`, `*_DEX_FLAGS`, `*_BAG_POCKET_ORDER`: `GameDataRecordsGen.kt`,
+lazy vals), and the 3DS port's `struct pd_config`s are generated too (`3ds/core/pd_configs_gen.h`, from
+`gamedata/targets/3ds.toml`: per config, which parts the port reads). The other records (hacks', other languages',
+layouts: still Kotlin vals the TOML names), the games' identity and the name tables come later. Until phase 1's gate passes,
+`GameDataMigrationTest` checks the generated configs and records equal the old Kotlin ones (`LegacyNativeConfigs.kt`,
+`LegacyRetailPorts.kt`, `LegacyRecords.kt`, test sources; `scripts/convert_native_configs.py` made the first, a
+one-off), and `make -C 3ds test-configs-gen` the generated C against the old hand-written tables
+(`3ds/test/configs_gen_test.c`).
 
 ## Relationship to the private ROM-hack repo
 
@@ -111,7 +116,7 @@ species2/level2/item2 too, and zero padding is harmless since 0x00 is `nop`).
 ## 3DS port (`3ds/`, branch `port-3ds`)
 
 A homebrew 3DS build, early preview (see `3ds/README.md`): a portable C core (`3ds/core/`) re-implements
-the companion's reads (addresses from `gamedata/gen3/`, decoding from `Gen3Mon.kt` - keep in sync) and
+the companion's reads (addresses generated from `gamedata/`: `pd_configs_gen.h`; decoding from `Gen3Mon.kt` - keep in sync) and
 draws it at 320x240 in the OPTION look; `3ds/ctr/` runs it beside libmgba (the same submodule). Its
 tables, font, map layouts, guides (`Guide*.kt` + `GuideAreas*Gen.kt`, by a Kotlin-subset parser in
 `tools/gen_guide.py`) are generated from the app's (`make -C 3ds tables`). Look at UI changes with `make -C

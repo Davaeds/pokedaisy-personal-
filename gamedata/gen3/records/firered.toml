@@ -1,0 +1,105 @@
+# Gen 3 records (retail FireRed / LeafGreen): the Pokédex, guide, trainer-card and dex-flag tables the
+# configs in gen3/retail/ name, and that the 3DS / Linux companion reads (gamedata/targets/3ds.toml).
+# The format and the commands: gamedata/README.md.
+
+# FireRed's own gBagPockets[] index order (item.c: gBagPockets[POCKET_X-1] =
+# ...). Every FireRed-engine config (rev0/rev1/Unbound/Gaia/Radical Red)
+# shares this - none of them are known to reorder the bag pockets array.
+[list.FIRERED_BAG_POCKET_ORDER]
+of = 'Int'
+items = ['POCKET_ITEMS', 'POCKET_KEY_ITEMS', 'POCKET_POKE_BALLS', 'POCKET_TM_HM', 'POCKET_BERRIES']
+
+# struct Pokedex in SaveBlock2 (+0x18: owned[52] at +0x10, seen[52] at +0x44) + SaveBlock1's two
+# anti-cheat copies of seen.
+[record.FIRERED_DEX_FLAGS]
+schema = 'gen3_dexflags'
+block = 'DexFlagBlock.SAVE_BLOCK_2'
+seen = 0x5C
+caught = 0x28
+bytes = 52
+seenCopies = [0x5F8, 0x3A18]
+
+[record.POKEDEX_FIRERED_REV1]
+schema = 'gen3_pokedex'
+entries = 0x0844E8B0
+frontPics = 0x0823511C
+palettes = 0x0823737C
+speciesInfo = 0x082547F4
+speciesToNational = 0x0825205E
+abilityNames = 0x0824FCB0
+footprints = 0x0843FB20
+evolutions = 0x082597C4
+tmhmLearnsets = 0x08252C38
+tmhmMoves = 0x0845A604
+
+# LeafGreen: FireRed's layout, its own tables (and dex text).
+[record.POKEDEX_LEAFGREEN_REV0]
+schema = 'gen3_pokedex'
+entries = 0x0844E270
+frontPics = 0x08235088
+palettes = 0x082372E8
+speciesInfo = 0x08254760
+speciesToNational = 0x08251FCA
+abilityNames = 0x0824FC1C
+footprints = 0x0843F8EC
+evolutions = 0x08259734
+tmhmLearnsets = 0x08252BA4
+tmhmMoves = 0x08459FC4
+
+[record.POKEDEX_LEAFGREEN_REV1]
+schema = 'gen3_pokedex'
+entries = 0x0844E2E0
+frontPics = 0x082350F8
+palettes = 0x08237358
+speciesInfo = 0x082547D0
+speciesToNational = 0x0825203A
+abilityNames = 0x0824FC8C
+footprints = 0x0843F95C
+evolutions = 0x082597A4
+tmhmLearnsets = 0x08252C14
+tmhmMoves = 0x0845A034
+
+[record.GUIDE_TABLES_FIRERED_REV1]
+schema = 'gen3_guide'
+trainers = 0x0823EB38
+learnsets = 0x0825D824
+wildHeaders = 0x083C9D28
+mapGroups = 0x08352718
+
+# LeafGreen, from pret/pokefirered's `leafgreen` / `leafgreen_rev1` maps (both
+# builds byte-identical to retail): same layouts, its own addresses and data
+# (version-exclusive wild encounters).
+[record.GUIDE_TABLES_LEAFGREEN_REV0]
+schema = 'gen3_guide'
+trainers = 0x0823EAA4
+learnsets = 0x0825D794
+wildHeaders = 0x083C9AF4
+guide = 'GuideId.LEAFGREEN'
+mapGroups = 0x08352688
+
+[record.GUIDE_TABLES_LEAFGREEN_REV1]
+schema = 'gen3_guide'
+trainers = 0x0823EB14
+learnsets = 0x0825D804
+wildHeaders = 0x083C9B64
+guide = 'GuideId.LEAFGREEN'
+mapGroups = 0x083526F8
+
+# FireRed / LeafGreen's card (trainer_card.c's SetPlayerCardData, include/global.h): game stats in
+# SaveBlock1, the National Dex magic at SaveBlock2 + 0x18 + 3, the Sticker Man's var.
+[record.TRAINER_CARD_FIRERED]
+schema = 'gen3_card'
+style = 'CardStyle.KANTO'
+gameStatsOff = 0x1200
+flagsOff = 0xEE0
+varsOff = 0x1000
+badgeFlag = 0x820
+pokedexFlag = 0x829
+nationalMagicOff = 0x1B  # 0x18 + 3
+nationalMagic = 0xB9
+nationalVar = 0x404E
+nationalVarValue = 0x6258
+nationalFlag = 0x840
+dexFlags = 'FIRERED_DEX_FLAGS'
+regionalDex = { kotlin = 'IntArray(151) { it + 1 }' }
+stickerVar = 0x4049
