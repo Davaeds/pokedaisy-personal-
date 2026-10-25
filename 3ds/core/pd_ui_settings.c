@@ -79,8 +79,9 @@ void ui_settings_tab(struct pd_ui* ui, struct pd_canvas* c, const struct pd_game
     if (host && host->hasExpand) {
         if (host->expandGame) {
             setting(ui, c, ix, &y, iw, SETTING_ASPECT, "ASPECT", pd_aspect_name(ui->settings->aspect));
-            // Two values: flips in place (the app's rule for pick-lists is more than two).
-            if (ui->settings->aspect != PD_ASPECT_ORIGINAL)
+            // Two values: flips in place (the app's rule for pick-lists is more than two). Only
+            // ZOOM OUT has anything to step back from.
+            if (ui->settings->aspect == PD_ASPECT_ZOOM_OUT)
                 setting(ui, c, ix, &y, iw, SETTING_AUTO_ZOOM, "AUTO ZOOM IN", ui->settings->autoZoom ? "ON" : "OFF");
         } else {
             // This game's overworld can't be rebuilt: shown, not tappable.
@@ -119,6 +120,7 @@ static void pick_list(struct pd_ui* ui, struct pd_canvas* c, const char* title, 
     int lf = pd_list_box(c, x, y, w, n * ROW_H + 2 * 7 + 4);
     int ix = x + lf + 4, iw = w - 2 * (lf + 4);
     int ry = y + lf + 2;
+    ui->startId = HIT_OPTION + current; // the D-pad starts on the current choice
     for (int i = 0; i < n; i++) {
         bool on = i == current || ui->pressedId == HIT_OPTION + i;
         if (on) pd_fill(c, ix - 4, ry, iw + 8, ROW_H, PD_ROW_SELECTED);
@@ -140,6 +142,7 @@ static void confirm(struct pd_ui* ui, struct pd_canvas* c, const char* title, co
     pd_text_wrap(c, x + lf + 6, y + lf + 2, w - 2 * (lf + 6), 16, 3, text, PD_LABEL, PD_LABEL_SHADOW);
     y += h + 6;
     int bw = 96;
+    ui->startId = HIT_NO; // cancel first
     ui_button(ui, c, c->w / 2 - bw - 6, y, bw, 24, yes, HIT_YES);
     ui_button(ui, c, c->w / 2 + 6, y, bw, 24, "CANCEL", HIT_NO);
 }

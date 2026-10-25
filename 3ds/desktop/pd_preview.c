@@ -282,7 +282,7 @@ int main(int argc, char** argv) {
     shot(out, name, "bag-item", px);
     drag(&p, HIT_BAG_LIST, -60);
     shot(out, name, "bag-scrolled", px);
-    tap(&p, HIT_POCKET_NEXT, 0);
+    tap(&p, HIT_BAG_TAB + 1, 0);
     shot(out, name, "bag-pocket", px);
 
     // SETTINGS, its pick-list and a confirm. FF lit, as while it runs.

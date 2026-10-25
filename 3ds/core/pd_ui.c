@@ -93,12 +93,16 @@ static const struct pd_hit* hit_at(const struct pd_ui* ui, int x, int y) {
     return NULL;
 }
 
+// The tab bar runs along the bottom, like the app's (CompanionScreen).
+#define BAR_Y(c) ((c)->h - CHIP_H - 2)
+
 static void chip(struct pd_ui* ui, struct pd_canvas* c, int x, int w, bool open, int id) {
-    pd_title_box(c, x, 2, w, CHIP_H, open || ui->pressedId == id ? PD_TITLE_FILL : PD_LIST_FILL);
-    ui_add_hit(ui, x, 2, w, CHIP_H, id);
+    pd_title_box(c, x, BAR_Y(c), w, CHIP_H, open || ui->pressedId == id ? PD_TITLE_FILL : PD_LIST_FILL);
+    ui_add_hit(ui, x, BAR_Y(c), w, CHIP_H, id);
 }
 
 static void tab_bar(struct pd_ui* ui, struct pd_canvas* c, const struct pd_host_info* host) {
+    int by = BAR_Y(c);
     int w = (c->w - MARGIN * (BAR_TABS + 3) - FF_W - GEAR_W) / BAR_TABS;
     int x = MARGIN;
     for (int i = 0; i < BAR_TABS; i++, x += w + MARGIN) {
@@ -106,27 +110,33 @@ static void tab_bar(struct pd_ui* ui, struct pd_canvas* c, const struct pd_host_
         bool open = ui->tab == t;
         chip(ui, c, x, w, open, HIT_TAB + (int) t);
         int tw = pd_text_width(TAB_LABELS[t]);
-        pd_text(c, x + (w - tw) / 2, pd_text_y(2, CHIP_H), TAB_LABELS[t], open ? PD_VALUE : PD_TITLE_TEXT,
+        pd_text(c, x + (w - tw) / 2, pd_text_y(by, CHIP_H), TAB_LABELS[t], open ? PD_VALUE : PD_TITLE_TEXT,
                 open ? PD_VALUE_SHADOW : PD_TITLE_SHADOW);
     }
     // Fast-forward: lit while on.
     bool ff = host && host->ffOn;
     chip(ui, c, x, FF_W, ff, HIT_FF);
     uint32_t col = ff ? PD_VALUE : PD_TITLE_TEXT;
-    pd_triangle(c, x + 7, 2 + CHIP_H / 2 - 4, 5, PD_RIGHT, col);
-    pd_triangle(c, x + 13, 2 + CHIP_H / 2 - 4, 5, PD_RIGHT, col);
+    pd_triangle(c, x + 7, by + CHIP_H / 2 - 4, 5, PD_RIGHT, col);
+    pd_triangle(c, x + 13, by + CHIP_H / 2 - 4, 5, PD_RIGHT, col);
     x += FF_W + MARGIN;
     // The TRAINER CARD is under SETTINGS: the gear stays lit.
     bool open = ui->tab == PD_TAB_SETTINGS || ui->tab == PD_TAB_CARD;
     chip(ui, c, x, GEAR_W, open, HIT_TAB + PD_TAB_SETTINGS);
-    pd_bitmap(c, x + (GEAR_W - 11) / 2, 2 + (CHIP_H - 11) / 2, GEAR, 11, open ? PD_VALUE : PD_TITLE_TEXT);
+    pd_bitmap(c, x + (GEAR_W - 11) / 2, by + (CHIP_H - 11) / 2, GEAR, 11, open ? PD_VALUE : PD_TITLE_TEXT);
 }
 
 void pd_ui_draw(struct pd_ui* ui, struct pd_canvas* c, const struct pd_game* g,
                 const struct pd_snapshot* s, const struct pd_host_info* host) {
     ui->hitCount = 0;
+    ui->startId = -1;
     pd_backdrop(c);
     tab_bar(ui, c, host);
+    // The tabs draw above the bar: the same pixels, a shorter canvas.
+    struct pd_canvas full = *c, view = *c;
+    view.h = BAR_Y(c) - 2;
+    if (view.cy1 > view.h) view.cy1 = view.h;
+    c = &view;
     if (ui->tab == PD_TAB_SETTINGS) {
         ui_settings_tab(ui, c, g, s, host);
     } else if (!g->cfg) {
@@ -146,6 +156,8 @@ void pd_ui_draw(struct pd_ui* ui, struct pd_canvas* c, const struct pd_game* g,
     } else {
         ui_battle_tab(ui, c, g, s);
     }
+    // Overlays black out the whole companion, the bar too.
+    c = &full;
     if (ui->overlay == PD_OVERLAY_PLACES) {
         ui_places_overlay(ui, c, g);
     } else if (ui->overlay == PD_OVERLAY_GUIDE_NOTICE) {
@@ -211,9 +223,8 @@ static void act(struct pd_ui* ui, int id) {
         ui->summarySlot = id - HIT_SLOT;
     } else if (id == HIT_BACK) {
         pd_ui_back(ui);
-    } else if (id == HIT_POCKET_PREV || id == HIT_POCKET_NEXT) {
-        int dir = id == HIT_POCKET_NEXT ? 1 : -1;
-        ui->bagPocket = (ui->bagPocket + PD_POCKET_COUNT + dir) % PD_POCKET_COUNT;
+    } else if (id >= HIT_BAG_TAB && id < HIT_BAG_TAB + 8) {
+        ui->bagPocket = id - HIT_BAG_TAB;
         ui->bagSelected = -1;
         ui->bagScroll = 0;
     } else if (id >= HIT_BAG_ROW && id < HIT_BAG_ROW + PD_POCKET_SLOTS) {

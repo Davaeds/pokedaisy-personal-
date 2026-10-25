@@ -38,14 +38,12 @@ static struct pd_canvas canvas;
 static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture, *gameTexture;
-static uint32_t gamePixels[256 * 256];
 static SDL_Rect lastGameRect;
 /* EXPAND (the app's pk_wide.c): the overworld rebuilt past the game's edges
  * into a window the screen's shape, at the scale the game's own picture gets
  * (ZOOM OUT: one whole scale less), so the original pixels stay where they were. */
 static SDL_Texture *wideTexture;
-static uint32_t wideSource[240 * 160], wideFrame[PK_WIDE_MAX_VIEW_W * PK_WIDE_MAX_VIEW_H],
-    widePixels[PK_WIDE_MAX_VIEW_W * PK_WIDE_MAX_VIEW_H];
+static uint32_t wideSource[240 * 160], wideFrame[PK_WIDE_MAX_VIEW_W * PK_WIDE_MAX_VIEW_H];
 static bool wideSupported, wideReady;
 static unsigned wideW, wideH;
 static SDL_AudioDeviceID audio;
@@ -101,6 +99,39 @@ static void quiet_log(struct mLogger *l, int category, enum mLogLevel level,
   fputc('\n', stderr);
 }
 static struct mLogger quietLogger = {.log = quiet_log};
+/* The audio device. A handheld's ALSA device can go bad under the app (the
+ * screen turned off and on: "ALSA write failed (unrecoverable)"), and SDL then
+ * closes it for good; it's reopened as soon as SDL says so, or within a second
+ * of it no longer playing. */
+static bool audioLost;
+static void audio_open(void) {
+  SDL_AudioSpec want = {0};
+  want.freq = 32768;
+  want.format = AUDIO_S16SYS;
+  want.channels = 2;
+  want.samples = 512;
+  audio = SDL_OpenAudioDevice(NULL, 0, &want, NULL, 0);
+  if (audio)
+    SDL_PauseAudioDevice(audio, 0);
+  else
+    fprintf(stderr, "Audio unavailable: %s\n", SDL_GetError());
+}
+static void audio_check(void) {
+  static Uint32 next;
+  bool stopped = audio && SDL_GetAudioDeviceStatus(audio) == SDL_AUDIO_STOPPED;
+  if (!audioLost && !stopped)
+    return;
+  if (SDL_GetTicks() < next)
+    return;
+  next = SDL_GetTicks() + 1000;
+  if (audio)
+    SDL_CloseAudioDevice(audio);
+  audio = 0;
+  audio_open();
+  audioLost = !audio;
+  if (audio)
+    fprintf(stderr, "Audio device reopened\n");
+}
 static void post_audio(struct mAVStream *s, blip_t *l, blip_t *r) {
   (void)s;
   int16_t out[2048];
@@ -243,6 +274,9 @@ static void events(void) {
       running = 0;
     if (e.type == SDL_JOYDEVICEADDED && !SDL_IsGameController(e.jdevice.which))
       controller_added(e.jdevice.which);
+    if (e.type == SDL_AUDIODEVICEREMOVED && !e.adevice.iscapture && audio &&
+        e.adevice.which == audio)
+      audioLost = true;
     if (e.type == SDL_CONTROLLERDEVICEADDED)
       controller_added(e.cdevice.which);
     if (e.type == SDL_CONTROLLERDEVICEREMOVED)
@@ -332,6 +366,17 @@ static void companion_canvas(void) {
   canvasH = h;
   pd_canvas_init(&canvas, w, h, pixels);
 }
+/* How long the last presents waited (the driver holds each one for the screen's
+ * refresh), for POCKET_PERF. */
+static double presentMs, emuMs, wideMs;
+static double ms_since(uint64_t t) {
+  return (double)(SDL_GetPerformanceCounter() - t) * 1000.0 / SDL_GetPerformanceFrequency();
+}
+static void timed_present(void) {
+  uint64_t t = SDL_GetPerformanceCounter();
+  SDL_RenderPresent(renderer);
+  presentMs += (double)(SDL_GetPerformanceCounter() - t) * 1000.0 / SDL_GetPerformanceFrequency();
+}
 static void present(void) {
   SDL_RenderSetLogicalSize(renderer, canvasW, canvasH);
   SDL_RenderSetIntegerScale(renderer, SDL_TRUE);
@@ -348,7 +393,7 @@ static void present(void) {
     notice(SDL_GetError());
     return;
   }
-  SDL_RenderPresent(renderer);
+  timed_present();
 }
 /* The EXPAND window for an ow x oh screen and a fw x fh game: the screen's
  * size over the game's whole scale (one less for ZOOM OUT), within pk_wide's
@@ -382,25 +427,31 @@ static void wide_tick(struct mCore *c, bool skip, const struct pd_settings *s) {
     pk_wide_skip(c, wideSource);
     return;
   }
+  // ZOOM OUT steps back in to EXPAND's window off the plain overworld (a text
+  // box, the START menu, a battle) with AUTO ZOOM IN on, as the app's camera
+  // does - by the last frame's scene, the one known before this one is drawn.
+  int last = pk_wide_scene();
+  int aspect = s->aspect == PD_ASPECT_ZOOM_OUT && s->autoZoom && last != PK_WIDE_SCENE_FIELD
+                   ? PD_ASPECT_EXPAND : s->aspect;
   int ow = W, oh = H;
   if (SDL_GetRendererOutputSize(renderer, &ow, &oh) < 0 || ow <= 0 || oh <= 0)
     ow = W, oh = H;
-  wide_window(ow, oh, fw, fh, s->aspect, &wideW, &wideH);
+  wide_window(ow, oh, fw, fh, aspect, &wideW, &wideH);
   struct PkWideView v = {((int)fw - (int)wideW) / 2, ((int)fh - (int)wideH) / 2,
                          (int)wideW, (int)wideH};
-  int mix = pk_wide_view(c, wideSource, wideFrame, v, NULL);
-  int scene = pk_wide_scene();
-  wideReady = mix == 256 && pk_wide_last_mode() == PK_WIDE_MODE_MAP &&
-              !pk_wide_fault() &&
-              (scene == PK_WIDE_SCENE_FIELD ||
-               (!s->autoZoom && scene == PK_WIDE_SCENE_TEXT));
+  // Like the app's EXPAND, the window shows whatever the scene: the map past
+  // the edges on the overworld (text boxes and the START menu too), the
+  // battle's own scenery, and off the map a glow from the frame's own edge
+  // pixels, crossfaded - never a cut back to the bare picture.
+  pk_wide_view(c, wideSource, wideFrame, v, NULL);
+  wideReady = !pk_wide_fault();
 }
 // Gameplay scales in physical panel pixels; the companion keeps its 512x384
 // grid.
-static void present_game(unsigned gw, unsigned gh) {
+static bool render_game(unsigned gw, unsigned gh) {
   int ow, oh;
   if (SDL_GetRendererOutputSize(renderer, &ow, &oh) < 0 || ow <= 0 || oh <= 0)
-    return;
+    return false;
   SDL_RenderSetLogicalSize(renderer, ow, oh);
   SDL_RenderSetIntegerScale(renderer, SDL_FALSE);
   int scale = ow / (int)gw;
@@ -411,15 +462,10 @@ static void present_game(unsigned gw, unsigned gh) {
   lastGameRect =
       (SDL_Rect){(ow - (int)gw * scale) / 2, (oh - (int)gh * scale) / 2,
                  (int)gw * scale, (int)gh * scale};
-  for (unsigned y = 0; y < gh; y++)
-    for (unsigned x = 0; x < gw; x++) {
-      uint32_t native = video[y * 256 + x];
-      gamePixels[y * 256 + x] =
-          ((native & 255) << 16) | (native & 0xff00) | ((native >> 16) & 255);
-    }
-  if (SDL_UpdateTexture(gameTexture, NULL, gamePixels, 256 * 4) < 0) {
+  // The textures take mGBA's pixels as they are (XBGR: SDL's BGR888).
+  if (SDL_UpdateTexture(gameTexture, &(SDL_Rect){0, 0, (int)gw, (int)gh}, video, 256 * 4) < 0) {
     notice(SDL_GetError());
-    return;
+    return false;
   }
   SDL_Texture *drawn = gameTexture;
   if (wideReady) {
@@ -431,14 +477,10 @@ static void present_game(unsigned gw, unsigned gh) {
       scale = 1;
     lastGameRect = (SDL_Rect){(ow - (int)gw * scale) / 2, (oh - (int)gh * scale) / 2,
                               (int)gw * scale, (int)gh * scale};
-    for (unsigned i = 0; i < gw * gh; i++) {
-      uint32_t n = wideFrame[i];
-      widePixels[i] = ((n & 255) << 16) | (n & 0xff00) | ((n >> 16) & 255);
-    }
     if (SDL_UpdateTexture(wideTexture, &(SDL_Rect){0, 0, (int)gw, (int)gh},
-                          widePixels, (int)gw * 4) < 0) {
+                          wideFrame, (int)gw * 4) < 0) {
       notice(SDL_GetError());
-      return;
+      return false;
     }
     drawn = wideTexture;
   }
@@ -446,9 +488,57 @@ static void present_game(unsigned gw, unsigned gh) {
   SDL_Rect src = {0, 0, (int)gw, (int)gh};
   if (SDL_RenderCopy(renderer, drawn, &src, &lastGameRect) < 0) {
     notice(SDL_GetError());
-    return;
+    return false;
   }
-  SDL_RenderPresent(renderer);
+  return true;
+}
+static void present_game(unsigned gw, unsigned gh) {
+  if (render_game(gw, gh))
+    timed_present();
+}
+/* The game menu (resume, states, quit): an OPTION window over the game's
+ * picture, EXPAND's edges and all, dimmed behind it - the companion's canvas
+ * scale, its windows only (pd_menu.overlay), drawn into a texture whose
+ * untouched pixels stay see-through. */
+#define MENU_KEY 0x00FF00FFu
+static uint32_t menuPixels[CANVAS_MAX_W * CANVAS_MAX_H];
+static SDL_Texture *menuTexture;
+static void present_menu(struct pd_menu *m, unsigned gw, unsigned gh) {
+  if (!render_game(gw, gh))
+    return;
+  int ow, oh;
+  SDL_GetRendererOutputSize(renderer, &ow, &oh);
+  int scale = ow / canvasW < oh / canvasH ? ow / canvasW : oh / canvasH;
+  if (scale < 1)
+    scale = 1;
+  int w = canvasW * 3 / 4 < 300 ? (canvasW < 300 ? canvasW : 300) : canvasW * 3 / 4;
+  int h = 24 + 4 + m->count * 18 + 2 * 7 + 8 + 2 * MARGIN;
+  if (h > canvasH)
+    h = canvasH;
+  if (!menuTexture) {
+    menuTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
+                                    CANVAS_MAX_W, CANVAS_MAX_H);
+    if (!menuTexture)
+      return;
+    SDL_SetTextureBlendMode(menuTexture, SDL_BLENDMODE_BLEND);
+  }
+  struct pd_canvas mc;
+  pd_canvas_init(&mc, w, h, menuPixels);
+  for (int i = 0; i < w * h; i++)
+    menuPixels[i] = MENU_KEY;
+  m->overlay = true;
+  pd_menu_draw(m, &mc);
+  for (int i = 0; i < w * h; i++)
+    menuPixels[i] = menuPixels[i] == MENU_KEY ? 0 : (menuPixels[i] | 0xFF000000u);
+  SDL_UpdateTexture(menuTexture, &(SDL_Rect){0, 0, w, h}, menuPixels, w * 4);
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 120);
+  SDL_RenderFillRect(renderer, NULL);
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+  SDL_Rect at = {(ow - w * scale) / 2, (oh - h * scale) / 2, w * scale, h * scale};
+  SDL_RenderCopy(renderer, menuTexture, &(SDL_Rect){0, 0, w, h}, &at);
+  timed_present();
 }
 static bool capture_frame(const char *path, unsigned *lit) {
   int ow, oh;
@@ -493,19 +583,70 @@ static bool state(struct mCore *c, const char *path, bool save) {
   }
   return ok;
 }
-static void focus_move(struct pd_ui *u, int *focus, int direction) {
-  if (!u->hitCount) {
-    *focus = -1;
+/* The D-pad's cursor over the companion. Kept by hit id, since every draw makes
+ * the hit list anew: a press that leaves the screen as it was keeps it where it
+ * is (the nearest item if that one went), and a new screen (a tab, a summary, a
+ * pick-list, a dex entry) puts it on that screen's start (pd_ui.startId: a
+ * pick-list's current choice, a confirm's CANCEL), else its first item. */
+static int focusId = -1;
+static struct pd_hit focusAt;
+struct screen {
+  int tab, overlay, summarySlot, dexOpen;
+};
+static struct screen lastScreen = {-1, -1, -1, -1};
+static struct screen screen_of(const struct pd_ui *u) {
+  return (struct screen){u->tab, u->overlay, u->summarySlot, u->dexOpen};
+}
+static void focus_new_screen(void) { lastScreen.tab = -1; }
+// What the cursor can land on: not the tab bar, nor a scrim or a list's drag area.
+static bool focusable(int id) {
+  return !(id >= HIT_TAB && id < HIT_TAB + PD_TAB_COUNT) && id != HIT_FF && id != HIT_SCRIM &&
+         id != HIT_BAG_LIST && id != HIT_DEX_LIST && id != HIT_GUIDE_LIST;
+}
+static int focus_index(const struct pd_ui *u, int id) {
+  for (int i = 0; i < u->hitCount; i++)
+    if (u->hits[i].id == id)
+      return i;
+  return -1;
+}
+// After a draw: where the cursor is now (an index into u->hits, -1 = none).
+static int focus_resolve(struct pd_ui *u) {
+  struct screen now = screen_of(u);
+  bool changed = memcmp(&now, &lastScreen, sizeof now) != 0;
+  lastScreen = now;
+  int i = changed ? -1 : focus_index(u, focusId);
+  if (i < 0 && !changed && focusId >= 0) { // gone: the nearest item to where it was
+    int best = 1 << 30;
+    for (int j = 0; j < u->hitCount; j++) {
+      const struct pd_hit *h = &u->hits[j];
+      int dx = h->x + h->w / 2 - (focusAt.x + focusAt.w / 2),
+          dy = h->y + h->h / 2 - (focusAt.y + focusAt.h / 2);
+      if (focusable(h->id) && dx * dx + dy * dy < best)
+        best = dx * dx + dy * dy, i = j;
+    }
+  }
+  if (i < 0 && u->startId >= 0)
+    i = focus_index(u, u->startId);
+  for (int j = 0; i < 0 && j < u->hitCount; j++)
+    if (focusable(u->hits[j].id))
+      i = j;
+  if (i < 0 && u->hitCount)
+    i = 0;
+  focusId = i >= 0 ? u->hits[i].id : -1;
+  if (i >= 0)
+    focusAt = u->hits[i];
+  return i;
+}
+static void focus_move(struct pd_ui *u, int direction) {
+  int cur = focus_index(u, focusId);
+  if (cur < 0) {
+    focus_resolve(u);
     return;
   }
-  if (*focus < 0 || *focus >= u->hitCount) {
-    *focus = 0;
-    return;
-  }
-  const struct pd_hit *h = &u->hits[*focus];
+  const struct pd_hit *h = &u->hits[cur];
   int best = -1, score = 1000000;
   for (int i = 0; i < u->hitCount; i++) {
-    if (i == *focus)
+    if (i == cur)
       continue;
     struct pd_hit *t = &u->hits[i];
     if (t->id == HIT_SCRIM || t->id == HIT_BAG_LIST || t->id == HIT_DEX_LIST ||
@@ -523,9 +664,10 @@ static void focus_move(struct pd_ui *u, int *focus, int direction) {
       score = along + across * 4;
     }
   }
-  if (best >= 0)
-    *focus = best;
-  else if (direction == UP || direction == DOWN) {
+  if (best >= 0) {
+    focusId = u->hits[best].id;
+    focusAt = u->hits[best];
+  } else if (direction == UP || direction == DOWN) {
     int d = direction == DOWN ? 36 : -36;
     if (u->overlay == PD_OVERLAY_PLACES)
       u->placesScroll += d;
@@ -547,6 +689,98 @@ static void focus_draw(struct pd_ui *u, int focus) {
   pd_fill(&canvas, h->x, h->y + h->h - 2, h->w, 2, 0xff7331);
   pd_fill(&canvas, h->x, h->y, 2, h->h, 0xff7331);
   pd_fill(&canvas, h->x + h->w - 2, h->y, 2, h->h, 0xff7331);
+}
+/* Pacing. The screen's refresh paces the game where it's close to the game's
+ * 59.73 fps (a 60 Hz panel): a game frame per refresh, the present waiting for
+ * it, no timer - the timer's frames drifted against the refresh and every few
+ * seconds one missed it (the Smart Pro lost ~13 frames in 5 s). The audio then
+ * plays a hair faster, so its sample rate follows the queue (dynamic rate
+ * control, as RetroArch and the Android app do): +-0.5% around the ratio of the
+ * two rates, keeping ~60 ms queued. Elsewhere, or with POCKET_NO_VSYNC, the
+ * timer paces as before. */
+static bool vsyncPaced;
+static double screenHz;
+static void pacing_start(double gameHz) {
+  SDL_DisplayMode mode = {0};
+  screenHz = SDL_GetCurrentDisplayMode(0, &mode) == 0 ? mode.refresh_rate : 0;
+  SDL_RendererInfo info;
+  vsyncPaced = !getenv("POCKET_NO_VSYNC") && screenHz >= 58 && screenHz <= 62 &&
+               SDL_GetRendererInfo(renderer, &info) == 0 && (info.flags & SDL_RENDERER_PRESENTVSYNC) &&
+               gameHz > 0;
+}
+// A refresh-paced loop whose presents don't wait (a driver ignoring vsync) goes back to the timer.
+static void pacing_check(double frameMs) {
+  static double avg;
+  static int count;
+  if (!vsyncPaced)
+    return;
+  avg += frameMs;
+  if (++count < 120)
+    return;
+  if (avg / count < 12.0) {
+    vsyncPaced = false;
+    fprintf(stderr, "Presents don't wait for the refresh (%.1f ms apart): pacing by the timer\n", avg / count);
+  }
+  avg = 0;
+  count = 0;
+}
+static void audio_rate(struct mCore *c, double gameHz) {
+  double rate = 32768;
+  if (vsyncPaced && audio && screenHz > 0) {
+    double queued = SDL_GetQueuedAudioSize(audio) / 4.0, target = 32768 * 0.06;
+    double d = (target - queued) / target;
+    d = d > 1 ? 1 : d < -1 ? -1 : d;
+    rate = 32768 * gameHz / screenHz * (1 + 0.005 * d);
+  }
+  for (int i = 0; i < 2; i++)
+    blip_set_rates(c->getAudioChannel(c, i), c->frequency(c), rate);
+}
+/* POCKET_PERF=1: every 5 s, how the frames went: loop iterations, the work in
+ * one (emulation, EXPAND, drawing, present) on average and at worst, how many
+ * took longer than a game frame, how far apart presents landed, the screen's
+ * refresh rate. */
+static void perf_frame(uint64_t start, double hz) {
+  static int on = -1, n, late;
+  static double sum, worst, gapSum, gapWorst, presents, emus, wides;
+  static uint64_t lastEnd, windowStart;
+  if (on < 0)
+    on = getenv("POCKET_PERF") != NULL;
+  if (!on)
+    return;
+  uint64_t end = SDL_GetPerformanceCounter(), f = SDL_GetPerformanceFrequency();
+  double work = (double)(end - start) * 1000.0 / f, budget = 1000.0 / hz;
+  if (!windowStart)
+    windowStart = end;
+  n++;
+  sum += work;
+  presents += presentMs;
+  emus += emuMs;
+  wides += wideMs;
+  presentMs = emuMs = wideMs = 0;
+  if (work > worst)
+    worst = work;
+  if (work > budget)
+    late++;
+  if (lastEnd) {
+    double gap = (double)(end - lastEnd) * 1000.0 / f;
+    gapSum += gap;
+    if (gap > gapWorst)
+      gapWorst = gap;
+  }
+  lastEnd = end;
+  if (end - windowStart >= 5 * f) {
+    SDL_DisplayMode mode = {0};
+    SDL_GetCurrentDisplayMode(0, &mode);
+    fprintf(stderr, "perf: emulation %.2f ms, EXPAND %.2f ms a frame\n", emus / n, wides / n);
+    fprintf(stderr, "perf: %d frames in %.1f s, work %.2f ms avg (%.2f of it waiting in present) / %.2f worst, "
+            "%d over %.2f ms, frame to frame %.2f ms avg / %.2f worst, screen %d Hz, %s, audio queued %u B\n",
+            n, (double)(end - windowStart) / f, sum / n, presents / n, worst, late, budget,
+            gapSum / (n > 1 ? n - 1 : 1), gapWorst, mode.refresh_rate,
+            vsyncPaced ? "paced by the screen" : "paced by the timer", audio ? SDL_GetQueuedAudioSize(audio) : 0);
+    n = late = 0;
+    sum = worst = gapSum = gapWorst = presents = emus = wides = 0;
+    windowStart = end;
+  }
 }
 #ifdef POCKET_TEST
 static void test_frame(struct mCore *, bool, int, struct pd_ui *,
@@ -663,12 +897,18 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
   pd_menu_init(&confirmMenu, "CONFIRM", confirmOpts, 2);
   int menuOpen = 0;
   bool companion = false, ff = false, leave = false;
-  int focus = 0, frames = 0;
-  uint64_t due = SDL_GetPerformanceCounter();
+  int frames = 0;
+  bool companionWas = false;
+  focusId = -1;
+  focus_new_screen();
+  uint64_t due = SDL_GetPerformanceCounter(), lastFrame = due;
   double hz = (double)c->frequency(c) / c->frameCycles(c);
+  pacing_start(hz);
   while (running && !leave) {
+    uint64_t frameStart = SDL_GetPerformanceCounter();
     if(saveStatus.failed) { appError=1; notice("Save I/O failed; stopping game"); break; }
     events();
+    audio_check();
     repeat_directions();
     if (down(X)) {
       menuOpen = 0;
@@ -759,16 +999,15 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
           companion = false;
         if (down(L) || down(R)) {
           pd_ui_next_tab(&ui, down(R) ? 1 : -1);
-          focus = 0;
         }
         for (int k = RIGHT; k <= DOWN; k++)
           if (down(k))
-            focus_move(&ui, &focus, k);
-        if (down(A) && focus >= 0 && focus < ui.hitCount) {
-          struct pd_hit hit = ui.hits[focus];
+            focus_move(&ui, k);
+        int at = focus_index(&ui, focusId);
+        if (down(A) && at >= 0) {
+          struct pd_hit hit = ui.hits[at];
           pd_ui_touch(&ui, hit.x + hit.w / 2, hit.y + hit.h / 2, true);
           pd_ui_touch(&ui, hit.x + hit.w / 2, hit.y + hit.h / 2, false);
-          focus = 0;
         }
         switch (pd_ui_take_action(&ui)) {
         case PD_ACTION_LEAVE_GAME:
@@ -804,13 +1043,24 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
       muted = ff;
       c->setKeys(c, held & 1023);
       int count = ff ? settings.ffSpeed : 1;
+      audio_rate(c, hz);
       for (int i = 0; i < count; i++) {
+        uint64_t t = SDL_GetPerformanceCounter();
         c->runFrame(c);
+        emuMs += ms_since(t);
+        t = SDL_GetPerformanceCounter();
         wide_tick(c, i < count - 1, &settings);
+        wideMs += ms_since(t);
       }
     }
-    if(!companion || !snap.valid)pd_snapshot_read(&snap, &game, read_memory, c);
-    if (companion) {
+    // The companion's data: fresh when it opens (it pauses the game), else twice a
+    // second - read through the bus byte by byte, every frame cost frame time.
+    if (!snap.valid || (companion && !companionWas) || (!companion && frames % 30 == 0))
+      pd_snapshot_read(&snap, &game, read_memory, c);
+    companionWas = companion;
+    if (companion && menuOpen && menuOpen != 4) {
+      present_menu(menuOpen == 1 ? &gameMenu : &confirmMenu, gw, gh);
+    } else if (companion) {
       if (menuOpen) {
         if (menuOpen == 4) {
           pd_splash_draw(&canvas, "Based on PokeDaisy by Lidor Itzhari",
@@ -820,12 +1070,12 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
           pd_menu_draw(menuOpen == 1 ? &gameMenu : &confirmMenu, &canvas);
       } else {
         pd_ui_update(&ui, &snap);
-        // The hit focused last frame: the companion draws it as its own cursor where it has one.
-        ui.focusId = focus >= 0 && focus < ui.hitCount ? ui.hits[focus].id : -1;
+        // The companion draws the focused hit as its own cursor where it has one.
+        ui.focusId = focusId;
         host.ffOn = ff;
         host.hasState = access(ss, F_OK) == 0;
         pd_ui_draw(&ui, &canvas, &game, &snap, &host);
-        focus_draw(&ui, focus);
+        focus_draw(&ui, focus_resolve(&ui));
       }
       present();
     } else {
@@ -847,8 +1097,15 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
       }
       break;
     }
-    due += (uint64_t)(SDL_GetPerformanceFrequency() / hz);
+    perf_frame(frameStart, hz);
     uint64_t now = SDL_GetPerformanceCounter();
+    pacing_check((double)(now - lastFrame) * 1000.0 / SDL_GetPerformanceFrequency());
+    lastFrame = now;
+    if (vsyncPaced) {
+      due = now; // the present waited for the refresh: that's the pace
+      continue;
+    }
+    due += (uint64_t)(SDL_GetPerformanceFrequency() / hz);
     if (now < due)
       SDL_Delay((Uint32)((due - now) * 1000 / SDL_GetPerformanceFrequency()));
     else if (now - due > SDL_GetPerformanceFrequency() / 5)
@@ -910,7 +1167,10 @@ int main(int argc, char **argv) {
   window = SDL_CreateWindow("PokeDaisy Linux", SDL_WINDOWPOS_CENTERED,
       SDL_WINDOWPOS_CENTERED, fullscreen?display.w:winW, fullscreen?display.h:winH,
       fullscreen?SDL_WINDOW_FULLSCREEN:SDL_WINDOW_RESIZABLE);
-  renderer = window ? SDL_CreateRenderer(window, -1, 0) : NULL;
+  // Presents wait for the refresh (the pacing, above); a driver without it gets the timer.
+  renderer = window ? SDL_CreateRenderer(window, -1, getenv("POCKET_NO_VSYNC") ? 0 : SDL_RENDERER_PRESENTVSYNC) : NULL;
+  if (!renderer && window)
+    renderer = SDL_CreateRenderer(window, -1, 0);
   if (!renderer) {
     fprintf(stderr, "Video: %s\n", SDL_GetError());
     SDL_Quit();
@@ -922,9 +1182,9 @@ int main(int argc, char **argv) {
             rendererInfo.name, canvasW, canvasH);
   SDL_ShowCursor(SDL_DISABLE);
   companion_canvas();
-  gameTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888,
+  gameTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGR888,
                                   SDL_TEXTUREACCESS_STREAMING, 256, 256);
-  wideTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888,
+  wideTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_BGR888,
                                   SDL_TEXTUREACCESS_STREAMING, PK_WIDE_MAX_VIEW_W,
                                   PK_WIDE_MAX_VIEW_H);
   if (!texture || !gameTexture || !wideTexture) {
@@ -934,16 +1194,7 @@ int main(int argc, char **argv) {
   SDL_SetTextureBlendMode(gameTexture, SDL_BLENDMODE_NONE);
   SDL_SetTextureBlendMode(wideTexture, SDL_BLENDMODE_NONE);
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-  SDL_AudioSpec want = {0};
-  want.freq = 32768;
-  want.format = AUDIO_S16SYS;
-  want.channels = 2;
-  want.samples = 512;
-  audio = SDL_OpenAudioDevice(NULL, 0, &want, NULL, 0);
-  if (audio)
-    SDL_PauseAudioDevice(audio, 0);
-  else
-    fprintf(stderr, "Audio unavailable: %s\n", SDL_GetError());
+  audio_open();
   rawTrimui=getenv("POCKET_RAW_TRIMUI") && !strcmp(getenv("POCKET_RAW_TRIMUI"),"1");
   snprintf(path, sizeof path, "%s/gamecontrollerdb.txt", root);
   if (access(path, R_OK) == 0) {
@@ -1008,6 +1259,8 @@ int main(int argc, char **argv) {
   SDL_DestroyTexture(texture);
   SDL_DestroyTexture(gameTexture);
   SDL_DestroyTexture(wideTexture);
+  if (menuTexture)
+    SDL_DestroyTexture(menuTexture);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();

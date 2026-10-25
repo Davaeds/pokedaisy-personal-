@@ -100,6 +100,12 @@ static void test_frame(struct mCore* c,bool companion,int frame,struct pd_ui* ui
         assert(oh-lastGameRect.h<2*scale || wideH>=PK_WIDE_MAX_VIEW_H);
       }
       assert(fieldShots); // at least one mode was checked through to its screenshot
+      // The game menu over the expanded picture: its window, the game around it.
+      static const char* items[]={"Resume game","Party","Save state","Load state","Quit to game list"};
+      struct pd_menu m;pd_menu_init(&m,"GAME",items,5);
+      s->aspect=PD_ASPECT_EXPAND;for(int i=0;i<4;i++){c->runFrame(c);wide_tick(c,false,s);}
+      present_menu(&m,gw,gh);shot("menu");
+      assert(lastGameRect.w>=ow-2*(lastGameRect.w/(int)wideW) && wideReady);
       s->aspect=keep;wideReady=false;
     }
     if(!companionGame) {

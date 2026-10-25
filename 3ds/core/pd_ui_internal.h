@@ -8,7 +8,9 @@
 #include "pd_style.h"
 #include "pd_ui.h"
 
-#define CONTENT_Y 28
+// Where a tab's content starts: the tab bar is along the bottom, like the app's
+// (pd_ui_draw hands the tabs the canvas above it).
+#define CONTENT_Y MARGIN
 #define MARGIN 4
 #define ROW_H 18
 
@@ -18,8 +20,7 @@ enum {
     HIT_FF = 110,
     HIT_SLOT = 200,        // + party slot
     HIT_BACK = 300,
-    HIT_POCKET_PREV = 400,
-    HIT_POCKET_NEXT = 401,
+    HIT_BAG_TAB = 400,     // + the bag's pocket tab (ALL first)
     HIT_BAG_LIST = 410,
     HIT_BAG_ROW = 500,     // + item index
     HIT_SETTING = 600,     // + enum setting_row

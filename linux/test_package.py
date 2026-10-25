@@ -12,8 +12,9 @@ with tempfile.TemporaryDirectory(prefix='pd-linux-package-') as d:
     assert archive.exists() and Path(result.stdout.strip())==archive
     with zipfile.ZipFile(archive) as z:
         assert z.testzip() is None
-        names=z.namelist();assert len(names)==10,names
+        names=z.namelist();assert len(names)==12,names
         assert all(n.startswith(name+'/') for n in names)
+        assert b'"label": "PokeDaisy"' in z.read(name+'/config.json') and z.read(name+'/icon.png')[:4]==b'\x89PNG'
         assert z.read(name+'/pokedaisy-linux')==binary.read_bytes()
         assert z.getinfo(name+'/launch.sh').external_attr>>16 & 0o111
         assert z.read(name+'/SOURCE.txt').startswith(b'Source: https://github.com/lidor30/pokedaisy')

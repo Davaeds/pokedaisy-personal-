@@ -116,8 +116,8 @@ struct pd_ui {
     int foeSelected, foeShown;
     int lastFoeActive, lastFoeNext;
     int summarySlot; // party slot whose summary is open, -1 = none
-    int bagPocket;   // index into the game's own pocket order
-    int bagSelected; // item index in that pocket, -1 = none
+    int bagPocket;   // the open pocket tab: 0 ALL, then each pocket with items, in the game's order
+    int bagSelected; // the item's row in that tab, -1 = none
     int bagScroll;   // pixels
 
     // POKéDEX: the list's scroll, the open entry (national number, 0 = the
@@ -146,6 +146,7 @@ struct pd_ui {
     int touchX0, touchY0, touchLastY;
     int pressedId; // what the stylus went down on (-1 = nothing)
     int focusId;   // the hit a host's D-pad focus is on, drawn as that part's own cursor (-1 = none)
+    int startId;   // set by each draw: where a D-pad starts on this screen (-1 = its first item)
     struct pd_hit hits[PD_UI_MAX_HITS];
     int hitCount;
 };
