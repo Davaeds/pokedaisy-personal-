@@ -108,10 +108,11 @@ Hold `BACK` to leave the game, as always.
 
 ## Phones held upright
 
-Hold a phone upright and the game sits across the top of the screen, with the companion docked below it and the touch controls under that. It's always open: there's nothing to slide in. In a DS game the touch screen takes the companion's place, between the top screen and the buttons.
+Hold a phone upright and the game sits across the top of the screen, with the companion docked below it and the touch controls under that. In a DS game the touch screen takes the companion's place, between the top screen and the buttons.
 
 - **Change its height:** drag the grip on the companion's top edge up or down. It snaps to the default size (the shape of the Thor's bottom screen) and to the largest size (everything under the game).
 - **Step through sizes:** tap the grip to go from small, to the default, to everything under the game, and round again.
+- **Put it away:** tap the X beside the grip. The companion slides down off the screen and the game gets the whole screen, the way it does held sideways. To bring it back, tap the tab with the up arrow at the bottom of the screen, or press `BACK`. PokeDaisy remembers which way you left it. A DS game's touch screen can't be put away.
 - **Touch controls:** they get the space at the bottom of the screen, under the companion. With the companion `AT BOTTOM` (below) they go in the gap between the game and the companion when there's room, and lie over the game when there isn't. The phone held upright has its own layout, and `POSITION` on the `TOUCH CONTROLS` page puts the buttons at the top, middle or bottom of their space; see [Touch controls](controls.md#touch-controls).
 
 The `COMPANION` setting (on the `DISPLAY OPTIONS` page of the `SCREEN` group, on single-screen devices) picks where the companion sits on a phone held upright:
@@ -125,7 +126,7 @@ With `ASPECT` set to `EXPAND`, the game fills everything above the companion, so
 
 ## Rotating the device
 
-On a device with one screen, PokeDaisy follows the way you hold it. Turn it sideways and you get the window or the side panel; turn it upright and you get the docked companion. It switches as you rotate, mid-game.
+On a device with one screen, PokeDaisy follows the way you hold it. Turn it sideways and you get the window or the side panel; turn it upright and you get the docked companion (or the whole screen for the game, if you put the companion away). It switches as you rotate, mid-game.
 
 With a second screen, PokeDaisy stays in landscape.
 

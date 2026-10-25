@@ -619,7 +619,10 @@ class PokeDaisyActivity : Activity() {
             com.pokedaisy.app.companion.QuickAction.SAVE_STATE -> engine.requestSaveState(engine.currentSlot)
             com.pokedaisy.app.companion.QuickAction.LOAD_STATE -> engine.requestLoadState(engine.currentSlot)
             com.pokedaisy.app.companion.QuickAction.FF -> engine.toggleFastForward()
-            com.pokedaisy.app.companion.QuickAction.COMPANION -> if (::sidePanel.isInitialized) sidePanel.openPanel()
+            com.pokedaisy.app.companion.QuickAction.COMPANION -> {
+                if (::sidePanel.isInitialized && sidePanel.enabled) sidePanel.openPanel()
+                if (::portraitPanel.isInitialized && portraitPanel.enabled) portraitPanel.openPanel()
+            }
         }
     }
 
@@ -1530,7 +1533,7 @@ class PokeDaisyActivity : Activity() {
                 CompanionScreen(snap, stateSlots, companionSettings, battleInput, back = panelBack, keys = panelKeys, clickSound = playClick, achievements = RetroAchievements, statusBar = companionStatusBar, itemUse = itemUse, fly = flyAction, askForSupport = askForSupport, gamePick = gamePick, shareBestEffort = shareBestEffort)
             }
         })
-        portraitPanel = PortraitPanel(root, view, touchControls, Prefs(this), portraitBack, playClick) {
+        portraitPanel = PortraitPanel(root, view, touchControls, Prefs(this), portraitBack, playClick, onHiddenChanged = { syncTouchControls() }) {
             dsOrCompanion {
                 val snap by telemetry.snapshot.collectAsState()
                 CompanionScreen(snap, stateSlots, companionSettings, battleInput, back = portraitBack, clickSound = playClick, achievements = RetroAchievements, statusBar = companionStatusBar, itemUse = itemUse, fly = flyAction, askForSupport = askForSupport, gamePick = gamePick, shareBestEffort = shareBestEffort)
@@ -2592,7 +2595,7 @@ class PokeDaisyActivity : Activity() {
         if (::portraitPanel.isInitialized) {
             val prefs = Prefs(this)
             val w = stage.width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
-            portraitPanel.padStrip = if (show && portraitPanel.enabled && portraitPanel.expand && prefs.portraitCompanionUnderGame)
+            portraitPanel.padStrip = if (show && portraitPanel.enabled && !portraitPanel.hidden && portraitPanel.expand && prefs.portraitCompanionUnderGame)
                 com.pokedaisy.app.companion.ui.TouchGeometry.naturalHeight(style, w.toFloat(), resources.displayMetrics.density, !touchControls.shoulders, touchControls.dsButtons)
             else 0
         }
@@ -3133,6 +3136,7 @@ class PokeDaisyActivity : Activity() {
                 // second screen (CLOSE COMPANION), it comes back to its own.
                 if (companionClosed) reopenCompanion()
                 else if (::sidePanel.isInitialized && sidePanel.enabled) sidePanel.openPanel()
+                else if (::portraitPanel.isInitialized && portraitPanel.enabled) portraitPanel.openPanel()
             }
             Hotkeys.Action.QUICK_MENU -> {
                 val wasOpen = quickMenu.open

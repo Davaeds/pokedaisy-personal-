@@ -175,3 +175,55 @@ fun PortraitGrip(grip: PortraitLayout.Grip = PortraitLayout.Grip.ABOVE, onClick:
         ShadowedPixelIcon(PixelIcons.resizeVertical, OptionColors.label, OptionColors.labelShadow, m)
     }
 }
+
+/**
+ * The X beside the portrait companion's grip ([PortraitGrip]): puts the companion away, the game taking the whole
+ * screen, like the side panel's close tab held sideways. Drawn like the grip (the same folder tab running into the
+ * companion's edge), so the two read as one strip.
+ */
+@Composable
+fun PortraitCloseTab(grip: PortraitLayout.Grip = PortraitLayout.Grip.ABOVE, onClose: () -> Unit) {
+    val m = rememberGbaTextMetrics()
+    val u = m.u
+    val noRipple = remember { MutableInteractionSource() }
+    val description = tr("Close the companion")
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(u * 24, u * 24)
+            .drawBehind {
+                drawLayeredBox(
+                    OptionColors.titleLayers.inPx(u.toPx()), OptionColors.titleFill, radius = 3 * u.toPx(),
+                    openBottom = grip == PortraitLayout.Grip.ABOVE, openTop = grip == PortraitLayout.Grip.BELOW,
+                )
+            }
+            .semantics { contentDescription = description }
+            .soundClickable(interactionSource = noRipple, indication = null, onClick = onClose),
+    ) {
+        ShadowedPixelIcon(PixelIcons.panelClose, OptionColors.label, OptionColors.labelShadow, m)
+    }
+}
+
+/**
+ * The tab on the screen's bottom edge, in the middle, that brings the put-away portrait companion back up: a white
+ * folder tab running off the bottom of the screen with an up chevron, the upright twin of [SidePanelOpenTab].
+ */
+@Composable
+fun PortraitOpenTab(onOpen: () -> Unit) {
+    val m = rememberGbaTextMetrics()
+    val u = m.u
+    val noRipple = remember { MutableInteractionSource() }
+    val description = tr("Open the companion")
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(u * 40, u * 20)
+            .drawBehind {
+                drawLayeredBox(OptionColors.titleLayers.inPx(u.toPx()), OptionColors.titleFill, radius = 3 * u.toPx(), openBottom = true)
+            }
+            .semantics { contentDescription = description }
+            .soundClickable(interactionSource = noRipple, indication = null, onClick = onOpen),
+    ) {
+        ShadowedPixelIcon(PixelIcons.panelUp, OptionColors.label, OptionColors.labelShadow, m)
+    }
+}

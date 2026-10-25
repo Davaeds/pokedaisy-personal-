@@ -12,7 +12,9 @@ import androidx.compose.ui.platform.ComposeView
 import com.pokedaisy.app.companion.ui.CompanionBack
 import com.pokedaisy.app.companion.ui.LocalClickSound
 import com.pokedaisy.app.companion.ui.LocalCompanionTopInset
+import com.pokedaisy.app.companion.ui.PortraitCloseTab
 import com.pokedaisy.app.companion.ui.PortraitGrip
+import com.pokedaisy.app.companion.ui.PortraitOpenTab
 import com.pokedaisy.app.companion.ui.PortraitLayout
 import com.pokedaisy.app.companion.ui.SidePanelCompanion
 
@@ -29,6 +31,11 @@ import com.pokedaisy.app.companion.ui.SidePanelCompanion
  * screen too short for anything else puts it inside the companion's top. BACK is the companion's back
  * ([back]).
  *
+ * The X beside the grip puts the companion away ([hidden], remembered in [Prefs.portraitCompanionHidden]): it slides
+ * down off the screen and the game, centred, and the touch controls get the whole screen, as with the side panel
+ * closed held sideways. A tab on the screen's bottom edge, or a BACK tap, slides it back up. A DS game's touch screen
+ * can't be put away (it's the game's second screen).
+ *
  * Held sideways the same device gets [SidePanel] instead (PokeDaisyActivity
  * switches between them on rotation).
  */
@@ -39,6 +46,8 @@ class PortraitPanel(
     private val prefs: Prefs,
     private val back: CompanionBack,
     private val clickSound: () -> Unit,
+    /** Put away (true) or back up: the activity lays the touch controls out again for the new room. */
+    private val onHiddenChanged: (Boolean) -> Unit = {},
     private val companion: @Composable () -> Unit,
 ) {
     private val context: Context get() = root.context
@@ -76,8 +85,16 @@ class PortraitPanel(
             apply()
         }
 
+    /** Put away by its X: the game has the whole screen ([Prefs.portraitCompanionHidden]). */
+    private var hiddenPref = prefs.portraitCompanionHidden
+
+    /** Put away right now (never a DS game's touch screen). */
+    val hidden: Boolean get() = hiddenPref && !ds
+
     private var panel: View? = null
     private var gripView: View? = null
+    private var closeTab: View? = null
+    private var openTab: View? = null
     private val grip = mutableStateOf(PortraitLayout.Grip.ABOVE)
     private val topInset = mutableIntStateOf(0)
     private var laidOutFor = Triple(0, 0, 0)
@@ -102,6 +119,7 @@ class PortraitPanel(
         if (on) {
             ratio = storedRatio()
             underGame = prefs.portraitCompanionUnderGame
+            hiddenPref = prefs.portraitCompanionHidden
             val at = root.indexOfChild(touchControls) + 1
             panel = CompanionColors.track(ComposeView(context)).apply {
                 setContent {
@@ -117,16 +135,31 @@ class PortraitPanel(
             }.also {
                 root.addView(it, at + 1, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
             }
+            closeTab = CompanionColors.track(ComposeView(context)).apply {
+                setContent {
+                    CompositionLocalProvider(LocalClickSound provides clickSound) { PortraitCloseTab(grip.value, ::hide) }
+                }
+            }.also { root.addView(it, at + 2, FrameLayout.LayoutParams(-2, -2, Gravity.TOP or Gravity.CENTER_HORIZONTAL)) }
+            openTab = CompanionColors.track(ComposeView(context)).apply {
+                setContent {
+                    CompositionLocalProvider(LocalClickSound provides clickSound) { PortraitOpenTab(::show) }
+                }
+            }.also { root.addView(it, at + 3, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL)) }
+            // The X sits just right of the grip: placed again once either is measured.
+            closeTab?.addOnLayoutChangeListener { v, l, _, r, _, ol, _, or, _ -> if (r - l != or - ol) v.post { apply() } }
             // The grip's own height decides where things go: place them again once it's measured.
             gripView?.addOnLayoutChangeListener { v, _, t, _, b, _, ot, _, ob -> if (b - t != ob - ot) v.post { apply() } }
             root.addOnLayoutChangeListener(relayout)
             root.topAligned = true
         } else {
             root.removeOnLayoutChangeListener(relayout)
-            for (v in listOfNotNull(panel, gripView)) root.removeView(v)
+            for (v in listOfNotNull(panel, gripView, closeTab, openTab)) { v.animate().cancel(); root.removeView(v) }
             panel = null
             gripView = null
+            closeTab = null
+            openTab = null
             root.topAligned = false
+            root.centered = false
             setMargins(game, 0, 0)
             setMargins(touchControls, 0, 0)
         }
@@ -143,6 +176,7 @@ class PortraitPanel(
 
     /** Where the companion is on the screen (px), for TOUCH CONTROLS' preview; null while off. */
     fun companionBounds(): androidx.compose.ui.geometry.Rect? {
+        if (hidden) return null
         val v = panel ?: return null
         val lp = v.layoutParams as FrameLayout.LayoutParams
         return androidx.compose.ui.geometry.Rect(0f, lp.topMargin.toFloat(), screenW.toFloat(), (lp.topMargin + lp.height).toFloat())
@@ -151,19 +185,88 @@ class PortraitPanel(
     /** A BACK tap; false = not ours (held sideways, or a second screen has the companion). */
     fun onBack(): Boolean {
         if (!enabled) return false
-        back.back()
+        if (hidden) show() else back.back()
         return true
+    }
+
+    /** Brings a put-away companion back up (the QUICK MENU's or a hotkey's COMPANION). */
+    fun openPanel() = show()
+
+    private var sliding = false
+
+    /** The X: slides the companion (and its grip) down off the screen, then gives the game the whole screen. */
+    private fun hide() {
+        if (!enabled || hidden || ds) return
+        hiddenPref = true
+        prefs.portraitCompanionHidden = true
+        onHiddenChanged(true)
+        val views = listOfNotNull(panel, gripView, closeTab)
+        val top = views.minOfOrNull { it.top } ?: 0
+        val dy = (screenH - top).toFloat()
+        sliding = true
+        views.forEachIndexed { i, v ->
+            v.animate().translationY(dy).setDuration(SLIDE_MS).setUpdateListener { punchThrough() }
+                .withEndAction(if (i == 0) Runnable { sliding = false; apply() } else null).start()
+        }
+    }
+
+    /** The bottom tab or BACK: lays the screen out for the companion again, then slides it up into its place. */
+    private fun show() {
+        if (!enabled || !hidden) return
+        hiddenPref = false
+        prefs.portraitCompanionHidden = false
+        onHiddenChanged(false)
+        sliding = false
+        apply()
+        val views = listOfNotNull(panel, gripView, closeTab)
+        val lp = panel?.layoutParams as? FrameLayout.LayoutParams
+        val top = minOf(lp?.topMargin ?: 0, (gripView?.layoutParams as? FrameLayout.LayoutParams)?.topMargin ?: Int.MAX_VALUE)
+        val dy = (screenH - top).toFloat()
+        for (v in views) {
+            v.animate().cancel()
+            v.translationY = dy
+            v.animate().translationY(0f).setDuration(SLIDE_MS).setUpdateListener { punchThrough() }.withEndAction(null).start()
+        }
+    }
+
+    /** The game is a SurfaceView: a moving view over it has to tell the window where its hole is (see [SidePanel]). */
+    private fun punchThrough() {
+        panel?.let { root.requestTransparentRegion(it) }
     }
 
     private fun apply() {
         if (!enabled) return
         val h = screenH
+        if (hidden) {
+            if (sliding) return
+            laidOutFor = Triple(screenW, h, gameH)
+            for (v in listOfNotNull(panel, gripView, closeTab)) { v.visibility = View.GONE; v.translationY = 0f }
+            openTab?.visibility = View.VISIBLE
+            root.centered = true
+            setMargins(game, 0, 0)
+            setMargins(touchControls, 0, 0)
+            return
+        }
+        for (v in listOfNotNull(panel, gripView)) v.visibility = View.VISIBLE
+        closeTab?.visibility = if (ds) View.GONE else View.VISIBLE
+        openTab?.visibility = View.GONE
+        root.centered = false
         val a = arrangement()
         laidOutFor = Triple(screenW, h, gameH)
         grip.value = a.grip
         topInset.intValue = a.topInset(gripH)
         panel?.let { setFrame(it, a.companionTop, a.companionHeight) }
         gripView?.let { setMargins(it, a.gripTop, 0) }
+        // The X right of the grip, on the same strip.
+        closeTab?.let { x ->
+            val lp = x.layoutParams as FrameLayout.LayoutParams
+            val left = ((gripView?.width ?: 0) + x.width) / 2 + (CLOSE_GAP_DP * context.resources.displayMetrics.density).toInt()
+            if (lp.topMargin != a.gripTop || lp.leftMargin != left) {
+                lp.topMargin = a.gripTop
+                lp.leftMargin = left
+                x.layoutParams = lp
+            }
+        }
         setMargins(game, 0, h - a.gameAreaBottom)
         setMargins(touchControls, a.padTop, h - a.padBottom)
     }
@@ -215,5 +318,11 @@ class PortraitPanel(
     private fun onDragEnd() {
         ratio = PortraitLayout.snap(screenW, screenH, gameH, currentRatio, reserve)
         save()
+    }
+
+    private companion object {
+        const val SLIDE_MS = 160L
+        /** Between the grip and its X. */
+        const val CLOSE_GAP_DP = 8
     }
 }

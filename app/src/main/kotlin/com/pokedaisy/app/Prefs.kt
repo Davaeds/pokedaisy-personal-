@@ -491,6 +491,12 @@ class Prefs(context: Context) {
         get() = p.getBoolean("portrait_companion_under_game", true)
         set(v) = p.edit().putBoolean("portrait_companion_under_game", v).apply()
 
+    /** A phone held upright: the companion is put away (its X), the game taking the whole screen until the tab at the
+     * screen's bottom or BACK brings it back up (see [PortraitPanel]). Like [sidePanelDocked], it's remembered. */
+    var portraitCompanionHidden: Boolean
+        get() = p.getBoolean("portrait_companion_hidden", false)
+        set(v) = p.edit().putBoolean("portrait_companion_hidden", v).apply()
+
     /** A phone held upright in a DS game: the touch screen's slot (where the companion goes) as a ratio of the screen's
      * width, kept apart from [portraitCompanionRatio]. 0.76: the DS screen (4:3) over its COMPANION switch, with the touch
      * controls still getting the space below on a 18.5:9 phone (PortraitLayout.padInGap; 0.8 missed it by a few px). */

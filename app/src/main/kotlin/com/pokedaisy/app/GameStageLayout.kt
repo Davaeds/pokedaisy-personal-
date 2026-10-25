@@ -66,6 +66,15 @@ class GameStageLayout(
             requestLayout()
         }
 
+    /** With [topAligned]: the game (and bar) in the middle of their area instead of at its top - a phone held upright
+     * with its companion put away ([PortraitPanel]), the game keeping its upright shape on the whole screen. */
+    var centered = false
+        set(v) {
+            if (field == v) return
+            field = v
+            requestLayout()
+        }
+
     /** How tall the game (and the bar over it, when shown) comes out at [width] wide, fitted. A bar not
      * attached to a window yet counts as 0: measuring a ComposeView then throws ("Cannot locate
      * windowRecomposer" - issue #31, PortraitPanel enabled from onResume); its first layout corrects it. */
@@ -118,7 +127,7 @@ class GameStageLayout(
         val areaW = width - lp.leftMargin - lp.rightMargin
         val areaH = height - lp.topMargin - lp.bottomMargin
         val x = lp.leftMargin + (areaW - gameW) / 2
-        val y = lp.topMargin + if (topAligned) 0 else (areaH - barH - gameH) / 2
+        val y = lp.topMargin + if (topAligned && !centered) 0 else (areaH - barH - gameH) / 2
         if (barShown) bar.layout(x, y, x + gameW, y + barH)
         game.layout(x, y + barH, x + gameW, y + barH + gameH)
         huds.forEach { it.offsetTopAndBottom(y + barH) }

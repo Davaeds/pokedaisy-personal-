@@ -550,6 +550,18 @@ object PixelIcons {
         ".......111",
     )
 
+    /** A chevron pointing up: brings the hidden portrait companion back up (PortraitOpenTab). */
+    val panelUp = listOf(
+        ".......11.......",
+        "......1111......",
+        ".....111111.....",
+        "....111..111....",
+        "...111....111...",
+        "..111......111..",
+        ".111........111.",
+        "111..........111",
+    )
+
     /** An X: closes the side panel (SidePanelCloseTab). */
     val panelClose = listOf(
         "11..........11",
