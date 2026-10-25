@@ -66,6 +66,7 @@ struct pd_host_info {
     char values[PD_UI_HOST_LINES][40];
     int count;
     bool ffOn;
+    bool hideScreenMode; // Optional: host owns display scaling. Zero keeps the 3DS row.
     bool hasState;      // a save state exists for LOAD STATE
     char stateWhen[24]; // when it was made, shown beside LOAD STATE
 };

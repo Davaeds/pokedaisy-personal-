@@ -67,7 +67,8 @@ void ui_settings_tab(struct pd_ui* ui, struct pd_canvas* c, const struct pd_game
     pd_fill(c, ix, y + 1, iw, 1, PD_DIVIDER);
     y += 4;
 
-    setting(ui, c, ix, &y, iw, SETTING_SCREEN, "SCREEN", pd_screen_mode_name(ui->settings->screenMode));
+    if (!host || !host->hideScreenMode)
+        setting(ui, c, ix, &y, iw, SETTING_SCREEN, "SCREEN", pd_screen_mode_name(ui->settings->screenMode));
     snprintf(buf, sizeof(buf), "%dx", ui->settings->ffSpeed);
     setting(ui, c, ix, &y, iw, SETTING_FF, "FAST-FORWARD", buf);
     setting(ui, c, ix, &y, iw, SETTING_SAVE_STATE, "SAVE STATE", NULL);

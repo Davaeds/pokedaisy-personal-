@@ -122,3 +122,12 @@ azahar-battle-test: 3ds fixture-roms
 
 clean:
 	rm -rf $(BUILD) ctr/build ctr/pokedaisy.3dsx
+
+# Optional host capability: the default 3DS settings remain available.
+$(BUILD)/pd_host_display_test: $(CORE_SRC) $(wildcard core/*.h) test/host_display_test.c
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -o $@ $(CORE_SRC) test/host_display_test.c -lm
+
+.PHONY: test-host-display
+test-host-display: $(BUILD)/pd_host_display_test
+	$(BUILD)/pd_host_display_test
