@@ -3,8 +3,8 @@
 #
 # Runs on every push to main (a "Sync fork" with upstream counts) and by hand (Actions > Personal build >
 # Run workflow). It renames the app only inside the build (the source files keep upstream's names, so syncs stay
-# clean), builds a signed release APK and publishes it as this fork's release v<versionName>, which the in-app
-# updater (pointed at this fork in the build) offers.
+# clean), builds a signed release APK and publishes it as this fork's release v<versionName>.<run number> (each build its
+# own release), which the in-app updater (pointed at this fork in the build) offers.
 #
 # One secret is needed: PERSONAL_KEYSTORE_BASE64 (Settings > Secrets and variables > Actions), a base64 of this
 # fork's own signing key. Every build must be signed with the same key, or an update won't install over the last one.
@@ -64,7 +64,19 @@ jobs:
           grep -q "${APP_NAME}" app/src/main/res/values/strings.xml
           sed -i "s|const val REPO = \"lidor30/pokedaisy\"|const val REPO = \"${GITHUB_REPOSITORY}\"|" app/src/main/kotlin/com/pokedaisy/app/AppUpdater.kt
           grep -q "${GITHUB_REPOSITORY}" app/src/main/kotlin/com/pokedaisy/app/AppUpdater.kt
-          echo "VERSION=$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)" >> "$GITHUB_ENV"
+          # Each build its own version: upstream's versionName plus this workflow's run number (1.3.2 -> 1.3.2.7), and a
+          # versionCode that keeps growing (upstream's x 1000 + the run), so the in-app updater offers every new build and
+          # Android installs it over the last one. Upstream's next version (1.3.3.x) still sorts after any 1.3.2.x.
+          upstream_name="$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)"
+          upstream_code="$(sed -n 's/^ *versionCode = \([0-9]*\).*/\1/p' app/build.gradle.kts)"
+          test -n "${upstream_name}" && test -n "${upstream_code}"
+          version="${upstream_name}.${GITHUB_RUN_NUMBER}"
+          code=$(( upstream_code * 1000 + GITHUB_RUN_NUMBER ))
+          sed -i "s/^\( *versionName = \)\".*\"/\1\"${version}\"/" app/build.gradle.kts
+          sed -i "s/^\( *versionCode = \)[0-9]*/\1${code}/" app/build.gradle.kts
+          grep -q "versionName = \"${version}\"" app/build.gradle.kts
+          grep -q "versionCode = ${code}" app/build.gradle.kts
+          echo "VERSION=${version}" >> "$GITHUB_ENV"
 
       - name: Signing key
         id: key
