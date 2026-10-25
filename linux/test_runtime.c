@@ -11,8 +11,9 @@ static void tap(SDL_Keycode code) {
   SDL_Event e={.type=SDL_KEYDOWN};e.key.keysym.sym=code;
   assert(SDL_PushEvent(&e)==1);e.type=SDL_KEYUP;assert(SDL_PushEvent(&e)==1);
 }
+static char liveName[16]="live";
 static void shot(const char* name) {
-  char path[1200];snprintf(path,sizeof path,"%s/%s.png",output,name);
+  char path[1200];snprintf(path,sizeof path,"%s/%s-%s.png",output,liveName,name);
   assert(capture_frame(path,NULL));
 }
 static void drive(struct mCore* c, unsigned keys, int n) {
@@ -21,26 +22,31 @@ static void drive(struct mCore* c, unsigned keys, int n) {
 static void test_frame(struct mCore* c,bool companion,int frame,struct pd_ui* ui,struct pd_snapshot* snap) {
   if(live) {
     assert(frame==0 && c->platform(c)==mPLATFORM_GBA);
-    size_t len=0;const unsigned char* rom=c->getMemoryBlock(c,0x08,&len);
+    // A copy: mGBA swaps its ROM mapping for a writable one once the game touches
+    // the cartridge's GPIO registers (FireRed does), so the block's pointer goes stale.
+    size_t len=0;const unsigned char* block=c->getMemoryBlock(c,0x08,&len);
+    unsigned char* rom=malloc(len);assert(rom);memcpy(rom,block,len);
     struct pd_game game;pd_game_detect(&game,rom,len);game.rom=rom;game.romSize=len;
+    snprintf(liveName,sizeof liveName,"live-%s",game.code);
     for(int i=0;i<120 && (!snap->valid || snap->partyCount==0 || !snap->posOk);i++) {
       drive(c,1,8);drive(c,0,40);pd_snapshot_read(snap,&game,read_memory,c);
     }
     assert(snap->valid && snap->partyCount>0 && snap->posOk);
     drive(c,0,120);pd_snapshot_read(snap,&game,read_memory,c);
-    present_game(240,160);shot("live-emerald-game");
+    present_game(240,160);shot("game");
     struct pd_host_info host={0};ui->tab=PD_TAB_PARTY;
-    pd_ui_draw(ui,&canvas,&game,snap,&host);present();shot("live-emerald-party");
+    pd_ui_draw(ui,&canvas,&game,snap,&host);present();shot("party");
     bool found=false;
     for(int i=0;i<ui->hitCount;i++)if(ui->hits[i].id==HIT_SLOT) {
       struct pd_hit h=ui->hits[i];pd_ui_touch(ui,h.x+1,h.y+1,true);pd_ui_touch(ui,h.x+1,h.y+1,false);found=true;break;
     }
     assert(found && ui->summarySlot==0);
-    pd_ui_draw(ui,&canvas,&game,snap,&host);present();shot("live-emerald-summary");
+    pd_ui_draw(ui,&canvas,&game,snap,&host);present();shot("summary");
     assert(pd_ui_back(ui) && ui->summarySlot==-1);
     uint32_t before=c->frameCounter(c);
     assert(state(c,"integration.ss",true));drive(c,0,20);assert(state(c,"integration.ss",false));
     assert(c->frameCounter(c)==before);unlink("integration.ss");
+    free(rom);
     printf("PASS real GBA save, party=%d, companion Summary/back and state reload\n",snap->partyCount);
     running=0;return;
   }

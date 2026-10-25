@@ -13,8 +13,10 @@
 #include <mgba-util/vfs.h>
 #include <mgba/core/blip_buf.h>
 #include <mgba/core/core.h>
+#include <mgba/core/log.h>
 #include <mgba/core/serialize.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -73,6 +75,18 @@ static void notice(const char *s) {
   messageUntil = SDL_GetTicks() + 2500;
   fprintf(stderr, "%s\n", s);
 }
+/* mGBA logs every DMA and BIOS call at DEBUG; keep warnings and errors only, so
+ * launch.sh's log stays readable. */
+static void quiet_log(struct mLogger *l, int category, enum mLogLevel level,
+                      const char *format, va_list args) {
+  (void)l;
+  if (!(level & (mLOG_FATAL | mLOG_ERROR | mLOG_WARN)))
+    return;
+  fprintf(stderr, "%s: ", mLogCategoryName(category));
+  vfprintf(stderr, format, args);
+  fputc('\n', stderr);
+}
+static struct mLogger quietLogger = {.log = quiet_log};
 static void post_audio(struct mAVStream *s, blip_t *l, blip_t *r) {
   (void)s;
   int16_t out[2048];
@@ -292,35 +306,6 @@ static bool capture_frame(const char *path, unsigned *lit) {
   free(shot);
   return ok;
 }
-static bool copy_backup(const char *path) {
-  FILE *in = fopen(path, "rb");
-  if (!in)
-    return errno == ENOENT;
-  char dest[1200];
-  snprintf(dest, sizeof dest, "%s.backup-XXXXXX", path);
-  int fd = mkstemp(dest);
-  FILE *out = fd >= 0 ? fdopen(fd, "wb") : NULL;
-  if (!out) {
-    if (fd >= 0)
-      close(fd);
-    fclose(in);
-    return false;
-  }
-  char b[8192];
-  size_t n;
-  bool ok = true;
-  while ((n = fread(b, 1, sizeof b, in)))
-    if (fwrite(b, 1, n, out) != n) {
-      ok = false;
-      break;
-    }
-  if (ferror(in))
-    ok = false;
-  fclose(in);
-  if (fclose(out))
-    ok = false;
-  return ok;
-}
 static bool state(struct mCore *c, const char *path, bool save) {
   char tmp[1200];
   snprintf(tmp, sizeof tmp, "%s.tmp", path);
@@ -440,6 +425,8 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
   c->setVideoBuffer(c, video, 256);
   c->setAudioBufferSize(c, 512);
   if (!c->loadROM(c, vf)) {
+    vf->close(vf);
+    mCoreConfigDeinit(&c->config);
     c->deinit(c);
     free(romdata);
     appError = 1;
@@ -452,7 +439,7 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
   snprintf(sav, sizeof sav, "%s/saves/%s.sav", root, name);
   snprintf(ss, sizeof ss, "%s/states/%s.ss", root, name);
   struct pocket_save_status saveStatus = {0};
-  if (!copy_backup(sav)) {
+  if (!pocket_save_backup(sav, time(NULL))) {
     appError = 1;
     notice("Save backup failed; game not opened");
     goto cleanup;
@@ -711,6 +698,7 @@ int main(int argc, char **argv) {
     else
       rom = argv[i];
   }
+  mLogSetDefaultLogger(&quietLogger);
   signal(SIGINT, stop);
   signal(SIGTERM, stop);
   mkdir(root, 0755);

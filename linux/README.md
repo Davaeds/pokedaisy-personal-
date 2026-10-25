@@ -7,7 +7,7 @@ another emulator, companion decoder, game-address table or data generator.
 This first contribution deliberately excludes the downstream Polished adapter,
 expanded overworlds, enhanced summaries, filters, automatic recovery and
 firmware suspend/shutdown. Those implementations remain on the development
-branches listed in HANDOFF.md. This branch is not an update of the installed
+branches of keeganwhitacre/pokedaisy-brick. This branch is not an update of the installed
 Brick development package. Use a separate data directory when evaluating it.
 
 ## Native build

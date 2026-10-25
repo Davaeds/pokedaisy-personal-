@@ -12,7 +12,7 @@ name='pokedaisy-linux-'+('aarch64' if arch==183 else 'x86_64')
 a.output.mkdir(parents=True,exist_ok=True);dest=a.output/name
 dest.mkdir() # Refuse to overwrite an earlier package.
 for source,target in [(a.binary,'pokedaisy-linux'),(repo/'linux/launch.sh','launch.sh'),
-                      (repo/'linux/README.md','README.md'),(repo/'linux/HANDOFF.md','HANDOFF.md'),
+                      (repo/'linux/README.md','README.md'),
                       (repo/'LICENSE','LICENSE'),(repo/'NOTICE','NOTICE')]:
     shutil.copy2(source,dest/target)
 (dest/'pokedaisy-linux').chmod(0o755);(dest/'launch.sh').chmod(0o755)

@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory(prefix='pd-linux-package-') as d:
     assert archive.exists() and Path(result.stdout.strip())==archive
     with zipfile.ZipFile(archive) as z:
         assert z.testzip() is None
-        names=z.namelist();assert len(names)==11,names
+        names=z.namelist();assert len(names)==10,names
         assert all(n.startswith(name+'/') for n in names)
         assert z.read(name+'/pokedaisy-linux')==binary.read_bytes()
         assert z.getinfo(name+'/launch.sh').external_attr>>16 & 0o111

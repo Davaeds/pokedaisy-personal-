@@ -3,7 +3,7 @@ on:
   pull_request:
     paths: ['linux/**', '3ds/core/**', '3ds/test/host_display_test.c', '3ds/Makefile', '3ds/desktop/pd_png.*', 'app/src/main/cpp/pk_savevf.*', 'third_party/mgba', '.github/workflows/linux.yml', 'gamedata/**']
   push:
-    branches: [main, dev, 'upstream/linux-*']
+    branches: [main, dev]
     paths: ['linux/**', '3ds/**', 'app/src/main/cpp/pk_savevf.*', 'third_party/mgba', '.github/workflows/linux.yml', 'gamedata/**']
   workflow_dispatch:
 permissions:
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0, upstream pin
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - run: git submodule update --init third_party/mgba
       - run: sudo apt-get update && sudo apt-get install -y cmake libsdl2-dev
       - name: Shared host capability and legacy previews
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       - run: git submodule update --init third_party/mgba
       - run: sudo apt-get update && sudo apt-get install -y cmake qemu-user-static
       - name: Prepare checksum-pinned toolchain and SDK
@@ -53,7 +53,7 @@ jobs:
           ctest --test-dir linux/build-arm --output-on-failure
       - name: Package TrimUI artifact
         run: python3 linux/package.py linux/build-arm/pokedaisy-linux "$RUNNER_TEMP/linux-artifacts"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pokedaisy-linux-aarch64
           path: ${{ runner.temp }}/linux-artifacts/*.zip

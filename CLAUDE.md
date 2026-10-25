@@ -133,6 +133,19 @@ loads every ROM into one fixed buffer, so per-ROM caches key on `pd_rom_id()`, n
 (`3ds/ctr/gpu.c`) writes textures from the CPU in the tiled order: display transfers into textures drew
 upside down / rotated in Azahar, so don't go back to them without checking on hardware.
 
+## Linux port (`linux/`)
+
+An SDL2 host for Linux handhelds (Keegan Whitacre's, from his `keeganwhitacre/pokedaisy-brick` fork, whose `pocket/`
+has much more: Polished Crystal, the summary pages, NextUI power handling): the pinned mGBA core plus the 3DS port's
+C companion (`3ds/core/`), drawn on its 512x384 canvas, so a companion change for 3DS shows here too and the other
+way round. It adds no game data of its own (addresses come from `3ds/core/`). Build and test in a Linux container or
+VM: `cmake -S linux -B linux/build && cmake --build linux/build && ctest --test-dir linux/build`; `linux-runtime-test
+ROM DATA OUT` boots a real ROM + save (DATA/saves/<rom file name>.sav) to the field and screenshots PARTY / the
+summary. Saves are backed up into `saves/pokedaisy-backups/` like Android's (`pocket_save_backup`, newest 10
+distinct); states carry no save data, so loading one never writes the save. Keep a copy of the ROM's bytes rather
+than mGBA's ROM block pointer: a GPIO write (FireRed) swaps the mapping. CI: `.github/workflows/linux.yml` (x86_64
+native, AArch64 under QEMU with the checksum-pinned TrimUI toolchain).
+
 ## UI work
 
 **Look at every UI change before calling it done** — render it and read the PNG, don't
