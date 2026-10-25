@@ -29,9 +29,11 @@ unknown. Target the **New 3DS / New 3DS XL / New 2DS XL** first; the original
   (newest 10 per game) - the repo's "save files are sacred" rule.
 - Settings kept in `sdmc:/pokedaisy/settings.ini`.
 - The companion, in the app's FireRed OPTION-screen look:
-  - **PARTY**: the six slots (the game's own icon from your ROM, name with its
-    ♂ / ♀, level, HP bar, status) in the app's FireRed party palette; tap one
-    for its summary (moves, type, PP).
+  - **PARTY**: the six slots in the app's FireRed-like slot (`PartySlot` /
+    `SlotGeometry`: the Poke Ball and the game's own icon from your ROM over the
+    frame's corner, name, level or a status chip, ♂ / ♀, the HP bar with its HP
+    tag and the numbers under it, empty slots faint), edge to edge like
+    `PartyGrid`; tap one for its summary (moves, type, PP).
   - **BATTLE**: opens by itself in a battle and goes back after it. **INFO**:
     the foe and you (with the game's own party icons, read from your ROM),
     your moves with the app's verdicts (SUPER 2x / NEUTRAL 1x / RESISTED 1/2x /

@@ -25,9 +25,14 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+// The window's size without POCKET_FULLSCREEN / POCKET_WINDOW, and the companion's
+// canvas until a screen says otherwise (companion_size).
 #define W 512
 #define H 384
-static uint32_t pixels[W * H];
+#define CANVAS_MAX_W 1024
+#define CANVAS_MAX_H 768
+static uint32_t pixels[CANVAS_MAX_W * CANVAS_MAX_H];
+static int canvasW = W, canvasH = H;
 static color_t video[256 * 256];
 static struct pd_canvas canvas;
 static SDL_Window *window;
@@ -244,13 +249,60 @@ static void repeat_directions(void) {
     }
 }
 static bool down(int k) { return (pressed & (1u << k)) != 0; }
-static void present(void) {
-  SDL_RenderSetLogicalSize(renderer, W, H);
-  if (SDL_GetTicks() < messageUntil) {
-    pd_fill(&canvas, 4, 334, 504, 24, 0x181818);
-    pd_text_fit(&canvas, 10, 338, 492, message, 0xffffff, PD_NO_SHADOW);
+/* The companion's canvas for an ow x oh screen: the largest whole scale that
+ * keeps it at least 320x240 (the 3DS's, which every tab is laid out for), so
+ * its pixel text is about as big on every panel: 320x240 at 2x on 640x480,
+ * 426x240 at 3x on 1280x720, 341x256 on 1024x768, 480x270 on 1920x1080.
+ * POCKET_COMPANION_SCALE=N picks the scale instead. */
+static void companion_size(int ow, int oh, int *w, int *h) {
+  int scale = ow / 320 < oh / 240 ? ow / 320 : oh / 240;
+  const char *forced = getenv("POCKET_COMPANION_SCALE");
+  if (forced && atoi(forced) > 0)
+    scale = atoi(forced);
+  if (scale < 1)
+    scale = 1;
+  *w = ow / scale;
+  *h = oh / scale;
+  if (*w > CANVAS_MAX_W)
+    *w = CANVAS_MAX_W;
+  if (*h > CANVAS_MAX_H)
+    *h = CANVAS_MAX_H;
+  if (*w < 320)
+    *w = 320;
+  if (*h < 240)
+    *h = 240;
+}
+/* Before the companion draws: the canvas follows the window (a resize, a
+ * rotated panel), with a texture to match. */
+static void companion_canvas(void) {
+  int ow = W, oh = H, w, h;
+  if (SDL_GetRendererOutputSize(renderer, &ow, &oh) < 0 || ow <= 0 || oh <= 0)
+    ow = W, oh = H;
+  companion_size(ow, oh, &w, &h);
+  if (w == canvasW && h == canvasH && texture)
+    return;
+  SDL_Texture *t = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888,
+                                     SDL_TEXTUREACCESS_STREAMING, w, h);
+  if (!t) {
+    notice(SDL_GetError());
+    return;
   }
-  if (SDL_UpdateTexture(texture, NULL, pixels, W * 4) < 0) {
+  SDL_SetTextureBlendMode(t, SDL_BLENDMODE_NONE);
+  if (texture)
+    SDL_DestroyTexture(texture);
+  texture = t;
+  canvasW = w;
+  canvasH = h;
+  pd_canvas_init(&canvas, w, h, pixels);
+}
+static void present(void) {
+  SDL_RenderSetLogicalSize(renderer, canvasW, canvasH);
+  SDL_RenderSetIntegerScale(renderer, SDL_TRUE);
+  if (SDL_GetTicks() < messageUntil) {
+    pd_fill(&canvas, 4, canvasH - 50, canvasW - 8, 24, 0x181818);
+    pd_text_fit(&canvas, 10, canvasH - 46, canvasW - 20, message, 0xffffff, PD_NO_SHADOW);
+  }
+  if (SDL_UpdateTexture(texture, NULL, pixels, canvasW * 4) < 0) {
     notice(SDL_GetError());
     return;
   }
@@ -313,6 +365,7 @@ static void present_game(unsigned gw, unsigned gh) {
   if (SDL_GetRendererOutputSize(renderer, &ow, &oh) < 0 || ow <= 0 || oh <= 0)
     return;
   SDL_RenderSetLogicalSize(renderer, ow, oh);
+  SDL_RenderSetIntegerScale(renderer, SDL_FALSE);
   int scale = ow / (int)gw;
   if (oh / (int)gh < scale)
     scale = oh / (int)gh;
@@ -451,6 +504,8 @@ static void focus_draw(struct pd_ui *u, int focus) {
   if (focus < 0 || focus >= u->hitCount)
     return;
   struct pd_hit *h = &u->hits[focus];
+  if (h->id >= HIT_SLOT && h->id < HIT_SLOT + PD_PARTY_SIZE)
+    return; // a party slot shows its own selected look (pd_ui.focusId)
   pd_fill(&canvas, h->x, h->y, h->w, 2, 0xff7331);
   pd_fill(&canvas, h->x, h->y + h->h - 2, h->w, 2, 0xff7331);
   pd_fill(&canvas, h->x, h->y, 2, h->h, 0xff7331);
@@ -596,6 +651,7 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
     if (down(Y) && !companion)
       ff = !ff;
     if (companion) {
+      companion_canvas();
       if (menuOpen) {
         if (menuOpen == 4) {
           if (down(B) || down(A))
@@ -727,6 +783,8 @@ static void run_game(const char *path, int maxFrames, const char *shot) {
           pd_menu_draw(menuOpen == 1 ? &gameMenu : &confirmMenu, &canvas);
       } else {
         pd_ui_update(&ui, &snap);
+        // The hit focused last frame: the companion draws it as its own cursor where it has one.
+        ui.focusId = focus >= 0 && focus < ui.hitCount ? ui.hits[focus].id : -1;
         host.ffOn = ff;
         host.hasState = access(ss, F_OK) == 0;
         pd_ui_draw(&ui, &canvas, &game, &snap, &host);
@@ -824,11 +882,9 @@ int main(int argc, char **argv) {
   SDL_RendererInfo rendererInfo;
   if (!SDL_GetRendererInfo(renderer, &rendererInfo))
     fprintf(stderr, "Video backend: %s; opaque RGB888 canvas %dx%d\n",
-            rendererInfo.name, W, H);
-  SDL_RenderSetLogicalSize(renderer, W, H);
+            rendererInfo.name, canvasW, canvasH);
   SDL_ShowCursor(SDL_DISABLE);
-  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888,
-                              SDL_TEXTUREACCESS_STREAMING, W, H);
+  companion_canvas();
   gameTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888,
                                   SDL_TEXTUREACCESS_STREAMING, 256, 256);
   wideTexture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888,
@@ -838,11 +894,9 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Texture: %s\n", SDL_GetError());
     return 1;
   }
-  SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_NONE);
   SDL_SetTextureBlendMode(gameTexture, SDL_BLENDMODE_NONE);
   SDL_SetTextureBlendMode(wideTexture, SDL_BLENDMODE_NONE);
   SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-  pd_canvas_init(&canvas, W, H, pixels);
   SDL_AudioSpec want = {0};
   want.freq = 32768;
   want.format = AUDIO_S16SYS;
@@ -890,6 +944,7 @@ int main(int argc, char **argv) {
         snprintf(path, sizeof path, "%s/roms/%s", root, names[menu.selected]);
         run_game(path, 0, NULL);
       }
+      companion_canvas();
       pd_menu_draw(&menu, &canvas);
       present();
       if (frames && ++ticks >= frames) {

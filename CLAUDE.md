@@ -142,8 +142,10 @@ upside down / rotated in Azahar, so don't go back to them without checking on ha
 
 An SDL2 host for Linux handhelds (Keegan Whitacre's, from his `keeganwhitacre/pokedaisy-brick` fork, whose `pocket/`
 has much more: Polished Crystal, the summary pages, NextUI power handling): the pinned mGBA core plus the 3DS port's
-C companion (`3ds/core/`), drawn on its 512x384 canvas, so a companion change for 3DS shows here too and the other
-way round. It adds no game data of its own (addresses come from `3ds/core/`). Build and test in a Linux container or
+C companion (`3ds/core/`), so a companion change for 3DS shows here too and the other way round. Its canvas follows
+the screen (`companion_size`: the largest whole scale keeping 320x240, so 426x240 at 3x on 1280x720); PARTY is
+Android's `PartySlot` ported (`pd_ui_party.c`), and the host's D-pad focus reaches the core as `pd_ui.focusId` so a
+slot shows its own selected look instead of the focus ring. It adds no game data of its own (addresses come from `3ds/core/`). Build and test in a Linux container or
 VM: `cmake -S linux -B linux/build && cmake --build linux/build && ctest --test-dir linux/build`; `linux-runtime-test
 ROM DATA OUT` boots a real ROM + save (DATA/saves/<rom file name>.sav) to the field and screenshots PARTY / the
 summary. Saves are backed up into `saves/pokedaisy-backups/` like Android's (`pocket_save_backup`, newest 10

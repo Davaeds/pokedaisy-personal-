@@ -39,6 +39,7 @@ void pd_ui_init(struct pd_ui* ui, struct pd_settings* settings) {
     ui->summarySlot = -1;
     ui->bagSelected = -1;
     ui->pressedId = -1;
+    ui->focusId = -1;
     ui->battleSlot = -1;
     ui->dexNational = -1;
     ui->mapPage = -1;

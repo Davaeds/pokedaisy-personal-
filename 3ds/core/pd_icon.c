@@ -65,15 +65,21 @@ static const struct icon* icon_for(const struct pd_game* g, int species) {
 }
 
 bool pd_draw_mon_icon(struct pd_canvas* c, const struct pd_game* g, int species, int x, int y, bool faded) {
+    return pd_draw_mon_icon_scaled(c, g, species, x, y, 1, faded);
+}
+
+bool pd_draw_mon_icon_scaled(struct pd_canvas* c, const struct pd_game* g, int species, int x, int y, int scale,
+                             bool faded) {
     if (!pd_rom_id(g)) return false;
     const struct icon* e = icon_for(g, species);
     if (!e->ok) return false;
-    for (int py = 0; py < PD_ICON; py++) {
+    if (scale < 1) scale = 1;
+    for (int py = 0; py < PD_ICON * scale; py++) {
         int sy = y + py;
         if (sy < c->cy0 || sy >= c->cy1) continue;
-        for (int px = 0; px < PD_ICON; px++) {
+        for (int px = 0; px < PD_ICON * scale; px++) {
             int sx = x + px;
-            uint32_t v = e->px[py * PD_ICON + px];
+            uint32_t v = e->px[py / scale * PD_ICON + px / scale];
             if (v == CLEAR || sx < c->cx0 || sx >= c->cx1) continue;
             uint32_t* d = &c->px[sy * c->w + sx];
             if (faded) {

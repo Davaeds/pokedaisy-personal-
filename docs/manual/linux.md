@@ -15,6 +15,9 @@ Follow `linux/README.md` in the source repository for dependencies, native and
 TrimUI builds, controls, save paths and test commands. Use a separate data
 folder while testing. Existing emulator saves are never imported automatically.
 
+The game and the companion both fit your screen at a sharp whole number scale,
+so text stays about the same size on a 640x480, 720x720 or 1280x720 handheld.
+
 Press the companion button to pause the game and open its companion. Use the
 D-pad to focus an option, A to choose it and B to go back. The shoulder buttons
 change tabs. Your game menu has cancel-first save, load and quit confirmations.

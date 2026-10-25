@@ -3,11 +3,13 @@
 #include "../core/pd_ui_internal.h"
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 static uint32_t pixels[512*384];
 static bool has(const struct pd_ui* ui,int id) {
     for(int i=0;i<ui->hitCount;i++)if(ui->hits[i].id==id)return true;
     return false;
 }
+static const struct pd_host_info noHost={0};
 static void tap(struct pd_ui* ui,int id) {
     for(int i=0;i<ui->hitCount;i++)if(ui->hits[i].id==id) {
         struct pd_hit h=ui->hits[i];pd_ui_touch(ui,h.x+1,h.y+1,true);pd_ui_touch(ui,h.x+1,h.y+1,false);return;
@@ -56,5 +58,26 @@ int main(void) {
     FILE* old=fopen(path,"w");fputs("screen=1\nff=3\nguide=0\n",old);fclose(old);
     assert(pd_settings_load(&back,path) && back.aspect==PD_ASPECT_ORIGINAL && back.autoZoom && back.ffSpeed==3);
     remove(path);
-    puts("PASS default/null host, optional scaling row, remaining settings and FF interaction, EXPAND rows");
+    // PARTY at a Linux canvas size: Android's slot, edge to edge, two columns. The
+    // selected look (orange outline) follows the host's D-pad focus, else slot 0;
+    // empty slots are faint and take no taps.
+    static uint32_t partyPx[426*240];
+    pd_canvas_init(&c,426,240,partyPx);
+    struct pd_snapshot party={.valid=true,.partyCount=3};
+    for(int i=0;i<3;i++){party.party[i].species=1+i;party.party[i].level=5;party.party[i].hp=10;party.party[i].maxHp=20;}
+    // A FireRed rev 1 header: a supported game (no ROM bytes, so no icons).
+    uint8_t header[0xC0]={0};memcpy(header+0xAC,"BPRE",4);header[0xBC]=1;
+    struct pd_game fr;pd_game_detect(&fr,header,0x1000000);assert(fr.cfg);
+    ui.tab=PD_TAB_PARTY;ui.summarySlot=-1;ui.focusId=-1;
+    // Slot i's frame top edge: cells from (MARGIN, CONTENT_Y - 2), 209 x 70 here; the frame 8 / 6 px in.
+    #define FRAME_TOP(i) partyPx[(26+210*((i)/2)/3+6)*426+MARGIN+209*((i)%2)+8+12]
+    pd_ui_draw(&ui,&c,&fr,&party,&noHost);
+    int slots=0;for(int i=0;i<ui.hitCount;i++)slots+=ui.hits[i].id>=HIT_SLOT&&ui.hits[i].id<HIT_SLOT+6;
+    assert(slots==3);
+    assert(FRAME_TOP(0)==0xFF7331 && FRAME_TOP(2)==0x4A4A63);
+    ui.focusId=HIT_SLOT+2;pd_ui_draw(&ui,&c,&fr,&party,&noHost);
+    assert(FRAME_TOP(0)==0x4A4A63 && FRAME_TOP(2)==0xFF7331);
+    // An empty slot's outline is blended into the backdrop, not drawn solid.
+    assert(FRAME_TOP(4)!=0x4A4A63 && FRAME_TOP(4)!=PD_BACKDROP_A && FRAME_TOP(4)!=PD_BACKDROP_B);
+    puts("PASS default/null host, optional scaling row, remaining settings and FF interaction, EXPAND rows, party grid");
 }

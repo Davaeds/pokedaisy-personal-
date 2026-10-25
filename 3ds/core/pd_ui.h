@@ -145,6 +145,7 @@ struct pd_ui {
     bool touching, dragging, touchScroll;
     int touchX0, touchY0, touchLastY;
     int pressedId; // what the stylus went down on (-1 = nothing)
+    int focusId;   // the hit a host's D-pad focus is on, drawn as that part's own cursor (-1 = none)
     struct pd_hit hits[PD_UI_MAX_HITS];
     int hitCount;
 };

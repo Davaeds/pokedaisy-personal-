@@ -49,8 +49,12 @@ button layout. Connect the controller before starting. Other controllers can
 supply SDL_GAMECONTROLLERCONFIG; they are not claimed hardware support.
 
 `POCKET_FULLSCREEN=1` uses SDL's current display mode; no Brick panel size is
-assumed. Gameplay uses centered whole-pixel scaling, and the companion uses
-its existing 512x384 logical canvas. The 3DS screen-mode setting is hidden by
+assumed. Gameplay uses centered whole-pixel scaling. The companion's canvas
+follows the screen too: the largest whole scale that keeps it at least 320x240
+(the 3DS's, which its tabs are laid out for), so its text is about the same size
+on every panel: 320x240 at 2x on 640x480, 426x240 at 3x on 1280x720, 341x256 on
+1024x768, 360x360 on 720x720, 480x270 on 1920x1080. `POCKET_COMPANION_SCALE=N`
+picks the scale instead. The 3DS screen-mode setting is hidden by
 an optional host capability; fast-forward and state settings stay available.
 Audio-device failure is logged and leaves silent gameplay available.
 `POCKET_WINDOW=WxH` opens the window at a device's panel size instead (1280x720,
@@ -115,7 +119,9 @@ itself. Private integration can use `linux-runtime-test ROM DATA CAPTURES [WxH,.
 an isolated copy of a compatible raw battery save: it boots to the field, walks,
 and checks that EXPAND and ZOOM OUT keep the game's own frame pixel for pixel in
 the middle of the window at each size, then (for a companion game) opens PARTY
-and a summary. No private ROM, save, capture
+and a summary. Every companion tab at a canvas size, from the RAM fixtures:
+`PD_PREVIEW_SIZE=426x240 3ds/build/pd_preview <fixture> <code> <out> <name> [ROM]`
+(after `make -C 3ds preview`). No private ROM, save, capture
 or extracted artwork is included in commits or install artifacts.
 
 GPL-3.0, preserving Lidor Itzhari's attribution. Existing dependency/font notices
