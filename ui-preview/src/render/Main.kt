@@ -1186,6 +1186,8 @@ fun main(args: Array<String>) {
             onNodeWithContentDescription("ZOOM").performSemanticsAction(SemanticsActions.OnClick)
         },
         Shot("$g-real-guide", bw, bh, bd, companion("GUIDE", snap = ::ndsSnapshot)),
+        // With a battle fixture (-PndsFixture=black_battle, platinum_battle): the companion opens on the battle, as in game.
+        Shot("$g-real-battle", bw, bh, bd, companion("PARTY", snap = ::ndsSnapshot)),
         // HERE on a route: the fixture's save moved to its first route's grass (Platinum's ROUTE 201, HG / SS's ROUTE 29,
         // Black's Route 1).
         Shot("$g-real-guide-route", bw, bh, bd, companion("GUIDE", snap = {
