@@ -2793,13 +2793,20 @@ static void wildRoll(int s, int keep) {
 
 /** The ambient effect for where the player stands, chosen the way BattleSetup_GetTerrainId picks a battle's background
  * (pokefirered / pokeemerald: the metatile behavior under the player, then gMapHeader.mapType; surfing counts as water),
- * with the map's weather first (gMapHeader.weather, +0x16; mapType +0x17 in every Gen 3 engine). The behavior values
+ * with the weather first, over any ground (the save's current weather, else gMapHeader.weather +0x16; mapType +0x17 in
+ * every Gen 3 engine). The behavior values
  * are FireRed's (attributes u32, low 9 bits) or Emerald's / Ruby's (u16, low 8): tall grass 0x02 (FireRed's cycling
  * road grass 0xD1), Emerald's long grass 0x03, sand 0x21 (Emerald's deep sand 0x06, FireRed's shallow water 0x17, which
  * it gives the sand background), Emerald's ash grass 0x24, mountain top 0x0C, water 0x10-0x15 / 0x19. */
 static int ambientPick(const struct Snap* s) {
     uint32_t hdr = (uint32_t) C[PK_WIDE_MAP_HEADER];
     int weather = (int) r8(hdr + 0x16), mapType = (int) r8(hdr + 0x17);
+    // The weather really falling, which scripts and a hack's own weather change (Unbound's rain on a route whose map
+    // says clear): SaveBlock1.weather, 0x2E past its pos in FireRed and Emerald alike (GetSavedWeather). The map's own
+    // weather only where that byte isn't a weather.
+    uint32_t sb1 = C[PK_WIDE_SAVE_STATIC] ? (uint32_t) C[PK_WIDE_SAVE_BLOCK1_PTR] : r32((uint32_t) C[PK_WIDE_SAVE_BLOCK1_PTR]);
+    int saved = (int) r8(sb1 + (uint32_t) C[PK_WIDE_SB1_POS] + 0x2E);
+    if (saved <= 21) weather = saved;
     bool kanto = mapPreviews;
     int b = -1;
     int mid = block(s, s->posX + MAP_OFFSET, s->posY + MAP_OFFSET);
