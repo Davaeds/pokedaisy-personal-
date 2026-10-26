@@ -225,9 +225,11 @@ class FakeSettings(showHintsInitially: Boolean = true, initialTabs: List<String>
     override val textLook get() = textOn
     override fun setTextLook(style: String?) { textOn = style }
     override fun gbaControlBindings() = GbaControls.Btn.entries.associateWith {
-        listOf(when (it) { GbaControls.Btn.X -> "BUTTON_X"; GbaControls.Btn.Y -> "BUTTON_Y"; else -> "BUTTON_${it.name}" })
+        listOf(when (it) { GbaControls.Btn.X, GbaControls.Btn.START_2, GbaControls.Btn.TO_COMPANION -> "BUTTON_X"; GbaControls.Btn.Y, GbaControls.Btn.SELECT_2 -> "BUTTON_Y"; else -> "BUTTON_${it.name}" })
     }
     override fun setGbaControlBinding(btn: GbaControls.Btn, keyName: String) {}
+    // The shots' games are GBA ones (a DS game's rows: X / Y).
+    override val buttonGroup get() = GbaControls.Group.GBA
     override val keyCapture get() = previewCapture
     private var hotkeysOn = true
     override val hotkeysEnabled get() = hotkeysOn
@@ -2164,7 +2166,7 @@ fun main(args: Array<String>) {
         },
         // The list's end: LIBRARY / ONLINE (RetroAchievements' BETA tag) / APP.
         Shot("settings-home-bottom", tw, th, td, activity { SettingsActivity() }) { onNodeWithText("RUN SETUP").performScrollTo() },
-        Shot("settings-buttons", tw, th * 2, td, activity { SettingsActivity() }) { onNodeWithText("GAME BUTTONS").performScrollTo().performClick() },
+        Shot("settings-buttons", tw, th * 2, td, activity { SettingsActivity() }) { onNodeWithText("GAME BUTTONS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick) },
         // A GBA button waiting for its button, in place.
         Shot("settings-buttons-capture", tw, th * 2, td, activity { SettingsActivity() }) {
             onNodeWithText("GAME BUTTONS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
@@ -2350,7 +2352,8 @@ val PREVIEW_BUTTONS: Map<GbaControls.Btn, List<String>> = GbaControls.Btn.entrie
         GbaControls.Btn.A -> listOf("BUTTON_A", "Z"); GbaControls.Btn.B -> listOf("BUTTON_B", "X")
         GbaControls.Btn.L -> listOf("BUTTON_L1", "A"); GbaControls.Btn.R -> listOf("BUTTON_R1", "S")
         GbaControls.Btn.START -> listOf("BUTTON_START", "ENTER"); GbaControls.Btn.SELECT -> listOf("BUTTON_SELECT")
-        GbaControls.Btn.X -> listOf("BUTTON_X"); GbaControls.Btn.Y -> listOf("BUTTON_Y")
+        GbaControls.Btn.X, GbaControls.Btn.START_2, GbaControls.Btn.TO_COMPANION -> listOf("BUTTON_X")
+        GbaControls.Btn.Y, GbaControls.Btn.SELECT_2 -> listOf("BUTTON_Y")
         GbaControls.Btn.TURBO_A, GbaControls.Btn.TURBO_B -> emptyList()
     }
 }

@@ -102,7 +102,7 @@ val SETTING_KEYWORDS: Map<String, String> = mapOf(
     "FF MUSIC" to "fast forward audio sound music steady sped up mute",
     "REWIND" to "rewind undo go back time",
     "TOUCH CONTROLS" to "touch controls on screen controls virtual gamepad overlay touch buttons layout edit move resize size scale opacity transparency see through haptic haptics vibration vibrate turbo dpad d-pad fade hide phone",
-    "GAME BUTTONS" to "key bindings keybinds keybinding controls remap remapping rebind mapping input controller gamepad buttons turbo",
+    "GAME BUTTONS" to "key bindings keybinds keybinding controls remap remapping rebind mapping input controller gamepad buttons turbo start 2 select 2 x y ds nds game boy gba to companion",
     "HOTKEYS" to "shortcuts combos save state load state slot rewind fast forward key bindings restart close quit exit app companion open panel window",
     "QUICK MENU" to "radial ring wheel circle grid style labels names icons only shortcut actions pc fly repel super max bike bicycle get off dismount rod fishing wild encounters save load state fast forward l3 thumb stick",
     "STATUS BAR" to "clock time battery money location top bar",
@@ -341,23 +341,7 @@ private fun GroupedRowsList(
                 FeaturedTitle(row, m, top = if (i == 0) 1 else 6, modifier = track)
             } else if (row.header) {
                 val track = if (tops == null) Modifier else Modifier.onGloballyPositioned { tops[i] = it.positionInParent().y.toInt() }
-                val band = OptionColors.groupTitleFill
-                if (band == null) {
-                    GbaText(
-                        tr(row.label), OptionColors.value, OptionColors.valueShadow, m,
-                        modifier = track.padding(start = m.u * 8, top = m.u * (if (i == 0) 1 else 6), bottom = m.u),
-                    )
-                } else {
-                    // Black text on white rows (Gen 1): the title is a black band, so it can't pass for a row.
-                    GbaText(
-                        tr(row.label), OptionColors.groupTitleText, OptionColors.groupTitleShadow, m,
-                        modifier = track
-                            .padding(start = m.u * 2, end = m.u * 2, top = m.u * (if (i == 0) 1 else 6), bottom = m.u * 2)
-                            .fillMaxWidth()
-                            .drawBehind { drawPixelRoundRect(band, radius = m.u.toPx() * 2, step = m.u.toPx()) }
-                            .padding(horizontal = m.u * 6, vertical = m.u * 2),
-                    )
-                }
+                GroupTitleLine(row.label, m, first = i == 0, modifier = track)
             } else {
                 OptionLine(
                     row.label, row.value, selected = i == cursor, m,
@@ -377,6 +361,29 @@ private fun GroupedRowsList(
             }
         }
         footer()
+    }
+}
+
+/** A group's title in a settings list ([groupTitle]'s look, for lists built row by row: GAME BUTTONS). [first] = the
+ * list's top line, with less room above it. */
+@Composable
+fun GroupTitleLine(label: String, m: GbaTextMetrics, first: Boolean, modifier: Modifier = Modifier) {
+    val band = OptionColors.groupTitleFill
+    if (band == null) {
+        GbaText(
+            tr(label), OptionColors.value, OptionColors.valueShadow, m,
+            modifier = modifier.padding(start = m.u * 8, top = m.u * (if (first) 1 else 6), bottom = m.u),
+        )
+    } else {
+        // Black text on white rows (Gen 1): the title is a black band, so it can't pass for a row.
+        GbaText(
+            tr(label), OptionColors.groupTitleText, OptionColors.groupTitleShadow, m,
+            modifier = modifier
+                .padding(start = m.u * 2, end = m.u * 2, top = m.u * (if (first) 1 else 6), bottom = m.u * 2)
+                .fillMaxWidth()
+                .drawBehind { drawPixelRoundRect(band, radius = m.u.toPx() * 2, step = m.u.toPx()) }
+                .padding(horizontal = m.u * 6, vertical = m.u * 2),
+        )
     }
 }
 

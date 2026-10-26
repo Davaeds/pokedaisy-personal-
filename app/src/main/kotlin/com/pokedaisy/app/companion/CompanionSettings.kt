@@ -157,8 +157,12 @@ interface CompanionSettings {
     /** Rebinds a GBA button to a single key, by display name (no "KEYCODE_" prefix). */
     fun setGbaControlBinding(btn: GbaControls.Btn, keyName: String)
 
-    /** Leaves TURBO A / B unbound ([GbaControls.Btn.canClear]). */
+    /** Leaves TURBO A / B and the GBA / Game Boy rows unbound ([GbaControls.Btn.canClear]). */
     fun clearGbaControlBinding(btn: GbaControls.Btn) {}
+
+    /** GAME BUTTONS' rows for the game running besides every game's ([GbaControls.Group.DS] or [GbaControls.Group.GBA]);
+     * null = both groups (previews). */
+    val buttonGroup: GbaControls.Group? get() = null
 
     /** Whether the hotkeys fire at all ([com.pokedaisy.app.Prefs.hotkeysEnabled]). */
     val hotkeysEnabled: Boolean

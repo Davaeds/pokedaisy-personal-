@@ -1152,6 +1152,7 @@ class PokeDaisyActivity : Activity() {
             GbaControls.clearBinding(getExternalFilesDir(null) ?: filesDir, btn)
             input.setControls(GbaControls.load(getExternalFilesDir(null) ?: filesDir))
         }
+        override val buttonGroup get() = if (romIsNds) GbaControls.Group.DS else GbaControls.Group.GBA
         override val hotkeysEnabled get() = hotkeysOn
         override fun setHotkeysEnabled(on: Boolean) {
             Prefs(this@PokeDaisyActivity).hotkeysEnabled = on
@@ -2788,12 +2789,12 @@ class PokeDaisyActivity : Activity() {
         return super.dispatchKeyEvent(event)
     }
 
-    // --- X: the buttons on the other screen's companion (two screens, a GBA / Game Boy game's field) ---------------
+    // --- TO COMPANION (X by default): the buttons on the other screen's companion (two screens, a GBA / Game Boy game's field) ---
 
     /**
-     * The game's buttons steer the companion on the other screen, as a DS game's X opens its menu on the touch screen: X
-     * on the field ([canFocusBottom]) sends them down there, the game gets none ([bottomFocusTakes]) and a silver strip on
-     * its picture points down ([CompanionFocusStripe]). X, START, B (or BACK) with nothing
+     * The game's buttons steer the companion on the other screen, as a DS game's X opens its menu on the touch screen:
+     * GAME BUTTONS' TO COMPANION (X by default) on the field ([canFocusBottom]) sends them down there, the game gets none
+     * ([bottomFocusTakes]) and a silver strip on its picture points down ([CompanionFocusStripe]). It again, START, B (or BACK) with nothing
      * left to go back from, a tap on the strip, or the game leaving the field bring them back. Compose state: the
      * companion ([CompanionFocusHost]) and the HUD read it.
      */
@@ -2803,7 +2804,7 @@ class PokeDaisyActivity : Activity() {
     /** The joystick's D-pad / stick directions while [bottomFocus], so a new one is a press. */
     private var bottomHat = 0
 
-    /** X can take the buttons down now: a GBA / Game Boy game on the field with its controls free (no text box, script or
+    /** TO COMPANION can take the buttons down now: a GBA / Game Boy game on the field with its controls free (no text box, script or
      * START menu, where the field read knows), the companion on the other screen, nothing else holding the buttons. */
     private fun canFocusBottom(): Boolean {
         if (romIsNds || debugMirror || companionClosed || companionOverGame.value) return false
@@ -2825,7 +2826,7 @@ class PokeDaisyActivity : Activity() {
     }
 
     /**
-     * A key with the buttons on the other screen's companion, or X taking them there - null = not its business. Keys
+     * A key with the buttons on the other screen's companion, or TO COMPANION's taking them there - null = not its business. Keys
      * pressed there stay away from the game until let go ([menuHeld]); the hotkeys only hear releases (a hold let go).
      */
     private fun bottomFocusTakes(event: KeyEvent): Boolean? {
@@ -2833,7 +2834,7 @@ class PokeDaisyActivity : Activity() {
         val down = event.action == KeyEvent.ACTION_DOWN
         if (code == KeyEvent.KEYCODE_BACK) return null
         if (!bottomFocus.value) {
-            if (!down || event.repeatCount != 0 || !input.isX(code) || !canFocusBottom()) return null
+            if (!down || event.repeatCount != 0 || !input.isCompanion(code) || !canFocusBottom()) return null
             setBottomFocus(true)
             menuHeld.add(code)
             return true
@@ -2843,8 +2844,8 @@ class PokeDaisyActivity : Activity() {
             if (!down && !event.isCanceled) companionBackTap()
             return true
         }
-        val x = input.isX(code)
-        // X goes back whatever it presses in the game (START, on a GBA / Game Boy game).
+        val x = input.isCompanion(code)
+        // TO COMPANION's key goes back whatever it presses in the game (START 2, by default).
         val key = if (x) MenuKey.X else menuKeyFor(input.buttonFor(code) ?: 0) ?: return super.dispatchKeyEvent(event)
         if (!down) {
             menuHeld.remove(code)

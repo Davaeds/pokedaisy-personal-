@@ -101,14 +101,25 @@ class Hotkeys private constructor(
         return keys
     }
 
+    /** What [gameKey] needs of the game's buttons ([GbaInput]; ui-preview compiles this file without it). */
+    interface GameKeys {
+        /** The game button [keyCode] presses, null = none ([GbaInput.buttonFor]). */
+        fun buttonFor(keyCode: Int): Int?
+        /** The player holds a game button. */
+        val holdsButtons: Boolean
+        fun onKey(keyCode: Int, down: Boolean): Boolean
+        /** [keyCode]'s button pressed for a few frames ([GbaInput.tap]). */
+        fun tap(keyCode: Int)
+    }
+
     /**
      * A key on its way to the game ([input]), the hotkeys first ([handle] gets their events): true when the game mustn't
      * see it. That's a key completing a chord, or SELECT / START of a chord, held back until let go (holding SELECT for
      * SELECT + START used to press SELECT in the game first): no chord by then, the game gets it as a tap
-     * ([GbaInput.tap]). Pressed while other game buttons are held, or with one pressed meanwhile, it goes through at once
+     * ([GameKeys.tap]). Pressed while other game buttons are held, or with one pressed meanwhile, it goes through at once
      * ([letThrough]), so the games' own A + B + SELECT + START still works.
      */
-    fun gameKey(keyCode: Int, down: Boolean, input: GbaInput, handle: (Event) -> Unit): Boolean {
+    fun gameKey(keyCode: Int, down: Boolean, input: GameKeys, handle: (Event) -> Unit): Boolean {
         if (down && keyCode in heldBack) return true   // its repeats
         for (e in onKey(keyCode, down)) handle(e)
         if (!down) {

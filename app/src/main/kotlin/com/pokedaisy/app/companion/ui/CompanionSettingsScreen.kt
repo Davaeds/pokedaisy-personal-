@@ -93,7 +93,8 @@ fun CompanionSettingsScreen(
     // HOME starts with a group title, so its first row is index 1. HOME's cursor and
     // scroll outlive its sub-pages: coming back lands on the row that opened one.
     var homeCursor by ui::homeCursor
-    var pageCursor by remember(page) { mutableStateOf(0) }
+    // GAME BUTTONS opens on a group title (ALL GAMES): its cursor starts on the row under it, like HOME's.
+    var pageCursor by remember(page) { mutableStateOf(if (page == Page.BUTTONS) 1 else 0) }
     val cursor = if (page == Page.HOME) homeCursor else pageCursor
     fun moveCursor(i: Int) { if (page == Page.HOME) homeCursor = i else pageCursor = i }
     val homeScroll = ui.homeScroll
@@ -160,15 +161,21 @@ fun CompanionSettingsScreen(
                             tick++
                         }
                     } + SettingRow(tk("CANCEL"), null) { page = Page.HOME }
-                    Page.BUTTONS -> GbaControls.Btn.entries.map { btn ->
-                        val title = btn.title
-                        SettingRow(title, bindingValue(capture, title, settings.gbaControlBindings()[btn]), subtitle = btn.subtitle, labelBadge = btn.badge) {
-                            capture?.toggle(title) {
-                                KeyCapture.Request(
-                                    title, chord = false,
-                                    onDone = { keys -> settings.setGbaControlBinding(btn, KeyCapture.keyName(keys.first())); tick++ },
-                                    onClear = if (btn.canClear) ({ settings.clearGbaControlBinding(btn); tick++ }) else null,
-                                )
+                    // Every game's buttons, then the game running's own group (TO COMPANION only with two screens).
+                    Page.BUTTONS -> GbaControls.Group.entries.filter { it == GbaControls.Group.ALL || settings.buttonGroup.let { g -> g == null || g == it } }.flatMap { group ->
+                        val btns = GbaControls.Btn.entries.filter {
+                            it.group == group && (it != GbaControls.Btn.TO_COMPANION || settings.usesSecondScreen || settings.buttonGroup == null)
+                        }
+                        listOf(groupTitle(group.title)) + btns.map { btn ->
+                            val title = btn.title
+                            SettingRow(title, bindingValue(capture, title, settings.gbaControlBindings()[btn]), subtitle = btn.subtitle, labelBadge = btn.badge) {
+                                capture?.toggle(title) {
+                                    KeyCapture.Request(
+                                        title, chord = false,
+                                        onDone = { keys -> settings.setGbaControlBinding(btn, KeyCapture.keyName(keys.first())); tick++ },
+                                        onClear = if (btn.canClear) ({ settings.clearGbaControlBinding(btn); tick++ }) else null,
+                                    )
+                                }
                             }
                         }
                     } + SettingRow(tk("CANCEL"), null) { page = Page.HOME }

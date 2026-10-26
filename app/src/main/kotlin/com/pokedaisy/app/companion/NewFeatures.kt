@@ -54,8 +54,12 @@ object NewFeatures {
     /** SETTINGS > DISPLAY OPTIONS > LIGHT COMPANION: a lighter companion for slow devices (LightCompanion). */
     const val LIGHT_COMPANION = "light_companion"
 
-    /** GAME BUTTONS > X: on the field of a two-screen device, X takes the buttons to the companion, like a DS game's menu. */
+    /** GAME BUTTONS > TO COMPANION (X by default): on the field of a two-screen device it takes the buttons to the
+     * companion, like a DS game's menu. */
     const val X_COMPANION = "x_companion"
+
+    /** GAME BUTTONS > START 2 / SELECT 2: the GBA / Game Boy games' spare buttons, apart from the DS games' X / Y. */
+    const val GBA_BUTTONS = "gba_buttons"
 
     /** SETTINGS > PLAYER LOOK: play as another game's hero (companion.data.PlayerLook). */
     const val PLAYER_LOOK = "player_look"
@@ -82,7 +86,7 @@ object NewFeatures {
     val ALL = listOf(
         HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB, TOUCH_CONTROLS,
         COMPANION_TAB, REUSABLE_TMS, SHINY_ODDS, UNLIT_SCREEN, LIGHT_COMPANION, X_COMPANION, PLAYER_LOOK, RIVAL_LOOK, TEXT_LOOK, DAY_NIGHT,
-        FOLLOWER, COMPANION_HOTKEY, NUZLOCKE,
+        FOLLOWER, COMPANION_HOTKEY, NUZLOCKE, GBA_BUTTONS,
     )
 
     private const val DAYS = 7

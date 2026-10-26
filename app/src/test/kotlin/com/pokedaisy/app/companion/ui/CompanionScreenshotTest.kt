@@ -2000,7 +2000,7 @@ object SampleCompanion {
         override val touchStyle = com.pokedaisy.app.companion.TouchControlsStyle()
         override fun setTouchStyle(style: com.pokedaisy.app.companion.TouchControlsStyle) {}
         override fun gbaControlBindings() = GbaControls.Btn.entries.associateWith {
-        listOf(when (it) { GbaControls.Btn.X -> "BUTTON_X"; GbaControls.Btn.Y -> "BUTTON_Y"; else -> "BUTTON_${it.name}" })
+        listOf(when (it) { GbaControls.Btn.X, GbaControls.Btn.START_2, GbaControls.Btn.TO_COMPANION -> "BUTTON_X"; GbaControls.Btn.Y, GbaControls.Btn.SELECT_2 -> "BUTTON_Y"; else -> "BUTTON_${it.name}" })
     }
         override fun setGbaControlBinding(btn: GbaControls.Btn, keyName: String) {}
         override val hotkeysEnabled = true

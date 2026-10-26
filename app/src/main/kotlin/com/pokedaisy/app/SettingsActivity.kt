@@ -1573,12 +1573,17 @@ class SettingsActivity : ComponentActivity() {
             Hint(tr("Which physical button is each GBA button. The D-pad and analog stick are fixed."), m, small)
             OptionListWindow(m, Modifier.fillMaxWidth().weight(1f, fill = false)) {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    GbaControls.Btn.entries.forEachIndexed { i, btn ->
-                        KeyBindRow(
-                            btn.title, ctrls[btn], capture, m, small,
-                            divider = i < GbaControls.Btn.entries.lastIndex,
-                            subtitle = btn.subtitle, labelBadge = btn.badge,
-                        ) { controlRequest(btn) }
+                    // Every game's buttons, then the DS games' and the GBA / Game Boy games' own.
+                    GbaControls.Group.entries.forEach { group ->
+                        com.pokedaisy.app.companion.ui.GroupTitleLine(group.title, m, first = group == GbaControls.Group.ALL)
+                        val btns = GbaControls.Btn.entries.filter { it.group == group }
+                        btns.forEachIndexed { i, btn ->
+                            KeyBindRow(
+                                btn.title, ctrls[btn], capture, m, small,
+                                divider = i < btns.lastIndex,
+                                subtitle = btn.subtitle, labelBadge = btn.badge,
+                            ) { controlRequest(btn) }
+                        }
                     }
                 }
             }

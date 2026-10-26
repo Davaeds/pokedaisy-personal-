@@ -12,32 +12,38 @@ The button settings live in the `CONTROLS` group, on both screens: the top scree
 
 ## Game buttons
 
-`GAME BUTTONS` sets which physical button presses each GBA button. Open it and you'll see a row per GBA button with the keys it's on now.
+`GAME BUTTONS` sets which physical button presses each GBA button. Open it and you'll see a row per button with the keys it's on now, in three groups: the buttons every game uses, then the DS games' own and the GBA and Game Boy games' own.
 
-| GBA button | Default |
-| --- | --- |
-| `GBA A` and `GBA B` | A and B |
-| `GBA L` and `GBA R` | L1 and R1 |
-| `GBA START` and `GBA SELECT` | START and SELECT |
-| `X` and `Y` | X and Y |
-| `GBA TURBO A` and `GBA TURBO B` | Nothing |
+| Group | Button | Default |
+| --- | --- | --- |
+| `ALL GAMES` | `GBA A` and `GBA B` | A and B |
+| | `GBA L` and `GBA R` | L1 and R1 |
+| | `GBA START` and `GBA SELECT` | START and SELECT |
+| | `GBA TURBO A` and `GBA TURBO B` | Nothing |
+| `DS GAMES` | `X` and `Y` | X and Y |
+| `GBA AND GAME BOY` | `START 2` and `SELECT 2` | X and Y |
+| | `TO COMPANION` | X |
 
-`X` and `Y` are the DS games' own X and Y. In the other games they're a second START and SELECT, so X opens the menu and Y uses your registered item, like in the DS games. On a handheld with two screens, X does one more thing on the field: see [X takes your buttons to the companion](#x-takes-your-buttons-to-the-companion). Each GBA button also has a keyboard key (Z, X, A, S, Enter and so on) for when you play with one.
+`X` and `Y` are the DS games' own X and Y. The GBA and Game Boy games have no X or Y, so the same buttons get rows of their own there: `START 2` and `SELECT 2` are a second START and SELECT, so X opens the menu and Y uses your registered item, like in the DS games. On a handheld with two screens, `TO COMPANION` does one more thing on the field: see [X takes your buttons to the companion](#x-takes-your-buttons-to-the-companion). Each GBA button also has a keyboard key (Z, X, A, S, Enter and so on) for when you play with one.
 
-To change one, tap its row (it says `PRESS A BUTTON…`) and press the button you want on your device. That works the same on the top screen and on the companion: there, while a row waits, the game's screen shows a window asking for the button and the keys you hold. `CANCEL`, or `BACK`, leaves the button as it was. `TURBO A` and `TURBO B` also get `CLEAR`, which takes them off every button again.
+Since a DS game and a GBA game never run at the same time, a button can be in both groups at once: X is the DS games' `X` and the other games' `START 2`. Change one and the other stays as it was. So you can keep X for the companion in the GBA games and put `START 2` on another button, or clear `TO COMPANION` to have X be only a second START.
 
-The new button replaces everything that GBA button had, keyboard key included. A button can only do one GBA button: put it on a new one and it leaves the old one.
+In a game, the companion's `GAME BUTTONS` shows the group for the game you're playing under `ALL GAMES`. The top screen's Settings shows all three.
+
+To change one, tap its row (it says `PRESS A BUTTON…`) and press the button you want on your device. That works the same on the top screen and on the companion: there, while a row waits, the game's screen shows a window asking for the button and the keys you hold. `CANCEL`, or `BACK`, leaves the button as it was. `TURBO A`, `TURBO B` and the GBA and Game Boy rows also get `CLEAR`, which takes them off every button again.
+
+The new button replaces everything that row had, keyboard key included. A button can only do one thing in a game: put it on a new row and it leaves the old one in the same games. `TO COMPANION` is the exception: it shares its button with whatever else is on it.
 
 > [!NOTE]
 > Buttons go by Android's names, which follow an Xbox controller's layout. On AYN and Retroid devices, `A` is the bottom face button even where the printed label says something else. If A and B feel swapped, swap them here.
 
 The D-pad and the analog stick always move; they can't be remapped. First-time setup has a page listing these buttons too, and you change them right there the same way.
 
-![The top screen's GAME BUTTONS page, a row for each GBA button with the keys it's on](shots/settings-buttons.png "GAME BUTTONS on the top screen")
+![The top screen's GAME BUTTONS page: ALL GAMES, DS GAMES and GBA AND GAME BOY, a row for each button with the keys it's on](shots/settings-buttons.png "GAME BUTTONS on the top screen")
 
 ## X takes your buttons to the companion
 
-On a handheld with two screens, press `X` while you walk around in a GBA or Game Boy game and your buttons move down to the companion, like the menu on a DS game's touch screen. A silver strip slides up along the bottom of the game with an arrow pointing down at the companion, and `L` and `R` slide in at the ends of the companion's tab bar.
+On a handheld with two screens, press `X` (the `TO COMPANION` button in `GAME BUTTONS`) while you walk around in a GBA or Game Boy game and your buttons move down to the companion, like the menu on a DS game's touch screen. A silver strip slides up along the bottom of the game with an arrow pointing down at the companion, and `L` and `R` slide in at the ends of the companion's tab bar.
 
 While your buttons are down there, the game keeps running but doesn't see them:
 
@@ -48,7 +54,7 @@ While your buttons are down there, the game keeps running but doesn't see them:
 
 They also come back by themselves when the game needs them: a battle starts, or something you picked on the companion opens on the game, like the PC or a flight.
 
-`X` only does this on the field with nothing else going on. In a text box, a menu or a battle it's still `START`. DS games keep their own X.
+`X` only does this on the field with nothing else going on. In a text box, a menu or a battle it's still `START`, as long as it's also `START 2`. DS games keep their own X.
 
 ## Turbo A and B
 
