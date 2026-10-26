@@ -364,6 +364,22 @@ SPRITES.reddit = {
     '...KKKKKKK...',
   ],
 };
+SPRITES.discord = {
+  pal: { K: INK, W: '#ffffff', B: '#5865f2' },
+  rows: [
+    '..KK.....KK..',
+    '.KBBKKKKKBBK.',
+    '.KBBBBBBBBBK.',
+    'KBBBBBBBBBBBK',
+    'KBBWWBBBWWBBK',
+    'KBBWWBBBWWBBK',
+    'KBBWWBBBWWBBK',
+    'KBBBBBBBBBBBK',
+    'KBBBBBBBBBBBK',
+    '.KBBKKKKKBBK.',
+    '..KK.....KK..',
+  ],
+};
 SPRITES.dual = {
   pal: { K: INK, U: '#58a0f0', W: '#d8f0ff', S: '#909098', L: '#c8c8d0', G: '#58c058' },
   rows: [
@@ -876,6 +892,8 @@ export const FRAMES = {
   patreonHot: frameSvg([[INKF, 1], ['#ffffff', 1]], 2, '#ffc4be'),
   reddit: frameSvg([[INKF, 1], ['#ffe2d2', 1]], 2, '#ffb48e'),
   redditHot: frameSvg([[INKF, 1], ['#ffffff', 1]], 2, '#ffcbb0'),
+  discord: frameSvg([[INKF, 1], ['#e3e6ff', 1]], 2, '#aab2ff'),
+  discordHot: frameSvg([[INKF, 1], ['#ffffff', 1]], 2, '#c6ccff'),
   chip: frameSvg([[INKF, 1]], 1, '#ffffff'),
   chipOn: frameSvg([[INKF, 1]], 1, INKF),
   pillGreen: frameSvg([['#2c7a3a', 1]], 1, '#dff6e2'),
