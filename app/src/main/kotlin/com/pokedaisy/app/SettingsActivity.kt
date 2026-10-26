@@ -597,15 +597,6 @@ class SettingsActivity : ComponentActivity() {
                 prefs.expandZoomOnText = !prefs.expandZoomOnText
                 revision++
             }.takeIf { prefs.gameAspect == com.pokedaisy.app.companion.GameAspect.WIDE },
-            // EXPAND only: what moves in the light above and below battles and menus (a phone held upright).
-            SettingRow(tk("AMBIENT EFFECT"), prefs.ambientEffect.label,
-                       labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.AMBIENT_EFFECT),
-                       subtitle = "Above and below battles and menus") {
-                val effects = com.pokedaisy.app.companion.AmbientEffect.entries
-                selector = Selector(tk("AMBIENT EFFECT"), effects.map { it.label }, prefs.ambientEffect.label) { l ->
-                    prefs.ambientEffect = effects.first { it.label == l }
-                }
-            }.takeIf { prefs.gameAspect == com.pokedaisy.app.companion.GameAspect.WIDE },
             // The party, a minimap, the balls and BAG / WILD over the game on the field: its own page (layout, look, size, parts).
             SettingRow(tk("HUD"), onOff(prefs.fieldHud), labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.HUD), opensPage = true, subtitle = "Party, minimap and bag over the game") { screen = Screen.FIELD_HUD },
             // One screen: FIGHT, POKéMON and RUN in the room beside a battle (BattleButtons).

@@ -7,7 +7,6 @@ import com.pokedaisy.app.companion.GridStrength
 import com.pokedaisy.app.companion.ScreenFilter
 import com.pokedaisy.app.companion.Smoothing
 import com.pokedaisy.app.companion.FfMusicMode
-import com.pokedaisy.app.companion.AmbientEffect
 
 /** Tiny SharedPreferences wrapper for app-level state. */
 class Prefs(context: Context) {
@@ -395,11 +394,6 @@ class Prefs(context: Context) {
     var expandZoomOnText: Boolean
         get() = p.getBoolean("expand_zoom_on_text", true)
         set(v) = p.edit().putBoolean("expand_zoom_on_text", v).apply()
-
-    /** EXPAND > AMBIENT EFFECT: what moves in the light above and below battles and menus (BUBBLES by default). */
-    var ambientEffect: AmbientEffect
-        get() = AmbientEffect.entries.firstOrNull { it.name == p.getString("expand_ambient_effect", null) } ?: AmbientEffect.BUBBLES
-        set(v) = p.edit().putString("expand_ambient_effect", v.name).apply()
 
     /** SCREEN > OVERLAY: the frame around the game, an [com.pokedaisy.app.overlay.OverlayChoice.key] - "" (none, the
      * default), a built-in frame ("builtin:DAISY") or an imported overlay ("user:<its folder>"). */

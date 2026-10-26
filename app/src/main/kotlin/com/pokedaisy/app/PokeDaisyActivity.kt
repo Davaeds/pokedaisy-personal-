@@ -1229,11 +1229,6 @@ class PokeDaisyActivity : Activity() {
             Prefs(this@PokeDaisyActivity).expandZoomOnText = on
             view.camera.zoomOnText = on
         }
-        override val ambientEffect get() = Prefs(this@PokeDaisyActivity).ambientEffect
-        override fun setAmbientEffect(effect: com.pokedaisy.app.companion.AmbientEffect) {
-            Prefs(this@PokeDaisyActivity).ambientEffect = effect
-            MgbaCore.pkWideSetAmbientEffect(effect.ordinal)
-        }
         override val expandOffer get() = expandOfferUp.value
         override fun answerExpandOffer(turnOn: Boolean) {
             val prefs = Prefs(this@PokeDaisyActivity)
@@ -2374,8 +2369,6 @@ class PokeDaisyActivity : Activity() {
     /** Show the status bar above the game per SETTINGS > STATUS BAR, fit, stretch or widen
      * the game per SETTINGS > ASPECT, and draw it through SETTINGS > SHADERS. */
     private fun syncGameScreen() {
-        // EXPAND's AMBIENT EFFECT, as either Settings screen left it.
-        MgbaCore.pkWideSetAmbientEffect(Prefs(this).ambientEffect.ordinal)
         if (!::statusBar.isInitialized) return
         val prefs = Prefs(this)
         // STATUS BAR > COMPANION: the strip goes over the companion's tabs instead.

@@ -49,9 +49,6 @@ object NewFeatures {
     /** SETTINGS > MENU SOUNDS: the game's menu beep off, cries kept (companion.data.MenuSounds). */
     const val MENU_SOUNDS = "menu_sounds"
 
-    /** SETTINGS > AMBIENT EFFECT: what moves in EXPAND's light above and below battles and menus (pk_wide.c). */
-    const val AMBIENT_EFFECT = "ambient_effect"
-
     /** SETTINGS > SHADERS > UNLIT SCREEN: the GBA's screen with no light of its own (ScreenShaders.UNLIT). */
     const val UNLIT_SCREEN = "unlit_screen"
 
@@ -83,7 +80,7 @@ object NewFeatures {
     val ALL = listOf(
         HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB, TOUCH_CONTROLS,
         COMPANION_TAB, REUSABLE_TMS, UNLIT_SCREEN, LIGHT_COMPANION, X_COMPANION, PLAYER_LOOK, RIVAL_LOOK, TEXT_LOOK, DAY_NIGHT,
-        FOLLOWER, COMPANION_HOTKEY, MENU_SOUNDS, AMBIENT_EFFECT,
+        FOLLOWER, COMPANION_HOTKEY, MENU_SOUNDS,
     )
 
     private const val DAYS = 7

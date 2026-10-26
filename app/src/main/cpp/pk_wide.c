@@ -1985,17 +1985,19 @@ static uint32_t glowAt(const uint32_t* frame, int X, int Y, const int reach[4], 
 // they used to repeat its top / bottom pixel down every column, which a tall window (a phone held upright) showed as
 // stripes. There it's ambient light instead, in the picture's own colours: the frame is averaged in 8x8 blocks, each
 // column's light is its blocks weighted towards that edge and towards the colourful ones (so the top follows the sky and
-// what's in it, the bottom the text box and the field above it), spread out and dimmed towards the window's edge with its colour kept. Over it, the
-// effect picked in AMBIENT EFFECT (pk_wide_set_ambient_effect): motes, sparkles, snow, ... Only above and below: the
-// sides keep the drawn scene.
+// what's in it, the bottom the text box and the field above it), spread out and dimmed towards the window's edge with its
+// colour kept. Over it, an effect for where the battle is (ambientPick: the way the game picks the battle's background,
+// from the tile under the player, the map's type and its weather): rain, snow, leaves in grass, bubbles on water,
+// sparkles in a cave, ... Only above and below: the sides keep the drawn scene.
 
 enum {
-    AMB_BUBBLES, AMB_SPARKLES, AMB_FIREFLIES, AMB_EMBERS, AMB_SNOW, AMB_RAIN, AMB_PETALS, AMB_AURORA, AMB_NONE, AMB_COUNT
+    AMB_MOTES, AMB_BUBBLES, AMB_SPARKLES, AMB_FIREFLIES, AMB_EMBERS, AMB_SNOW, AMB_SAND, AMB_RAIN, AMB_STORM, AMB_LEAVES,
+    AMB_MIST, AMB_COUNT
 };
-static volatile int ambEffect = AMB_BUBBLES;
+static int ambPicked = AMB_MOTES;   // from where the player last stood on the field (ambientPick)
+static int ambNow = AMB_MOTES;      // this frame's
+static int ambFlash;                // STORM's lightning, 0..256
 static inline uint32_t lerp(uint32_t a, uint32_t b, int t);
-
-void pk_wide_set_ambient_effect(int effect) { ambEffect = effect >= 0 && effect < AMB_COUNT ? effect : AMB_BUBBLES; }
 
 #define AMB_CELL 8
 #define AMB_CW (PK_WIDE_W / AMB_CELL)    // 30
@@ -2124,6 +2126,20 @@ static void effStar(int x, int y, int arm, int amount, uint32_t colour) {
     effAdd(x - 1, y + 1, amount / 4, true, 0); effAdd(x + 1, y + 1, amount / 4, true, 0);
 }
 
+/** A ring of radius r16 (1/16 pixels) at (cx, cy): a bubble's edge, its inside faintly lit. */
+static void effRing(int cx, int cy, int r16, int amount, uint32_t colour) {
+    int r = (r16 >> 4) + 2, px = cx >> 4, py = cy >> 4;
+    for (int y = py - r; y <= py + r; y++)
+        for (int x = px - r; x <= px + r; x++) {
+            int dx = x * 16 + 8 - cx, dy = y * 16 + 8 - cy;
+            int d2 = dx * dx + dy * dy;
+            int off = (d2 - r16 * r16) / (2 * r16);      // about how far off the circle, 1/16 pixels
+            if (off < 0) off = -off;
+            if (off < 14) effAdd(x, y, amount * (14 - off) / 14, false, colour);
+            else if (d2 < r16 * r16) effAdd(x, y, amount / 6, true, 0);
+        }
+}
+
 static inline uint32_t rgbc(int r, int g, int b) { return 0xFF000000u | (uint32_t) b << 16 | (uint32_t) g << 8 | (uint32_t) r; }
 
 /** The side's light colour at column x (0..255 per channel), unblurred: what tints the effects that follow the screen. */
@@ -2160,14 +2176,21 @@ static void ambientEffects(struct PkWideView v, const int reach[4]) {
         memset(effTint[j], 0, (size_t) v.w);
         memset(effFixA[j], 0, (size_t) v.w);
     }
-    int effect = ambEffect;
-    if (effect == AMB_AURORA || effect == AMB_NONE) return;   // drawn in ambientAt
+    int effect = ambNow;
     int t = ambTick;
+    ambFlash = 0;
+    if (effect == AMB_STORM) {
+        // Lightning now and then: a flash, a dark beat, a second flash fading out.
+        uint32_t cyc = (uint32_t) t / 300u;
+        int at = (int) ((uint32_t) t % 300u) - (int) (hash32(cyc * 0x2545F491u) % 200u);
+        ambFlash = at < 0 ? 0 : at < 3 ? 210 : at < 6 ? 30 : at < 9 ? 170 : at < 30 ? 170 * (30 - at) / 21 : 0;
+    }
+    if (effect == AMB_MIST) return;   // drawn in ambientAt
     for (int side = 0; side < 2; side++) {
         int span = reach[2 + side];
         if (span < 12) continue;
         // How many: by the margin's area (a 240 x 120 margin gets the base count).
-        int area = v.w * span, base = (int[]) { 7, 16, 10, 16, 40, 34, 14, 0, 0 }[effect];
+        int area = v.w * span, base = (int[]) { 7, 12, 16, 10, 16, 40, 46, 34, 52, 14, 0 }[effect];
         int n = base * area / (240 * 120);
         if (n < 3) n = 3;
         if (n > 120) n = 120;
@@ -2178,7 +2201,7 @@ static void ambientEffects(struct PkWideView v, const int reach[4]) {
             uint32_t h2 = hash32(h);
             int x0 = v.x + (int) (h % (uint32_t) v.w);
             switch (effect) {
-            case AMB_BUBBLES: {          // soft motes drifting away from the game, swaying, fading in and out
+            case AMB_MOTES: {            // soft motes drifting away from the game, swaying, fading in and out (dust)
                 int period = 540 + (int) (h2 % 420);
                 int p = (int) (((uint32_t) t + h2) % (uint32_t) period) * 256 / period;
                 int dist = 2 + p * (span - 2) / 256;
@@ -2244,7 +2267,33 @@ static void ambientEffects(struct PkWideView v, const int reach[4]) {
                 }
                 break;
             }
-            case AMB_RAIN: {             // slanted streaks falling fast
+            case AMB_BUBBLES: {          // rings rising and wobbling, gone at the top of the margin
+                int speed = 5 + (int) (h2 % 9);                  // 1/16 pixels a frame
+                int r = 2 + (int) ((h >> 20) % 3);
+                int len = (span + 2 * r) * 16;
+                int y16 = (int) (((uint32_t) t * (uint32_t) speed + h2) % (uint32_t) len);
+                int Yp = (side ? PK_WIDE_H + span - 1 : -1) + r - (y16 >> 4);
+                int x = x0 + sinTab[(t * 2 + (int) (h >> 7)) & 255] * 3 / 127;
+                effRing(x * 16 + 8, Yp * 16 + 8, r * 16, 170, effColour(side, x, 360, 110));
+                effAdd(x - r / 2, Yp - r / 2, 210, false, effColour(side, x, 200, 210));   // the shine
+                break;
+            }
+            case AMB_SAND: {             // grains blown sideways, sinking a little
+                int speed = 24 + (int) (h2 % 40);                // 1.5 to 4 pixels a frame
+                int lenX = (v.w + 16) * 16;
+                int x16 = (int) (((uint32_t) t * (uint32_t) speed + h2) % (uint32_t) lenX);
+                int x = v.x - 8 + (x16 >> 4);
+                int d = 1 + (int) ((h >> 12) % (uint32_t) span);
+                int Yp = edgeY + dir * d + sinTab[(t / 2 + (int) (h >> 7)) & 255] * 2 / 127;
+                uint32_t c = effColour(side, x, 300, 40 + (int) ((h >> 24) % 60));
+                int a = 140 + (int) ((h >> 8) % 80);
+                effAdd(x, Yp, a, false, c);
+                effAdd(x - 1, Yp, a / 2, false, c);
+                if ((h >> 27) & 1) effAdd(x - 2, Yp, a / 4, false, c);
+                break;
+            }
+            case AMB_RAIN:
+            case AMB_STORM: {            // slanted streaks falling fast
                 int speed = 48 + (int) (h2 % 32);                // 3 to 5 pixels a frame
                 int dl = 5 + (int) ((h >> 20) % 5);
                 int len = (span + dl) * 16;
@@ -2255,7 +2304,7 @@ static void ambientEffects(struct PkWideView v, const int reach[4]) {
                 for (int q = 0; q < dl; q++) effAdd(x - q / 3, top + q, 50 + q * 110 / dl, false, c);
                 break;
             }
-            case AMB_PETALS: {           // petals drifting down, fluttering
+            case AMB_LEAVES: {           // leaves drifting down, fluttering
                 int speed = 4 + (int) (h2 % 6);
                 int len = span * 16;
                 int y16 = (int) (((uint32_t) t * (uint32_t) speed + h2) % (uint32_t) len);
@@ -2293,11 +2342,9 @@ static uint32_t ambientAt(int X, int Y, const int reach[4], uint32_t alpha) {
     int lo = at - r < 0 ? 0 : at - r, hi = at + r >= PK_WIDE_W ? PK_WIDE_W - 1 : at + r;
     int dim = t * t >> 8;
     int bright = 256 - dim * 160 / 256;                             // 1.0 at the game -> ~0.38 at the window's edge
-    int effect = ambEffect;
-    if (effect != AMB_NONE) {
-        int wave = sinTab[(X * 2 - d * 3 + ambTick / 2) & 255] + sinTab[(X - d * 2 - ambTick / 3 + 90) & 255];
-        bright += bright * wave / (127 * (effect == AMB_AURORA ? 6 : 14));   // a slow shimmer, about +-14% (+-33%)
-    }
+    int effect = ambNow;
+    int wave = sinTab[(X * 2 - d * 3 + ambTick / 2) & 255] + sinTab[(X - d * 2 - ambTick / 3 + 90) & 255];
+    bright += bright * wave / (127 * (effect == AMB_MIST ? 6 : 14));   // a slow shimmer, about +-14% (+-33% in mist)
     int col[3];
     for (int c = 0; c < 3; c++) {
         int32_t blur = (preA[side][hi + 1][c] - preA[side][lo][c]) / (hi - lo + 1) / 16;
@@ -2311,9 +2358,10 @@ static uint32_t ambientAt(int X, int Y, const int reach[4], uint32_t alpha) {
     int tint = 0, fixA = 0;
     uint32_t fixC = 0;
     if (i >= 0 && j >= 0 && i < effView.w && j < effView.h) { tint = effTint[j][i]; fixA = effFixA[j][i]; fixC = effFixC[j][i]; }
-    if (effect == AMB_AURORA) {
-        // Curtains of light: two bands winding slowly through the margin, in the picture's colours lit up, with faint
-        // rays running through them.
+    if (ambFlash) tint += ambFlash * (256 - t / 2) / 256;   // lightning, brightest by the game
+    if (effect == AMB_MIST) {
+        // Banks of mist: two bands winding slowly through the margin, in the picture's colours lit up, with faint
+        // streaks running through them.
         int rays = 192 + sinTab[(X * 5 + ambTick / 3) & 255] * 40 / 127 + sinTab[(X * 2 - ambTick / 5 + 30) & 255] * 24 / 127;
         for (int b = 0; b < 2; b++) {
             int mid = far * (b ? 58 : 32) / 100 + sinTab[((X + b * 60) + ambTick * (b ? 1 : -1) / 3) & 255] * far / (7 * 127)
@@ -2326,8 +2374,8 @@ static uint32_t ambientAt(int X, int Y, const int reach[4], uint32_t alpha) {
                 tint += (f * f >> 8) * (b ? 80 : 110) / 256 * rays / 256;
             }
         }
-        if (tint > 230) tint = 230;
     }
+    if (tint > 230) tint = 230;
     for (int c = 0; c < 3; c++) {
         if (tint) {
             int lit = col[c] * 3 / 2 + 56;
@@ -2743,6 +2791,48 @@ static void wildRoll(int s, int keep) {
     wildOwned = true;
 }
 
+/** The ambient effect for where the player stands, chosen the way BattleSetup_GetTerrainId picks a battle's background
+ * (pokefirered / pokeemerald: the metatile behavior under the player, then gMapHeader.mapType; surfing counts as water),
+ * with the map's weather first (gMapHeader.weather, +0x16; mapType +0x17 in every Gen 3 engine). The behavior values
+ * are FireRed's (attributes u32, low 9 bits) or Emerald's / Ruby's (u16, low 8): tall grass 0x02 (FireRed's cycling
+ * road grass 0xD1), Emerald's long grass 0x03, sand 0x21 (Emerald's deep sand 0x06, FireRed's shallow water 0x17, which
+ * it gives the sand background), Emerald's ash grass 0x24, mountain top 0x0C, water 0x10-0x15 / 0x19. */
+static int ambientPick(const struct Snap* s) {
+    uint32_t hdr = (uint32_t) C[PK_WIDE_MAP_HEADER];
+    int weather = (int) r8(hdr + 0x16), mapType = (int) r8(hdr + 0x17);
+    bool kanto = mapPreviews;
+    int b = -1;
+    int mid = block(s, s->posX + MAP_OFFSET, s->posY + MAP_OFFSET);
+    if (mid >= 0 && mid <= NUM_METATILES_TOTAL && s->primary && s->secondary) {
+        uint32_t ts = mid < s->split ? s->primary : s->secondary;
+        uint32_t i = (uint32_t) (mid < s->split ? mid : mid - s->split);
+        uint32_t attrs = r32(ts + (uint32_t) C[PK_WIDE_ATTR_OFFSET]);
+        b = C[PK_WIDE_ATTR_SIZE] == 4 ? (int) (r32(attrs + 4 * i) & 0x1FF) : (int) (r16(attrs + 2 * i) & 0xFF);
+    }
+    switch (weather) {
+    case 3: case 20: case 21: return AMB_RAIN;          // rain, Route 119 / 123's
+    case 5: case 13: case 15: return AMB_STORM;         // thunderstorm, downpour, the legendaries' clash
+    case 4: return AMB_SNOW;
+    case 6: case 9: return AMB_MIST;                    // fog
+    case 7: case 12: return AMB_EMBERS;                 // volcanic ash, drought
+    case 8: return AMB_SAND;                            // sandstorm
+    case 10: case 14: return AMB_BUBBLES;               // underwater
+    }
+    bool water = (b >= 0x10 && b <= 0x15) || b == 0x19 || surfing() > 0;
+    if (b == 0x02 || (kanto && b == 0xD1)) return AMB_LEAVES;
+    if (!kanto && b == 0x03) return AMB_FIREFLIES;
+    if (b == 0x21 || (kanto ? b == 0x17 : b == 0x06)) return AMB_SAND;
+    if (!kanto && b == 0x24) return AMB_EMBERS;
+    switch (mapType) {
+    case 4: return water ? AMB_BUBBLES : AMB_SPARKLES;  // underground: a cave
+    case 5: return AMB_BUBBLES;                         // underwater
+    case 8: case 9: return AMB_MOTES;                   // indoors, a secret base: dust in the light
+    }
+    if (water) return AMB_BUBBLES;
+    if (b == 0x0C) return AMB_SNOW;                     // a mountain top
+    return AMB_MOTES;
+}
+
 int pk_field_state(struct mCore* core, int runIndoors, int wildKeep) {
     if (!F.locked) return 0;
     G = (struct GBA*) core->board;
@@ -2763,6 +2853,7 @@ int pk_field_state(struct mCore* core, int runIndoors, int wildKeep) {
 
 void pk_wide_reset(void) {
     pk_wide_gb_reset();
+    ambPicked = AMB_MOTES;
     prev = -1;
     memset(seenObjects, 0, sizeof(seenObjects));
     npieces[0] = npieces[1] = 0;
@@ -3091,6 +3182,7 @@ static int viewInner(struct mCore* core, const uint32_t* frame, uint32_t* out, s
         lastScore = best;
     }
     bool valid = best >= MIN_SCORE;
+    if (valid && bestSnap >= 0) ambPicked = ambientPick(&snaps[bestSnap]);
     bool battle = !valid && inBattleScreen();
     bool menu = !valid && !battle && menuScreen();
     // A menu screen opened from a battle (POKéMON, BAG: gMain.inBattle stays set) is part of the battle for the
@@ -3157,6 +3249,7 @@ static int viewInner(struct mCore* core, const uint32_t* frame, uint32_t* out, s
     if (ambient) {
         sinInit();
         ambTick++;
+        ambNow = ambPicked;
         ambientLightPrepare(frame);
         ambientEffects(v, reach);
     } else {

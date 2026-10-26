@@ -671,12 +671,6 @@ Java_com_pokedaisy_app_MgbaCore_pkWideSetDraw(JNIEnv* env, jobject thiz, jboolea
     g.wideSkipNext = !draw;
 }
 
-// EXPAND's AMBIENT EFFECT (pk_wide_set_ambient_effect). Any thread.
-JNIEXPORT void JNICALL
-Java_com_pokedaisy_app_MgbaCore_pkWideSetAmbientEffect(JNIEnv* env, jobject thiz, jint effect) {
-    pk_wide_set_ambient_effect(effect);
-}
-
 // WIDE: the last frame wasn't drawn (pkWideSetDraw(false)): nothing new to publish. Emu thread.
 JNIEXPORT jboolean JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkWideSkipped(JNIEnv* env, jobject thiz) {
