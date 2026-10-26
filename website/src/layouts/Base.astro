@@ -120,7 +120,7 @@ const petals = [[4, 22, 1, 0, 22], [91, 10, 2, 4, 26], [70, 62, 1, 9, 24], [10, 
           <Pixel name="logo" scale={1} />
           <div>
             <p class="foot-name"><span class="red">POKE</span>DAISY</p>
-            <p class="muted tiny">Free and open source, GPL v3. No ads, no accounts, no tracking.</p>
+            <p class="muted tiny">Free and open source, GPL v3. No ads, no accounts, no cookies. The site only counts visits, anonymously.</p>
           </div>
         </div>
         <div class="foot-links tiny">
@@ -146,6 +146,10 @@ const petals = [[4, 22, 1, 0, 22], [91, 10, 2, 4, 26], [70, 62, 1, 9, 24], [10, 
       </div>
     </footer>
 
+    <script>
+      import { startAnalytics } from '../lib/analytics.js';
+      startAnalytics();
+    </script>
     <script>
       // Windows open as they scroll into view, a few at a time.
       const reveal = new IntersectionObserver((entries) => {

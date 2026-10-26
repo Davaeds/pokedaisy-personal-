@@ -131,6 +131,7 @@ const kinds = [
 
 <script>
   import { clean, validate, toFirestore } from '../../functions/feedback-form.js';
+  import { track } from '../lib/analytics.js';
 
   const ENDPOINT = 'https://firestore.googleapis.com/v1/projects/pokedaisy/databases/(default)/documents/feedback';
   const form = document.querySelector<HTMLFormElement>('[data-feedback]')!;
@@ -189,6 +190,7 @@ const kinds = [
     try {
       const res = await fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toFirestore(sub)) });
       if (!res.ok) throw new Error(String(res.status));
+      track('feedback_sent', { kind: sub.kind, ok: 'yes' });  // the kind only, nothing typed
       form.reset();
       form.querySelector<HTMLInputElement>(`input[name=kind][value=${sub.kind}]`)!.checked = true;
       thanks.querySelector<HTMLAnchorElement>('[data-where]')!.href = JSON.parse(form.dataset.where!)[sub.kind];
@@ -197,6 +199,7 @@ const kinds = [
       thanks.scrollIntoView({ behavior: 'smooth', block: 'center' });
       status.textContent = '';
     } catch {
+      track('feedback_sent', { kind: sub.kind, ok: 'no' });
       status.textContent = 'It didn\'t go through - check the connection and try again.';
       status.className = 'status small error';
     } finally {

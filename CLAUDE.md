@@ -1778,6 +1778,9 @@ The site's game matrix is README's Supported games table; a row of all "—" mea
 so the export lists it under `inProgress` - off the matrix, and "in progress" in the ROM check (none since R.O.W.E.
 got its companion, 2026-10-09).
 The site's demos and art never use real Pokémon / move / item names or the games' art (the user's rule).
+**Website analytics** (`website/src/lib/analytics.js`, website/README.md's "Analytics"): anonymous GA4 counts, no cookies, a fixed
+event list checked per value, live site only. gtag.js sends nothing without its cookie, so the page posts gtag's own hit itself;
+off until `MEASUREMENT_ID` is set. A new tracked action goes on `EVENTS` with its allowed values (and the README's list).
 **Feedback without GitHub** (`website/src/pages/feedback.astro`, `/feedback/`): game request / bug / idea, written
 to Firestore `feedback` (write-only, `firestore.rules`) and posted on GitHub by `website/functions/index.js` (game requests /
 ideas as discussions in the `game-requests` / `ideas` categories via GraphQL, bugs as issues)

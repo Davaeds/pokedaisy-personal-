@@ -85,7 +85,7 @@ const title = 'POKEDAISY'.split('');
         <p data-type-text>Play your Pokémon games. See everything about them on your second screen, or right beside the game.</p>
         <span class="more"><Pixel name="more" scale={1} /></span>
       </div>
-      <div class="cta">
+      <div class="cta" data-track-where="hero">
         <a class="btn f-primary h-primaryHot primary big" href={download}>
           <Pixel name="download" scale={1} /> DOWNLOAD{latest && <span class="ver">v{latest.version}</span>}
         </a>
@@ -273,7 +273,7 @@ const title = 'POKEDAISY'.split('');
         <ul class="highlights">
           {highlights(latest.body).map((h) => <li set:html={h} />)}
         </ul>
-        <div class="cta">
+        <div class="cta" data-track-where="latest">
           <a class="btn f-primary h-primaryHot primary" href={download}><Pixel name="download" scale={0.667} /> DOWNLOAD APK</a>
           <a class="btn f-btn h-btnHot" href="/releases/">ALL RELEASES</a>
         </div>
