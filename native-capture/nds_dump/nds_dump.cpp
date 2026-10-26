@@ -36,10 +36,68 @@ using namespace melonDS;
 
 static std::string savePath;
 static NDS* nds = nullptr;
+
+// watch LO HI [r|w|rw] [N]: the ARM9's own reads / writes of main RAM in [LO, HI) reported with its registers (the
+// interpreter only: the JIT's fast paths skip the bus). How the Gen 5 addresses were traced back to code.
+struct Watch { u32 lo, hi; bool r, w; int left; };
+static std::vector<Watch> watches;
+static bool inFrame = false;
+static u64 frameCount_();
+class WatchNDS : public NDS {
+public:
+    using NDS::NDS;
+    void hit(u32 addr, u32 v, int size, bool write)
+    {
+        if (!inFrame) return;
+        for (Watch& w : watches) {
+            if (addr + size <= w.lo || addr >= w.hi || !(write ? w.w : w.r) || w.left == 0) continue;
+            if (w.left > 0) w.left--;
+            const u32* R = ARM9.R;
+            printf("watch f%llu %s%d %08X = %08X  pc %08X lr %08X r0 %08X r1 %08X r2 %08X r3 %08X r4 %08X r5 %08X sp %08X%s\n",
+                (unsigned long long) frameCount_(), write ? "W" : "R", size * 8, addr, v, R[15], R[14], R[0], R[1], R[2],
+                R[3], R[4], R[5], R[13], ARM9.CPSR & 0x20 ? " T" : "");
+            // WATCH_STACK=N: N words from the stack too (return addresses: the callers)
+            static int stackWords = getenv("WATCH_STACK") ? atoi(getenv("WATCH_STACK")) : 0;
+            if (stackWords > 0) {
+                printf("    stack:");
+                for (int i = 0; i < stackWords; i++) {
+                    u32 sp = R[13] + 4 * i, v = 0;
+                    if ((sp & ARM9.DTCMMask) == ARM9.DTCMBase) memcpy(&v, &ARM9.DTCM[sp & (DTCMPhysicalSize - 1)], 4);
+                    else if ((sp & 0xFF000000u) == 0x02000000u) memcpy(&v, &MainRAM[sp & MainRAMMask], 4);
+                    printf(" %08X", v);
+                }
+                printf("\n");
+            }
+            fflush(stdout);
+        }
+    }
+    void ARM9Write8(u32 a, u8 v) override { if (!watches.empty()) hit(a, v, 1, true); NDS::ARM9Write8(a, v); }
+    void ARM9Write16(u32 a, u16 v) override { if (!watches.empty()) hit(a, v, 2, true); NDS::ARM9Write16(a, v); }
+    void ARM9Write32(u32 a, u32 v) override { if (!watches.empty()) hit(a, v, 4, true); NDS::ARM9Write32(a, v); }
+    u32 ARM9Read32(u32 a) override
+    {
+        u32 v = NDS::ARM9Read32(a);
+        if (!watches.empty()) hit(a, v, 4, false);
+        return v;
+    }
+    u16 ARM9Read16(u32 a) override
+    {
+        u16 v = NDS::ARM9Read16(a);
+        if (!watches.empty()) hit(a, v, 2, false);
+        return v;
+    }
+    u8 ARM9Read8(u32 a) override
+    {
+        u8 v = NDS::ARM9Read8(a);
+        if (!watches.empty()) hit(a, v, 1, false);
+        return v;
+    }
+};
 static u32 heldKeys = 0;     // pressed keys, bit = melonDS key index (A 0 .. L 9, X 10, Y 11)
 static bool touching = false;
 static u16 touchX = 0, touchY = 0;
 static u64 frameCount = 0;
+static u64 frameCount_() { return frameCount; }
 static int wideMargin = 0;   // wide MX [MY]: EXPAND drawn every frame (pk_nds_wide.cpp)
 static int wideMarginY = 0;
 // look DX DY: the window (wide's, at first) moved DX, DY DS pixels a frame, as the look-around moves it - set before
@@ -221,7 +279,9 @@ static void runFrames(int n, u32 keys)
 #ifdef NDS_DUMP_GL
         if (gpuOn) pk_nds_gl_begin_frame();
 #endif
+        inFrame = true;
         nds->RunFrame();
+        inFrame = false;
         frameCount++;
         static int wasBattle = 0;
         int battle = 0;
@@ -392,7 +452,7 @@ int main(int argc, char** argv)
     // The app's JIT: no fast memory (pk_nds.cpp)
     if (jit) args.JIT = JITArgs {32, true, true, false};
     else args.JIT = std::nullopt;
-    nds = new NDS(std::move(args), &host);
+    nds = new WatchNDS(std::move(args), &host);
     nds->Reset();
 
     NDSCart::NDSCartArgs cartArgs;
@@ -750,6 +810,13 @@ int main(int argc, char** argv)
             double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
             printf("bench %d frames: %.3f ms a frame (wide %d)\n", frames, ms / frames, wideMargin);
             fflush(stdout);
+        } else if (!strcmp(cmd, "watch")) {
+            // watch LO HI [r|w|rw] [N]: report the game's accesses to [LO, HI) (at most N, default 20); watch off clears
+            if (!strcmp(a, "off")) watches.clear();
+            else {
+                bool reads = c[0] && strchr(c, 'r'), writes = !c[0] || strchr(c, 'w');   // writes only by default
+                watches.push_back({num(a), num(b), reads, writes, d[0] ? (int) num(d) : 20});
+            }
         } else if (!strcmp(cmd, "itcm32")) {
             // itcm32 ADDR VALUE: a word into the hook's spare ITCM (an argument a call points at)
             u32 val = num(b);

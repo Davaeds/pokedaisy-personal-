@@ -84,4 +84,6 @@ In FireRed, LeafGreen, Emerald, Ruby and Sapphire, the bag tab has a `PC` button
 
 It works in every language, and on hacks that kept those games' code: Glazed, Emerald Kaizo, Emerald Legacy, Gaia, Odyssey, Orange Islands, Ultra Violet, Ghost Grey and the CFRU hacks (Unbound, Radical Red, Amethyst, Sword and Shield Ultimate Plus). Heart and Soul, SoulGold, Lazarus and Emerald Imperium have the `PC` button too, but not the bag's `USE`, `GIVE` and `TAKE` yet (SoulGold's `USE` for the keep-away spray aside). So do Red, Blue, Yellow (in every language) and Crystal on the Game Boy: the PC there is the whole one from their Pokémon Centers, with its other choices too, like the PC that stores your items.
 
+On the DS it works in Platinum, HeartGold, SoulSilver and Black, with the same whole PC as their Pokémon Centers.
+
 Like `USE`, it only works while you're walking around: with a menu, a conversation or a battle open, it says so instead.

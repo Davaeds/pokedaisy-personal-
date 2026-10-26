@@ -64,11 +64,11 @@ static const PkNdsFieldGame BLACK_US = {
     0,
     0, 0, 0,
     0,
-    0,            // no field map hook yet (PC / FLY)
+    0,            // no field map hook: PC / FLY take the GameSystem's event check's place (pk_nds_call.cpp's Gen5Fns)
     0x020AA1BC,   // the BGM stack's first song (u16; 0x1C an entry, the depth at bgmDepth)
     0x0214E024,   // sSeqPlayer (NitroSDK's, 16 x 0x44: player 6 plays the field's song, 12 a battle's)
     0,
-    0,
+    3,            // pk_nds_call's Gen 5 jobs (BLACK there)
     0, 0,
     5,
     0x08, 0x08, 0x04, 21, 93,

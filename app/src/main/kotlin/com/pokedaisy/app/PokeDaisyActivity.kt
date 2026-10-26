@@ -528,7 +528,7 @@ class PokeDaisyActivity : Activity() {
                 if (o.result == com.pokedaisy.app.companion.data.ItemUseResult.USED) closeCompanionWindow()
                 done(o)
             }
-            if (dsCalls()) return dsAction(MgbaCore.NDS_ACTION_PC, intArrayOf(0, 0, 0, 0), opened)
+            if (dsCalls()) return dsAction(MgbaCore.NDS_ACTION_PC, intArrayOf(0, 0, 0, 0), done = opened)
             val gb = gbField()
             if (gb != null && ::engine.isInitialized && engine.running) {
                 val notNow = com.pokedaisy.app.companion.data.ItemUseOutcome(
@@ -548,13 +548,20 @@ class PokeDaisyActivity : Activity() {
             }
         }
 
-        /** A DS game whose PC pk_nds_call knows (Platinum, HeartGold / SoulSilver). */
-        private fun dsCalls() = romIsNds && com.pokedaisy.app.companion.data.gen4ConfigFor(telemetry.snapshot.value.game) != null
+        /** A DS game whose PC pk_nds_call knows (Platinum, HeartGold / SoulSilver, Black). */
+        private fun dsCalls() = romIsNds && telemetry.snapshot.value.game.let {
+            com.pokedaisy.app.companion.data.gen4ConfigFor(it) != null || com.pokedaisy.app.companion.data.gen5ConfigFor(it) != null
+        }
     }
 
     /** Posts DS [action] (MgbaCore.NDS_ACTION_*) on the emu thread, then waits a few frames for the game to run it:
-     * USED once it has, NOT_NOW when the field isn't free (a text box, a menu, a battle) or it never ran. */
-    private fun dsAction(action: Int, args: IntArray, done: (com.pokedaisy.app.companion.data.ItemUseOutcome) -> Unit) {
+     * USED once it has (or what [ran] makes of its results), NOT_NOW when the field isn't free (a text box, a menu, a
+     * battle) or it never ran. */
+    private fun dsAction(
+        action: Int, args: IntArray,
+        ran: ((IntArray?) -> com.pokedaisy.app.companion.data.ItemUseResult)? = null,
+        done: (com.pokedaisy.app.companion.data.ItemUseOutcome) -> Unit,
+    ) {
         if (!::engine.isInitialized || !engine.running) return done(com.pokedaisy.app.companion.data.ItemUseOutcome(com.pokedaisy.app.companion.data.ItemUseResult.FAILED))
         val inBattle = telemetry.snapshot.value.inBattle
         fun finish(r: com.pokedaisy.app.companion.data.ItemUseResult) {
@@ -567,7 +574,7 @@ class PokeDaisyActivity : Activity() {
         fun poll(seq: Int, left: Int) {
             engine.requestFieldItemJob(inBattle) { _, _ ->
                 when (MgbaCore.pkNdsActionStatus(seq)) {
-                    1 -> finish(com.pokedaisy.app.companion.data.ItemUseResult.USED)
+                    1 -> finish(ran?.invoke(MgbaCore.pkNdsActionResults(seq)) ?: com.pokedaisy.app.companion.data.ItemUseResult.USED)
                     0 -> if (left > 0) poll(seq, left - 1) else finish(com.pokedaisy.app.companion.data.ItemUseResult.NOT_NOW)
                     else -> finish(com.pokedaisy.app.companion.data.ItemUseResult.NOT_NOW)
                 }
@@ -719,12 +726,49 @@ class PokeDaisyActivity : Activity() {
     /** FLY on the MAP tab (Fly.kt): two steps on the emu thread - the checks, controls locked and the fade to black,
      * then once it's black the game's own Fly map choice. */
     private val flyAction = object : com.pokedaisy.app.companion.FlyAction {
-        override fun canFly() = dsFly() || fieldItemSupport()?.canFly == true || gbField() != null
+        override fun canFly() = dsFly() || gen5Fly() || fieldItemSupport()?.canFly == true || gbField() != null
 
         /** A DS game whose FLY pk_nds_call knows (Platinum, HeartGold / SoulSilver): its fly spots are the destinations
          * (spawn ids). */
         private fun dsConfig() = com.pokedaisy.app.companion.data.gen4ConfigFor(telemetry.snapshot.value.game)
         private fun dsFly() = romIsNds && dsConfig()?.flySpots?.isNotEmpty() == true
+
+        /** Black: pk_nds_call's FLY the party menu's way; its destinations are the towns' places (Gen5Field.kt). */
+        private fun gen5Config() = com.pokedaisy.app.companion.data.gen5ConfigFor(telemetry.snapshot.value.game)
+        private fun gen5Spots() = com.pokedaisy.app.companion.data.gen5FlySpots(telemetry.snapshot.value.game)
+        private fun gen5Fly() = romIsNds && gen5Config() != null && gen5Spots().isNotEmpty()
+
+        /** Black's FLY check (the skill's own test of this place), then the towns whose arrival flag is set. */
+        private fun gen5Targets(done: (com.pokedaisy.app.companion.data.FlyTargets) -> Unit) {
+            val flyer = dsFlyer() ?: return done(com.pokedaisy.app.companion.data.FlyTargets(com.pokedaisy.app.companion.data.FlyResult.NO_FLYER))
+            val inBattle = telemetry.snapshot.value.inBattle
+            val cfg = gen5Config() ?: return done(com.pokedaisy.app.companion.data.FlyTargets(com.pokedaisy.app.companion.data.FlyResult.FAILED))
+            val spots = gen5Spots()
+            fun finish(t: com.pokedaisy.app.companion.data.FlyTargets) {
+                Log.i("pokedaisy", "fly targets (Gen 5): $t")
+                val shown = if (inBattle && t.result == com.pokedaisy.app.companion.data.FlyResult.NOT_NOW) t.copy(result = com.pokedaisy.app.companion.data.FlyResult.IN_BATTLE) else t
+                runOnUiThread { done(shown) }
+            }
+            fun poll(seq: Int, left: Int) {
+                engine.requestFieldItemJob(inBattle) { calls, _ ->
+                    val st = MgbaCore.pkNdsActionStatus(seq)
+                    val res = if (st == 1) MgbaCore.pkNdsActionResults(seq) else null
+                    when {
+                        res != null -> {
+                            val result = com.pokedaisy.app.companion.data.gen5FlyResult(res[1])
+                            val open = com.pokedaisy.app.companion.data.gen5OpenFlySpots({ a, n -> calls.read(a, n) }, cfg, spots)
+                            finish(com.pokedaisy.app.companion.data.FlyTargets(result, if (result == com.pokedaisy.app.companion.data.FlyResult.OK) open else emptyList(), flyer.first, flyer.second))
+                        }
+                        st == 0 && left > 0 -> poll(seq, left - 1)
+                        else -> finish(com.pokedaisy.app.companion.data.FlyTargets(com.pokedaisy.app.companion.data.FlyResult.NOT_NOW))
+                    }
+                }
+            }
+            engine.requestFieldItemJob(inBattle) { _, _ ->
+                val seq = MgbaCore.pkNdsAction(MgbaCore.NDS_ACTION_FLY_CHECK, 0, 0, 0, 0)
+                if (seq == 0) finish(com.pokedaisy.app.companion.data.FlyTargets(com.pokedaisy.app.companion.data.FlyResult.NOT_NOW)) else poll(seq, 30)
+            }
+        }
 
         /** The first party Pokémon that knows FLY (not an egg): its slot and the snapshot's personality for it. */
         private fun dsFlyer(): Pair<Int, Long>? = telemetry.snapshot.value.party.withIndex().firstOrNull { (_, m) ->
@@ -766,6 +810,10 @@ class PokeDaisyActivity : Activity() {
         }
 
         override fun targets(done: (com.pokedaisy.app.companion.data.FlyTargets) -> Unit) {
+            if (gen5Fly()) {
+                if (!::engine.isInitialized || !engine.running) return done(com.pokedaisy.app.companion.data.FlyTargets(com.pokedaisy.app.companion.data.FlyResult.FAILED))
+                return gen5Targets(done)
+            }
             if (dsFly()) {
                 if (!::engine.isInitialized || !engine.running) return done(com.pokedaisy.app.companion.data.FlyTargets(com.pokedaisy.app.companion.data.FlyResult.FAILED))
                 return dsTargets(done)
@@ -804,6 +852,33 @@ class PokeDaisyActivity : Activity() {
         }
 
         override fun fly(mapsec: Int, targets: com.pokedaisy.app.companion.data.FlyTargets, done: (com.pokedaisy.app.companion.data.FlyResult) -> Unit) {
+            if (gen5Fly()) {
+                // [mapsec] is a town's place here (gen5OpenFlySpots); the flyer must still be in its slot.
+                val cfg = gen5Config()
+                val spot = cfg?.let { com.pokedaisy.app.companion.data.gen5FlySpotAt(it, mapsec, gen5Spots()) }
+                val flyer = dsFlyer()
+                if (spot == null || !::engine.isInitialized || !engine.running) return done(com.pokedaisy.app.companion.data.FlyResult.FAILED)
+                if (flyer == null || flyer.first != targets.flyerSlot || flyer.second != targets.flyerPersonality) {
+                    return done(com.pokedaisy.app.companion.data.FlyResult.NO_FLYER)
+                }
+                closeCompanionWindow()
+                // The job's result 1 is the flight's event: none when the game's own check said no (walked indoors since).
+                var refused = false
+                dsAction(MgbaCore.NDS_ACTION_FLY, intArrayOf(flyer.first, spot.mapHeader, 0, 0), ran = { res ->
+                    if (res != null && res[1] == 0) {
+                        refused = true
+                        com.pokedaisy.app.companion.data.ItemUseResult.FAILED
+                    } else com.pokedaisy.app.companion.data.ItemUseResult.USED
+                }) { o ->
+                    done(when (o.result) {
+                        com.pokedaisy.app.companion.data.ItemUseResult.USED -> com.pokedaisy.app.companion.data.FlyResult.OK
+                        com.pokedaisy.app.companion.data.ItemUseResult.IN_BATTLE -> com.pokedaisy.app.companion.data.FlyResult.IN_BATTLE
+                        com.pokedaisy.app.companion.data.ItemUseResult.NOT_NOW -> com.pokedaisy.app.companion.data.FlyResult.NOT_NOW
+                        else -> if (refused) com.pokedaisy.app.companion.data.FlyResult.CANT_FLY_HERE else com.pokedaisy.app.companion.data.FlyResult.FAILED
+                    })
+                }
+                return
+            }
             if (dsFly()) {
                 // [mapsec] is a fly spot's spawn id here; the flyer must still be in its slot (the party can change).
                 val spot = dsConfig()?.flySpots?.getOrNull(mapsec - 1)

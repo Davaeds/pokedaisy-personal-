@@ -53,6 +53,8 @@ It works in FireRed, LeafGreen, Emerald, Ruby and Sapphire in every language and
 
 On the Game Boy it works in Red, Blue, Yellow (in every language) and Crystal. The list is the one the game's own map would give you: in Red, Blue and Yellow every town you've been to, and in Crystal the towns you've been to in the region you're in (Kanto's once you've reached the Indigo Plateau).
 
+On the DS it works in Platinum, HeartGold, SoulSilver and Black. Black asks for no badge: once someone knows the move, every town you've arrived at is on the list.
+
 ## Which games get a picture
 
 No game art comes with PokeDaisy. The map picture is rebuilt from your own ROM, once, the first time you play a game, and kept after that. So the very first time, the map can take a moment to appear.

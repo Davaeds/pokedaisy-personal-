@@ -2021,7 +2021,25 @@ saved at Gear Station) and from the cart's own files. Heap blocks keep their sou
   `scripts/gen_gen5_guide.py` the wild sets by season, the bosses' teams and HERE's item balls (`GuideGen5BlackGen.kt`,
   read by `Gen5World`); `NdsArt` rebuilds the icons, item icons, fronts and DEX pages (`dex.tsv`, types in the cart's
   Gen 5 ids, `Gen4Dex` maps them). Type ids: Gen 5 has no ??? type, so its 9..16 are the app's 10..17 (`gen5Type`).
-- Not done: PC / FLY (no field hook found yet), the Unova map picture, battle input, the Elite Four's done flags (they're
+- PC and FLY (`pk_nds_call.cpp`'s `Gen5Fns`, traced with nds_dump's `watch LO HI` - the ARM9's own reads / writes of a
+  range with its registers and, with `WATCH_STACK=N`, its stack: who set the GameSystem's event when A was pressed at
+  the PC, at a nurse, and when FLY was picked from the party menu). The GameSystem runs one GMEVENT at a time (+0x18);
+  each frame with none, `GameSystem_Main` asks its event check (+0x10, the field's in overlay 21, given the field map)
+  and runs what it returns. There's no field map main to hook as on Gen 4, so the hook takes the check's place for one
+  frame - the game calls it only when no event runs, the moment pressing A would start one. A job that starts an event
+  stores the check back, makes its event, sets it (`GameSystem_SetEvent`, 0x02012109) and goes on into an ARM9
+  `movs r0, #0; bx lr`, so the check can't replace it. PC: the script event (0x02158769: gs, script, object) of the
+  Pokémon Center PC's script, 10090 (what the check starts at Accumula's PC; the globe beside it is 2108). FLY: the
+  party menu's FLDSKILL calls (overlay 10): the check work from the field map (0x0215E841), the skill's test (0x0215EA15:
+  FLY = skill 4, allowed where the zone header's +0x1E bit 13 is set - outdoors), and its event (0x0215EA39 with the
+  parameters { party slot, 4, zone }), which lands on the zone's spawn (`flySpotsBlack`' x / z are those, checked).
+  The test and the event run together in a small helper of ours (`stub/pk_nds_skill.c`, in the spare ITCM), so a pick
+  made after walking indoors starts nothing. Black has no badge rule for FLY (the save's badges cleared, the party menu
+  still flew); the app offers the towns whose arrival flag (2480 + n) is set, as places (`Gen5Field.kt`: the Town Map's
+  section ids). Checked headless: the PC's boxes opened and closed back to the field (walking, on the bike too), FLY to
+  all 15 towns the save has, refused in a Pokémon Center, in a battle, a text box and the X menu; an in-game save after
+  each loaded again at the new place.
+- Not done: the Unova map picture, battle input, the Elite Four's done flags (they're
   cleared at the League's door), Ghetsis' and N's (done with the National Dex, which Juniper hands over after the end).
 
 ## Build

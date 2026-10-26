@@ -31,7 +31,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | Platinum (DS) | USA rev 1 | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | — | n/a | — |
 | HeartGold (DS) | USA | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | — | n/a | — |
 | SoulSilver (DS) | USA | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | — | n/a | — |
-| Black (DS) | USA/Europe | ✅ ¹⁴ | — | — | — | — | — | — | ✅ ¹⁴ | ◐ ¹⁴ | ✅ ¹⁴ | — | ✅ ¹⁶ | n/a | — |
+| Black (DS) | USA/Europe | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ◐ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁶ | n/a | — |
 | Amethyst | 1.3.0, 1.4.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ ¹⁹ |
 | Ash Gray | 4.5.3, Fork Bug Fix 1.0 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | — | — | ✅ ¹⁹ |
 | Celia's Stupid Romhack | 1.1.4 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | ✅ ¹⁵ | — | — |
@@ -172,8 +172,11 @@ change to any of the places listed under "Where it's decided" updates its rows h
     the bike bit by the GameData's move form (surf not checked: no surfer in the save), WILD ENCOUNTERS zeroes the zone's
     seven rates in its loaded encounter table (80 steps in Route 1's grass, no battle; back on, one within a few), SMART
     FF's battle wait reads the player's battle adapter (3 = choosing). EXPAND as on Gen 4 (`widecheck` on the Gear
-    Station platform: as many far pixels in the overlap as HeartGold's field, ~20 a frame, all on the outer rows). No PC or
-    FLY yet (no field hook found).
+    Station platform: as many far pixels in the overlap as HeartGold's field, ~20 a frame, all on the outer rows). PC and
+    FLY take the GameSystem's field event check's place for one frame (it runs only while no event does) and start the
+    game's own events: the Pokémon Center PC's script (10090), and FLY the party menu's way (its field-skill check of the
+    place, then the skill's event to the town's zone); traced with nds_dump's `watch`, checked headless (the PC's boxes
+    opened and closed, FLY to all 15 open towns, refused indoors, an in-game save after each loaded again).
 15. REUSABLE TMS patches the branch where the game uses a TM up after it teaches a move (`if (item < ITEM_HM01)
     RemoveBagItem`), found in the ROM by its code (`ReusableTms.find`): the FireRed engine has three (after the TM case's
     animation, after forgetting a move, Task_LearnedMove), Emerald and Ruby / Sapphire one; every one must call the same
