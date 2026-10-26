@@ -5,7 +5,7 @@
 // against its allowed values, and only on the live site, never with Global Privacy Control / Do Not Track.
 
 // The GA4 web stream's measurement ID (G-...; public). Empty = analytics off everywhere.
-export const MEASUREMENT_ID = '';
+export const MEASUREMENT_ID = 'G-CMT9D1FJFZ';
 export const LIVE_HOSTS = ['pokedaisy.com', 'www.pokedaisy.com'];
 
 const ROM_REASONS = ['unknown-hack', 'retail-hack', 'revision', 'other-game', 'gb', 'ds', '7z', 'empty-zip', 'not-a-rom'];

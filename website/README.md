@@ -60,9 +60,7 @@ gtag.js isn't used: it sends nothing when it can't keep its `_ga` cookie, and it
 keeps those visits out of the reports. The page sends gtag's own hit (`/g/collect`) with a beacon instead, so no
 Google script loads either.
 
-Off until `MEASUREMENT_ID` is set. One-time setup: Firebase console > Project settings > Integrations > Google
-Analytics (link the project), then add a web app / GA4 web stream for `https://pokedaisy.com` and put its `G-...` ID
-(public) in `analytics.js`. In GA4 Admin: Google signals off, granular location and device data off, Enhanced
+`MEASUREMENT_ID` is the GA4 web stream for `https://pokedaisy.com` (public; empty turns it off). In GA4 Admin: Google signals off, granular location and device data off, Enhanced
 measurement off (only the events above), data retention 2 months.
 
 ## Feedback form (no GitHub account)
