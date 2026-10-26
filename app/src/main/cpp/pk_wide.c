@@ -2134,7 +2134,23 @@ static uint32_t sideColour(int side, int x) {
     return rgbc(clampi(ch[0], 0, 255), clampi(ch[1], 0, 255), clampi(ch[2], 0, 255));
 }
 
-static uint32_t towards(uint32_t a, int r, int g, int b, int t) { return lerp(a, rgbc(r, g, b), t); }
+
+/** An effect's colour at column x: the light's own colour there, made more colourful (sat / 256) and lifted towards
+ * white by lift / 256 - so a speck is the screen's colour, only brighter, whatever the game shows. */
+static uint32_t effColour(int side, int x, int sat, int lift) {
+    uint32_t c = sideColour(side, x);
+    int ch[3] = { (int) (c & 0xFF), (int) ((c >> 8) & 0xFF), (int) ((c >> 16) & 0xFF) };
+    int lum = (ch[0] * 77 + ch[1] * 150 + ch[2] * 29) >> 8;
+    int hi = 0;
+    for (int k = 0; k < 3; k++) {
+        ch[k] = clampi(lum + (ch[k] - lum) * sat / 256, 0, 255);
+        if (ch[k] > hi) hi = ch[k];
+    }
+    // Brought up to a bright level first (its hue kept), so a dark screen's specks still show, then lifted.
+    if (hi > 0 && hi < 220) for (int k = 0; k < 3; k++) ch[k] = ch[k] * 220 / hi;
+    for (int k = 0; k < 3; k++) ch[k] = clampi(ch[k] + (255 - ch[k]) * lift / 256, 0, 255);
+    return rgbc(ch[0], ch[1], ch[2]);
+}
 
 static void ambientEffects(struct PkWideView v, const int reach[4]) {
     effView = v;
@@ -2181,7 +2197,7 @@ static void ambientEffects(struct PkWideView v, const int reach[4]) {
                 int x = v.x + (int) (hc % (uint32_t) v.w), d = 1 + (int) ((hc >> 12) % (uint32_t) span);
                 int life = sinTab[p >> 1];
                 int a = life * life / 127 * 200 / 127;   // a quick flash
-                uint32_t c = towards(sideColour(side, x), 255, 255, 255, 150);
+                uint32_t c = effColour(side, x, 400, 110);
                 effStar(x, edgeY + dir * d, 1 + (int) ((hc >> 20) % 3), a, c);
                 break;
             }
@@ -2193,9 +2209,9 @@ static void ambientEffects(struct PkWideView v, const int reach[4]) {
                 int cyp = (edgeY + dir * (mid + sinTab[(t / 5 + (int) (h >> 17)) & 255] * ay / 2 / 127)) * 16;
                 int glow = sinTab[(t * 2 / 3 + (int) (h >> 5)) & 255];
                 int a = glow > 0 ? glow * 190 / 127 : 0;
-                uint32_t c = towards(sideColour(side, cxp >> 4), 255, 236, 120, 190);
+                uint32_t c = effColour(side, cxp >> 4, 460, 40);
                 effDisc(cxp, cyp, 4 * 16, a * 2 / 3, false, c);
-                effAdd(cxp >> 4, cyp >> 4, a, false, rgbc(255, 250, 200));
+                effAdd(cxp >> 4, cyp >> 4, a, false, effColour(side, cxp >> 4, 360, 150));
                 break;
             }
             case AMB_EMBERS: {           // sparks rising, flickering, cooling as they go
@@ -2206,9 +2222,10 @@ static void ambientEffects(struct PkWideView v, const int reach[4]) {
                 int heat = 256 - p;
                 int flick = 160 + sinTab[(t * 5 + (int) (h >> 13)) & 255] * 80 / 127;
                 int a = heat * flick / 256;
-                uint32_t c = rgbc(255, 110 + heat / 3, 30 + heat / 8);
+                // Hot = the screen's colour near white, cooling to its deepest.
+                uint32_t c = effColour(side, x, 480, heat / 4);
                 effDisc(x * 16 + 8, Yp * 16 + 8, 3 * 16, a / 2, false, c);
-                effAdd(x, Yp, a, false, rgbc(255, 200 + heat / 6, 120));
+                effAdd(x, Yp, a, false, effColour(side, x, 400, 60 + heat / 2));
                 if ((h >> 6) & 1) effAdd(x, Yp + dir * -1, a * 2 / 3, false, c);
                 break;
             }
@@ -2219,7 +2236,7 @@ static void ambientEffects(struct PkWideView v, const int reach[4]) {
                 int Yp = side ? PK_WIDE_H + (y16 >> 4) : -span + (y16 >> 4);
                 int x = x0 + sinTab[(t / 2 + (int) (h >> 7)) & 255] * 3 / 127;
                 int a = 150 + (int) ((h >> 20) % 70);
-                uint32_t c = towards(sideColour(side, x), 255, 255, 255, 220);
+                uint32_t c = effColour(side, x, 300, 150);
                 effAdd(x, Yp, a, false, c);
                 if ((h >> 26) % 3 == 0) {        // a bigger flake
                     effAdd(x + 1, Yp, a * 2 / 3, false, c); effAdd(x, Yp + 1, a * 2 / 3, false, c);
@@ -2234,7 +2251,7 @@ static void ambientEffects(struct PkWideView v, const int reach[4]) {
                 int y16 = (int) (((uint32_t) t * (uint32_t) speed + h2) % (uint32_t) len);
                 int top = side ? PK_WIDE_H + (y16 >> 4) - dl : -span + (y16 >> 4) - dl;
                 int x = x0 - (y16 >> 4) / 3;
-                uint32_t c = towards(sideColour(side, x), 210, 225, 255, 170);
+                uint32_t c = effColour(side, x, 340, 70);
                 for (int q = 0; q < dl; q++) effAdd(x - q / 3, top + q, 50 + q * 110 / dl, false, c);
                 break;
             }
@@ -2245,8 +2262,8 @@ static void ambientEffects(struct PkWideView v, const int reach[4]) {
                 int Yp = side ? PK_WIDE_H + (y16 >> 4) : -span + (y16 >> 4);
                 int x = x0 + sinTab[(t / 2 + (int) (h >> 7)) & 255] * 14 / 127 + (y16 >> 4) / 4;
                 int flap = sinTab[(t * 3 + (int) (h >> 15)) & 255];
-                uint32_t c = towards(sideColour(side, x), 255, 150 + (int) ((h >> 9) % 50), 190, 215);
-                uint32_t rim = towards(c, 255, 235, 245, 120);
+                uint32_t c = effColour(side, x, 520, (int) ((h >> 9) % 50));
+                uint32_t rim = effColour(side, x, 400, 130);
                 int a = 220;
                 effAdd(x, Yp, a, false, rim);
                 if (flap > 40) {                                                   // flat: an oval
