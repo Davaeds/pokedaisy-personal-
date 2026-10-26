@@ -532,6 +532,14 @@ panel locked at half the screen sideways, `SidePanel.setDsScreen`, the dock unde
 `_HEARTGOLD`, pages from the cart); GUIDE on both (`GuidePlatinum.kt`, `GuideHeartGold.kt` over `Gen4World`:
 `scripts/gen_gen4_guide.py` writes the wild sets, boss teams and HERE's items from the decomps; gym leaders go by badge -
 HG / SS clears the leaders' trainer flags for rematches; `readGen4Progress` adds the badges and the DS clock's hour).
+**DS RESOLUTION** (SCREEN group on both screens, `Prefs.dsResolution`, ORIGINAL default / 2x-8x, NEW tag; GitHub discussion #241):
+melonDS's OpenGL renderer ported to OpenGL ES in our patch (`MELONDS_GLES`; ES 3.2 or 3.0 + draw_buffers_indexed) on an EGL
+context of the emu thread (`nds/pk_nds_gl.cpp`), frames to EmulatorView through a SurfaceTexture (`gpuFrames`), our compositor
+(melonDS's maths + EXPAND's margins by a CPU plan, `PkNdsWidePlan`), 1x copies of both screens read back a frame late. EXPAND
+there is one polygon list of the whole view drawn in one pass (`submitGpu`, no slices): no seams, far cheaper. ORIGINAL keeps
+the software renderer, pixel for pixel. Check GPU changes headless with nds_dump's `NDS_DUMP_GL` build (ANGLE; `gpu N`,
+`gpushot`) and compare `ffmode 0` / `ffmode 3` runs; shaders compile as GLSL ES 3.00 in WebGL2 too. docs/DEVELOPMENT.md's
+"DS RESOLUTION".
 **Companion options (2026-10-08)**: RESUME GAMES (`Prefs.autoResume`, top-screen Settings > LIBRARY; off =
 a launch boots the save, a return from HOME still resumes - `freshLaunch`), CLOSE COMPANION (SETTINGS, two
 screens: the Presentation goes away until BACK on the game), STATUS BAR OFF / GAME / COMPANION (`Prefs.statusBarOnCompanion`,

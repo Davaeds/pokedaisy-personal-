@@ -7,6 +7,7 @@
 
 #include <jni.h>
 #include <android/log.h>
+#include <android/native_window_jni.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -497,8 +498,9 @@ Java_com_pokedaisy_app_MgbaCore_pkRunFrame(JNIEnv* env, jobject thiz) {
         // Not drawn (fast-forward's unseen frames, or one whose 3D the frame before skipped): nothing new to show.
         if (g.wide && g.wideCrc && g.viewW > 0 && g.viewH > 0 && (g.wideSkipNext || !pk_nds_frame_drawn())) {
             g.wideSkipped = true;
-        } else if (g.wide && g.wideCrc && g.viewW > 0 && g.viewH > 0 &&
+        } else if (pk_nds_scale() <= 1 && g.wide && g.wideCrc && g.viewW > 0 && g.viewH > 0 &&
                    pk_nds_wide_draw(g.wide, g.viewX, g.viewY, g.viewW, g.viewH)) {
+            // (the GPU path puts its window out itself: pk_nds_presented)
             g.wideW = g.viewW;
             g.wideH = g.viewH;
         } else {
@@ -1564,6 +1566,45 @@ Java_com_pokedaisy_app_MgbaCore_pkNdsWildRates(JNIEnv* env, jobject thiz, jintAr
 JNIEXPORT void JNICALL
 Java_com_pokedaisy_app_MgbaCore_pkNdsSetDraw(JNIEnv* env, jobject thiz, jboolean draw, jboolean drawNext) {
     if (pk_nds_active()) pk_nds_set_draw(draw == JNI_TRUE, drawNext == JNI_TRUE);
+}
+
+// DS RESOLUTION (nds/pk_nds_gl.h): 1 = the software renderer, 2-8 the GPU's. Taken before the next frame. Emu thread.
+JNIEXPORT void JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsSetScale(JNIEnv* env, jobject thiz, jint scale) {
+    if (pk_nds_active()) pk_nds_set_scale(scale);
+}
+
+// The scale in effect (1: software), and whether the GPU path can run here (-1 not tried yet, 0 no, 1 yes).
+JNIEXPORT jint JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsScale(JNIEnv* env, jobject thiz) {
+    return pk_nds_active() ? pk_nds_scale() : 1;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsGpuSupported(JNIEnv* env, jobject thiz) {
+    return pk_nds_gpu_supported();
+}
+
+// The game screen's SurfaceTexture's Surface for the GPU path's frames (null: none). Any thread.
+JNIEXPORT void JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsGlSetWindow(JNIEnv* env, jobject thiz, jobject surface) {
+    pk_nds_set_window(surface ? ANativeWindow_fromSurface(env, surface) : NULL);
+}
+
+// Whether the last frame went out through the GPU path (the view then takes it from the SurfaceTexture). Emu thread.
+JNIEXPORT jboolean JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsGlPresented(JNIEnv* env, jobject thiz) {
+    return pk_nds_active() && pk_nds_presented() ? JNI_TRUE : JNI_FALSE;
+}
+
+// The GPU path's frame presented at [timestamp] (SurfaceTexture.getTimestamp): x, y, w, h in DS pixels, texels wide,
+// high into out (6 ints). False when it's not known. Any thread.
+JNIEXPORT jboolean JNICALL
+Java_com_pokedaisy_app_MgbaCore_pkNdsGlFrameInfo(JNIEnv* env, jobject thiz, jlong timestamp, jintArray out) {
+    int32_t v[6];
+    if (!out || (*env)->GetArrayLength(env, out) < 6 || !pk_nds_gpu_frame_info((int64_t) timestamp, v)) return JNI_FALSE;
+    (*env)->SetIntArrayRegion(env, out, 0, 6, (const jint*) v);
+    return JNI_TRUE;
 }
 
 // STEADY FF music for a DS game (nds/pk_nds_music.h): the song id the game plays (-1 = not mapped), a copy of the game

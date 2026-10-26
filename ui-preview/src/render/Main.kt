@@ -2180,6 +2180,13 @@ fun main(args: Array<String>) {
         Shot("settings-search", tw, th, td, activity { SettingsActivity() }) {
             onNode(hasSetTextAction()).performTextInput("rebind")
         },
+        // DS RESOLUTION: found by "upscale" (its keywords), and its pick-list.
+        Shot("settings-ds-resolution", tw, th, td, activity { SettingsActivity() }) {
+            onNode(hasSetTextAction()).performTextInput("upscale")
+        },
+        Shot("settings-ds-resolution-pick", tw, th, td, activity { SettingsActivity() }) {
+            onNodeWithText("DS RESOLUTION").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        },
         Shot("settings-folders", tw, th * 2, td, activity { SettingsActivity() }) { onNodeWithText("FOLDERS").performScrollTo().performClick() },
         // CHEATS from the hub (no cheats yet), then as a game's library menu opens it.
         Shot("settings-cheats-empty", tw, th, td, activity { SettingsActivity() }) {

@@ -552,6 +552,17 @@ private fun homeRows(
         // EXPAND only: whether a conversation, sign, menu or picture over the field pulls the zoom in (battles always do).
         SettingRow(tk("AUTO ZOOM IN"), onOff(s.expandZoomOnText), subtitle = "1x on dialogue, signs, menus") { s.setExpandZoomOnText(!s.expandZoomOnText); changed() }
             .takeIf { s.gameAspect == GameAspect.WIDE },
+        // A DS game: its 3D at 2x to 8x the DS's own on the GPU, or ORIGINAL (the CPU's, pixel for pixel).
+        s.dsResolution?.let { scale ->
+            SettingRow(
+                tk("DS RESOLUTION"), if (s.dsGpuAvailable) dsResolutionLabel(scale) else tk("N/A"), enabled = s.dsGpuAvailable,
+                labelBadge = NewFeatures.badge(NewFeatures.DS_RESOLUTION), subtitle = "Sharper 3D in DS games",
+            ) {
+                if (!s.dsGpuAvailable) return@SettingRow
+                val labels = dsResolutionLabels()
+                select(Selector(tk("DS RESOLUTION"), labels, dsResolutionLabel(scale)) { l -> s.setDsResolution(labels.indexOf(l) + 1); changed() })
+            }
+        },
         // The party, a minimap, the balls and BAG / WILD over the game on the field: its own page (layout, look, size, parts).
         SettingRow(tk("HUD"), onOff(s.fieldHud), labelBadge = NewFeatures.badge(NewFeatures.HUD), opensPage = true, subtitle = "Party, minimap and bag over the game") { navigate(Page.FIELD_HUD) },
         // One screen: FIGHT, POKéMON and RUN in the room beside a battle (BattleButtons).

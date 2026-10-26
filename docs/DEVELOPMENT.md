@@ -1885,13 +1885,14 @@ Platinum (USA rev 1, `CPUE`) and HeartGold / SoulSilver (USA, `IPKE` / `IPGE`) r
 EXPAND and STEADY music.
 
 **The core.** `third_party/melonds` (a submodule pinned to upstream 1.1) builds its core library only, with the
-software 3D renderer (no OpenGL, unthreaded: on the emulation thread, since melonDS's render thread raced fast-forward's
-frame skip on the Thor and showed frames with black rows) and the JIT without fast memory. Our changes are one patch,
+software 3D renderer (unthreaded: on the emulation thread, since melonDS's render thread raced fast-forward's frame skip
+on the Thor and showed frames with black rows), its OpenGL renderer ported to OpenGL ES (DS RESOLUTION, below) and the
+JIT without fast memory. Our changes are one patch,
 `third_party/patches/melonds-pokedaisy.patch`, applied to the submodule's working tree at configure time by
 `apply_melonds_patch.cmake` (once; a tree that has it is left alone): EXPAND's GPU3D hooks (every polygon past culling,
 the lists' swap at VBlank, the clipper), the software renderer's column range, fast-forward's frame skip
 (`GPU::SkipDraw` / `SkipDrawNext`: no 2D lines or 3D render on a frame nobody sees, decided at line 215 where the next
-frame's 3D starts, never while display capture is on) and `NDS::Current` as a plain static (Android's emulated
+frame's 3D starts, never while display capture is on), the OpenGL renderer's port (below) and `NDS::Current` as a plain static (Android's emulated
 `thread_local` cost ~8% of the emulation thread). To change it: edit `third_party/melonds`, then
 `git -C third_party/melonds diff > third_party/patches/melonds-pokedaisy.patch`. Moving the submodule means re-making the
 patch. melonDS and its bundled pieces (FatFs, Teakra, xxHash, tiny-AES-c, blip_buf, Dolphin's code) are in NOTICE and
@@ -1939,6 +1940,31 @@ software renderer draws only the rows and columns the shown window needs. The mi
 (`nds_dump`'s `widecheck` must find no difference). Battles carry their 512 px BG3 background past the screen, and the
 HP boxes, the text box and the field menu's bar to the edges, from the nearest steady rows (sprites tracked per row so
 a flicker in the intro doesn't reach the margins).
+
+**DS RESOLUTION (the GPU path).** `ORIGINAL` is the software renderer above, pixel for pixel; `2x`-`8x` switch melonDS to its
+OpenGL renderer (`nds/pk_nds_gl.cpp`, between frames, back and forth while playing). The patch ports it to OpenGL ES
+(`MELONDS_GLES`): the GLSL 1.40 shaders rewritten to GLSL ES 3.00 when compiled (`OpenGLSupport.cpp`'s `ToGLES`: version
+line, precisions, `layout(location)` for the outputs) plus the few lines ES rejects (int literals as floats), the
+palette as raw R16UI halfwords decoded in the shader (ES has no 1_5_5_5_REV), `glMapBufferRange`, an RGBA readback for
+display capture, and the fog / edge passes into a framebuffer without the depth texture they read (a feedback loop on
+tile GPUs). At 2x and up opaque polygons grow by a texel (two from 5x), each edge offset outward square to itself
+(`GrowPolygon`): Gen 4's map blocks meet corner-on-side, and at a higher resolution the clear colour showed through as
+black cracks along the paths (pushing corners away from the centre left long thin strips' cracks open). It needs ES 3.2, or 3.0 / 3.1 with OES / EXT_draw_buffers_indexed (`glColorMaski` is loaded at run time into
+`OpenGL::ColorMaski`); without either the row is `N/A`. Our hooks on the renderer: two colour textures drawn in turn (the
+3D a frame shows survives the next frame's, drawn at line 215 before the frame ends, so we compose after `RunFrame`),
+`BlitHook` in place of melonDS's compositor (records which texture the frame showed), and `Wide`, a polygon list of ours
+drawn instead of the game's at any view size and scale. Our compositor (one shader in `pk_nds_gl.cpp`, melonDS's own
+blend maths) draws the top screen's window into a SurfaceTexture the view hands over (`EmulatorView.gpuFrames`;
+`pkNdsGlFrameInfo` matches each buffer's timestamp to its window and size) and both screens at 1x into a PBO, read a
+drawn frame later, for the bottom display, thumbnails and EXPAND's checks. The EGL context lives on the emu thread for
+the game; the view's context shares nothing with it. **EXPAND on the GPU**: the slices give way to one list - every
+submission mapped from the window's view onto clip space (as the box test's retry maps it) and clipped once, placed in
+the view's own pixels (`submitGpu` / `swapGpu` in `pk_nds_wide.cpp`) - drawn by the renderer as one picture, so no seams
+and none of the slices' CPU cost; a submission it can't take (a viewport not the whole screen, the list full) draws the
+game's own list for that frame. The margins' 2D (fog layers over the 3D, a battle's BG3, the screen's edge rows carried
+on) is planned per pixel on the CPU as before (`PkNdsWidePlan`: a colour, the 3D alone or under a 2D colour, or a
+screen pixel to repeat) and put together by the compositor. Far zoom-outs draw the 3D at a lower scale (a budget of
+1.5 screens at 8x). Headless: nds_dump's `NDS_DUMP_GL` build runs it through ANGLE (its README).
 
 **Fast-forward.** A shown frame of an FF group draws; the others skip drawing (above), which took 4x from ~200 to 240
 DS frames a second on the Thor. Whether the next frame is seen is decided a frame ahead (its 3D starts at line 215,

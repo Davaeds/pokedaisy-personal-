@@ -114,6 +114,10 @@ class EmulatorEngine(
     @Volatile var wildFlag = 0L
     @Volatile var wildEncounters = 100
 
+    /** DS RESOLUTION ([Prefs.dsResolution]): a DS game's 3D scale, handed to the core before the next frame. */
+    @Volatile var ndsScale = 1
+    private var ndsScaleSet = -1
+
     /** REUSABLE TMS: the ROM's spots that use a TM up ([com.pokedaisy.app.companion.data.ReusableTms]; empty = none
      * known) and whether they're patched; both go in on the next frame boundary ([setReusableTms]). */
     @Volatile private var tmSites: List<com.pokedaisy.app.companion.data.ReusableTms.Site> = emptyList()
@@ -737,6 +741,7 @@ class EmulatorEngine(
     private fun loop(rom: File, save: File, resume: File?) {
         emuJobs.clear()   // the last game's
         SaveBackups.snapshot(save)
+        ndsScaleSet = -1
         if (!MgbaCore.pkInit(rom.absolutePath, save.absolutePath)) {
             loadError = "mGBA could not load ${rom.name}"
             running = false
@@ -923,6 +928,10 @@ class EmulatorEngine(
                 ) keys = keys xor MgbaCore.Key.B
                 MgbaCore.pkSetKeys(keys)
                 if (nds) {
+                    if (ndsScale != ndsScaleSet) {
+                        MgbaCore.pkNdsSetScale(ndsScale)
+                        ndsScaleSet = ndsScale
+                    }
                     // Fast-forward on the refresh shows the last frame of each group: the others skip their drawing, and
                     // EXPAND's slices (drawn after a frame, for the next) only come before a shown one - drawing them for
                     // every frame was two thirds of a DS frame's cost, and at 3x the group outran the refresh (stutter).

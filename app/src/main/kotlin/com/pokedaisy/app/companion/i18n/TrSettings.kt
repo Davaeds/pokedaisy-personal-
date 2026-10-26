@@ -160,6 +160,8 @@ internal val trSettings: Map<String, Tr> = mapOf(
     "GBA COLORS" to Tr(ja = "GBAの いろ", fr = "COULEURS GBA", de = "GBA-FARBEN", it = "COLORI GBA", es = "COLORES GBA", br = "CORES GBA", pt = "CORES GBA"),
     "ASPECT" to Tr(ja = "アスペクト", fr = "FORMAT", de = "FORMAT", it = "FORMATO", es = "FORMATO", br = "PROPORÇÃO", pt = "PROPORÇÃO"),
     "AUTO ZOOM IN" to Tr(ja = "オート ズームイン", fr = "ZOOM AUTO", de = "AUTO-ZOOM", it = "ZOOM AUTO", es = "ZOOM AUTO", br = "ZOOM AUTO", pt = "ZOOM AUTO"),
+    "DS RESOLUTION" to Tr(ja = "DS かいぞうど", fr = "RÉSOLUTION DS", de = "DS-AUFLÖSUNG", it = "RISOLUZIONE DS", es = "RESOLUCIÓN DS", br = "RESOLUÇÃO DS", pt = "RESOLUÇÃO DS"),
+    "Sharper 3D in DS games" to Tr(ja = "DSの 3Dを くっきりと", fr = "3D plus nette des jeux DS", de = "Schärferes 3D in DS-Spielen", it = "3D più nitido nei giochi DS", es = "3D más nítido en juegos de DS", br = "3D mais nítido nos jogos de DS", pt = "3D mais nítido nos jogos de DS"),
     "1x on dialogue, signs, menus" to Tr(ja = "かいわ・かんばん・メニューで 1x", fr = "1x : dialogues, panneaux, menus", de = "1x bei Dialog, Schild, Menü", it = "1x su dialoghi, cartelli, menu", es = "1x en diálogos, letreros, menús", br = "1x em diálogos, placas, menus", pt = "1x em diálogos, placas, menus"),
     "STRETCH" to Tr(ja = "ひきのばし", fr = "ÉTIRÉ", de = "GESTRECKT", it = "ESTESO", es = "ESTIRADO", br = "ESTICAR", pt = "ESTICAR"),
     "ORIGINAL" to Tr(ja = "オリジナル", fr = "ORIGINAL", de = "ORIGINAL", it = "ORIGINALE", es = "ORIGINAL", br = "ORIGINAL", pt = "ORIGINAL"),

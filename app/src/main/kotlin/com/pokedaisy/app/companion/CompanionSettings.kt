@@ -68,6 +68,12 @@ interface CompanionSettings {
     /** The game's own TMs never run out ([com.pokedaisy.app.companion.data.ReusableTms.BUILT_IN]): the row says so. */
     val reusableTmsBuiltIn: Boolean get() = false
 
+    /** DS RESOLUTION ([com.pokedaisy.app.Prefs.dsResolution]): the scale, null when the game isn't a DS one (no row);
+     * [dsGpuAvailable] false = this device can't run the GPU renderer (no OpenGL ES 3.2), so the DS's own it is. */
+    val dsResolution: Int? get() = null
+    val dsGpuAvailable: Boolean get() = true
+    fun setDsResolution(scale: Int) {}
+
     /** NUZLOCKE ([Nuzlocke]): [nuzlockeSupported] = a GBA game whose party and battles are read; the switch is per game. */
     val nuzlockeSupported: Boolean get() = false
     val nuzlocke: Boolean get() = false

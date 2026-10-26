@@ -193,6 +193,8 @@ class SettingsActivity : ComponentActivity() {
 
     /** The companion goes on the second screen: there is one, and SINGLE SCREEN is off. */
     private val usesSecondScreen get() = hasSecondScreen && !prefs.singleScreen
+    /** DS RESOLUTION's GPU renderer can run here (OpenGL ES 3.2). */
+    private val dsGpu by lazy { GlCaps.gles32(this) }
 
     private val updates by lazy { AppUpdateFlow(this) }
 
@@ -597,6 +599,21 @@ class SettingsActivity : ComponentActivity() {
                 prefs.expandZoomOnText = !prefs.expandZoomOnText
                 revision++
             }.takeIf { prefs.gameAspect == com.pokedaisy.app.companion.GameAspect.WIDE },
+            // DS games: the 3D at 2x to 8x the DS's own, drawn on the GPU (nds/pk_nds_gl.h); ORIGINAL keeps the CPU's,
+            // pixel for pixel. N/A without OpenGL ES 3.2.
+            dsGpu.let { gpu ->
+                SettingRow(
+                    tk("DS RESOLUTION"), if (gpu) com.pokedaisy.app.companion.ui.dsResolutionLabel(prefs.dsResolution) else tk("N/A"),
+                    enabled = gpu, subtitle = "Sharper 3D in DS games",
+                    labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.DS_RESOLUTION),
+                ) {
+                    if (!gpu) return@SettingRow
+                    val labels = com.pokedaisy.app.companion.ui.dsResolutionLabels()
+                    selector = Selector(tk("DS RESOLUTION"), labels, com.pokedaisy.app.companion.ui.dsResolutionLabel(prefs.dsResolution)) {
+                        prefs.dsResolution = labels.indexOf(it) + 1
+                    }
+                }
+            }.takeIf { com.pokedaisy.app.companion.data.TelemetrySampler.NDS_SUPPORT },
             // The party, a minimap, the balls and BAG / WILD over the game on the field: its own page (layout, look, size, parts).
             SettingRow(tk("HUD"), onOff(prefs.fieldHud), labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.HUD), opensPage = true, subtitle = "Party, minimap and bag over the game") { screen = Screen.FIELD_HUD },
             // One screen: FIGHT, POKéMON and RUN in the room beside a battle (BattleButtons).

@@ -18,6 +18,9 @@
 #include "pk_nds_call.h"
 #include "pk_nds_wide.h"
 #include "pk_nds_music.h"
+#ifdef NDS_DUMP_GL
+#include "pk_nds_gl.h"
+#endif
 
 #include <zlib.h>
 
@@ -38,7 +41,14 @@ static bool touching = false;
 static u16 touchX = 0, touchY = 0;
 static u64 frameCount = 0;
 static int wideMargin = 0;   // wide MX [MY]: EXPAND drawn every frame (pk_nds_wide.cpp)
+static int wideMarginY = 0;
 static bool wideDrawn = false;
+// gpu N (NDS_DUMP_GL builds): DS RESOLUTION's GPU renderer at N, as pk_nds_run_frame drives it; the screens are then
+// its 1x copies (RGBA) and gpushot writes the composed window.
+static bool gpuOn = false;
+static std::vector<u32> gpuTop(256 * 192), gpuBottom(256 * 192), gpuTopArgb(256 * 192);
+
+static u32 rgbaToArgb(u32 p) { return 0xFF000000u | ((p & 0xFF) << 16) | (p & 0xFF00) | ((p >> 16) & 0xFF); }
 static u32 read32(u32 addr) { return nds->ARM9Read32(addr); }
 static void write32(u32 addr, u32 v) { nds->ARM9Write32(addr, v); }
 static int wildOff = 0;          // wildoff 1: WILD ENCOUNTERS OFF, the field read run every frame (pk_nds_field.cpp)
@@ -127,6 +137,13 @@ static bool writePng(const std::string& path, const u32* argb, int w, int h)
 static bool shot(const std::string& path)
 {
     std::vector<u32> px(256 * 384);
+    if (gpuOn) {
+        for (int i = 0; i < 256 * 192; i++) {
+            px[i] = rgbaToArgb(gpuTop[i]);
+            px[256 * 192 + i] = rgbaToArgb(gpuBottom[i]);
+        }
+        return writePng(path, px.data(), 256, 384);
+    }
     int fb = nds->GPU.FrontBuffer;
     for (int s = 0; s < 2; s++) {
         const u32* src = nds->GPU.Framebuffer[fb][s].get();
@@ -193,6 +210,9 @@ static void runFrames(int n, u32 keys)
         nds->SetKeyMask(~keys & 0xFFF);
         if (touching) nds->TouchScreen(touchX, touchY);
         else nds->ReleaseScreen();
+#ifdef NDS_DUMP_GL
+        if (gpuOn) pk_nds_gl_begin_frame();
+#endif
         nds->RunFrame();
         frameCount++;
         static int wasBattle = 0;
@@ -207,9 +227,19 @@ static void runFrames(int n, u32 keys)
             }
         }
         // As the app: a battle's margins are its background, everything else the overworld's 3D.
-        if (wideMargin)
-            wideDrawn = pk_nds_wide_frame(nds, nds->GPU.Framebuffer[nds->GPU.FrontBuffer][0].get(), draw, !battle,
-                appPerTick > 0 ? drawNext : true, battle) || wideDrawn;
+        if (wideMargin) {
+            pk_nds_wide_gpu_want(!battle);
+            wideDrawn = pk_nds_wide_frame(nds, gpuOn ? gpuTopArgb.data() : nds->GPU.Framebuffer[nds->GPU.FrontBuffer][0].get(),
+                draw, !battle, appPerTick > 0 ? drawNext : true, battle) || wideDrawn;
+        }
+#ifdef NDS_DUMP_GL
+        if (gpuOn && draw) {
+            // As pk_nds_run_frame: the window is EXPAND's whole view here
+            pk_nds_gl_frame(nds, -wideMargin, -wideMarginY, 256 + 2 * wideMargin, 192 + 2 * wideMarginY,
+                gpuTop.data(), gpuBottom.data());
+            for (int k = 0; k < 256 * 192; k++) gpuTopArgb[k] = rgbaToArgb(gpuTop[k]);
+        }
+#endif
         if (!recordPrefix.empty() && draw) recordShown();
         if (musicPerFrame > 0) {
             static s16 musicBuf[4096];
@@ -240,6 +270,20 @@ static Shown grabShown()
 
 static void recordShown()
 {
+#ifdef NDS_DUMP_GL
+    if (gpuOn) {
+        // The GPU path's window, composed this frame (its 1x copies lag a drawn frame: not comparable across patterns)
+        int w = 0, h = 0;
+        const u32* px = pk_nds_gl_captured(&w, &h);
+        if (!px) return;
+        std::vector<u32> argb((size_t) w * h);
+        for (size_t k = 0; k < argb.size(); k++) argb[k] = rgbaToArgb(px[k]);
+        char path[600];
+        snprintf(path, sizeof(path), "%s_%05d_gpu.png", recordPrefix.c_str(), (int) (frameCount - recordStart - 1));
+        writePng(path, argb.data(), w, h);
+        return;
+    }
+#endif
     Shown got = grabShown();
     char path[600];
     int f = (int) (frameCount - recordStart - 1);
@@ -411,9 +455,26 @@ int main(int argc, char** argv)
             // wide MX [MY]: EXPAND with MX DS pixels left and right, MY above and below (0 = off; MY defaults to 0)
             wideMargin = (int) num(a);
             int my = n > 2 ? (int) num(b) : 0;
+            wideMarginY = my;
             pk_nds_wide_set(nds, wideMargin > 0);
             pk_nds_wide_need(wideMargin, wideMargin, my, my);
             wideDrawn = false;
+#ifdef NDS_DUMP_GL
+        } else if (!strcmp(cmd, "gpu")) {
+            // gpu N: DS RESOLUTION at N (1 = back to the software renderer)
+            pk_nds_gl_capture(true);
+            int s = pk_nds_gl_set_scale(nds, (int) num(a));
+            gpuOn = s > 1;
+            printf("gpu: scale %d\n", s);
+        } else if (!strcmp(cmd, "gpushot")) {
+            // gpushot FILE: the GPU path's last window (the screen, or EXPAND's view), at its scale
+            int w = 0, h = 0;
+            const u32* px = pk_nds_gl_captured(&w, &h);
+            if (!px) { fprintf(stderr, "gpushot: no frame\n"); continue; }
+            std::vector<u32> argb((size_t) w * h);
+            for (size_t k = 0; k < argb.size(); k++) argb[k] = rgbaToArgb(px[k]);
+            writePng(a, argb.data(), w, h);
+#endif
         } else if (!strcmp(cmd, "wideshot")) {
             // wideshot FILE: the last wide frame (RGBA words -> PNG)
             if (!wideDrawn) { fprintf(stderr, "wideshot: no wide frame\n"); continue; }

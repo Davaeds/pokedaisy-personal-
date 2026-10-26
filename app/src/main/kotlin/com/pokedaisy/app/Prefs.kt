@@ -396,6 +396,12 @@ class Prefs(context: Context) {
             ?: if (p.getBoolean("stretch_game", false)) GameAspect.STRETCH else GameAspect.ORIGINAL
         set(v) = p.edit().putString("game_aspect", v.name).remove("stretch_game").apply()
 
+    /** SCREEN > DS RESOLUTION: a DS game's 3D at this many times the DS's own (2-8: the GPU renderer,
+     * nds/pk_nds_gl.h) or the DS's own on the CPU (1, the default: melonDS's software renderer, pixel for pixel). */
+    var dsResolution: Int
+        get() = p.getInt("ds_resolution", 1).coerceIn(1, DS_RESOLUTION_MAX)
+        set(v) = p.edit().putInt("ds_resolution", v.coerceIn(1, DS_RESOLUTION_MAX)).apply()
+
     /** EXPAND > AUTO ZOOM IN: whether a conversation, a sign, a menu or a picture over the field pulls the zoomed-out
      * view in to 1x (battles always do). On by default. */
     var expandZoomOnText: Boolean
@@ -689,3 +695,6 @@ class Prefs(context: Context) {
         const val RECENT_CAP = 10   // more than the 3 shown, so deleted ROMs don't starve the row
     }
 }
+
+/** DS RESOLUTION's highest scale ([Prefs.dsResolution]). */
+const val DS_RESOLUTION_MAX = 8

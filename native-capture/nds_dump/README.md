@@ -16,6 +16,20 @@ It boots with melonDS's FreeBIOS and generated firmware (no BIOS or firmware fil
 **writes every save the game makes back to it**: always give it a copy, never the player's save. `--jit` runs the app's
 JIT settings (no fast memory); without it, the interpreter.
 
+### The GPU renderer (DS RESOLUTION)
+
+Built with `-DNDS_DUMP_GL=ON`, it also runs the app's GPU path (`nds/pk_nds_gl.cpp`: melonDS's OpenGL ES renderer, EXPAND's
+one-picture list, our compositor) through ANGLE: point `ANGLE_DIR` at a folder holding `libEGL.dylib` and `libGLESv2.dylib`
+(Chromium's, e.g. copied from an app that bundles them: their install names are `./lib*.dylib`, so run with
+`DYLD_LIBRARY_PATH` set to that folder) and `GLES_INCLUDE` at copies of the NDK sysroot's `EGL`, `GLES2`, `GLES3` and
+`KHR` header folders. ANGLE on Metal gives ES 3.0 with OES_draw_buffers_indexed, which is all the port needs.
+
+```bash
+cmake -S native-capture/nds_dump -B build-gl -DNDS_DUMP_GL=ON -DANGLE_DIR=<angle> -DGLES_INCLUDE=<headers>
+cmake --build build-gl -j
+DYLD_LIBRARY_PATH=<angle> build-gl/nds_dump ROM.nds SAVE.sav --jit < script.txt
+```
+
 ## Script commands
 
 One per line from stdin; `#` starts a comment. Numbers take `0x` hex. Keys are `A B SELECT START RIGHT LEFT UP DOWN R L
@@ -49,6 +63,8 @@ X Y`, joined with commas (`A,UP`), or `NONE`.
 | `ffguard 1/0` | `pk_nds_run_frame`'s guard on (default) / off: a frame whose 3D the one before skipped isn't drawn. Off shows the flash it prevents. |
 | `musicon N` | STEADY's copy begun now and N of its frames run after each game frame, as the app runs it (0 stops it). |
 | `bench N` | N frames flat out, then ms a frame. |
+| `gpu N` | (`NDS_DUMP_GL` builds) DS RESOLUTION at N: the GPU renderer, or `gpu 1` back to the software one. `shot` then writes its 1x copies (a drawn frame late), `ffmode` the composed window. |
+| `gpushot FILE` | (`NDS_DUMP_GL` builds) The GPU path's last window at its scale: the screen, or with `wide` on EXPAND's whole view. |
 | `call FN [A0..A3]` | The game's function FN (Thumb: odd) from the field's main loop next frame; prints r0. |
 | `action N [A0..A3]` | One of `pk_nds_call`'s jobs (1 = PC, 2 = FLY's checks, 3 = FLY) and its results. |
 | `script FILE` / `scriptgo FILE` | A field script (the game's bytecode) run as the PC job runs its own; `scriptgo` returns once it has started. |

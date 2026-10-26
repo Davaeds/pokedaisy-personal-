@@ -3,7 +3,7 @@ title: Screen, aspect and shaders
 summary: Change how the game sits on the top screen and how it looks, from widescreen EXPAND to LCD and CRT filters, frames and dark mode.
 section: player
 order: 3
-keywords: [lag, slow device, input delay, light companion, widescreen, fullscreen, 16:9, 3:2, ratio, bezel, border, frame, crt, lcd, scanlines, xbrz, scalefx, upscale, unlit, backlight, pixel transparency, night, appearance, framerate, fps, performance, graphics, look]
+keywords: [ds resolution, internal resolution, upscaling, hd, sharper 3d, jagged, lag, slow device, input delay, light companion, widescreen, fullscreen, 16:9, 3:2, ratio, bezel, border, frame, crt, lcd, scanlines, xbrz, scalefx, upscale, unlit, backlight, pixel transparency, night, appearance, framerate, fps, performance, graphics, look]
 ---
 
 The top screen is wider than a GBA, so there's a choice to make about the space around the game. You can keep the GBA's own shape, stretch it, or let PokeDaisy draw more of the world into the gaps. On top of that you can run the picture through a filter, put a frame around it and switch the app's windows to a dark look.
@@ -48,6 +48,26 @@ In a game that doesn't support it yet, `EXPAND` shows as `ORIGINAL` and the comp
 With `EXPAND` on, the `ZOOM` hotkey steps the view out so you see further around you. It's R3 (clicking the right stick) by default, or `C` on a keyboard; you can move it to any button under `HOTKEYS` (see [Controls](controls.md)). Battles, conversations and menus ease back in by themselves, so text is never tiny. Each game keeps the zoom you picked: open it again and, once you're back on the field, the view eases out to it. If you'd rather keep your zoom through conversations, signs and menus, turn `AUTO ZOOM IN` off in Settings; battles still ease in, and so do the party and bag screens you open from one.
 
 The **right stick** looks around. Push it and the view moves; let go and it stays put until you walk, then glides back to you. Hold it while you walk and the camera looks ahead in that direction, keeping your character on screen.
+
+## DS resolution: sharper 3D
+
+The DS games (Platinum, HeartGold and SoulSilver) draw their world in 3D, and the DS drew it small: 256 by 192 pixels, so on a big screen the edges look jagged. `DS RESOLUTION` draws that 3D at more pixels instead.
+
+| Choice | What you get |
+| --- | --- |
+| `ORIGINAL` | The DS's own picture, pixel for pixel. This is the default. |
+| `2x` to `8x` | The 3D drawn that many times sharper by your device's graphics chip. `4x` is about as sharp as a 1080p screen can show; `6x` and `8x` go past it, which smooths the edges even more. |
+
+Text, menus and anything the game draws flat keep their own pixels, so they look the same at every choice.
+
+With `2x` or more and `ASPECT` on `EXPAND`, the world past the screen's edges is drawn together with the screen in one go, just as sharp, and the strips stay smooth as you walk. Zoomed far out, the 3D is drawn a little less sharp to keep things quick; it's small on screen then anyway.
+
+A few things worth knowing:
+
+- **It works the graphics chip harder.** If a game slows down or your device runs warm, pick a lower choice.
+- **Not every device can do it.** It needs a fairly recent graphics chip (OpenGL ES 3.2, which most handhelds of the last few years have). On a device without one the row shows `N/A` and the game uses `ORIGINAL`.
+- **Some shaders step aside.** `SMOOTHING` and `UNLIT SCREEN` work on the DS's own pixels, so they're off at `2x` and up. `FILTER` and `GBA COLORS` still apply.
+- On the companion, the row only shows while a DS game is running, and a change shows on the game straight away.
 
 ## Status bar
 

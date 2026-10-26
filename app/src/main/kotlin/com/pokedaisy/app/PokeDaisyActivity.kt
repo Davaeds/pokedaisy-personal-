@@ -1066,6 +1066,12 @@ class PokeDaisyActivity : Activity() {
             if (::engine.isInitialized) engine.setReusableTms(tmSites, on)
         }
         override val reusableTmsSupported get() = tmSites.isNotEmpty()
+        override val dsResolution get() = if (romIsNds) Prefs(this@PokeDaisyActivity).dsResolution else null
+        override val dsGpuAvailable get() = GlCaps.gles32(this@PokeDaisyActivity) && MgbaCore.pkNdsGpuSupported() != 0
+        override fun setDsResolution(scale: Int) {
+            Prefs(this@PokeDaisyActivity).dsResolution = scale
+            if (::engine.isInitialized) engine.ndsScale = scale
+        }
         override val nuzlockeSupported get() = telemetry.snapshot.value.let { !it.unsupported && com.pokedaisy.app.companion.Nuzlocke.supports(it.game) }
         override val nuzlocke get() = com.pokedaisy.app.companion.Nuzlocke.on
         override fun setNuzlocke(on: Boolean) = com.pokedaisy.app.companion.Nuzlocke.setOn(on)
@@ -1708,6 +1714,8 @@ class PokeDaisyActivity : Activity() {
         // A DS cart's EXPAND: the overworld past the top screen's edges, for a cart its field read knows.
         if (nds && WideScreen.ndsKnows(gameCode, romRev)) wideGame = WideScreen.NDS
         view.camera.ndsMode(nds)
+        // DS RESOLUTION's frames come through a SurfaceTexture the view hands the core (EmulatorView.gpuFrames).
+        view.gpuFrames = nds
         // The ZOOM picked last time on this game: the camera holds 1x until the field has been up a moment, then eases
         // out to it (WideCamera.reset), so it comes back once the game has loaded rather than over its title screen.
         view.camera.level = Prefs(this).zoomLevelFor(romKey)
@@ -1873,6 +1881,7 @@ class PokeDaisyActivity : Activity() {
         e.runIndoors = p.runIndoors && companionSettings.runIndoorsSupported
         e.wildFlag = wildFlag
         e.wildEncounters = p.wildEncounters
+        e.ndsScale = p.dsResolution
         e.setReusableTms(tmSites, p.reusableTms)
         e.setShinyTarget(shinyTarget)
         e.shinyOdds = shinyOddsPref()
