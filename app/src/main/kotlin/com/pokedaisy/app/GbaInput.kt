@@ -55,9 +55,33 @@ class GbaInput {
     /** [keyCode] is bound to X (GAME BUTTONS), whatever it presses in the game running. */
     fun isX(keyCode: Int): Boolean = (controls[keyCode] ?: 0) and GbaControls.DS_X != 0
 
+    /** The player holds a game button (a key, the stick / D-pad or the touch controls). */
+    val holdsButtons: Boolean get() = heldKeys.isNotEmpty() || turboKeys.isNotEmpty() || hatBits != 0 || touchBits != 0
+
+    /** A press that was held back from the game (SELECT / START of a hotkey chord, [Hotkeys.gameKey]) and let go:
+     * pressed for [TAP_FRAMES] game frames from now ([tapMask]). */
+    @Volatile private var tapBits = 0
+    @Volatile private var tapFrames = 0
+
+    fun tap(keyCode: Int) {
+        tapBits = keyToBit(keyCode)?.and(GbaControls.TURBO.inv()) ?: return
+        tapFrames = TAP_FRAMES
+    }
+
+    /** [tap]'s button for this frame, counting it down; the engine calls it once per game frame. None while a script
+     * steers, like [turboMask]. */
+    fun tapMask(): Int {
+        if (tapFrames <= 0) return 0
+        val bits = tapBits
+        if (--tapFrames == 0) tapBits = 0
+        return if (scriptExclusive) 0 else bits
+    }
+
     /** Lets go of every key the player holds (not a script's): the companion's window took the buttons, or a rebind
      *  the keys' releases. */
     fun releaseAll() {
+        tapFrames = 0
+        tapBits = 0
         heldKeys.clear()
         turboKeys.clear()
         buttonBits = 0
@@ -138,6 +162,9 @@ class GbaInput {
 
     companion object {
         private const val DEAD = 0.5f
+        /** A held-back tap's length: the Game Boy games miss shorter presses outside their menus (3 frames), and
+         * Crystal Clear's menus want 6. */
+        const val TAP_FRAMES = 6
 
         /** The D-pad directions a joystick event holds (its HAT, else the left stick); null = not a joystick's. */
         fun motionBits(event: MotionEvent): Int? {

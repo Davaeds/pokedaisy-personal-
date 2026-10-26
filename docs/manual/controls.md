@@ -62,6 +62,8 @@ Hotkeys are shortcuts for things outside the game: save states, fast-forward, le
 
 Chords don't take a button away from the game. SELECT alone still works in game; only SELECT + R1 together saves a state.
 
+When SELECT or START is part of a chord, the game gets it when you let go rather than when you press it. That way holding SELECT to start SELECT + START doesn't press SELECT in the game just before you leave it. If you press another game button while holding SELECT or START (or were already holding one), it goes to the game right away, so the game's own button combinations keep working.
+
 | Hotkey | What it does | Controller | Keyboard |
 | --- | --- | --- | --- |
 | `SAVE STATE` | Saves a state in the current slot | SELECT + R1 | F1 |

@@ -3055,12 +3055,16 @@ class PokeDaisyActivity : Activity() {
         } else if (!hudBack.back() && !sidePanel.onBack() && !portraitPanel.onBack()) { companionBack.back(); mirrorBack.back() }
     }
 
-    /** Feeds a key change to the hotkeys (only while they're on); true when it's completing a chord,
-     *  so the game mustn't see it. */
+    /** Feeds a key change to the hotkeys (only while they're on); true when the game mustn't see it
+     *  ([Hotkeys.gameKey]: completing a chord, or SELECT / START of one held back until let go). */
     private fun hotkeyTakes(keyCode: Int, down: Boolean): Boolean {
         if (!::hotkeys.isInitialized || !hotkeysOn) return false
-        for (e in hotkeys.onKey(keyCode, down)) handleHotkey(e)
-        return hotkeys.consumes(keyCode)
+        return hotkeys.gameKey(keyCode, down, input, ::handleHotkey)
+    }
+
+    /** Another game button: SELECT / START held back for a chord go to the game first, held. */
+    private fun letHeldBackThrough() {
+        if (::hotkeys.isInitialized) for (k in hotkeys.letThrough()) input.onKey(k, true)
     }
 
     // Many Android handhelds (Retroid's) report L2/R2 as analog axes, not BUTTON_L2/R2 keys: a trigger
@@ -3108,6 +3112,7 @@ class PokeDaisyActivity : Activity() {
             if (GbaInput.motionBits(event)?.let { it != 0 } == true) return true
             quickStickHold = false
         }
+        if (GbaInput.motionBits(event)?.let { it != 0 } == true) letHeldBackThrough()
         if (input.onMotion(event)) return true
         return super.onGenericMotionEvent(event)
     }

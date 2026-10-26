@@ -913,7 +913,7 @@ class EmulatorEngine(
                 MgbaCore.pkSetRewinding(rewinding)
                 // TURBO A / B: pressed 2 frames, released 2, in game frames - so FF mashes faster too.
                 val reset = if (softResetFrames > 0) { softResetFrames--; SOFT_RESET_KEYS } else 0
-                var keys = input.mask or reset or (if ((frame++ / 2) % 2 == 0L) input.turboMask else 0)
+                var keys = input.mask or reset or input.tapMask() or (if ((frame++ / 2) % 2 == 0L) input.turboMask else 0)
                 // AUTO-RUN: B flipped while walking on the player's own field (holding it walks) - never in a script, a
                 // battle, a menu screen (B leaves it) or on a bike (the Acro Bike's wheelie is B). Nor with A held: the
                 // expansion's DexNav creeps on A (Seaglass & co.), but checks B's run first, so a held B scared the
