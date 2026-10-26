@@ -158,6 +158,10 @@ int pk_wide_view(struct mCore* core, const uint32_t* frame, uint32_t* out, struc
 /** Instead of pk_wide_view, for a frame that won't be shown (fast-forward runs several per screen refresh): keeps the
  * game's RAM after it, as the next frame drawn needs, without drawing anything - most of WIDE's cost. */
 void pk_wide_skip(struct mCore* core, const uint32_t* frame);
+
+/** EXPAND's AMBIENT EFFECT: what moves in the light above and below battles and menus (0 BUBBLES, 1 SPARKLES, 2 FIREFLIES,
+ * 3 EMBERS, 4 SNOW, 5 RAIN, 6 PETALS, 7 AURORA, 8 NONE: AmbientEffect's ids). Any thread. */
+void pk_wide_set_ambient_effect(int effect);
 // A Game Boy game configured with nothing to draw (EXPAND off): its scene only (pk_wide_scene), for the FIELD HUD -
 // pk_wide_gb.c's match run on a 1 x 1 window; `skip` (a fast-forwarded frame nobody sees) only notes its RAM.
 void pk_wide_probe(struct mCore* core, const uint32_t* frame, int skip);

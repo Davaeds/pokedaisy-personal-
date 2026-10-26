@@ -271,6 +271,10 @@ interface CompanionSettings {
     val expandZoomOnText: Boolean get() = true
     fun setExpandZoomOnText(on: Boolean) {}
 
+    /** EXPAND's AMBIENT EFFECT - see [com.pokedaisy.app.Prefs.ambientEffect]. */
+    val ambientEffect: AmbientEffect get() = AmbientEffect.BUBBLES
+    fun setAmbientEffect(effect: AmbientEffect) {}
+
     /** EXPAND's one-time offer in a game it knows, while EXPAND is off ([com.pokedaisy.app.Prefs.expandGameOfferSeen]):
      * true while it's up (Compose state). Shown once ever - the setting is global. */
     val expandOffer: Boolean get() = false
@@ -471,6 +475,21 @@ enum class Smoothing(val label: String) {
  * What fast-forward sounds like, in the order SETTINGS lists them. [label] is
  * what the rows show.
  */
+/** EXPAND's AMBIENT EFFECT ([com.pokedaisy.app.Prefs.ambientEffect]): what moves in the light above and below battles,
+ * the title and menu screens. The order is the native side's ids (pk_wide_set_ambient_effect): add new ones at the end. */
+enum class AmbientEffect(val label: String) {
+    BUBBLES(tk("BUBBLES")),
+    SPARKLES(tk("SPARKLES")),
+    FIREFLIES(tk("FIREFLIES")),
+    EMBERS(tk("EMBERS")),
+    SNOW(tk("SNOW")),
+    RAIN(tk("RAIN")),
+    PETALS(tk("PETALS")),
+    AURORA(tk("AURORA")),
+    /** The light alone, still. */
+    NONE(tk("NONE")),
+}
+
 enum class FfMusicMode(val label: String) {
     /** The song at its normal tempo: a clean clip rendered from the ROM
      * (FfMusicRenderer), looped while the game races; silent until it's ready (SPED-UP only for a song

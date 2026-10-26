@@ -1983,79 +1983,283 @@ static uint32_t glowAt(const uint32_t* frame, int X, int Y, const int reach[4], 
 
 // Off the map (battles, the title, menu screens) the rows above and below the game have nothing of the game's to show:
 // they used to repeat its top / bottom pixel down every column, which a tall window (a phone held upright) showed as
-// stripes. There it's ambient light instead: the colours of the picture's top / bottom part, spread out and dimmed
-// towards the window's edge, with a slow shimmer and a few motes of light drifting away from the game. Only above and
-// below: the sides keep the drawn scene.
+// stripes. There it's ambient light instead, in the picture's own colours: the frame is averaged in 8x8 blocks, each
+// column's light is its blocks weighted towards that edge and towards the colourful ones (so the top follows the sky and
+// what's in it, the bottom the text box and the field above it), spread out and dimmed towards the window's edge with its colour kept. Over it, the
+// effect picked in AMBIENT EFFECT (pk_wide_set_ambient_effect): motes, sparkles, snow, ... Only above and below: the
+// sides keep the drawn scene.
 
-#define AMB_BAND 24          // rows the light's colours are taken from, at the top / bottom of the picture
-#define AMB_ORBS 7           // motes per side
+enum {
+    AMB_BUBBLES, AMB_SPARKLES, AMB_FIREFLIES, AMB_EMBERS, AMB_SNOW, AMB_RAIN, AMB_PETALS, AMB_AURORA, AMB_NONE, AMB_COUNT
+};
+static volatile int ambEffect = AMB_BUBBLES;
+static inline uint32_t lerp(uint32_t a, uint32_t b, int t);
 
-static int32_t ambAcc[2][PK_WIDE_W][3];       // per column, x16, eased over frames
-static int32_t preA[2][PK_WIDE_W + 1][3];
+void pk_wide_set_ambient_effect(int effect) { ambEffect = effect >= 0 && effect < AMB_COUNT ? effect : AMB_BUBBLES; }
+
+#define AMB_CELL 8
+#define AMB_CW (PK_WIDE_W / AMB_CELL)    // 30
+#define AMB_CH (PK_WIDE_H / AMB_CELL)    // 20
+
+static int32_t cellAcc[AMB_CH][AMB_CW][3];  // each block's colour, x16, eased over frames
+static int32_t preA[2][PK_WIDE_W + 1][3];   // per side, the light's colour per column (x16), as running sums
 static bool ambAccOk;
 static int ambTick;
 static int8_t sinTab[256];
 static bool sinOk;
 
-struct AmbOrb { int x, y, r2, a; };
-static struct AmbOrb orbs[2][AMB_ORBS];
-static int norbs[2];
+// The effect's light for this frame, per window pixel (only the rows above / below the frame are used): an amount
+// towards the local colour lit up, and an amount towards a fixed colour.
+static uint8_t effTint[BUF_H][BUF_W];
+static uint8_t effFixA[BUF_H][BUF_W];
+static uint32_t effFixC[BUF_H][BUF_W];
+static struct PkWideView effView;
 
 static void sinInit(void) {
     if (sinOk) return;
     for (int i = 0; i < 256; i++) {
         // Bhaskara's sine (no libm): good to ~0.2%.
         int half = i & 127;
-        double th = half * 180.0 / 128.0, s = 4 * th * (180 - th) / (40500 - th * (180 - th));
-        sinTab[i] = (int8_t) ((i < 128 ? 1 : -1) * (int) (s * 127 + 0.5));
+        double th = half * 180.0 / 128.0, sv = 4 * th * (180 - th) / (40500 - th * (180 - th));
+        sinTab[i] = (int8_t) ((i < 128 ? 1 : -1) * (int) (sv * 127 + 0.5));
     }
     sinOk = true;
 }
 
+static inline uint32_t hash32(uint32_t h) {
+    h ^= h >> 16; h *= 0x7FEB352Du; h ^= h >> 15; h *= 0x846CA68Bu; h ^= h >> 16;
+    return h;
+}
+
 static void ambientLightPrepare(const uint32_t* frame) {
-    for (int side = 0; side < 2; side++) {
-        int y0 = side ? PK_WIDE_H - AMB_BAND : 0;
-        for (int c = 0; c < 3; c++) preA[side][0][c] = 0;
-        for (int x = 0; x < PK_WIDE_W; x++) {
+    for (int cy = 0; cy < AMB_CH; cy++)
+        for (int cx = 0; cx < AMB_CW; cx++) {
             int32_t sum[3] = { 0, 0, 0 };
-            for (int y = y0; y < y0 + AMB_BAND; y++) {
-                uint32_t v = frame[y * PK_WIDE_W + x];
-                for (int c = 0; c < 3; c++) sum[c] += (v >> (8 * c)) & 0xFF;
+            for (int y = cy * AMB_CELL; y < (cy + 1) * AMB_CELL; y++) {
+                const uint32_t* row = frame + y * PK_WIDE_W + cx * AMB_CELL;
+                for (int x = 0; x < AMB_CELL; x++)
+                    for (int c = 0; c < 3; c++) sum[c] += (row[x] >> (8 * c)) & 0xFF;
             }
             for (int c = 0; c < 3; c++) {
-                int32_t now = sum[c] * 16 / AMB_BAND;
-                // A fifth of the way each frame: a move's flash or a sprite passing still shows, but softly.
-                ambAcc[side][x][c] = ambAccOk ? ambAcc[side][x][c] + (now - ambAcc[side][x][c]) / 5 : now;
-                preA[side][x + 1][c] = preA[side][x][c] + ambAcc[side][x][c];
+                int32_t now = sum[c] * 16 / (AMB_CELL * AMB_CELL);
+                // A third of the way each frame: a move's flash shows, but text and sprites passing don't flicker it.
+                cellAcc[cy][cx][c] = ambAccOk ? cellAcc[cy][cx][c] + (now - cellAcc[cy][cx][c]) / 3 : now;
+            }
+        }
+    ambAccOk = true;
+    // Rows weighted by how near they are to the side's edge: 0.8 a block, so the nearest ~5 blocks carry most of it.
+    static const int w[AMB_CH] = { 256, 205, 164, 131, 105, 84, 67, 54, 43, 34, 27, 22, 18, 14, 11, 9, 7, 6, 5, 4 };
+    for (int side = 0; side < 2; side++) {
+        int32_t colCell[AMB_CW][3];
+        for (int cx = 0; cx < AMB_CW; cx++) {
+            int32_t sum[3] = { 0, 0, 0 }, wsum = 0;
+            for (int r = 0; r < AMB_CH; r++) {
+                int cy = side ? AMB_CH - 1 - r : r;
+                const int32_t* cc = cellAcc[cy][cx];
+                // A colourful block counts up to 6x a grey one, so a red sky reads red past the grey / blue boxes
+                // over it (the way a TV's backlight picks a picture's colours out).
+                int32_t hi = cc[0] > cc[1] ? cc[0] : cc[1], lo = cc[0] < cc[1] ? cc[0] : cc[1];
+                if (cc[2] > hi) hi = cc[2];
+                if (cc[2] < lo) lo = cc[2];
+                int32_t wr = w[r] * (32 + (hi - lo) / 16 * 5 / 4) / 32;
+                for (int c = 0; c < 3; c++) sum[c] += cc[c] * wr;
+                wsum += wr;
+            }
+            for (int c = 0; c < 3; c++) colCell[cx][c] = sum[c] / wsum;
+        }
+        for (int c = 0; c < 3; c++) preA[side][0][c] = 0;
+        for (int x = 0; x < PK_WIDE_W; x++) {
+            // Between the blocks' centres, linearly.
+            int fx = x * 16 - (AMB_CELL * 16 / 2) + 8, cx = fx < 0 ? 0 : fx / (AMB_CELL * 16);
+            int f = fx < 0 ? 0 : (fx % (AMB_CELL * 16)) * 256 / (AMB_CELL * 16);
+            int cx2 = cx + 1 < AMB_CW ? cx + 1 : cx;
+            for (int c = 0; c < 3; c++) {
+                int32_t v = (colCell[cx][c] * (256 - f) + colCell[cx2][c] * f) >> 8;
+                preA[side][x + 1][c] = preA[side][x][c] + v;
             }
         }
     }
-    ambAccOk = true;
 }
 
-/** The motes for this frame: each drifts away from the game over its life, swaying, fading in and out. */
-static void ambientOrbs(struct PkWideView v, const int reach[4]) {
+// --- the effects: drawn into effTint / effFixA / effFixC ---
+
+static inline void effAdd(int X, int Y, int a, bool tint, uint32_t colour) {
+    int i = X - effView.x, j = Y - effView.y;
+    if (i < 0 || j < 0 || i >= effView.w || j >= effView.h || a <= 0) return;
+    if (Y >= 0 && Y < PK_WIDE_H) return;   // the frame itself: never
+    if (tint) {
+        int t = effTint[j][i] + a;
+        effTint[j][i] = (uint8_t) (t > 230 ? 230 : t);
+    } else {
+        int prev = effFixA[j][i], t = prev + a;
+        effFixC[j][i] = prev ? lerp(colour, effFixC[j][i], prev * 256 / t) : colour;
+        effFixA[j][i] = (uint8_t) (t > 230 ? 230 : t);
+    }
+}
+
+/** A soft round light at (cx, cy) in 1/16 pixels, radius r16 in 1/16 pixels: (1 - d^2/r^2)^2 falloff. */
+static void effDisc(int cx, int cy, int r16, int amount, bool tint, uint32_t colour) {
+    if (r16 < 8 || amount <= 0) return;
+    int r = (r16 >> 4) + 1, px = cx >> 4, py = cy >> 4;
+    int64_t r2 = (int64_t) r16 * r16;
+    for (int y = py - r; y <= py + r; y++)
+        for (int x = px - r; x <= px + r; x++) {
+            int dx = x * 16 + 8 - cx, dy = y * 16 + 8 - cy;
+            int64_t d2 = (int64_t) dx * dx + (int64_t) dy * dy;
+            if (d2 >= r2) continue;
+            int f = 256 - (int) (d2 * 256 / r2);
+            effAdd(x, y, amount * (f * f >> 8) >> 8, tint, colour);
+        }
+}
+
+/** A twinkle: a bright pixel, a plus of arms fading out, a faint halo. */
+static void effStar(int x, int y, int arm, int amount, uint32_t colour) {
+    effAdd(x, y, amount, false, colour);
+    for (int k = 1; k <= arm; k++) {
+        int a = amount * (arm + 1 - k) / (arm + 1);
+        effAdd(x - k, y, a, false, colour); effAdd(x + k, y, a, false, colour);
+        effAdd(x, y - k, a, false, colour); effAdd(x, y + k, a, false, colour);
+    }
+    effAdd(x - 1, y - 1, amount / 4, true, 0); effAdd(x + 1, y - 1, amount / 4, true, 0);
+    effAdd(x - 1, y + 1, amount / 4, true, 0); effAdd(x + 1, y + 1, amount / 4, true, 0);
+}
+
+static inline uint32_t rgbc(int r, int g, int b) { return 0xFF000000u | (uint32_t) b << 16 | (uint32_t) g << 8 | (uint32_t) r; }
+
+/** The side's light colour at column x (0..255 per channel), unblurred: what tints the effects that follow the screen. */
+static uint32_t sideColour(int side, int x) {
+    x = clampi(x, 0, PK_WIDE_W - 1);
+    int ch[3];
+    for (int c = 0; c < 3; c++) ch[c] = (int) ((preA[side][x + 1][c] - preA[side][x][c]) / 16);
+    return rgbc(clampi(ch[0], 0, 255), clampi(ch[1], 0, 255), clampi(ch[2], 0, 255));
+}
+
+static uint32_t towards(uint32_t a, int r, int g, int b, int t) { return lerp(a, rgbc(r, g, b), t); }
+
+static void ambientEffects(struct PkWideView v, const int reach[4]) {
+    effView = v;
+    for (int j = 0; j < v.h; j++) {
+        int Y = v.y + j;
+        if (Y >= 0 && Y < PK_WIDE_H) continue;
+        memset(effTint[j], 0, (size_t) v.w);
+        memset(effFixA[j], 0, (size_t) v.w);
+    }
+    int effect = ambEffect;
+    if (effect == AMB_AURORA || effect == AMB_NONE) return;   // drawn in ambientAt
+    int t = ambTick;
     for (int side = 0; side < 2; side++) {
-        norbs[side] = 0;
         int span = reach[2 + side];
-        if (span < 16) continue;
-        for (int k = 0; k < AMB_ORBS; k++) {
-            uint32_t h = (uint32_t) (k + 1 + side * 17) * 2654435761u;
-            h ^= h >> 13;
-            int period = 540 + (int) (h % 420);                     // 9 to 16 s a life
-            int p = (int) (((uint32_t) ambTick + h) % (uint32_t) period) * 256 / period;
-            int dist = 2 + p * (span - 2) / 256;
-            int sway = sinTab[(ambTick / 3 + (int) (h >> 8)) & 255] * 10 / 127;
-            int x = v.x + (int) ((h >> 10) % (uint32_t) v.w) + sway;
-            int r = 6 + (int) ((h >> 20) % 9);
-            if (r > span / 3) r = span / 3;
-            if (r < 3) continue;
-            int life = sinTab[p >> 1];                              // 0 -> 1 -> 0 over its life
-            struct AmbOrb* o = &orbs[side][norbs[side]++];
-            o->x = x;
-            o->y = side ? PK_WIDE_H - 1 + dist : -dist;
-            o->r2 = r * r;
-            o->a = life * (60 + (int) ((h >> 4) % 50)) / 127;       // at most ~0.4
+        if (span < 12) continue;
+        // How many: by the margin's area (a 240 x 120 margin gets the base count).
+        int area = v.w * span, base = (int[]) { 7, 16, 10, 16, 40, 34, 14, 0, 0 }[effect];
+        int n = base * area / (240 * 120);
+        if (n < 3) n = 3;
+        if (n > 120) n = 120;
+        int edgeY = side ? PK_WIDE_H : -1;   // the margin's row next to the game
+        int dir = side ? 1 : -1;             // away from the game
+        for (int k = 0; k < n; k++) {
+            uint32_t h = hash32((uint32_t) (k * 2 + side + 1) * 2654435761u + (uint32_t) effect * 97u);
+            uint32_t h2 = hash32(h);
+            int x0 = v.x + (int) (h % (uint32_t) v.w);
+            switch (effect) {
+            case AMB_BUBBLES: {          // soft motes drifting away from the game, swaying, fading in and out
+                int period = 540 + (int) (h2 % 420);
+                int p = (int) (((uint32_t) t + h2) % (uint32_t) period) * 256 / period;
+                int dist = 2 + p * (span - 2) / 256;
+                int sway = sinTab[(t / 3 + (int) (h >> 8)) & 255] * 10 * 16 / 127;
+                int r = 6 + (int) ((h >> 20) % 9);
+                if (r > span / 3) r = span / 3;
+                int life = sinTab[p >> 1];
+                effDisc(x0 * 16 + sway, (edgeY + dir * dist) * 16, r * 16, life * (60 + (int) ((h >> 4) % 50)) / 127, true, 0);
+                break;
+            }
+            case AMB_SPARKLES: {         // twinkles that light up in place and go out, somewhere new each time
+                int period = 70 + (int) (h2 % 110);
+                uint32_t cyc = ((uint32_t) t + h2) / (uint32_t) period;
+                int p = (int) (((uint32_t) t + h2) % (uint32_t) period) * 256 / period;
+                uint32_t hc = hash32(h ^ (cyc * 0x9E3779B9u));
+                int x = v.x + (int) (hc % (uint32_t) v.w), d = 1 + (int) ((hc >> 12) % (uint32_t) span);
+                int life = sinTab[p >> 1];
+                int a = life * life / 127 * 200 / 127;   // a quick flash
+                uint32_t c = towards(sideColour(side, x), 255, 255, 255, 150);
+                effStar(x, edgeY + dir * d, 1 + (int) ((hc >> 20) % 3), a, c);
+                break;
+            }
+            case AMB_FIREFLIES: {        // warm points wandering, glowing up and down
+                int ax = (int) (h2 % 40) + 20, ay = (int) ((h2 >> 8) % (uint32_t) (span / 2 + 1));
+                int cxp = x0 * 16 + sinTab[(t / 4 + (int) (h >> 3)) & 255] * ax * 16 / 127
+                          + sinTab[(t / 7 + (int) (h >> 11)) & 255] * 8 * 16 / 127;
+                int mid = span / 2;
+                int cyp = (edgeY + dir * (mid + sinTab[(t / 5 + (int) (h >> 17)) & 255] * ay / 2 / 127)) * 16;
+                int glow = sinTab[(t * 2 / 3 + (int) (h >> 5)) & 255];
+                int a = glow > 0 ? glow * 190 / 127 : 0;
+                uint32_t c = towards(sideColour(side, cxp >> 4), 255, 236, 120, 190);
+                effDisc(cxp, cyp, 4 * 16, a * 2 / 3, false, c);
+                effAdd(cxp >> 4, cyp >> 4, a, false, rgbc(255, 250, 200));
+                break;
+            }
+            case AMB_EMBERS: {           // sparks rising, flickering, cooling as they go
+                int period = 200 + (int) (h2 % 260);
+                int p = (int) (((uint32_t) t + h2) % (uint32_t) period) * 256 / period;
+                int Yp = side ? PK_WIDE_H + span - 1 - p * (span - 1) / 256 : -1 - p * (span - 1) / 256;
+                int x = x0 + sinTab[(t / 2 + (int) (h >> 9)) & 255] * 4 / 127 + p * ((int) (h >> 28) - 7) / 256;
+                int heat = 256 - p;
+                int flick = 160 + sinTab[(t * 5 + (int) (h >> 13)) & 255] * 80 / 127;
+                int a = heat * flick / 256;
+                uint32_t c = rgbc(255, 110 + heat / 3, 30 + heat / 8);
+                effDisc(x * 16 + 8, Yp * 16 + 8, 3 * 16, a / 2, false, c);
+                effAdd(x, Yp, a, false, rgbc(255, 200 + heat / 6, 120));
+                if ((h >> 6) & 1) effAdd(x, Yp + dir * -1, a * 2 / 3, false, c);
+                break;
+            }
+            case AMB_SNOW: {             // flakes falling straight down through the margin, swaying
+                int speed = 6 + (int) (h2 % 10);                 // 1/16 pixels a frame
+                int len = span * 16;
+                int y16 = (int) (((uint32_t) t * (uint32_t) speed + h2) % (uint32_t) len);
+                int Yp = side ? PK_WIDE_H + (y16 >> 4) : -span + (y16 >> 4);
+                int x = x0 + sinTab[(t / 2 + (int) (h >> 7)) & 255] * 3 / 127;
+                int a = 150 + (int) ((h >> 20) % 70);
+                uint32_t c = towards(sideColour(side, x), 255, 255, 255, 220);
+                effAdd(x, Yp, a, false, c);
+                if ((h >> 26) % 3 == 0) {        // a bigger flake
+                    effAdd(x + 1, Yp, a * 2 / 3, false, c); effAdd(x, Yp + 1, a * 2 / 3, false, c);
+                    effAdd(x + 1, Yp + 1, a / 3, false, c);
+                }
+                break;
+            }
+            case AMB_RAIN: {             // slanted streaks falling fast
+                int speed = 48 + (int) (h2 % 32);                // 3 to 5 pixels a frame
+                int dl = 5 + (int) ((h >> 20) % 5);
+                int len = (span + dl) * 16;
+                int y16 = (int) (((uint32_t) t * (uint32_t) speed + h2) % (uint32_t) len);
+                int top = side ? PK_WIDE_H + (y16 >> 4) - dl : -span + (y16 >> 4) - dl;
+                int x = x0 - (y16 >> 4) / 3;
+                uint32_t c = towards(sideColour(side, x), 210, 225, 255, 170);
+                for (int q = 0; q < dl; q++) effAdd(x - q / 3, top + q, 50 + q * 110 / dl, false, c);
+                break;
+            }
+            case AMB_PETALS: {           // petals drifting down, fluttering
+                int speed = 4 + (int) (h2 % 6);
+                int len = span * 16;
+                int y16 = (int) (((uint32_t) t * (uint32_t) speed + h2) % (uint32_t) len);
+                int Yp = side ? PK_WIDE_H + (y16 >> 4) : -span + (y16 >> 4);
+                int x = x0 + sinTab[(t / 2 + (int) (h >> 7)) & 255] * 14 / 127 + (y16 >> 4) / 4;
+                int flap = sinTab[(t * 3 + (int) (h >> 15)) & 255];
+                uint32_t c = towards(sideColour(side, x), 255, 150 + (int) ((h >> 9) % 50), 190, 215);
+                uint32_t rim = towards(c, 255, 235, 245, 120);
+                int a = 220;
+                effAdd(x, Yp, a, false, rim);
+                if (flap > 40) {                                                   // flat: an oval
+                    effAdd(x + 1, Yp, a, false, c); effAdd(x + 2, Yp, a * 3 / 4, false, c);
+                    effAdd(x + 1, Yp + 1, a * 2 / 3, false, c);
+                } else if (flap < -40) {                                           // edge on: a sliver
+                    effAdd(x, Yp + 1, a, false, c); effAdd(x, Yp + 2, a / 2, false, c);
+                } else {                                                           // turning
+                    effAdd(x + 1, Yp + 1, a, false, c); effAdd(x + 1, Yp, a / 2, false, c);
+                }
+                break;
+            }
+            }
         }
     }
 }
@@ -2068,35 +2272,54 @@ static uint32_t ambientAt(int X, int Y, const int reach[4], uint32_t alpha) {
     int t = d * 256 / far;
     if (t > 256) t = 256;
     int at = clampi(X, 0, PK_WIDE_W - 1);
-    int r = 6 + d;                                                  // the colours spread as they go out
+    int r = 4 + d * 3 / 4;                                          // the colours spread as they go out
     int lo = at - r < 0 ? 0 : at - r, hi = at + r >= PK_WIDE_W ? PK_WIDE_W - 1 : at + r;
     int dim = t * t >> 8;
-    int bright = 256 - dim * 170 / 256;                             // 1.0 at the game -> ~0.34 at the window's edge
-    int wave = sinTab[(X * 2 - d * 3 + ambTick / 2) & 255] + sinTab[(X - d * 2 - ambTick / 3 + 90) & 255];
-    bright += bright * wave / (127 * 14);                           // a slow shimmer, about +-14%
-    int light = 0;
-    for (int k = 0; k < norbs[side]; k++) {
-        const struct AmbOrb* o = &orbs[side][k];
-        int dx = X - o->x, dy = Y - o->y, d2 = dx * dx + dy * dy;
-        if (d2 >= o->r2) continue;
-        int f = 256 - d2 * 256 / o->r2;
-        light += o->a * (f * f >> 8) >> 8;
+    int bright = 256 - dim * 160 / 256;                             // 1.0 at the game -> ~0.38 at the window's edge
+    int effect = ambEffect;
+    if (effect != AMB_NONE) {
+        int wave = sinTab[(X * 2 - d * 3 + ambTick / 2) & 255] + sinTab[(X - d * 2 - ambTick / 3 + 90) & 255];
+        bright += bright * wave / (127 * (effect == AMB_AURORA ? 6 : 14));   // a slow shimmer, about +-14% (+-33%)
     }
-    if (light > 200) light = 200;
-    uint32_t out = 0;
+    int col[3];
     for (int c = 0; c < 3; c++) {
         int32_t blur = (preA[side][hi + 1][c] - preA[side][lo][c]) / (hi - lo + 1) / 16;
         int32_t avg = preA[side][PK_WIDE_W][c] / PK_WIDE_W / 16;
-        int32_t col = (blur * (256 - t) + avg * t) >> 8;            // further out, the picture's overall colour
-        col = col * bright >> 8;
-        if (light) {
-            int32_t lit = col * 3 / 2 + 56;                         // a mote: the same colour, lit up
-            if (lit > 255) lit = 255;
-            col += (lit - col) * light >> 8;
-        }
-        out |= (uint32_t) clampi(col, 0, 255) << (8 * c);
+        col[c] = (int) ((blur * (256 - t / 2) + avg * (t / 2)) >> 8);   // further out, more of the overall colour
     }
-    return out | alpha;
+    // Kept as colourful as the picture while it dims: a quarter more saturation, then the brightness.
+    int lum = (col[0] * 77 + col[1] * 150 + col[2] * 29) >> 8;
+    for (int c = 0; c < 3; c++) col[c] = clampi((lum + (col[c] - lum) * 5 / 4) * bright >> 8, 0, 255);
+    int i = X - effView.x, j = Y - effView.y;
+    int tint = 0, fixA = 0;
+    uint32_t fixC = 0;
+    if (i >= 0 && j >= 0 && i < effView.w && j < effView.h) { tint = effTint[j][i]; fixA = effFixA[j][i]; fixC = effFixC[j][i]; }
+    if (effect == AMB_AURORA) {
+        // Curtains of light: two bands winding slowly through the margin, in the picture's colours lit up, with faint
+        // rays running through them.
+        int rays = 192 + sinTab[(X * 5 + ambTick / 3) & 255] * 40 / 127 + sinTab[(X * 2 - ambTick / 5 + 30) & 255] * 24 / 127;
+        for (int b = 0; b < 2; b++) {
+            int mid = far * (b ? 58 : 32) / 100 + sinTab[((X + b * 60) + ambTick * (b ? 1 : -1) / 3) & 255] * far / (7 * 127)
+                    + sinTab[((X * 2 + b * 90) - ambTick / 4) & 255] * far / (16 * 127);
+            int width = far / 5 + 8;
+            int off = d - mid;
+            off = off < 0 ? -off * 3 / 2 : off / 2;   // the side towards the game softer, the far side fading out longer
+            if (off < width) {
+                int f = 256 - off * 256 / width;
+                tint += (f * f >> 8) * (b ? 80 : 110) / 256 * rays / 256;
+            }
+        }
+        if (tint > 230) tint = 230;
+    }
+    for (int c = 0; c < 3; c++) {
+        if (tint) {
+            int lit = col[c] * 3 / 2 + 56;
+            if (lit > 255) lit = 255;
+            col[c] += (lit - col[c]) * tint >> 8;
+        }
+        if (fixA) col[c] += ((int) ((fixC >> (8 * c)) & 0xFF) - col[c]) * fixA >> 8;
+    }
+    return (rgbc(col[0], col[1], col[2]) & 0x00FFFFFFu) | alpha;
 }
 
 // --- the frame ---------------------------------------------------------------------------------------
@@ -2918,7 +3141,7 @@ static int viewInner(struct mCore* core, const uint32_t* frame, uint32_t* out, s
         sinInit();
         ambTick++;
         ambientLightPrepare(frame);
-        ambientOrbs(v, reach);
+        ambientEffects(v, reach);
     } else {
         ambAccOk = false;
     }

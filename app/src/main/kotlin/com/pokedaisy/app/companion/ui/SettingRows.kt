@@ -109,6 +109,7 @@ val SETTING_KEYWORDS: Map<String, String> = mapOf(
     "BATTLE BUTTONS" to "battle buttons moves fight switch run flee side touch single screen one screen expand widescreen",
     "HUD" to "field hud heads up display overlay party minimap mini map balls bag wild encounters overworld legends single screen",
     "ASPECT" to "stretch ratio fullscreen full screen size scale 3:2 wide widescreen 16:9 expand zoom",
+    "AMBIENT EFFECT" to "expand ambient light glow background effect effects bubbles sparkles fireflies embers snow rain petals aurora particles stripes lines battle menu title upright portrait",
     "AUTO ZOOM IN" to "expand wide zoom close-up closeup dialogue conversation sign menu text box pull in automatic",
     "SHADERS" to "filter lcd crt scanlines grid gba colors color correction effects screen look smoothing xbr xbrz scalefx upscale hd edges unlit pixel transparency backlight",
     "LIGHT COMPANION" to "lag laggy slow slowdown stutter performance weak device low end battery buttons late input delay unresponsive animations smooth",

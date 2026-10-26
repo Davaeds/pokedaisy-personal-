@@ -42,6 +42,7 @@ import com.pokedaisy.app.companion.GameAspect
 import com.pokedaisy.app.companion.hasGrid
 import com.pokedaisy.app.companion.next
 import com.pokedaisy.app.companion.FfMusicMode
+import com.pokedaisy.app.companion.AmbientEffect
 import com.pokedaisy.app.companion.MAX_BAR_TABS
 
 private val FF_RATES = floatArrayOf(0f, 1.5f, 2f, 3f, 4f, 5f, 6f, 8f, 10f)
@@ -530,6 +531,12 @@ private fun homeRows(
         // EXPAND only: whether a conversation, sign, menu or picture over the field pulls the zoom in (battles always do).
         SettingRow(tk("AUTO ZOOM IN"), onOff(s.expandZoomOnText), subtitle = "1x on dialogue, signs, menus") { s.setExpandZoomOnText(!s.expandZoomOnText); changed() }
             .takeIf { s.gameAspect == GameAspect.WIDE },
+        // EXPAND only: what moves in the light above and below battles and menus (a phone held upright).
+        SettingRow(tk("AMBIENT EFFECT"), s.ambientEffect.label, labelBadge = NewFeatures.badge(NewFeatures.AMBIENT_EFFECT),
+                   subtitle = "Above and below battles and menus") {
+            val effects = AmbientEffect.entries
+            select(Selector(tk("AMBIENT EFFECT"), effects.map { it.label }, s.ambientEffect.label) { l -> s.setAmbientEffect(effects.first { it.label == l }) })
+        }.takeIf { s.gameAspect == GameAspect.WIDE },
         // The party, a minimap, the balls and BAG / WILD over the game on the field: its own page (layout, look, size, parts).
         SettingRow(tk("HUD"), onOff(s.fieldHud), labelBadge = NewFeatures.badge(NewFeatures.HUD), opensPage = true, subtitle = "Party, minimap and bag over the game") { navigate(Page.FIELD_HUD) },
         // One screen: FIGHT, POKéMON and RUN in the room beside a battle (BattleButtons).

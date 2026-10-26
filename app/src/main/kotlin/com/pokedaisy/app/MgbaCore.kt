@@ -116,6 +116,8 @@ object MgbaCore {
     external fun pkWideHeight(): Int
     /** WIDE: draw the next frame's window, or (false) only keep its RAM - a frame the screen won't show. Emu thread. */
     external fun pkWideSetDraw(draw: Boolean)
+    /** EXPAND's AMBIENT EFFECT, by [com.pokedaisy.app.companion.AmbientEffect]'s ordinal. Any thread. */
+    external fun pkWideSetAmbientEffect(effect: Int)
     /** WIDE: the last frame was only noted ([pkWideSetDraw] false): nothing new to put on screen. Emu thread. */
     external fun pkWideSkipped(): Boolean
     /** WIDE: the signal that made it switch itself off for this game (a fault while drawing, caught: the game goes on
