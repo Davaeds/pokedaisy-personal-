@@ -77,13 +77,18 @@ void pk_nds_wide_gpu(bool on, int scale, int maxTexture);
 /** The list the GPU renderer draws while it's Active (GLRenderer::Wide points at it): set at the lists' swap. */
 const melonDS::WidePolygonList* pk_nds_wide_gpu_list();
 
-/** Whether the margins show the 3D in the frames to come (the overworld): only then is the next flush's list built. */
+/** Whether the margins show the 3D in the frames to come (the overworld, a battle): only then is the next flush's list
+ * built. */
 void pk_nds_wide_gpu_want(bool threeD);
 
 /** A margin pixel's plan, the word's top byte: PLAN_COLOR = its colour as is (RGB in the low bytes); PLAN_3D / PLAN_3D_OVER
  * = the 3D there, put on the screen as the 2D engine would (alone, or under the 2D colour in the low bytes - 6 bits a
- * channel - blended by BLDCNT); PLAN_SCREEN = the screen's own pixel at (low byte | bit 16's 256, byte 1). */
-constexpr uint32_t PK_NDS_PLAN_COLOR = 0, PK_NDS_PLAN_3D = 1, PK_NDS_PLAN_3D_OVER = 2, PK_NDS_PLAN_SCREEN = 3;
+ * channel - blended by BLDCNT); PLAN_SCREEN = the screen's own pixel at (low byte | bit 16's 256, byte 1); PLAN_3D_ON =
+ * the 3D over the 2D colour in the low bytes (6 bits a channel: a battle's background, or with PLAN_UNDER_OBJ a sprite),
+ * its alpha blended onto it where BLDCNT has that (BG3 / OBJ) as the second target. */
+constexpr uint32_t PK_NDS_PLAN_COLOR = 0, PK_NDS_PLAN_3D = 1, PK_NDS_PLAN_3D_OVER = 2, PK_NDS_PLAN_SCREEN = 3,
+    PK_NDS_PLAN_3D_ON = 4;
+constexpr uint32_t PK_NDS_PLAN_UNDER_OBJ = 0x80;
 
 /** After pk_nds_wide_frame in GPU mode: the margins' plan and what the compositor needs to follow it. */
 struct PkNdsWidePlan {

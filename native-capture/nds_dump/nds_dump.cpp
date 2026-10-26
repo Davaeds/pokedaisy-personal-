@@ -42,6 +42,9 @@ static u16 touchX = 0, touchY = 0;
 static u64 frameCount = 0;
 static int wideMargin = 0;   // wide MX [MY]: EXPAND drawn every frame (pk_nds_wide.cpp)
 static int wideMarginY = 0;
+// look DX DY: the window (wide's, at first) moved DX, DY DS pixels a frame, as the look-around moves it - set before
+// each frame as the app sets it (pk_nds_wide_need), the GPU path composing that frame's window
+static int lookX = 0, lookY = 0, lookDX = 0, lookDY = 0;
 static bool wideDrawn = false;
 // gpu N (NDS_DUMP_GL builds): DS RESOLUTION's GPU renderer at N, as pk_nds_run_frame drives it; the screens are then
 // its 1x copies (RGBA) and gpushot writes the composed window.
@@ -207,6 +210,11 @@ static void runFrames(int n, u32 keys)
         }
         nds->GPU.SkipDraw = !draw;
         nds->GPU.SkipDrawNext = !drawNext;
+        if (wideMargin && (lookDX || lookDY)) {
+            lookX += lookDX;
+            lookY += lookDY;
+            pk_nds_wide_need(wideMargin - lookX, wideMargin + lookX, wideMarginY - lookY, wideMarginY + lookY);
+        }
         nds->SetKeyMask(~keys & 0xFFF);
         if (touching) nds->TouchScreen(touchX, touchY);
         else nds->ReleaseScreen();
@@ -226,16 +234,16 @@ static void runFrames(int n, u32 keys)
                 wasBattle = battle;
             }
         }
-        // As the app: a battle's margins are its background, everything else the overworld's 3D.
+        // As the app: a battle's margins are its background and its 3D, everything else the overworld's 3D.
         if (wideMargin) {
-            pk_nds_wide_gpu_want(!battle);
+            pk_nds_wide_gpu_want(true);
             wideDrawn = pk_nds_wide_frame(nds, gpuOn ? gpuTopArgb.data() : nds->GPU.Framebuffer[nds->GPU.FrontBuffer][0].get(),
                 draw, !battle, appPerTick > 0 ? drawNext : true, battle) || wideDrawn;
         }
 #ifdef NDS_DUMP_GL
         if (gpuOn && draw) {
             // As pk_nds_run_frame: the window is EXPAND's whole view here
-            pk_nds_gl_frame(nds, -wideMargin, -wideMarginY, 256 + 2 * wideMargin, 192 + 2 * wideMarginY,
+            pk_nds_gl_frame(nds, -wideMargin + lookX, -wideMarginY + lookY, 256 + 2 * wideMargin, 192 + 2 * wideMarginY,
                 gpuTop.data(), gpuBottom.data());
             for (int k = 0; k < 256 * 192; k++) gpuTopArgb[k] = rgbaToArgb(gpuTop[k]);
         }
@@ -259,8 +267,10 @@ static Shown grabShown()
     for (int k = 0; k < 2; k++)
         memcpy(s.screens.data() + k * 256 * 192, nds->GPU.Framebuffer[fb][k].get(), 256 * 192 * 4);
     if (wideMargin && wideDrawn) {
-        int x, y;
-        pk_nds_wide_rect(&x, &y, &s.ww, &s.wh);
+        // the window (wide's, moved by look)
+        int x = -wideMargin + lookX, y = -wideMarginY + lookY;
+        s.ww = 256 + 2 * wideMargin;
+        s.wh = 192 + 2 * wideMarginY;
         s.wide.resize((size_t) s.ww * s.wh);
         pk_nds_wide_view(s.wide.data(), x, y, s.ww, s.wh);
         for (u32& p : s.wide) p = 0xFF000000u | ((p & 0xFF) << 16) | (p & 0xFF00) | ((p >> 16) & 0xFF);
@@ -451,6 +461,10 @@ int main(int argc, char** argv)
             if (!strcmp(cmd, "poke8")) nds->ARM9Write8(addr, (u8) v);
             else if (!strcmp(cmd, "poke16")) nds->ARM9Write16(addr, (u16) v);
             else nds->ARM9Write32(addr, v);
+        } else if (!strcmp(cmd, "look")) {
+            // look DX DY: from here on the window moves DX, DY DS pixels a frame (look 0 0 stops it where it is)
+            lookDX = (int) num(a);
+            lookDY = n > 2 ? (int) num(b) : 0;
         } else if (!strcmp(cmd, "wide")) {
             // wide MX [MY]: EXPAND with MX DS pixels left and right, MY above and below (0 = off; MY defaults to 0)
             wideMargin = (int) num(a);

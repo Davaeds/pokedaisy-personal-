@@ -153,7 +153,7 @@ vec4 Out(ivec3 c)
 }
 
 // A margin pixel by EXPAND's plan: pk_nds_wide.cpp's composed() - the 3D under the 2D blended over it, else the 3D's
-// alpha against the backdrop - then the master brightness.
+// alpha against the backdrop - or a battle's 3D over its background, then the master brightness.
 vec4 Margin(ivec2 ip, vec2 p)
 {
     ivec2 q = ip - uPlanRect.xy;
@@ -167,9 +167,21 @@ vec4 Margin(ivec2 ip, vec2 p)
     }
     ivec4 c3 = Fetch3D(p);
     bool has3D = c3.a > 0;
+    int blendCnt = uBlend.x;
+    if (plan.a == 4)
+    {
+        // A battle: its 3D over the background, or a sprite (PK_NDS_PLAN_UNDER_OBJ)
+        ivec3 c = plan.rgb & 0x3F;
+        if (has3D)
+        {
+            int eva = (c3.a & 0x1F) + 1;
+            bool target2 = (blendCnt & ((plan.r & 0x80) != 0 ? 0x1000 : 0x800)) != 0;
+            c = target2 && eva < 32 ? min((c3.rgb * eva + c * (32 - eva) + 0x10) >> 5, ivec3(0x3F)) : c3.rgb;
+        }
+        return Out(Brightness(ivec4(c, 0), uBlend.w >> 14, uBlend.w & 0x1F).rgb);
+    }
     ivec3 under = has3D ? c3.rgb : uBackdrop;
     ivec3 c = under;
-    int blendCnt = uBlend.x;
     if (plan.a == 2)
     {
         bool target2 = (blendCnt & (has3D ? 0x100 : 0x2000)) != 0;

@@ -47,9 +47,16 @@ constexpr int HELPERS = 3;
 // GPU mode (pk_nds_wide_gpu): the whole view's list, at most these (GLRenderer's buffers hold 4096 / 24576).
 constexpr u32 GPU_MAX_POLYS = 4096;
 constexpr u32 GPU_MAX_VERTS = 20000;
-// GPU mode: texels the view's 3D may take (one and a half 8x screens), so a far zoom-out draws at a lower scale - it
-// shows the DS pixels smaller anyway.
-constexpr s64 GPU_BUDGET = 256 * 8 * 192 * 8 * 3 / 2;
+// GPU mode: texels the view's 3D may take (one and three quarter 8x screens: a 16:9 window at 1x and its pad, at 8x),
+// so a far zoom-out draws at a lower scale - it shows the DS pixels smaller anyway.
+constexpr s64 GPU_BUDGET = 256 * 8 * 192 * 8 * 7 / 4;
+// GPU mode: DS pixels the list takes past what the window needs, each way. It's drawn a frame after it's built, and
+// only the part the window needs then (WidePolygonList's crop): a window moving out by up to this much a frame has
+// the 3D there.
+constexpr int GPU_HEADROOM = 32;
+// ... and the part drawn, this much past what the window needs each way: a window that starts moving has no step yet to
+// be drawn ahead for (pk_nds_wide_need), its first one shows this much more.
+constexpr int GPU_PAD = 6;
 
 // A slice's picture as drawn: 256 x 192 in the 3D engine's colours (RGB6 + alpha5), the rectangle drawn in the
 // screen's pixels.
@@ -109,7 +116,11 @@ struct Wide {
     // pixel still holds) - a sprite that stays put while its picture changes (the trainer throwing) doesn't.
     u32 edgeSeen[2][192] = {};
     u8 edgeSteady[2][192] = {};
+    // Frames run since the last drawn one: what's held counts game frames, so fast-forward (one frame drawn in a few)
+    // carries a box on at the same frame as 1x does.
+    int undrawn = 0;
     int needL = 0, needR = 0, needT = 0, needB = 0;
+    int askL = 0, askR = 0, askT = 0, askB = 0;   // what the window asked for last (pk_nds_wide_need)
     // GPU mode: the GPU renderer draws the 3D, and EXPAND's is one list of the whole view - its margins and the screen
     // between them, one picture - built from the same submissions as the slices', handed to it as gpuList. wide.out
     // then holds the margins' plan for the compositor (pk_nds_wide_plan), not their colours.
@@ -130,6 +141,51 @@ struct Wide {
 
 Wide wide;
 
+// Engine A as it drew the frame on screen (GPU::VisibleEndHook, at line 192): the game's VBlank handler goes on to set
+// the next frame's fade, scroll, palettes and sprites before the margins are made, which ran them a frame ahead of the
+// screen (a battle's fade-in a step brighter beside it, sprites a step on). Its tiles and maps are read live.
+struct Shown2D {
+    u32 DispCnt = 0;
+    u16 BGCnt[4] = {}, BGXPos[4] = {}, BGYPos[4] = {};
+    u8 WinCnt[4] = {};
+    u16 BlendCnt = 0;
+    u8 EVA = 0, EVB = 0, EVY = 0;
+    u16 MasterBrightness = 0;
+    u8 Palette[0x400] = {};   // engine A's BG and OBJ palettes
+    u8 OAM[0x400] = {};
+    bool valid = false;
+};
+Shown2D shown2D;
+
+void takeShown2D(Shown2D& d, const GPU& gpu)
+{
+    const GPU2D::Unit& u = gpu.GPU2D_A;
+    d.DispCnt = u.DispCnt;
+    for (int i = 0; i < 4; i++) {
+        d.BGCnt[i] = u.BGCnt[i];
+        d.BGXPos[i] = u.BGXPos[i];
+        d.BGYPos[i] = u.BGYPos[i];
+        d.WinCnt[i] = u.WinCnt[i];
+    }
+    d.BlendCnt = u.BlendCnt;
+    d.EVA = u.EVA;
+    d.EVB = u.EVB;
+    d.EVY = u.EVY;
+    d.MasterBrightness = u.MasterBrightness;
+    std::memcpy(d.Palette, gpu.Palette, sizeof(d.Palette));
+    std::memcpy(d.OAM, gpu.OAM, sizeof(d.OAM));
+    d.valid = true;
+}
+
+void onVisibleEnd(GPU& gpu, void*) { takeShown2D(shown2D, gpu); }
+
+// What the frame on screen was drawn with: the snapshot, or (no frame run since the hook went in) the live state.
+const Shown2D& shown(const NDS* nds)
+{
+    if (!shown2D.valid) takeShown2D(shown2D, nds->GPU);
+    return shown2D;
+}
+
 inline Slice& sliceAt(int sx, int sy) { return wide.slices[(sy + 1) * 3 + sx + 1]; }
 
 // Where a polygon goes: a slice's lists, or GPU mode's.
@@ -144,6 +200,7 @@ struct Store {
 };
 
 void storePolygon(GPU3D& g, const Store& st, Vertex* cv, int nverts, bool facingview, int polytype);
+void updateCrop();
 
 void addPolygon(GPU3D& g, Slice& s, Vertex* cv, int nverts, bool facingview, int polytype)
 {
@@ -397,6 +454,11 @@ bool onBoxTest(GPU3D& g, Vertex* cube, void*)
 {
     if (g.Viewport[0] != 0 || g.Viewport[4] != 256 || g.Viewport[3] != 0 || g.Viewport[5] != 192) return false;
     s64 l = wide.needL, r = wide.needR, t = wide.needT, b = wide.needB;
+    if (wide.gpu) {
+        // The list's own view (headroom included): a model culled there would pop in as the window moves.
+        if (!wide.gpuBuilding) return false;
+        l = wide.gpuL; r = wide.gpuR; t = wide.gpuT; b = wide.gpuB;
+    }
     if (!(l | r | t | b)) return false;
     // A little more each way: a model's box can be a pixel short of what it draws.
     l += 4; r += 4; t += 4; b += 4;
@@ -408,13 +470,30 @@ bool onBoxTest(GPU3D& g, Vertex* cube, void*)
     return true;
 }
 
-// GPU mode: the scale the view's 3D is drawn at - the one asked for, less where the view would take more than the budget
-// or a side longer than the GPU's textures.
-int gpuViewScale(int vw, int vh)
+// GPU mode: the scale the view's 3D is drawn at - the one asked for, less where the part drawn ([cw] x [ch]) would take
+// more than the budget or the whole view ([vw] x [vh], the viewport) a side longer than the GPU's textures.
+int gpuViewScale(int cw, int ch, int vw, int vh)
 {
     int s = std::max(1, wide.gpuScale);
-    while (s > 1 && ((s64) vw * vh * s * s > GPU_BUDGET || vw * s > wide.gpuMaxTexture || vh * s > wide.gpuMaxTexture)) s--;
+    while (s > 1 && ((s64) cw * ch * s * s > GPU_BUDGET || vw * s > wide.gpuMaxTexture || vh * s > wide.gpuMaxTexture)) s--;
     return s;
+}
+
+// GPU mode: the part of the list's view drawn - what the window needs now, SPARE and GPU_PAD more, within what the list
+// was built for - and its scale. Before the list is drawn (line 215): at the swap, and as the window changes between
+// frames.
+void updateCrop()
+{
+    WidePolygonList& list = wide.gpuList;
+    if (!list.Active) return;
+    auto side = [](int need, int built) { return std::min(built, need + SPARE + GPU_PAD); };
+    int l = side(wide.needL, list.OffX), r = side(wide.needR, list.ViewW - W3D - list.OffX);
+    int t = side(wide.needT, list.OffY), b = side(wide.needB, list.ViewH - H3D - list.OffY);
+    list.CropX = list.OffX - l;
+    list.CropY = list.OffY - t;
+    list.CropW = W3D + l + r;
+    list.CropH = H3D + t + b;
+    list.Scale = gpuViewScale(list.CropW, list.CropH, list.ViewW, list.ViewH);
 }
 
 // GPU mode's swap: the list built over this flush becomes what the renderer draws (if it holds every polygon), and the
@@ -442,7 +521,7 @@ void swapGpu(GPU3D& g, bool rendering)
             list.ViewH = H3D + wide.gpuT + wide.gpuB;
             list.OffX = wide.gpuL;
             list.OffY = wide.gpuT;
-            list.Scale = gpuViewScale(list.ViewW, list.ViewH);
+            updateCrop();
         }
     } else {
         // The game's lists don't move on (rendering off): its own is drawn, ours is about to be written over.
@@ -454,13 +533,14 @@ void swapGpu(GPU3D& g, bool rendering)
     wide.gpuBank ^= 1;
     wide.gpuNumVerts = wide.gpuNumPolys = wide.gpuNumOpaque = 0;
     wide.gpuComplete = true;
-    // A side's margin and SPARE more (edge marking compares a pixel with its neighbours); none where none is needed,
-    // so the screen's own edge stays where the DS cuts it.
-    auto margin = [](int need) { return need > 0 ? need + SPARE : 0; };
-    wide.gpuL = margin(wide.needL);
-    wide.gpuR = margin(wide.needR);
-    wide.gpuT = margin(wide.needT);
-    wide.gpuB = margin(wide.needB);
+    // A side's margin, SPARE more (edge marking compares a pixel with its neighbours) and the headroom - every side,
+    // the window can move out on any. None at all while the window is the screen: the game's own list is drawn.
+    bool any = (wide.needL | wide.needR | wide.needT | wide.needB) != 0;
+    auto margin = [&](int need, int max) { return any ? std::min(max, need + SPARE + GPU_HEADROOM) : 0; };
+    wide.gpuL = margin(wide.needL, MX + SPARE);
+    wide.gpuR = margin(wide.needR, MX + SPARE);
+    wide.gpuT = margin(wide.needT, MY + SPARE);
+    wide.gpuB = margin(wide.needB, MY + SPARE);
     wide.gpuBuilding = wide.on && wide.gpu && wide.gpuWant && (wide.gpuL | wide.gpuR | wide.gpuT | wide.gpuB);
     if (wide.gpuBuilding && wide.gpuVerts[0].empty()) {
         for (int b = 0; b < 2; b++) {
@@ -582,12 +662,12 @@ bool isOverlay(const Compose& k, int bg)
 // [k] for the frame on screen now; [threeD]: the 3D is what the margins show (no layers over it otherwise).
 void setupCompose(Compose& k, NDS* nds, bool threeD)
 {
-    const GPU2D::Unit& u = nds->GPU.GPU2D_A;
+    const Shown2D& u = shown(nds);
     k.nds = nds;
     k.mb = u.MasterBrightness;
     if (!(u.DispCnt & 0x30000)) k.mb = 0;   // display off / VRAM modes: the 2D engine's call
     for (u32 v = 0; v < 64; v++) k.bright[v] = (u8) (shade(v, k.mb) & 0xFF);
-    k.backdrop = widen((u16) (nds->GPU.Palette[0] | (nds->GPU.Palette[1] << 8)));
+    k.backdrop = widen((u16) (u.Palette[0] | (u.Palette[1] << 8)));
     k.blendCnt = u.BlendCnt;
     k.eva = u.EVA;
     k.evb = u.EVB;
@@ -632,7 +712,7 @@ void setupCompose(Compose& k, NDS* nds, bool threeD)
 void decodeRow(NDS* nds, const Compose::Layer& l, int by, u16* out)
 {
     const GPU& gpu = nds->GPU;
-    const GPU2D::Unit& u = gpu.GPU2D_A;
+    const Shown2D& u = shown(nds);
     u16 cnt = u.BGCnt[l.bg];
     u32 disp = u.DispCnt;
     u32 mapBase = 0x06000000u + ((disp >> 27) & 7) * 0x10000u + ((cnt >> 8) & 0x1F) * 0x800u;
@@ -656,7 +736,7 @@ void decodeRow(NDS* nds, const Compose::Layer& l, int by, u16* out)
                 ci = (px & 1) ? b >> 4 : b & 0xF;
                 if (ci) ci += (e >> 12) * 16u;
             }
-            dst[i] = ci ? (u16) (0x8000 | ((gpu.Palette[ci * 2] | (gpu.Palette[ci * 2 + 1] << 8)) & 0x7FFF)) : 0;
+            dst[i] = ci ? (u16) (0x8000 | ((u.Palette[ci * 2] | (u.Palette[ci * 2 + 1] << 8)) & 0x7FFF)) : 0;
         }
     }
 }
@@ -684,6 +764,54 @@ inline u16 overlayPixel(Compose& k, int x, int y)
         if (c) return c;
     }
     return 0;
+}
+
+// Engine A's sprite (OAM attributes [a0] [a1] [a2], [w] x [h]) at pixel ([px], [py]) of itself, as GPU2D_Soft's
+// DrawSprite_Normal reads its tiles and the palettes: 0 clear, else 0x8000 | BGR555. Affine and bitmap sprites aren't
+// read: OBJ_UNREAD all over.
+constexpr u32 OBJ_UNREAD = 0x10000;
+
+u32 objPixel(NDS* nds, u16 a0, u16 a1, u16 a2, int w, int h, int px, int py)
+{
+    if (px < 0 || px >= w || py < 0 || py >= h) return 0;
+    if ((a0 & 0x100) || ((a0 >> 10) & 3) == 3) return OBJ_UNREAD;
+    const GPU& gpu = nds->GPU;
+    const Shown2D& u = shown(nds);
+    u32 disp = u.DispCnt;
+    if (a1 & 0x2000) py = h - 1 - py;
+    if (a1 & 0x1000) px = w - 1 - px;
+    bool c256 = (a0 & 0x2000) != 0;
+    u32 tile = a2 & 0x3FF;
+    if (disp & 0x10) tile = (tile << ((disp >> 20) & 3)) + (u32) ((py >> 3) * (w >> 3) << (c256 ? 1 : 0));
+    else tile += (u32) (py >> 3) * 0x20;
+    u32 addr = tile << 5, ci;
+    if (c256) {
+        addr += (u32) ((py & 7) << 3) + (u32) ((px & ~7) << 3) + (u32) (px & 7);
+        ci = gpu.ReadVRAM_AOBJ<u8>(addr & 0x3FFFF);
+    } else {
+        addr += (u32) ((py & 7) << 2) + (u32) ((px & ~7) << 2) + (u32) ((px & 7) >> 1);
+        u8 b = gpu.ReadVRAM_AOBJ<u8>(addr & 0x3FFFF);
+        ci = (px & 1) ? b >> 4 : b & 0xF;
+    }
+    if (!ci) return 0;
+    u32 pal = a2 >> 12;
+    u16 c;
+    if (c256 && (disp & 0x80000000u)) {
+        // the extended palettes: VRAM F or G mapped there
+        u32 off = (pal * 256 + ci) * 2 & 0x1FFF, m = gpu.VRAMMap_AOBJExtPal;
+        c = 0;
+        if (m & (1 << 5)) c |= (u16) (gpu.VRAM_F[off] | gpu.VRAM_F[off + 1] << 8);
+        if (m & (1 << 6)) c |= (u16) (gpu.VRAM_G[off] | gpu.VRAM_G[off + 1] << 8);
+    } else {
+        u32 i = 0x200 + (c256 ? ci : pal * 16 + ci) * 2;
+        c = (u16) (u.Palette[i] | (u.Palette[i + 1] << 8));
+    }
+    return 0x8000u | (c & 0x7FFF);
+}
+
+inline bool objOpaque(NDS* nds, u16 a0, u16 a1, u16 a2, int w, int h, int px, int py)
+{
+    return objPixel(nds, a0, a1, a2, w, h, px, py) != 0;
 }
 
 // Wide-frame pixel (x, y) as the screen would show it, its 3D colour [c] (NONE / alpha 0: the 3D clear there), as RGBA.
@@ -843,6 +971,8 @@ void stopPool()
 
 } // namespace
 
+static void applyNeed();
+
 void pk_nds_wide_set(NDS* nds, bool on)
 {
     if (nds == wide.nds && on == wide.on) return;
@@ -850,7 +980,9 @@ void pk_nds_wide_set(NDS* nds, bool on)
         wide.nds->GPU.GPU3D.WideSubmitHook = nullptr;
         wide.nds->GPU.GPU3D.WideSwapHook = nullptr;
         wide.nds->GPU.GPU3D.WideBoxHook = nullptr;
+        wide.nds->GPU.VisibleEndHook = nullptr;
     }
+    shown2D.valid = false;
     wide.nds = nds;
     wide.on = nds && on;
     wide.gpuList = WidePolygonList();
@@ -879,7 +1011,8 @@ void pk_nds_wide_set(NDS* nds, bool on)
     nds->GPU.GPU3D.WideSubmitHook = onSubmit;
     nds->GPU.GPU3D.WideSwapHook = onSwap;
     nds->GPU.GPU3D.WideBoxHook = onBoxTest;
-    pk_nds_wide_need(wide.needL, wide.needR, wide.needT, wide.needB);
+    nds->GPU.VisibleEndHook = onVisibleEnd;
+    applyNeed();
 }
 
 void pk_nds_wide_gpu(bool on, int scale, int maxTexture)
@@ -896,7 +1029,7 @@ void pk_nds_wide_gpu(bool on, int scale, int maxTexture)
         s.image.valid = s.shown.valid = false;
         s.renderNum = 0;
     }
-    pk_nds_wide_need(wide.needL, wide.needR, wide.needT, wide.needB);
+    applyNeed();
 }
 
 const WidePolygonList* pk_nds_wide_gpu_list() { return &wide.gpuList; }
@@ -910,10 +1043,25 @@ void pk_nds_wide_plan(PkNdsWidePlan* out)
 
 void pk_nds_wide_need(int left, int right, int top, int bottom)
 {
-    wide.needL = std::clamp(left, 0, MX);
-    wide.needR = std::clamp(right, 0, MX);
-    wide.needT = std::clamp(top, 0, MY);
-    wide.needB = std::clamp(bottom, 0, MY);
+    // The margins drawn now are shown with the next frame's window: one moving out (the look-around, a zoom easing
+    // out) is drawn for where it'll be by then too - twice its last step further, SPARE more - else its leading edge
+    // showed a strip of black.
+    auto ahead = [](int ask, int& last) {
+        int step = std::max(0, ask - last);
+        last = ask;
+        return step ? ask + 2 * step + SPARE : ask;
+    };
+    wide.needL = std::clamp(ahead(left, wide.askL), 0, MX);
+    wide.needR = std::clamp(ahead(right, wide.askR), 0, MX);
+    wide.needT = std::clamp(ahead(top, wide.askT), 0, MY);
+    wide.needB = std::clamp(ahead(bottom, wide.askB), 0, MY);
+    applyNeed();
+}
+
+// The margins wanted now: slices on / off, the GPU list's crop.
+static void applyNeed()
+{
+    if (wide.gpu) updateCrop();
     if (!wide.on) return;
     for (Slice& s : wide.slices) {
         bool x = s.sx < 0 ? wide.needL > 0 : s.sx > 0 ? wide.needR > 0 : true;
@@ -933,12 +1081,17 @@ void pk_nds_wide_need(int left, int right, int top, int bottom)
 bool pk_nds_wide_frame(NDS* nds, const uint32_t* top, bool draw, bool margins, bool drawNext, bool battle)
 {
     if (!wide.on || nds != wide.nds || !top) return false;
+    int step = 1 + wide.undrawn;
+    wide.undrawn = draw ? 0 : std::min(wide.undrawn + 1, 255);
     // Only while the 3D engine (engine A) is the top screen, and the caller says it's the overworld.
     bool aOnTop = (nds->PowerControl9 & (1 << 15)) != 0;
     bool threeDOnTop = margins && aOnTop;
     // A battle: its background layer, BG3 - a text BG (mode 0-2), shown - drawn on past the screen.
-    const GPU2D::Unit& unitA = nds->GPU.GPU2D_A;
+    const Shown2D& unitA = shown(nds);
     bool battleBg = battle && !threeDOnTop && aOnTop && (unitA.DispCnt & 7) <= 2 && (unitA.DispCnt & (1 << 11));
+    // The battle's 3D over it: BG0 the 3D layer, shown, not below BG3.
+    bool battle3D = battleBg && (unitA.DispCnt & (1 << 3)) && (unitA.DispCnt & (1 << 8)) &&
+        (unitA.BGCnt[0] & 3) <= (unitA.BGCnt[3] & 3);
     int bgx = unitA.BGXPos[3], bgy = unitA.BGYPos[3];
     // BLDCNT on the background (BG3, or the backdrop where it's clear) - modes 2 / 3, brightness up / down - unless a
     // window keeps colour effects off outside it: +1 / -1, 0 none.
@@ -992,26 +1145,34 @@ bool pk_nds_wide_frame(NDS* nds, const uint32_t* top, bool draw, bool margins, b
             const u32* was = wide.edgeSeen[side];
             bool held = now[y] == was[y] || (y > 0 && now[y] == was[y - 1]) || (y + 1 < H3D && now[y] == was[y + 1]);
             u8& n = wide.edgeSteady[side][y];
-            n = held ? (u8) std::min(255, n + 1) : 0;
+            n = held ? (u8) std::min(255, n + step) : 0;
         }
         std::memcpy(wide.edgeSeen[side], now, sizeof(now));
     }
     wide.objHeldNext.clear();
+    // A battle's scenery sprites the screen shows part of, its sides crossing them (the platforms and the trainer sliding
+    // in - behind the battle's 3D, the Pokemon): drawn on past it from their own tiles. Not one wholly off the screen -
+    // its 9-bit x could put it on either side, and a game parks the ones it doesn't use there - unless it's the next
+    // piece of one that's drawn (flush beside it, the same row, size, palette and priority: a platform is 64-pixel
+    // pieces); nor the boxes and text over the 3D, which a game leaves untidy past the screen (a box's pieces sliding
+    // on apart): those are carried below.
+    struct Crossing { u16 a0, a1, a2; int x, y, w, h, prio; };
+    Crossing crossing[128], offScreen[128];
+    int numCrossing = 0, numOff = 0;
     if (draw && battleBg && (unitA.DispCnt & (1 << 12))) {
         static const int sizes[3][4][2] = {
             {{8, 8}, {16, 16}, {32, 32}, {64, 64}}, {{16, 8}, {32, 8}, {32, 16}, {64, 32}}, {{8, 16}, {8, 32}, {16, 32}, {32, 64}},
         };
         for (int i = 0; i < 128; i++) {
-            const u8* o = &nds->GPU.OAM[i * 8];
+            const u8* o = &unitA.OAM[i * 8];
             u16 a0 = (u16) (o[0] | o[1] << 8), a1 = (u16) (o[2] | o[3] << 8);
             // Its place across the screen (and whether it shows): a box bobbing a pixel up and down while the game waits
             // for a command still counts as still.
             u16 a2 = (u16) (o[4] | o[5] << 8);
             u64 key = (u64) (a0 & 0xC300) | (u64) (a1 & 0xF1FF) << 16 | (u64) a2 << 32;
             u8 held = 0;
-            for (auto& [k, n] : wide.objHeld) if (k == key) { held = (u8) std::min(255, n + 1); break; }
+            for (auto& [k, n] : wide.objHeld) if (k == key) { held = (u8) std::min(255, n + step); break; }
             wide.objHeldNext.emplace_back(key, held);
-            if (held < EDGE_STEADY) continue;
             if (!(a0 & 0x100) && (a0 & 0x200)) continue;   // hidden
             int shape = (a0 >> 14) & 3;
             if (shape == 3) continue;
@@ -1020,31 +1181,64 @@ bool pk_nds_wide_frame(NDS* nds, const uint32_t* top, bool draw, bool margins, b
             int x = a1 & 0x1FF, y = a0 & 0xFF;
             if (x >= 256) x -= 512;
             if (y >= 192) y -= 256;
-            bool left = x <= 0 && x + w > 0, right = x < W3D && x + w >= W3D;
-            for (int r = std::max(0, y); r < std::min(H3D, y + h); r++) {
-                edgeObjL[r] |= left;
-                edgeObjR[r] |= right;
+            int prio = (a2 >> 10) & 3;
+            if (battle3D && prio > (unitA.BGCnt[0] & 3)) {
+                bool onScreen = x < W3D && x + w > 0 && y < H3D && y + h > 0;
+                if (((a0 >> 10) & 3) < 2 && !(a0 & 0x100)) {
+                    // (the ones wholly on the screen too, for their off-screen neighbours: they add nothing past it)
+                    if (onScreen) crossing[numCrossing++] = {a0, a1, a2, x, y, w, h, prio};
+                    else offScreen[numOff++] = {a0, a1, a2, x, y, w, h, prio};
+                }
+                continue;   // scenery is never carried (a settled platform at the edge was, as a white strip)
             }
+            if (held < EDGE_STEADY) continue;
+            bool left = x <= 0 && x + w > 0, right = x < W3D && x + w >= W3D;
+            // Only rows the sprite has a pixel on at the screen's edge.
+            for (int r = std::max(0, y); r < std::min(H3D, y + h); r++) {
+                edgeObjL[r] |= left && objOpaque(nds, a0, a1, a2, w, h, -x, r - y);
+                edgeObjR[r] |= right && objOpaque(nds, a0, a1, a2, w, h, W3D - 1 - x, r - y);
+            }
+        }
+    }
+    // The pieces wholly off the screen that go on from a drawn one, either way its 9-bit x reads, piece by piece.
+    for (bool more = numOff > 0; more;) {
+        more = false;
+        for (int i = 0; i < numOff; i++) {
+            Crossing o = offScreen[i];
+            for (int j = 0; j < numCrossing && !more; j++) {
+                const Crossing& c = crossing[j];
+                if (o.y != c.y || o.h != c.h || o.w != c.w || o.prio != c.prio || (o.a2 >> 12) != (c.a2 >> 12)) continue;
+                for (int ox : {o.x, o.x + 512, o.x - 512}) {
+                    if (ox + o.w != c.x && c.x + c.w != ox) continue;
+                    o.x = ox;
+                    crossing[numCrossing++] = o;
+                    offScreen[i] = offScreen[--numOff];
+                    more = true;
+                    break;
+                }
+            }
+            if (more) break;
         }
     }
     if (draw) wide.objHeld.swap(wide.objHeldNext);
     if (draw) {
-        u32 mb = nds->GPU.GPU2D_A.MasterBrightness;
-        if (!(nds->GPU.GPU2D_A.DispCnt & 0x30000)) mb = 0;   // display off / VRAM modes: the 2D engine's call
-        u16 bd = (u16) (nds->GPU.Palette[0] | (nds->GPU.Palette[1] << 8));
+        u32 mb = unitA.MasterBrightness;
+        if (!(unitA.DispCnt & 0x30000)) mb = 0;   // display off / VRAM modes: the 2D engine's call
+        u16 bd = (u16) (unitA.Palette[0] | (unitA.Palette[1] << 8));
         u32 backdrop = shade((bd & 0x1F) << 1, ((bd >> 5) & 0x1F) << 1, ((bd >> 10) & 0x1F) << 1, mb);
         u32 off = threeDOnTop || battleBg ? backdrop : 0xFF000000u;
         // BG3's colour as the screen shows it: BGR555 widened to 6 bits (a 2D layer's c << 1, ScanlineFinalPass),
         // BLDCNT's brightness up / down on it (a move's darkening, a flash - no other layer is over it out here, so its
         // alpha blending has nothing to mix), then the master brightness.
-        auto bgColor = [&](u16 c) {
+        auto bg6 = [&](u16 c) {
             u32 r = (c & 0x1F) << 1, g = ((c >> 5) & 0x1F) << 1, b = ((c >> 10) & 0x1F) << 1;
             if (fade) {
                 auto f = [&](u32 v) { return fade > 0 ? v + (63 - v) * evy / 16 : v - v * evy / 16; };
                 r = f(r); g = f(g); b = f(b);
             }
-            return shade(r, g, b, mb);
+            return r | g << 8 | b << 16;
         };
+        auto bgColor = [&](u16 c) { return shade(bg6(c), mb); };
         // Each row's colour carried past a box at the screen's side (0: none). A row whose edge band is one colour,
         // held EDGE_STEADY frames, carries its edge pixel; a row of the same box with a letter or a bar at the edge
         // takes the nearest such row's colour (the box's line or fill it's drawn over) - its own edge pixel would
@@ -1119,14 +1313,47 @@ bool pk_nds_wide_frame(NDS* nds, const uint32_t* top, bool draw, bool margins, b
                     return;
                 }
                 if (battleBg) {
+                    // The first scenery sprite (in OAM order, as the 2D engine picks) with a pixel here: under the 3D,
+                    // over the background unless that's above it (a sprite wins a tie with a BG).
+                    u32 obj = 0;
+                    int objPrio = 4;
+                    bool objSemi = false;
+                    for (int i = 0; i < numCrossing && !obj; i++) {
+                        const Crossing& o = crossing[i];
+                        if (x < o.x || x >= o.x + o.w || y < o.y || y >= o.y + o.h) continue;
+                        obj = objPixel(nds, o.a0, o.a1, o.a2, o.w, o.h, x - o.x, y - o.y) & 0xFFFF;
+                        objPrio = o.prio;
+                        objSemi = ((o.a0 >> 10) & 3) == 1;
+                    }
                     int side = x < 0 ? 0 : 1;
                     if (y >= 0 && y < H3D && carry[side][y]) {
                         row[x] = wide.gpu ? screen(side ? W3D - 1 : 0, carryRow[side][y]) : carry[side][y];
                         return;
                     }
                     u16 c = y >= 0 && y < H3D ? pk_nds_bg_pixel(nds, 3, x + bgx, y + bgy) : 0;
-                    // The background, else the backdrop (its palette's colour 0).
-                    row[x] = color(c ? bgColor(c) : bgColor(bd));
+                    // The background, else the backdrop (its palette's colour 0), or a sprite over it - under the
+                    // battle's 3D where it's drawn: its Pokemon slide in from past the screen's sides too.
+                    u32 under = bg6(c ? c : bd);
+                    bool objUnder = obj && objPrio <= (unitA.BGCnt[3] & 3);
+                    if (objUnder) {
+                        // A semi-transparent sprite blended onto the background where BLDCNT has it as the second target
+                        u32 o6 = widen((u16) obj);
+                        under = objSemi && (unitA.BlendCnt & 0x800) ? blend4(o6, under, compose.eva, compose.evb) : o6;
+                    }
+                    if (battle3D) {
+                        // The 3D's alpha onto what's under it where BLDCNT has that (the sprite, BG3) as the second target
+                        if (wide.gpu) {
+                            row[x] = PK_NDS_PLAN_3D_ON << 24 | (objUnder ? PK_NDS_PLAN_UNDER_OBJ : 0) | under;
+                            return;
+                        }
+                        u32 c3 = marginPixel(x, y);
+                        if (c3 != NONE && (c3 >> 24)) {
+                            bool target2 = (unitA.BlendCnt & (objUnder ? 0x1000 : 0x800)) != 0;
+                            row[x] = shade(target2 ? blend5(c3, under) : c3 & 0x3F3F3F, mb);
+                            return;
+                        }
+                    }
+                    row[x] = color(shade(under, mb));
                     return;
                 }
                 if (threeDOnTop && wide.gpu) {
@@ -1287,7 +1514,7 @@ void pk_nds_wide_rect(int* x, int* y, int* w, int* h)
 uint16_t pk_nds_bg_pixel(NDS* nds, int bg, int bx, int by)
 {
     const GPU& gpu = nds->GPU;
-    const GPU2D::Unit& u = gpu.GPU2D_A;
+    const Shown2D& u = shown(nds);
     u16 cnt = u.BGCnt[bg & 3];
     u32 disp = u.DispCnt;
     int size = cnt >> 14;
@@ -1315,7 +1542,7 @@ uint16_t pk_nds_bg_pixel(NDS* nds, int bg, int bx, int by)
         if (!ci) return 0;
         ci += (e >> 12) * 16u;
     }
-    u16 c = (u16) (gpu.Palette[ci * 2] | (gpu.Palette[ci * 2 + 1] << 8));
+    u16 c = (u16) (u.Palette[ci * 2] | (u.Palette[ci * 2 + 1] << 8));
     return (u16) (0x8000 | (c & 0x7FFF));
 }
 

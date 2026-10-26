@@ -1937,9 +1937,16 @@ pages (`GuidePlatinum.kt`, `GuideHeartGold.kt`) come from the decomps' scripts, 
 **EXPAND.** The overworld is 3D, so the margins are drawn, not rebuilt: every polygon the game submits is clipped again
 shifted by about a screen into lists of our own (left, right, above, below, the corners), and a second unthreaded
 software renderer draws only the rows and columns the shown window needs. The middle is the game's own frame, untouched
-(`nds_dump`'s `widecheck` must find no difference). Battles carry their 512 px BG3 background past the screen, and the
-HP boxes, the text box and the field menu's bar to the edges, from the nearest steady rows (sprites tracked per row so
-a flicker in the intro doesn't reach the margins).
+(`nds_dump`'s `widecheck` must find no difference). Battles carry their 512 px BG3 background past the screen, the
+battle's 3D over it (HG/SS's Pokemon are polygons: they slide in from past the edges), the scenery sprites behind the 3D
+(the platforms in 64 px pieces and the trainer: each piece the screen shows part of, drawn from its own tiles, and the
+pieces wholly off it that sit flush beside one of the same row, size, palette and priority - a lone off-screen sprite's
+9-bit x could be either side, and games park unused ones there), and the HP boxes, the text box and the field menu's
+bar to the edges, from the nearest steady rows (sprites over the 3D, tracked per row, counted in game frames so FF
+carries them at the same frame as 1x; a row only where the sprite's edge pixel is opaque). The 2D state the margins
+follow (engine A's registers, palettes, OAM) is a snapshot taken as line 192 starts (`GPU::VisibleEndHook`): read after
+the frame, it was already the game's VBlank handler's next frame - a battle's fade-in a step brighter than the screen,
+scroll and sprites a step on. `nds_dump`'s `look DX DY` moves the window a frame at a time, as the look-around does.
 
 **DS RESOLUTION (the GPU path).** `ORIGINAL` is the software renderer above, pixel for pixel; `2x`-`8x` switch melonDS to its
 OpenGL renderer (`nds/pk_nds_gl.cpp`, between frames, back and forth while playing). The patch ports it to OpenGL ES
@@ -1963,8 +1970,14 @@ the view's own pixels (`submitGpu` / `swapGpu` in `pk_nds_wide.cpp`) - drawn by 
 and none of the slices' CPU cost; a submission it can't take (a viewport not the whole screen, the list full) draws the
 game's own list for that frame. The margins' 2D (fog layers over the 3D, a battle's BG3, the screen's edge rows carried
 on) is planned per pixel on the CPU as before (`PkNdsWidePlan`: a colour, the 3D alone or under a 2D colour, or a
-screen pixel to repeat) and put together by the compositor. Far zoom-outs draw the 3D at a lower scale (a budget of
-1.5 screens at 8x). Headless: nds_dump's `NDS_DUMP_GL` build runs it through ANGLE (its README).
+screen pixel to repeat, or a battle's 3D over its background / a sprite) and put together by the compositor. The list
+is clipped at the view a flush before it's drawn and shown a frame after that, so a moving window (the look-around, a
+zoom easing out) showed black at its leading edge for two frames: it's built `GPU_HEADROOM` (32) DS pixels wider each
+way, and the renderer draws only the part the window needs at line 215 (`WidePolygonList::Crop*`: the colour texture
+holds that part, the viewport is the whole view moved onto it), `GPU_PAD` more each way, with the window's last step
+added once more ahead (`pk_nds_wide_need`, which the slices follow too). Far zoom-outs draw the 3D at a lower scale (a
+budget of 1.75 screens at 8x: a 16:9 window at 1x and its pad stay at 8x). Headless: nds_dump's `NDS_DUMP_GL` build runs
+it through ANGLE (its README).
 
 **Fast-forward.** A shown frame of an FF group draws; the others skip drawing (above), which took 4x from ~200 to 240
 DS frames a second on the Thor. Whether the next frame is seen is decided a frame ahead (its 3D starts at line 215,
