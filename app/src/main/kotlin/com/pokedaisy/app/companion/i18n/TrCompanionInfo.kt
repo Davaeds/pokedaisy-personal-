@@ -160,6 +160,11 @@ internal val trCompanionInfo: Map<String, Tr> = mapOf(
     "DAY" to Tr(ja = "ひる", fr = "JOUR", de = "TAG", it = "GIORNO", es = "DÍA", br = "DIA", pt = "DIA"),
     "EVENING" to Tr(ja = "ゆうがた", fr = "SOIR", de = "ABEND", it = "SERA", es = "TARDE", br = "TARDE", pt = "TARDE"),
     "NIGHT" to Tr(ja = "よる", fr = "NUIT", de = "NACHT", it = "NOTTE", es = "NOCHE", br = "NOITE", pt = "NOITE"),
+    // Black's seasons (its wild Pokémon change with them)
+    "SPRING" to Tr(ja = "はる", fr = "PRINTEMPS", de = "FRÜHLING", it = "PRIMAVERA", es = "PRIMAVERA", br = "PRIMAVERA", pt = "PRIMAVERA"),
+    "SUMMER" to Tr(ja = "なつ", fr = "ÉTÉ", de = "SOMMER", it = "ESTATE", es = "VERANO", br = "VERÃO", pt = "VERÃO"),
+    "AUTUMN" to Tr(ja = "あき", fr = "AUTOMNE", de = "HERBST", it = "AUTUNNO", es = "OTOÑO", br = "OUTONO", pt = "OUTONO"),
+    "WINTER" to Tr(ja = "ふゆ", fr = "HIVER", de = "WINTER", it = "INVERNO", es = "INVIERNO", br = "INVERNO", pt = "INVERNO"),
     "GIFT" to Tr(ja = "もらえる", fr = "CADEAU", de = "GESCHENK", it = "DONO", es = "REGALO", br = "PRESENTE", pt = "OFERTA"),
     "LEVEL UP" to Tr(ja = "レベルアップ", fr = "PAR NIVEAU", de = "LEVEL-UP", it = "PER LIVELLO", es = "POR NIVEL", br = "POR NÍVEL", pt = "POR NÍVEL"),
     "EVO." to Tr(ja = "しんか", fr = "ÉVO.", de = "ENTW.", it = "EVO.", es = "EVO.", br = "EVO.", pt = "EVO."),

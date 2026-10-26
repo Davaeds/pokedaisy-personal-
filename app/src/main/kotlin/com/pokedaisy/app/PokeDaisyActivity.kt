@@ -428,13 +428,19 @@ class PokeDaisyActivity : Activity() {
         }
     }
 
+    /** A DS game whose Repel steps the reader knows (Platinum, HeartGold / SoulSilver, Black). */
+    private fun dsRepelKnown(): Boolean {
+        val game = telemetry.snapshot.value.game
+        return romIsNds && (com.pokedaisy.app.companion.data.gen4ConfigFor(game)?.repelStepsOff
+            ?: com.pokedaisy.app.companion.data.gen5ConfigFor(game)?.repelStepsOff) != null
+    }
+
     private val itemUse = object : com.pokedaisy.app.companion.ItemUse {
         override val repelVar get() = fieldItemSupport()?.fns?.repelVar
         override fun repelSteps(v: Int) = fieldItemSupport()?.fns?.repelSteps(v) ?: v
-        /** A DS game's Repels ([com.pokedaisy.app.companion.data.useGen4Repel]); nothing else yet. */
-        private fun dsRepel(itemId: Int) = romIsNds &&
-            com.pokedaisy.app.companion.data.gen4ConfigFor(telemetry.snapshot.value.game)?.repelStepsOff != null &&
-            com.pokedaisy.app.companion.data.GEN4_REPEL_KINDS.any { it.first == itemId }
+        /** A DS game's Repels ([com.pokedaisy.app.companion.data.useGen4Repel], Black's [com.pokedaisy.app.companion.data.useGen5Repel]);
+         * nothing else yet. */
+        private fun dsRepel(itemId: Int) = dsRepelKnown() && com.pokedaisy.app.companion.data.GEN4_REPEL_KINDS.any { it.first == itemId }
         override fun canUse(itemId: Int) = dsRepel(itemId) || fieldItemSupport()?.canUse(itemId) == true
         override fun canGive(itemId: Int) = fieldItemSupport()?.canGive(itemId) == true
         override fun marked(itemId: Int) = dsRepel(itemId) || fieldItemSupport()?.marked(itemId) == true
@@ -479,9 +485,11 @@ class PokeDaisyActivity : Activity() {
                     val f = engine.fieldState
                     val free = f and MgbaCore.FIELD_SCREEN != 0 &&
                         f and (MgbaCore.FIELD_LOCKED or MgbaCore.FIELD_MENU or MgbaCore.FIELD_BATTLE) == 0
+                    val game = telemetry.snapshot.value.game
                     val out = runCatching {
-                        com.pokedaisy.app.companion.data.useGen4Repel(
-                            com.pokedaisy.app.companion.data.gen4ConfigFor(telemetry.snapshot.value.game)!!, calls, itemId, steps, free)
+                        com.pokedaisy.app.companion.data.gen5ConfigFor(game)?.let { com.pokedaisy.app.companion.data.useGen5Repel(it, calls, itemId, steps, free) }
+                            ?: com.pokedaisy.app.companion.data.useGen4Repel(
+                                com.pokedaisy.app.companion.data.gen4ConfigFor(game)!!, calls, itemId, steps, free)
                     }.getOrElse { Log.e("pokedaisy", "repel failed", it); failed }
                     Log.i("pokedaisy", "item use (DS): $out")
                     runOnUiThread { done(if (inBattle) inBattleInstead(out) else out) }
@@ -577,7 +585,7 @@ class PokeDaisyActivity : Activity() {
             com.pokedaisy.app.companion.QuickAction.PC -> itemUse.canPc()
             com.pokedaisy.app.companion.QuickAction.FLY -> flyAction.canFly()
             com.pokedaisy.app.companion.QuickAction.REPEL ->
-                romIsNds && com.pokedaisy.app.companion.data.gen4ConfigFor(telemetry.snapshot.value.game)?.repelStepsOff != null ||
+                dsRepelKnown() ||
                     fieldItemSupport()?.let { s -> s.fns.repelItems.any { s.canUse(it) } } == true
             com.pokedaisy.app.companion.QuickAction.BIKE, com.pokedaisy.app.companion.QuickAction.ROD -> keyItemsWork()
             com.pokedaisy.app.companion.QuickAction.WILD -> companionSettings.wildEncountersSupported
@@ -882,7 +890,8 @@ class PokeDaisyActivity : Activity() {
     /** The game running is a DS cart (melonDS): two screens, touch, X / Y ([loadRom]). */
     @Volatile private var romIsNds = false
     /** The DS game's generated world (its wild rates for WILD ENCOUNTERS), or null. */
-    @Volatile private var dsWorld: com.pokedaisy.app.companion.data.Gen4World? = null
+    /** The cart's own encounter rates, by map, for WILD ENCOUNTERS back on (MgbaCore.pkNdsWildRates). */
+    @Volatile private var dsWildRates: (() -> IntArray)? = null
 
     /** The loaded ROM's header code / revision byte, for [switchAddrsFor]. */
     @Volatile private var romCode = ""
@@ -1640,10 +1649,11 @@ class PokeDaisyActivity : Activity() {
         val nds = RomIdentity.isNds(r)
         romIsNds = nds
         if (::portraitPanel.isInitialized) portraitPanel.ds = nds
-        dsWorld = if (!nds) null else when (RomIdentity.ndsGameCode(r)) {
-            "CPUE" -> com.pokedaisy.app.companion.data.PLATINUM_WORLD
-            "IPKE" -> com.pokedaisy.app.companion.data.HEARTGOLD_WORLD
-            "IPGE" -> com.pokedaisy.app.companion.data.SOULSILVER_WORLD
+        dsWildRates = if (!nds) null else when (RomIdentity.ndsGameCode(r)) {
+            "CPUE" -> com.pokedaisy.app.companion.data.PLATINUM_WORLD::wildRates
+            "IPKE" -> com.pokedaisy.app.companion.data.HEARTGOLD_WORLD::wildRates
+            "IPGE" -> com.pokedaisy.app.companion.data.SOULSILVER_WORLD::wildRates
+            "IRBO" -> { { com.pokedaisy.app.companion.data.BLACK_WORLD.wildRateWords() } }
             else -> null
         }
         input.ds = nds
@@ -1736,7 +1746,7 @@ class PokeDaisyActivity : Activity() {
                 // A DS game's bottom screen goes to the bottom display (NdsBottomFrame).
                 NdsBottomFrame.bind(if (romIsNds) MgbaCore.pkNdsBottomBuffer() else null)
                 // WILD ENCOUNTERS back on: the cart's own rates, whatever a resume state left in RAM.
-                if (romIsNds) dsWorld?.let { MgbaCore.pkNdsWildRates(it.wildRates()) }
+                if (romIsNds) dsWildRates?.let { MgbaCore.pkNdsWildRates(it()) }
                 MgbaCore.pkVideoBuffer()?.let { buf ->
                     // Here on the emu thread, before the first frame (see EmulatorView.bindCore).
                     view.bindCore(buf, MgbaCore.pkWideBuffer(), w, h)

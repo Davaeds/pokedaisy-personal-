@@ -140,7 +140,8 @@
   "ds": [
     {"code": "CPUE", "rev": 1, "title": "Pokémon Platinum"},
     {"code": "IPGE", "rev": 0, "title": "Pokémon SoulSilver"},
-    {"code": "IPKE", "rev": 0, "title": "Pokémon HeartGold"}
+    {"code": "IPKE", "rev": 0, "title": "Pokémon HeartGold"},
+    {"code": "IRBO", "rev": 0, "title": "Pokémon Black"}
   ],
   "titles": {
     "015a5d380afe316a2a6fcc561798ebff9dfb3009": "Pokémon Versione Rubino",
@@ -152,6 +153,7 @@
     "18a3758ceeef2c77b315144be2c3910d6f1f69fe": "Pokémon Feuerrote Edition",
     "1c2a53332382e14dab8815e3a6dd81ad89534050": "Pokémon Rubin-Edition",
     "1f49f7289253dcbfecbc4c5ba3e67aa0652ec83c": "Pokémon Edición Rubí",
+    "26ad0b9967aa279c4a266ee69f52b9b2332399a5": "Pokémon Black",
     "2b3134224392f58da00f802faa1bf4b5cf6270be": "Pokémon Versione Rubino",
     "3233342c2f3087e6ffe6c1791cd5867db07df842": "ポケットモンスター サファイア",
     "3a6489189e581c4b29914071b79207883b8c16d8": "Pokémon Edición Zafiro",
@@ -216,6 +218,7 @@
       {"game": "Platinum (DS)", "version": "USA rev 1", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "HeartGold (DS)", "version": "USA", "cells": ["yes", "yes", "no", "yes", "yes", "yes"]},
       {"game": "SoulSilver (DS)", "version": "USA", "cells": ["yes", "yes", "no", "yes", "yes", "yes"]},
+      {"game": "Black (DS)", "version": "USA/Europe", "cells": ["yes", "yes", "part", "part", "yes", "yes"]},
       {"game": "Unbound", "version": "2.1.1.1", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "Unbound", "version": "2.1.1.1 French", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "Radical Red", "version": "4.1", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},

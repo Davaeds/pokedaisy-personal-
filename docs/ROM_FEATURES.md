@@ -31,6 +31,7 @@ change to any of the places listed under "Where it's decided" updates its rows h
 | Platinum (DS) | USA rev 1 | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | — | n/a | — |
 | HeartGold (DS) | USA | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | — | n/a | — |
 | SoulSilver (DS) | USA | ✅ ¹⁴ | — | — | — | — | ✅ ¹⁴ | — | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | ✅ ¹⁴ | — | n/a | — |
+| Black (DS) | USA/Europe | ✅ ¹⁴ | — | — | — | — | — | — | ✅ ¹⁴ | ◐ ¹⁴ | ✅ ¹⁴ | — | ✅ ¹⁶ | n/a | — |
 | Amethyst | 1.3.0, 1.4.1 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | ✅ | ✅ | ✅ | ✅ | — | — | ✅ ¹⁹ |
 | Ash Gray | 4.5.3, Fork Bug Fix 1.0 | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ ⁹ | — | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | ◐ ⁹ | — | — | ✅ ¹⁹ |
 | Celia's Stupid Romhack | 1.1.4 | ✅ | ✅ | ✅ | ✅ | — | — | — | ✅ | ✅ | ✅ | — | ✅ ¹⁵ | — | — |
@@ -166,6 +167,13 @@ change to any of the places listed under "Where it's decided" updates its rows h
     `scripts/gen_nds_stub.py`). Addresses from pret/pokeplatinum's and pokeheartgold's `.xMAP`s (both build the retail
     ROMs byte for byte), checked headless with `native-capture/nds_dump` (`fieldinfo`, `action`, `wildoff`, `widecheck`).
     No battle input yet: SMART FF's battle wait reads HG/SS's battle controller, but nothing presses the game's menus.
+    Black (Gen 5, no decomp): every address from headless captures of the player's save (docs/DEVELOPMENT.md's "Black");
+    the field read goes by the GameSystem's running proc (its overlay: field, battle or an app), field map and event,
+    the bike bit by the GameData's move form (surf not checked: no surfer in the save), WILD ENCOUNTERS zeroes the zone's
+    seven rates in its loaded encounter table (80 steps in Route 1's grass, no battle; back on, one within a few), SMART
+    FF's battle wait reads the player's battle adapter (3 = choosing). EXPAND as on Gen 4 (`widecheck` on the Gear
+    Station platform: as many far pixels in the overlap as HeartGold's field, ~20 a frame, all on the outer rows). No PC or
+    FLY yet (no field hook found).
 15. REUSABLE TMS patches the branch where the game uses a TM up after it teaches a move (`if (item < ITEM_HM01)
     RemoveBagItem`), found in the ROM by its code (`ReusableTms.find`): the FireRed engine has three (after the TM case's
     animation, after forgetting a move, Task_LearnedMove), Emerald and Ruby / Sapphire one; every one must call the same

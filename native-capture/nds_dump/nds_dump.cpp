@@ -349,6 +349,18 @@ static void fieldInfo()
     auto* cart = nds->NDSCartSlot.GetCart();
     const PkNdsFieldGame* g = cart ? pk_nds_field_game(cart->GetHeader().GameCode, cart->GetHeader().ROMVersion) : nullptr;
     if (!g) { printf("fieldinfo: no table for this cart\n"); fflush(stdout); return; }
+    if (g->gen == 5) {
+        u32 gs = read32(g->fieldSystemPtr);
+        u32 ps = gs ? read32(gs + g->offProcSys) : 0;
+        u32 proc = ps ? read32(ps + g->offCurrentProc) : 0;
+        printf("fieldinfo frame %llu: gs %08X proc %08X overlay %u fieldmap %08X event %08X bg tiles %d/%d/%d/%d battle %d"
+               " -> bits 0x%X\n", (unsigned long long) frameCount, gs, proc, proc ? read32(proc + g->offProcOverlay) : 0,
+               gs ? read32(gs + g->offFieldMap) : 0, gs ? read32(gs + g->offEvent) : 0, pk_nds_bg3_tiles(nds, 0),
+               pk_nds_bg3_tiles(nds, 1), pk_nds_bg3_tiles(nds, 2), pk_nds_bg3_tiles(nds, 3), pk_nds_battle_command(g, read32),
+               pk_nds_field_state(g, read32, write32, wildOff));
+        fflush(stdout);
+        return;
+    }
     u32 fs = read32(g->fieldSystemPtr);
     u32 pm = fs ? read32(fs + g->offProcessManager) : 0;
     u32 av = fs ? read32(fs + g->offPlayerAvatar) : 0;

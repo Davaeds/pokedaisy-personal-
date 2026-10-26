@@ -3,7 +3,7 @@ title: Supported games
 summary: Which games the companion can read, how to check your ROM, and what happens with a hack or version PokeDaisy doesn't know.
 section: help
 order: 1
-keywords: [nds, nintendo ds, platinum, heartgold, soulsilver, compatibility, compatible, rom hack, hacks, version, sha1, sha-1, checksum, unsupported, best effort, partially supported, request]
+keywords: [nds, nintendo ds, platinum, heartgold, soulsilver, black, unova, gen 5, compatibility, compatible, rom hack, hacks, version, sha1, sha-1, checksum, unsupported, best effort, partially supported, request]
 ---
 
 Any GBA, Game Boy or DS game plays in PokeDaisy. "Supported" is about the companion on the bottom screen: to show your party, bag, map and battles, it has to know exactly which game you're running and where that game keeps its data. A game it doesn't know still plays fine on the top screen; the companion shows a notice instead of your party.
@@ -31,8 +31,9 @@ Any GBA, Game Boy or DS game plays in PokeDaisy. "Supported" is about the compan
 - Pokémon Platinum: the USA release, revision 1.
 - Pokémon HeartGold: the USA release.
 - Pokémon SoulSilver: the USA release.
+- Pokémon Black: the USA / Europe release.
 
-The companion reads their party, bag, map, Pokédex and guide, with pictures, Pokédex pages and the map read from your cart. Platinum's battles show in the `BATTLE` tab; HeartGold's and SoulSilver's don't yet. [Screens and devices](devices.md#ds-games) has how a DS game uses your screens.
+The companion reads their party, bag, map, Pokédex and guide, with pictures, Pokédex pages and the map read from your cart. Platinum's and Black's battles show in the `BATTLE` tab; HeartGold's and SoulSilver's don't yet. Black's `MAP` names the place you're in but has no map picture yet. [Screens and devices](devices.md#ds-games) has how a DS game uses your screens.
 
 **ROM hacks**, each in the versions listed:
 

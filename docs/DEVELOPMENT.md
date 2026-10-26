@@ -1881,8 +1881,8 @@ built-in frames, storage + import - ui-preview compiles it, `OverlaysTest` cover
 
 ## Nintendo DS (melonDS)
 
-Platinum (USA rev 1, `CPUE`) and HeartGold / SoulSilver (USA, `IPKE` / `IPGE`) run on melonDS, with the companion,
-EXPAND and STEADY music.
+Platinum (USA rev 1, `CPUE`), HeartGold / SoulSilver (USA, `IPKE` / `IPGE`) and Black (USA / Europe, `IRBO`, a DSi
+enhanced cart that runs in DS mode) run on melonDS, with the companion, EXPAND and STEADY music.
 
 **The core.** `third_party/melonds` (a submodule pinned to upstream 1.1) builds its core library only, with the
 software 3D renderer (unthreaded: on the emulation thread, since melonDS's render thread raced fast-forward's frame skip
@@ -1993,6 +1993,36 @@ full FIFO stalls the driver into a buzz); a new song id starts a new copy, a son
 copies, calls and scripts. The fixtures `platinum`, `platinum_battle` and `heartgold` are its dumps (main RAM with only
 the read ranges kept); `PlatinumDecodeTest`, `NdsArtHeartGoldTest` and the reader tests run on them (the cart-backed ones
 need the ROM, like the other ROM tests). No Platinum save existed: one was played headless; HG/SS use the player's own.
+
+**Black (Gen 5).** pret has no Gen 5 decomp, so everything came from headless captures of the player's save (8 badges,
+saved at Gear Station) and from the cart's own files. Heap blocks keep their source file's name (`save_control.c`,
+`procsys.c`, `game_data.c`, `btl_pokeparam.c`, ...) right before their data, which is how most structures were named.
+- The whole save image (the save file's first 0x24000-byte copy) lives in one heap block and the game plays from it:
+  `[0x020A7298]` (SaveControl) -> +0x10 -> +0x34. Party 0x18E00 (Gen 4's 0xDC-byte encrypted struct, species to 649), bag
+  0x18400 (five pockets of {item, count}, plain), trainer 0x19400, money / badges 0x21200 / 0x21204, Pokédex 0x21600
+  (caught bits, then four seen sets), event vars / flags 0x20100 / 0x2037C, the Repel's steps 0x21B31. Its Location
+  (0x19500) only moves on a warp; the live zone and position are the GameData's (`[0x02146248]` GameSystem -> +0x1C ->
+  +0x114). `Gen5Reader.kt` reads all of it; fixtures `black`, `black_battle` (Battle Subway), `black_route1`,
+  `black_wild` (`BlackDecodeTest`).
+- The scene: the GameSystem's proc system runs one proc at a time, and its overlay says which (21 the field map, 93 a
+  battle, anything else an app over the field: the party, the bag). The GameSystem's field map is NULL while a
+  full-screen app or a battle runs, its event (GMEVENT) non-NULL while a script, a text box, a menu or a warp holds the
+  field; the field's text box is engine A's BG1. The battle's main module (the proc's work) has the battle parties at
+  +0xCC (`BTL_POKEPARAM` pointers, member 0 the one out: the array reorders on a switch, +0x19 keeps the original slot) and
+  client 0 at +0x10, whose adapter (+0x50) holds the command at +0xF: 3 while the player chooses (SMART FF's battle
+  wait). WILD ENCOUNTERS zeroes the seven rates of the zone's encounter table (the GameData's event data +0x38, the
+  season's block of `/a/1/2/6`, reloaded on every zone change); the bike is the GameData's move form (+0x154). The BGM
+  is a stack of songs (depth 0x020AA1B0, songs from 0x020AA1BC, 0x1C apart). All in `pk_nds_field.cpp`'s `BLACK_US`.
+- Getting out of the save's spot: Gear Station's hall is a rail map; the escalator's warp (the zone's event data in RAM)
+  was pointed at another zone's door and the save moved on from there (`black_route1`'s README).
+- The cart: Gen 5's text is UTF-16 encrypted per line (`Gen5Text.kt`; `/a/0/0/2`: species 70, moves 203, items 54,
+  places 89), the ARM9 is BLZ-packed (`Gen5Lz.kt`), sprites LZ11. `scripts/gen_gen5_tables.py` writes the names, types,
+  moves, items and their pockets, zones' places and FLY spots (`Gen5TablesBlack.kt`, `Gen5ItemsBlack.kt`);
+  `scripts/gen_gen5_guide.py` the wild sets by season, the bosses' teams and HERE's item balls (`GuideGen5BlackGen.kt`,
+  read by `Gen5World`); `NdsArt` rebuilds the icons, item icons, fronts and DEX pages (`dex.tsv`, types in the cart's
+  Gen 5 ids, `Gen4Dex` maps them). Type ids: Gen 5 has no ??? type, so its 9..16 are the app's 10..17 (`gen5Type`).
+- Not done: PC / FLY (no field hook found yet), the Unova map picture, battle input, the Elite Four's done flags (they're
+  cleared at the League's door), Ghetsis' and N's (done with the National Dex, which Juniper hands over after the end).
 
 ## Build
 

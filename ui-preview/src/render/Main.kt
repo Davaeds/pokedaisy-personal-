@@ -1086,7 +1086,11 @@ fun homeMapsec(game: GameKind) = when (game) {
 }
 
 /** A Pokémon in the game's regional Dex, for the DEX entry shots: Sinnoh's opens on TURTWIG. */
-fun ndsFirstMon(game: GameKind) = if (game == GameKind.PLATINUM) "TURTWIG" else "BULBASAUR"
+fun ndsFirstMon(game: GameKind) = when (game) {
+    GameKind.PLATINUM -> "TURTWIG"
+    GameKind.BLACK -> "Snivy"
+    else -> "BULBASAUR"
+}
 
 /** A DS game's real snapshot (-PndsFixture): the fixture's main RAM read the way the app reads it. */
 fun ndsSnapshot(): SnapshotView {
@@ -1097,10 +1101,10 @@ fun ndsSnapshot(): SnapshotView {
             return if (o < 0 || o + size > main.size) ByteArray(size) else main.copyOfRange(o, o + size)
         }
     }
-    val cfg = com.pokedaisy.app.companion.data.gen4ConfigFor(activeGame) ?: error("not a DS game: $activeGame")
     // connected / game: what the Poller adds once it has detected the cart
-    return com.pokedaisy.app.companion.data.buildSnapshotView(com.pokedaisy.app.companion.data.readGen4Telemetry(reader, cfg))
-        .copy(connected = true, game = activeGame)
+    val telemetry = if (activeGame == GameKind.BLACK) com.pokedaisy.app.companion.data.readGen5Telemetry(reader, com.pokedaisy.app.companion.data.GEN5_BLACK)
+        else com.pokedaisy.app.companion.data.readGen4Telemetry(reader, com.pokedaisy.app.companion.data.gen4ConfigFor(activeGame) ?: error("not a DS game: $activeGame"))
+    return com.pokedaisy.app.companion.data.buildSnapshotView(telemetry).copy(connected = true, game = activeGame)
 }
 
 fun main(args: Array<String>) {
@@ -1182,12 +1186,16 @@ fun main(args: Array<String>) {
             onNodeWithContentDescription("ZOOM").performSemanticsAction(SemanticsActions.OnClick)
         },
         Shot("$g-real-guide", bw, bh, bd, companion("GUIDE", snap = ::ndsSnapshot)),
-        // HERE on a route: the fixture's save moved to its first route's grass (Platinum's ROUTE 201, HG / SS's ROUTE 29).
+        // HERE on a route: the fixture's save moved to its first route's grass (Platinum's ROUTE 201, HG / SS's ROUTE 29,
+        // Black's Route 1).
         Shot("$g-real-guide-route", bw, bh, bd, companion("GUIDE", snap = {
             ndsSnapshot().let { s ->
-                val header = if (game == GameKind.PLATINUM) 342 else 33
-                val name = (if (game == GameKind.PLATINUM) com.pokedaisy.app.companion.data.mapPlacesPlatinum
-                    else com.pokedaisy.app.companion.data.mapPlacesHeartGold)[header].orEmpty()
+                val header = when (game) { GameKind.PLATINUM -> 342; GameKind.BLACK -> 317; else -> 33 }
+                val name = when (game) {
+                    GameKind.PLATINUM -> com.pokedaisy.app.companion.data.mapPlacesPlatinum
+                    GameKind.BLACK -> com.pokedaisy.app.companion.data.mapPlacesBlack
+                    else -> com.pokedaisy.app.companion.data.mapPlacesHeartGold
+                }[header].orEmpty()
                 s.copy(mapNum = header, location = s.location.copy(mapSecName = name))
             }
         })),

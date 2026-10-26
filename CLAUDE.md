@@ -540,6 +540,11 @@ there is one polygon list of the whole view drawn in one pass (`submitGpu`, no s
 the software renderer, pixel for pixel. Check GPU changes headless with nds_dump's `NDS_DUMP_GL` build (ANGLE; `gpu N`,
 `gpushot`) and compare `ffmode 0` / `ffmode 3` runs; shaders compile as GLSL ES 3.00 in WebGL2 too. docs/DEVELOPMENT.md's
 "DS RESOLUTION".
+**Black (Gen 5, IRBO; 2026-10-27)**: no decomp, so every address is from headless captures of the player's save (heap blocks
+carry their source file's name); `Gen5Reader.kt` (the live save image, the GameSystem's live zone, the battle's main module),
+`pk_nds_field.cpp`'s `BLACK_US` (scene by the running proc's overlay, field map, event; WILD ENCOUNTERS on the zone's
+encounter table), tables / GUIDE from the cart (`scripts/gen_gen5_tables.py`, `gen_gen5_guide.py`, `Gen5World`: seasons by
+month), art and DEX pages by `NdsArt` (`Gen5Text`, `Gen5Lz`). No PC / FLY or map picture yet. docs/DEVELOPMENT.md's "Black".
 **Companion options (2026-10-08)**: RESUME GAMES (`Prefs.autoResume`, top-screen Settings > LIBRARY; off =
 a launch boots the save, a return from HOME still resumes - `freshLaunch`), CLOSE COMPANION (SETTINGS, two
 screens: the Presentation goes away until BACK on the game), STATUS BAR OFF / GAME / COMPANION (`Prefs.statusBarOnCompanion`,

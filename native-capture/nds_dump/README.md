@@ -48,7 +48,7 @@ X Y`, joined with commas (`A,UP`), or `NONE`.
 | `savestate FILE` / `loadstate FILE` | A melonDS state. |
 | `savefile FILE` | The cart's save memory as it is now. |
 | `peek8/16/32 ADDR`, `poke8/16/32 ADDR V` | The ARM9's bus. |
-| `fieldinfo` | The field read (`pk_nds_field_state`) and the pointers behind it. |
+| `fieldinfo` | The field read (`pk_nds_field_state`) and the pointers behind it (Black: the GameSystem's proc, its overlay, field map and event, engine A's BG tiles, the battle adapter's command). |
 | `trace N` | N frames, each one's field bits, master brightness, DISPCNT and BG3's tiles. |
 | `battlemenu N` | The battle controller's command (`pk_nds_battle_command`) each frame for N frames, as it changes. |
 | `wide MX [MY]` | EXPAND with MX DS pixels left and right, MY above and below (0 = off). |
@@ -77,6 +77,6 @@ X Y`, joined with commas (`A,UP`), or `NONE`.
 
 ## Fixtures
 
-`app/src/test/resources/fixtures/platinum`, `platinum_battle` and `heartgold` were made with it; each `README.txt` says
+`app/src/test/resources/fixtures/platinum`, `platinum_battle`, `heartgold` and the `black*` ones were made with it; each `README.txt` says
 from which ROM, save and boot sequence. Their `mainram.bin` keeps only the ranges the readers use (zeros elsewhere), so
 the files stay small in git.

@@ -479,8 +479,8 @@ int pk_nds_field_bits(void)
 {
     if (!ds || !ds->field) return 0;
     int bits = pk_nds_field_state(ds->field, mainRead32, mainWrite32, ds->wildOff);
-    if ((bits & PK_NDS_FIELD_TEXT) && !pk_nds_bg3_tiles(ds->nds)) bits &= ~PK_NDS_FIELD_TEXT;
-    if ((bits & PK_NDS_FIELD_BATTLE) && pk_nds_battle_command(ds->field, mainRead32) == PK_NDS_BATTLE_SELECTING)
+    if ((bits & PK_NDS_FIELD_TEXT) && !pk_nds_bg3_tiles(ds->nds, ds->field->textBg ? ds->field->textBg : 3)) bits &= ~PK_NDS_FIELD_TEXT;
+    if ((bits & PK_NDS_FIELD_BATTLE) && pk_nds_battle_command(ds->field, mainRead32) == pk_nds_battle_selecting(ds->field))
         bits |= PK_NDS_FIELD_BATTLE_INPUT;
     return bits;
 }
@@ -488,7 +488,10 @@ int pk_nds_field_bits(void)
 int pk_nds_bgm(void)
 {
     if (!ds || !ds->field || !ds->field->currentBgm) return -1;
-    return (int) (mainRead32(ds->field->currentBgm) & 0xFFFF);
+    // Gen 5: a stack of songs (a battle's over the field's), the playing one at its depth.
+    u32 depth = ds->field->bgmDepth ? mainRead32(ds->field->bgmDepth) : 0;
+    if (depth > 7) return -1;
+    return (int) (mainRead32(ds->field->currentBgm + 0x1C * depth) & 0xFFFF);
 }
 
 bool pk_nds_bgm_fading(void)

@@ -3,7 +3,7 @@ title: Guide
 summary: The GUIDE tab's hints, what's in the area you're in, the next gym leader's team, evolutions and the hand-written help pages.
 section: companion
 order: 7
-keywords: [walkthrough, hints, spoilers, help, stuck, where, encounters, wild, gym, leader, boss, items, hidden, gifts, trades, evolve, trees, clock, time of day, rematch]
+keywords: [walkthrough, hints, spoilers, help, stuck, where, encounters, wild, gym, leader, boss, items, hidden, gifts, trades, evolve, trees, clock, time of day, rematch, season, spring, summer, autumn, winter]
 ---
 
 The GUIDE tab is there for the moments you'd normally open a walkthrough: you're stuck, you want to know what lives on this route, or you'd like to see the next gym leader's team before walking in. It reads your game as you play, so it knows where you are, what you've already picked up and which bosses you've beaten.
@@ -34,6 +34,8 @@ HERE is about the place you're standing in right now, and it changes as you walk
 In Polished Crystal the grass list follows your game's clock (morning, day or night, and the evening uses the night's), and the line under `GRASS / CAVE` says which time it's for. Some of its side areas set their Pokémon's levels by how many badges you have, and HERE already shows the levels for yours.
 
 In Lazarus many outdoor areas have different Pokémon by day and at night. Its night runs from 8 in the evening to 7 in the morning on your game's clock. HERE lists the ones out right now, says under `GRASS / CAVE` whether that's `DAY` or `NIGHT`, and adds an `AT NIGHT` (or `BY DAY`) section for the ones that only show up at the other time. The line at the top that counts how many you've caught here counts both.
+
+In Black the wild Pokémon change with the seasons, and the season changes every month: January, May and September are spring, then summer, autumn and winter in turn. The line under `GRASS / CAVE` says which season HERE shows, going by your device's date.
 - **PEOPLE**: anyone in the area who gives you an item, a Pokémon or an egg, and in-game trades (what they offer and what they want for it). Some of them want something done first.
 - **ITEMS**: items lying on the ground and hidden ones. A hidden item shows as `HIDDEN ITEM` until you tap it: the hint says roughly where it's buried, the answer names it.
 
