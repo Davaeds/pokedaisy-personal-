@@ -544,9 +544,10 @@ the software renderer, pixel for pixel. Check GPU changes headless with nds_dump
 carry their source file's name); `Gen5Reader.kt` (the live save image, the GameSystem's live zone, the battle's main module),
 `pk_nds_field.cpp`'s `BLACK_US` (scene by the running proc's overlay, field map, event; WILD ENCOUNTERS on the zone's
 encounter table), tables / GUIDE from the cart (`scripts/gen_gen5_tables.py`, `gen_gen5_guide.py`, `Gen5World`: seasons by
-month), art and DEX pages by `NdsArt` (`Gen5Text`, `Gen5Lz`). PC / FLY: `pk_nds_call.cpp`'s `Gen5Fns` - the hook takes the
-GameSystem's field event check's place for a frame (traced with nds_dump's `watch`), FLY's destinations are the towns' places
-(`Gen5Field.kt`). No map picture yet. docs/DEVELOPMENT.md's "Black".
+month), art and DEX pages by `NdsArt` (`Gen5Text`, `Gen5Lz`). MAP = the key item's Town Map (`NdsArt.townMapBlack` from a/0/8/5,
+`blackTownMap`: places are points from a/0/8/6, an 8 px grid snaps to them; `townMapZonesBlack` = a zone's place, a house's
+by its parent zone). PC / FLY: `pk_nds_call.cpp`'s `Gen5Fns` - the hook takes the GameSystem's field event check's place
+for a frame (traced with nds_dump's `watch`), FLY's destinations are the towns' places (`Gen5Field.kt`). docs/DEVELOPMENT.md's "Black".
 **Companion options (2026-10-08)**: RESUME GAMES (`Prefs.autoResume`, top-screen Settings > LIBRARY; off =
 a launch boots the save, a return from HOME still resumes - `freshLaunch`), CLOSE COMPANION (SETTINGS, two
 screens: the Presentation goes away until BACK on the game), STATUS BAR OFF / GAME / COMPANION (`Prefs.statusBarOnCompanion`,

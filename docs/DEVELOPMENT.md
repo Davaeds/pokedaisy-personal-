@@ -2021,6 +2021,20 @@ saved at Gear Station) and from the cart's own files. Heap blocks keep their sou
   `scripts/gen_gen5_guide.py` the wild sets by season, the bosses' teams and HERE's item balls (`GuideGen5BlackGen.kt`,
   read by `Gen5World`); `NdsArt` rebuilds the icons, item icons, fronts and DEX pages (`dex.tsv`, types in the cart's
   Gen 5 ids, `Gen4Dex` maps them). Type ids: Gen 5 has no ??? type, so its 9..16 are the app's 10..17 (`gen5Type`).
+- The MAP tab is the Town Map key item's (its touch screen), rebuilt from the cart by `NdsArt.townMapBlack` (a/0/8/5): two
+  8bpp BGs over member 0's 16 extended palettes - the aerial picture (screen 16 over tiles 7) and the routes and places on
+  it (screen 17 over tiles 5), 256 x 168 - and sprites from member 12's cells over tiles 8 (4bpp, 128-byte tile numbers:
+  the NCER's mapping mode) in member 2's palettes: a town arrived at gets cell 4 over the BG's grey middle (Victory Road
+  19, Unity Tower 23 + 19, shown only once arrived at; Liberty Garden's island 20, shown here once the Liberty Pass is in
+  the bag - the record's +0x20 condition isn't decoded), the player the figure (8) under the red arrow (7), the cursor the
+  ring (11 / 12). The places are a/0/8/6 member 0 (61 x 54 bytes: zone +0, the point +4 / +6, kind +0x16, arrival flag
+  +0x1E = 2480.., the same base as Platinum's); `gen_gen5_tables.py` writes them and each zone's place on the map
+  (`Gen5TownMapBlack.kt`: its own record, else its parent zone's at the zone header's +0x18, else one of the same name).
+  The game's cursor snaps from place to place; `blackTownMap` gives the 8 px cells around each point (within 8 px of the
+  point and 4 px up / down) to its place and draws the player and the cursor on the point. Checked against the game's own
+  Town Map headless (nds_dump: X > BAG > KEY ITEMS > Town Map from `black_route1`, arrival flags poked off and on in the
+  save image): the picture equal pixel for pixel where no sprite is, each sprite where the game puts it
+  (`NdsArtBlackTest` pins the CRCs, `BlackDecodeTest` the fixtures' places).
 - PC and FLY (`pk_nds_call.cpp`'s `Gen5Fns`, traced with nds_dump's `watch LO HI` - the ARM9's own reads / writes of a
   range with its registers and, with `WATCH_STACK=N`, its stack: who set the GameSystem's event when A was pressed at
   the PC, at a nurse, and when FLY was picked from the party menu). The GameSystem runs one GMEVENT at a time (+0x18);
@@ -2039,7 +2053,7 @@ saved at Gear Station) and from the cart's own files. Heap blocks keep their sou
   section ids). Checked headless: the PC's boxes opened and closed back to the field (walking, on the bike too), FLY to
   all 15 towns the save has, refused in a Pokémon Center, in a battle, a text box and the X menu; an in-game save after
   each loaded again at the new place.
-- Not done: the Unova map picture, battle input, the Elite Four's done flags (they're
+- Not done: battle input, the Elite Four's done flags (they're
   cleared at the League's door), Ghetsis' and N's (done with the National Dex, which Juniper hands over after the end).
 
 ## Build

@@ -218,7 +218,7 @@
       {"game": "Platinum (DS)", "version": "USA rev 1", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "HeartGold (DS)", "version": "USA", "cells": ["yes", "yes", "no", "yes", "yes", "yes"]},
       {"game": "SoulSilver (DS)", "version": "USA", "cells": ["yes", "yes", "no", "yes", "yes", "yes"]},
-      {"game": "Black (DS)", "version": "USA/Europe", "cells": ["yes", "yes", "part", "part", "yes", "yes"]},
+      {"game": "Black (DS)", "version": "USA/Europe", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "Unbound", "version": "2.1.1.1", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "Unbound", "version": "2.1.1.1 French", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "Radical Red", "version": "4.1", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},

@@ -35,7 +35,13 @@ object NdsArt {
     const val BLACK_FRONT = "nds/black/front"
     /** The egg's party icon under [BLACK_ICONS] (the icon archive's 650th; 651 is Manaphy's egg). */
     const val BLACK_EGG = 650
-    private const val VERSION = 10
+    /** Black's Town Map under rom-art/regionmap ([townMapBlack]): the map (256 x 168), the sprite a place of kind n
+     * gets once arrived at ([blackTown]), the player's marker and the cursor's two frames. */
+    const val BLACK_MAP = "black_unova"
+    fun blackTown(kind: Int) = "bw_town_$kind"
+    const val BLACK_PLAYER = "bw_player"
+    fun blackCursor(frame: Int) = "bw_cursor_$frame"
+    private const val VERSION = 11
     /** The Town Map's art under rom-art/regionmap: the map, each fly location's block sprite and the player's head. */
     const val PLATINUM_MAP = "platinum_sinnoh"
     fun platinumBlock(shape: Int, variant: Int) = "pt_block_${shape}_$variant"
@@ -200,8 +206,69 @@ object NdsArt {
                 write(dir, "$BLACK_ITEMS/$item.png", icon.png())
             }
         }
+        file(f, header, "/a/0/8/5")?.let { townMapBlack(Narc(it), dir) }
         dexBlack(f, header, dir)
         return true
+    }
+
+    /**
+     * Black's Town Map (the key item's, on the touch screen), from a/0/8/5. The map is two 8bpp BGs over one palette file
+     * (member 0: 16 extended palettes of 256 colours, the tilemaps' palette bits pick one): the aerial picture (screen 16
+     * over tiles 7) and the routes and places drawn on it (screen 17 over tiles 5), 256 x 168 (the bar under it cut off).
+     * Its sprites are member 12's cells over tiles 8 (4bpp, 128-byte tile numbers) in member 2's palettes, each centred
+     * on a place's point: a town arrived at gets cell 4 (its blue middle) over the BG's grey one, Victory Road cell 19
+     * (the small one), Unity Tower its ring (23) and middle (19), Liberty Garden its island's dot (20); the player is the
+     * figure (8) with the red arrow (7) on top, the cursor ring the pulse's cells 11 and 12. Checked against the game's
+     * own Town Map headless (the user's save, arrival flags poked off and on): the picture pixel for pixel, each sprite
+     * where the game puts it.
+     */
+    private fun townMapBlack(narc: Narc, dir: File) {
+        val bgPal = palettes(narc.member(0)).flatMap { it.toList() }.toIntArray()
+        val img = RomArt.Image(256, 168)
+        img.argb.fill(bgPal.getOrElse(0) { 0xFF000000.toInt() })
+        for ((screen, tiles) in listOf(16 to 7, 17 to 5)) {
+            drawScreen8(img, narc.member(screen) ?: return, ncgrData(narc.member(tiles)) ?: return, bgPal)
+        }
+        write(dir, "regionmap/$BLACK_MAP.png", img.png())
+        val tiles = ncgrData(narc.member(8)) ?: return
+        val cells = ncerCells(narc.member(12) ?: return, useMapping = true)
+        val pals = palettes(narc.member(2))
+        fun sprite(size: Int, vararg cellIds: Int): RomArt.Image? {
+            val out = RomArt.Image(size, size)
+            for (id in cellIds) {
+                val cell = cells.getOrNull(id)?.takeIf { it.isNotEmpty() } ?: return null
+                drawCell(out, size / 2, size / 2, cell, tiles, pals.getOrNull(cell.first().pal) ?: return null)
+            }
+            return out
+        }
+        for ((kind, ids) in listOf(0 to intArrayOf(4), 3 to intArrayOf(19), 4 to intArrayOf(20), 5 to intArrayOf(23, 19))) {
+            sprite(16, *ids)?.let { write(dir, "regionmap/${blackTown(kind)}.png", it.png()) }
+        }
+        sprite(48, 8, 7)?.let { write(dir, "regionmap/$BLACK_PLAYER.png", it.png()) }
+        for ((frame, id) in listOf(0 to 11, 1 to 12)) sprite(32, id)?.let { write(dir, "regionmap/${blackCursor(frame)}.png", it.png()) }
+    }
+
+    /** An 8bpp NSCR over [tiles] (64 bytes a tile), the entry's palette bits picking a 256-colour palette of [pal];
+     * colour 0 clear. */
+    private fun drawScreen8(img: RomArt.Image, nscr: ByteArray, tiles: ByteArray, pal: IntArray) {
+        val o = indexOf(nscr, "NRCS") ?: return
+        val cols = u16(nscr, o + 8) / 8
+        val rows = u16(nscr, o + 0xA) / 8
+        for (ty in 0 until minOf(rows, (img.height + 7) / 8)) for (tx in 0 until minOf(cols, img.width / 8)) {
+            val e = u16(nscr, o + 0x14 + (ty * cols + tx) * 2)
+            val tile = e and 0x3FF
+            val hf = e and 0x400 != 0
+            val vf = e and 0x800 != 0
+            val p = e shr 12
+            for (y in 0 until 8) for (x in 0 until 8) {
+                val py = ty * 8 + y
+                if (py >= img.height) continue
+                val i = tile * 64 + (if (vf) 7 - y else y) * 8 + (if (hf) 7 - x else x)
+                val v = if (i in tiles.indices) u8(tiles, i) else 0
+                if (v == 0) continue
+                pal.getOrNull(p * 256 + v)?.let { img.argb[py * img.width + tx * 8 + x] = it }
+            }
+        }
     }
 
     /**
@@ -335,9 +402,11 @@ object NdsArt {
     /** One OAM of an NCER cell: its offset from the sprite's centre, size, first tile, palette and flips. */
     private class Oam(val x: Int, val y: Int, val w: Int, val h: Int, val tile: Int, val pal: Int, val hf: Boolean, val vf: Boolean)
 
-    /** An NCER's cells (KBEC), each a list of OAMs; tile numbers in 32-byte units (1D mapping, the boundary these use). */
-    private fun ncerCells(ncer: ByteArray): List<List<Oam>> {
+    /** An NCER's cells (KBEC), each a list of OAMs; tile numbers in 32-byte units (1D mapping, the boundary these use),
+     * or with [useMapping] in the units its mapping mode says (KBEC +0x10: 0 32 bytes, 1 64, 2 128, 3 256). */
+    private fun ncerCells(ncer: ByteArray, useMapping: Boolean = false): List<List<Oam>> {
         val o = indexOf(ncer, "KBEC") ?: return emptyList()
+        val shift = if (useMapping) (u32(ncer, o + 0x10).toInt() and 3) else 0
         val count = u16(ncer, o + 8)
         val extended = u16(ncer, o + 0xA) == 1
         val data = o + 8 + u32(ncer, o + 0xC).toInt()
@@ -361,7 +430,7 @@ object NdsArt {
                 val (w, h) = sizes[shape][(a1 shr 14) and 3]
                 val y = (a0 and 0xFF).let { if (it >= 128) it - 256 else it }
                 val x = (a1 and 0x1FF).let { if (it >= 256) it - 512 else it }
-                Oam(x, y, w, h, a2 and 0x3FF, a2 shr 12, a1 and 0x1000 != 0, a1 and 0x2000 != 0)
+                Oam(x, y, w, h, (a2 and 0x3FF) shl shift, a2 shr 12, a1 and 0x1000 != 0, a1 and 0x2000 != 0)
             }
         }
     }

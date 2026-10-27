@@ -154,4 +154,34 @@ class NdsArtBlackTest {
         assertEquals("Potion", n.item(17))
         assertEquals(649 + 3, n.species.size)
     }
+
+    @Test
+    fun `the Town Map - the map and its sprites, as the game draws them`() {
+        assumeTrue("no Black ROM at $rom", rom.isFile)
+        val dir = kotlin.io.path.createTempDirectory("nds-art").toFile()
+        val out = File("build/nds-art").apply { mkdirs() }
+        try {
+            assertTrue(NdsArt.extractTo(rom, dir))
+            // Checked against the game's own Town Map headless (nds_dump, the user's save): the picture pixel for pixel
+            // where no sprite is, each sprite where the game puts it.
+            val golden = mapOf(
+                NdsArt.BLACK_MAP to Triple(256, 168, 465150285L),
+                NdsArt.blackTown(0) to Triple(16, 16, 60101346L),        // a town arrived at: its blue middle
+                NdsArt.blackTown(3) to Triple(16, 16, 1394109110L),      // Victory Road's small one
+                NdsArt.blackTown(4) to Triple(16, 16, 2891058625L),      // Liberty Garden's island
+                NdsArt.blackTown(5) to Triple(16, 16, 1386196619L),      // Unity Tower: its ring and middle
+                NdsArt.BLACK_PLAYER to Triple(48, 48, 1927940204L),      // the figure and the red arrow
+                NdsArt.blackCursor(0) to Triple(32, 32, 3423530032L),
+                NdsArt.blackCursor(1) to Triple(32, 32, 851329966L),
+            )
+            for ((name, want) in golden) {
+                val f = File(dir, "regionmap/$name.png")
+                assertTrue("$f", f.isFile)
+                f.copyTo(File(out, "bw-map-$name.png"), true)
+                assertEquals(name, want, pixels(f))
+            }
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
 }

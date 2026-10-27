@@ -135,7 +135,7 @@ shows a "not supported" notice).
 | Platinum (DS)                  | USA rev 1                  |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |
 | HeartGold (DS)                 | USA                        |  ✅   | ✅  |   —    | ✅  |   ✅    |  ✅   |
 | SoulSilver (DS)                | USA                        |  ✅   | ✅  |   —    | ✅  |   ✅    |  ✅   |
-| Black (DS)                     | USA/Europe                 |  ✅   | ✅  |   ◐    |  ◐  |   ✅    |  ✅   |
+| Black (DS)                     | USA/Europe                 |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |
 | Unbound                        | 2.1.1.1                    |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |
 | Unbound                        | 2.1.1.1 French             |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |
 | Radical Red                    | 4.1                        |  ✅   | ✅  |   ◐    | ✅  |   ✅    |  ✅   |

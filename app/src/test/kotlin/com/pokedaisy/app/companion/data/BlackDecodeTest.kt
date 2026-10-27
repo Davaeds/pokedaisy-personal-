@@ -68,6 +68,33 @@ class BlackDecodeTest {
     }
 
     @Test
+    fun `the Town Map - the player's place, its point and the towns arrived at`() {
+        val model = blackTownMap
+        // Route 1: its own record, the point (232, 148)
+        val r1 = read("black_route1")
+        assertEquals(232 / GEN5_TOWN_MAP_TILE to 148 / GEN5_TOWN_MAP_TILE, r1.regionMapTile)
+        val route1 = mapPlaceIdsBlack.getValue(317)
+        assertEquals(route1, model.pick(0, r1.regionMapTile!!.first, r1.regionMapTile!!.second)?.mapsec)
+        assertEquals(232 to 148, model.points[route1])
+        // The Gear Station platform: no place of its own on the map, so its parent zone's, Nimbasa City (132, 91)
+        val gear = read("black")
+        val nimbasa = mapPlaceIdsBlack.getValue(62)
+        assertEquals(132 / GEN5_TOWN_MAP_TILE to 91 / GEN5_TOWN_MAP_TILE, gear.regionMapTile)
+        assertEquals(nimbasa, model.pick(0, gear.regionMapTile!!.first, gear.regionMapTile!!.second)?.mapsec)
+        // Every arrival flag but Unity Tower's (2494) set, and the Liberty Pass in the bag
+        val visited = gear.townsVisited!!
+        assertEquals(0xBFFFL, visited and 0xFFFF)
+        assertTrue((visited shr GEN5_LIBERTY_PASS_BIT) and 1L != 0L)
+        // A place a point: each point's cell names its own place, and every place is on the map
+        for (p in townMapPlacesBlack) {
+            assertEquals(placeNamesBlack[p.place], p.place, model.pick(0, p.x / GEN5_TOWN_MAP_TILE, p.y / GEN5_TOWN_MAP_TILE)?.mapsec)
+        }
+        assertEquals(61, model.places().sumOf { it.second.size })
+        // 16 towns (and Victory Road, Unity Tower) by their arrival flag, plus Liberty Garden by the pass
+        assertEquals(17, model.marks.size)
+    }
+
+    @Test
     fun `a wild battle - no FOE TEAM, the foe read from its party`() {
         val t = read("black_wild")
         assertTrue(t.inBattle)

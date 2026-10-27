@@ -1167,6 +1167,17 @@ fun main(args: Array<String>) {
             onNodeWithContentDescription("FAVORITE").performClick()
         },
         Shot("$g-real-map", bw, bh, bd, companion("MAP", snap = ::ndsSnapshot)),
+        // Black's Town Map: PLACES, a place picked from it, and a tap by a town's point (the cursor snaps to it).
+        *(if (game == GameKind.BLACK) arrayOf(
+            Shot("$g-real-map-places", bw, bh, bd, companion("MAP", snap = ::ndsSnapshot)) { onNodeWithText("PLACES").performClick() },
+            Shot("$g-real-map-pick", bw, bh, bd, companion("MAP", snap = ::ndsSnapshot)) {
+                onNodeWithText("PLACES").performClick()
+                onNodeWithText("Castelia City", ignoreCase = true).performClick()
+            },
+            Shot("$g-real-map-tap", bw, bh, bd, companion("MAP", snap = ::ndsSnapshot)) {
+                onRoot().performTouchInput { click(Offset(37 + 1166 * (136f / 256), 37 + 886 * (46f / 168))) }
+            },
+        ) else emptyArray()),
         Shot("$g-real-dex", bw, bh, bd, companion("DEX", snap = ::ndsSnapshot)),
         Shot("$g-real-dex-entry", bw, bh, bd, companion("DEX", snap = ::ndsSnapshot)) {
             onAllNodesWithText(ndsFirstMon(game), substring = true, ignoreCase = true).onFirst().performClick()

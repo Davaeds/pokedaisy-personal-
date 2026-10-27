@@ -47,7 +47,28 @@ data class Gen5Config(
     val zonePlaceIds: Map<Int, Int> = emptyMap(),
     val battle: Gen5Battle? = null,
     val maxSpecies: Int = 649,
+    /** The Town Map ([townMapPlacesBlack]) and each zone's place on it ([townMapZonesBlack]); empty = none. */
+    val townMapPlaces: List<Gen5TownMapPlace> = emptyList(),
+    val townMapZones: IntArray? = null,
+    /** The Liberty Pass (its island shows on the Town Map once the bag holds it); 0 = none. */
+    val libertyPass: Int = 0,
 )
+
+/**
+ * One of a Gen 5 Town Map's places (a/0/8/6's records): [zone], its [place] (the place names' line), its point on the
+ * map ([x], [y]: the touch screen's pixels, where the game centres its sprites), its [kind] (0 a town, 1 a route, 2 a
+ * place, 3 Victory Road, 4 Liberty Garden, 5 Unity Tower) and its arrival flag ([flag], -1 none).
+ */
+data class Gen5TownMapPlace(val zone: Int, val place: Int, val x: Int, val y: Int, val kind: Int, val flag: Int)
+
+/** The Town Map's first arrival flag: [Telemetry.townsVisited]'s bit n is flag 2480 + n, as on Platinum. */
+const val GEN5_FIRST_ARRIVAL = 2480
+
+/** [Telemetry.townsVisited]'s bit for the Liberty Pass in the bag (Liberty Garden's island on the Town Map). */
+const val GEN5_LIBERTY_PASS_BIT = 40
+
+/** The Town Map's grid: [GEN5_TOWN_MAP_TILE] pixels a cell, the map 256 x 168 pixels. */
+const val GEN5_TOWN_MAP_TILE = 8
 
 /**
  * A battle, from the game system: GameSystem -> its proc system -> the running proc, the battle's when its overlay is
@@ -244,6 +265,16 @@ fun readGen5Telemetry(r: MemoryReader, cfg: Gen5Config): Telemetry {
     val zone = live?.let { u16(it, 0) } ?: u16(saved, 4)
     val battle = cfg.battle?.let { readGen5Battle(r, it) }
     val dex = readGen5PokedexState(r, cfg, img)
+    val progress = readGen5Progress(r, cfg, img, national = dex?.national == true)
+    // The Town Map: the zone's place on it (a house or a cave's floor: its parent zone's), and which of its towns the
+    // player has arrived at (the arrival flags from 2480; the game colours those).
+    val town = cfg.townMapZones?.getOrNull(zone)?.let { cfg.townMapPlaces.getOrNull(it) }
+    val arrivals = progress?.let { p ->
+        var bits = 0L
+        for (n in 0 until 32) if (p.flag(GEN5_FIRST_ARRIVAL + n)) bits = bits or (1L shl n)
+        if (cfg.libertyPass != 0 && items.any { it.itemId == cfg.libertyPass }) bits = bits or (1L shl GEN5_LIBERTY_PASS_BIT)
+        bits
+    }
     return Telemetry(
         frameCounter = 0,
         inBattle = battle != null,
@@ -268,7 +299,9 @@ fun readGen5Telemetry(r: MemoryReader, cfg: Gen5Config): Telemetry {
         isTrainerBattle = battle?.trainer,
         enemyActive = if (battle?.trainer == true) battle.foeActive else -1,
         pokedex = dex,
-        progress = readGen5Progress(r, cfg, img, national = dex?.national == true),
+        progress = progress,
+        regionMapTile = town?.let { it.x / GEN5_TOWN_MAP_TILE to it.y / GEN5_TOWN_MAP_TILE },
+        townsVisited = if (cfg.townMapPlaces.isEmpty()) null else arrivals,
     )
 }
 
@@ -289,6 +322,9 @@ val GEN5_BLACK = Gen5Config(
     zonePlaces = mapPlacesBlack,
     zonePlaceIds = mapPlaceIdsBlack,
     battle = Gen5Battle(gameSystemPtr = 0x02146248),
+    townMapPlaces = townMapPlacesBlack,
+    townMapZones = townMapZonesBlack,
+    libertyPass = 574,
 )
 
 /** The Gen 5 config for [kind], or null. */

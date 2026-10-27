@@ -945,22 +945,26 @@ private fun HudMiniMap(
     val region = model?.sections?.get(snapshot.regionMapSectionId)?.region?.takeIf { it in model.images.indices }
     val bitmap = regionMapBitmap(region?.let { model.images[it] })
     val labelStyle = MapLabelStyle.of(snapshot.game)
-    val head = regionMapBitmap(labelStyle.headAsset(snapshot.playerGender, snapshot.game))
+    // Black's Town Map: the player's figure, on their place's point (the reader's cell, [blackTownMap]'s points).
+    val black = snapshot.game == com.pokedaisy.app.companion.data.GameKind.BLACK
+    val head = regionMapBitmap(if (black) com.pokedaisy.app.companion.data.NdsArt.BLACK_PLAYER else labelStyle.headAsset(snapshot.playerGender, snapshot.game))
     val cursor = labelStyle.cursorColor
     val small = rememberGbaTextMetrics(0.75f)
     val name = snapshot.location.mapSecName
     if ((model == null || bitmap == null) && name.isEmpty()) return
     Column(modifier.hudPanel(u).soundClickable(onClick = onClick).padding(u * 4), horizontalAlignment = Alignment.CenterHorizontally) {
         if (model != null && bitmap != null) {
-            val tile = PlayerMapTile.of(model, snapshot.regionMapSectionId, snapshot.x, snapshot.y, snapshot.mapWidth, snapshot.mapHeight, snapshot.mapType)
+            val tile = (if (black) snapshot.regionMapTile else null)
+                ?: PlayerMapTile.of(model, snapshot.regionMapSectionId, snapshot.x, snapshot.y, snapshot.mapWidth, snapshot.mapHeight, snapshot.mapType)
+            val point = if (black && tile != null) model.pick(0, tile.first, tile.second)?.mapsec?.let { model.points[it] } else null
             val image = remember(bitmap) { bitmap.asImageBitmap() }
             val headImage = remember(head) { head?.asImageBitmap() }
             val crop = remember(bitmap) { regionMapContentBounds(bitmap) }
             Box(Modifier.size(u * mapW, u * mapH).clip(PixelRoundedShape(u * 2))) {
                 Canvas(Modifier.fillMaxSize()) {
                     val s = u.toPx()
-                    val cx = (tile?.let { it.first * TILE + TILE / 2 } ?: (crop.left + crop.width / 2)).toFloat()
-                    val cy = (tile?.let { it.second * TILE + TILE / 2 } ?: (crop.top + crop.height / 2)).toFloat()
+                    val cx = (point?.first ?: tile?.let { it.first * TILE + TILE / 2 } ?: (crop.left + crop.width / 2)).toFloat()
+                    val cy = (point?.second ?: tile?.let { it.second * TILE + TILE / 2 } ?: (crop.top + crop.height / 2)).toFloat()
                     val left = (cx - mapW / 2f).coerceIn(crop.left.toFloat(), maxOf(crop.left.toFloat(), crop.right - mapW.toFloat())).toInt()
                     val top = (cy - mapH / 2f).coerceIn(crop.top.toFloat(), maxOf(crop.top.toFloat(), crop.bottom - mapH.toFloat())).toInt()
                     val w = minOf(mapW, crop.right - left)
@@ -982,7 +986,16 @@ private fun HudMiniMap(
                             )
                         }
                     }
-                    if (headImage != null && tile != null) {
+                    if (headImage != null && point != null) {
+                        drawImage(
+                            headImage,
+                            dstOffset = IntOffset(
+                                ((point.first - headImage.width / 2 - left + ox) * s).toInt(),
+                                ((point.second - headImage.height / 2 - top + oy) * s).toInt(),
+                            ),
+                            dstSize = IntSize((headImage.width * s).toInt(), (headImage.height * s).toInt()), filterQuality = FilterQuality.None,
+                        )
+                    } else if (headImage != null && tile != null) {
                         drawImage(
                             headImage,
                             dstOffset = IntOffset(

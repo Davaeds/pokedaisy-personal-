@@ -33,7 +33,7 @@ Any GBA, Game Boy or DS game plays in PokeDaisy. "Supported" is about the compan
 - Pokémon SoulSilver: the USA release.
 - Pokémon Black: the USA / Europe release.
 
-The companion reads their party, bag, map, Pokédex and guide, with pictures, Pokédex pages and the map read from your cart. Platinum's and Black's battles show in the `BATTLE` tab; HeartGold's and SoulSilver's don't yet. Black's `MAP` names the place you're in but has no map picture yet. [Screens and devices](devices.md#ds-games) has how a DS game uses your screens.
+The companion reads their party, bag, map, Pokédex and guide, with pictures, Pokédex pages and the map read from your cart. Platinum's and Black's battles show in the `BATTLE` tab; HeartGold's and SoulSilver's don't yet. Black's `MAP` is the game's own Town Map: the towns you've arrived at in blue, the others grey, as the game shows them. [Screens and devices](devices.md#ds-games) has how a DS game uses your screens.
 
 **ROM hacks**, each in the versions listed:
 
