@@ -2053,6 +2053,8 @@ saved at Gear Station) and from the cart's own files. Heap blocks keep their sou
   section ids). Checked headless: the PC's boxes opened and closed back to the field (walking, on the bike too), FLY to
   all 15 towns the save has, refused in a Pokémon Center, in a battle, a text box and the X menu; an in-game save after
   each loaded again at the new place.
+- EXPAND: the field as on Gen 4. A battle's margins stay plain (`pk_nds_battle_margins`): its scene is all 3D and the
+  battle carry, tuned on HG/SS, stretched its HP boxes across them; a battle pulls the view back to the screen anyway.
 - Not done: battle input, the Elite Four's done flags (they're
   cleared at the League's door), Ghetsis' and N's (done with the National Dex, which Juniper hands over after the end).
 

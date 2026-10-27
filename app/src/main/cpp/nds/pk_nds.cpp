@@ -302,7 +302,7 @@ void pk_nds_run_frame(void)
     if (ds->wide) {
         // The overworld only: the field map on screen with nothing over it (a text box keeps it).
         bool overworld = (ds->fieldBits & PK_NDS_FIELD_SCREEN) && !(ds->fieldBits & (PK_NDS_FIELD_MENU | PK_NDS_FIELD_BATTLE));
-        bool battle = (ds->fieldBits & PK_NDS_FIELD_BATTLE) != 0;
+        bool battle = (ds->fieldBits & PK_NDS_FIELD_BATTLE) != 0 && pk_nds_battle_margins(ds->field);
         pk_nds_wide_gpu_want(overworld || battle);
         pk_nds_wide_frame(nds, gpu ? ds->topArgb : nds->GPU.Framebuffer[fb][0].get(), draw, overworld, drawNext, battle);
     }

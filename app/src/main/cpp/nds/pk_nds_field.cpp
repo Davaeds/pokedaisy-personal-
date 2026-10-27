@@ -141,6 +141,8 @@ static void releaseWild(const PkNdsFieldGame* g, uint32_t (*read32)(uint32_t), v
     holding = 0;
 }
 
+int pk_nds_battle_margins(const PkNdsFieldGame* g) { return g && g->gen != 5; }
+
 int pk_nds_battle_selecting(const PkNdsFieldGame* g) { return g && g->battleSelecting ? g->battleSelecting : PK_NDS_BATTLE_SELECTING; }
 
 // Gen 5: the GameSystem's running proc, or 0.

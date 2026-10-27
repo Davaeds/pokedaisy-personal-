@@ -91,6 +91,11 @@ int pk_nds_battle_command(const PkNdsFieldGame* game, uint32_t (*read32)(uint32_
  * move, a target - and the bag or party opened from there). */
 #define PK_NDS_BATTLE_SELECTING 5
 
+/** EXPAND carries [game]'s battles into the margins (its background, 3D, HP boxes and text box: tuned on HG/SS). Not
+ * Black's: its battle is all 3D and the carried HP boxes streaked across the margins; they stay plain there (a battle
+ * pulls the view back to the screen anyway). */
+int pk_nds_battle_margins(const PkNdsFieldGame* game);
+
 /** [game]'s battle command while the player chooses (Gen 4's PK_NDS_BATTLE_SELECTING; Gen 5's adapter has its own). */
 int pk_nds_battle_selecting(const PkNdsFieldGame* game);
 
