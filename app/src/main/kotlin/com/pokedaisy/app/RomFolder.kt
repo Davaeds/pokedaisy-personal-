@@ -179,11 +179,13 @@ object RomFolder {
 
     private fun cacheFile(context: Context) = File(context.filesDir, "rom-folder-scan.tsv")
 
-    /** Which games the companion supported when the cache was written ([CompanionSupport]'s sets, and the
-     * retail dumps it takes as retail: a ROM it turned away before is checked again). */
+    /** Which games the companion supported when the cache was written ([CompanionSupport]'s sets, the retail dumps it
+     * takes as retail and the DS carts by code and revision: a ROM it turned away before is checked again - a Black cart
+     * linked before Black was supported stayed out of the library). */
     private val SUPPORTED = "#supported\t" + Integer.toHexString(
         (TelemetrySampler.SUPPORTED_HACK_SHA1S.sorted() + TelemetrySampler.SUPPORTED_GB_SHA1S.sorted() +
-            com.pokedaisy.app.companion.data.RETAIL_DUMPS.map { it.sha1 }).hashCode(),
+            com.pokedaisy.app.companion.data.RETAIL_DUMPS.map { it.sha1 } +
+            TelemetrySampler.NDS_GAMES.map { (code, rev) -> "$code:$rev" }.sorted()).hashCode(),
     )
 
     private fun load(context: Context): Map<String, Entry> {
