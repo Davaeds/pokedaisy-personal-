@@ -45,18 +45,26 @@ enum {
 };
 
 #define PK_SAMPLE_RATE 48000
+/** The GB core's master volume (mGBA's full is 0x100): see pk_gb_config. */
+#define PK_GB_VOLUME 0x80
 
 // Game Boy / Color ROMs run on mGBA's GB core too (M_CORE_GB). Red/Blue/Yellow
 // are SGB-enhanced, so the core would frame them in a 256x224 Super Game Boy
-// border: turn borders off, which keeps every GB game at its 160x144 screen.
+// border: turn borders off, which keeps every GB game at its 160x144 screen. And half volume (below).
 static void pk_gb_config(struct mCore* core) {
     if (core->platform(core) != mPLATFORM_GB) {
         return;
     }
-    // Just this one option: mCoreLoadForeignConfig maps the whole config, and with
+    // Option by option: mCoreLoadForeignConfig maps the whole config, and with
     // no "volume" key in it the GB core's master volume went to 0 (Yellow was silent).
     mCoreConfigSetIntValue(&core->config, "sgb.borders", 0);
     core->reloadConfigOption(core, "sgb.borders", &core->config);
+    // Half of mGBA's full volume: at 0x100 its GB mixer scales the channels by 12 into an int16, which four loud
+    // channels overflow - Crystal and Yellow wrapped and clipped in every loud passage (the "crushed" sound players
+    // reported). Recorded headless at both volumes (mgba_dump's `volume` + `wav`): at 0x80 the loudest peak is ~28,700
+    // of 32,767 and the music is about as loud as FireRed's.
+    mCoreConfigSetIntValue(&core->config, "volume", PK_GB_VOLUME);
+    core->reloadConfigOption(core, "volume", &core->config);
 }
 
 static int pk_is_gba(const struct mCore* core) {

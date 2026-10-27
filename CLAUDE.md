@@ -439,8 +439,10 @@ CGB PAL_TOWNMAP) and the player's town-map sprite into rom-art; `OptionColors` /
 text box's double line) while YELLOW runs. Headless: `mgba_dump`'s `dump` writes `wram.bin` (C000-DFFF)
 + `hram.bin` for a GB core, which `FixtureMemoryReader` loads; a wild battle = poke wCurEnemyLevel
 (0xD126) and wCurOpponent (0xD058, an internal species index) on the field.
-**Yellow, round two**: `pk_gb_config` must only reload `sgb.borders` (`reloadConfigOption`): a whole
-`mCoreLoadForeignConfig` left the GB core's volume at 0 (Yellow was silent). Never tile a 1px backdrop
+**Yellow, round two**: `pk_gb_config` reloads options one by one (`reloadConfigOption`): a whole
+`mCoreLoadForeignConfig` left the GB core's volume at 0 (Yellow was silent). It sets the volume to 0x80 (`PK_GB_VOLUME`,
+2026-10-28, r/PokeDaisy's "crushed" Gen 1 / 2 sound): at mGBA's 0x100 the GB mixer overflows its int16 in loud passages
+(Crystal / Yellow clipped headless; at 0x80 the peak is ~28,700 and the music about FireRed's loudness). Never tile a 1px backdrop
 (`GameBackdrop` draws tiles one by one: Yellow's white was ~53,000 draws a frame, 77 ms on the
 RenderThread) - it's stretched once now. A game font is set larger (`LocalGameTextScale`, Gen 1 9/7) except
 where layouts are sized to the line (`rememberGbaTextMetrics(gameScaled = false)`: battle INFO / SUGGESTIONS), and drawn
