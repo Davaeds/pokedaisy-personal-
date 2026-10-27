@@ -1070,11 +1070,16 @@ struct Piece {
 };
 
 // Weather (field_weather.h's GFXTAG_*: 0x1201 horizontal fog .. 0x1206 rain) is screen-space sprites the
-// game lays only over its own 240 px: fog, ash and sandstorm as 64 px grids, rain and bubbles at random.
-// Repeated 256 px either way (a multiple of the grids' 64) they go on seamlessly into the margins.
+// game lays only over its own 240 x 160: fog, ash and sandstorm as 64 px grids, rain and bubbles at random.
+// Repeated 256 px either way (a multiple of the grids' 64) they go on seamlessly into the margins - up and down
+// too (a phone upright): the grids are 4 rows, 256 px, bubbles rise through 256 rows (160 + 48 each side) and
+// rain falls through 192 (-16 .. 176, field_weather_effects.c), so those repeat at their own height.
 #define WEATHER_TAG_FIRST 0x1201
 #define WEATHER_TAG_LAST 0x1206
+#define WEATHER_TAG_RAIN 0x1206
 #define WEATHER_REPEAT 256
+#define WEATHER_REPEAT_RAIN_Y 192
+#define MAX_PIECES 512   // a frame's OAM (128) and its subsprites, plus every weather sprite's 8 copies
 
 static const uint8_t OBJ_DIMS[3][4][2] = {
     { { 8, 8 }, { 16, 16 }, { 32, 32 }, { 64, 64 } },
@@ -1082,7 +1087,7 @@ static const uint8_t OBJ_DIMS[3][4][2] = {
     { { 8, 16 }, { 8, 32 }, { 16, 32 }, { 32, 64 } },
 };
 
-static struct Piece pieces[2][256];
+static struct Piece pieces[2][MAX_PIECES];
 static int npieces[2] = { 0, 0 };
 static int shown = 0;   // pieces[shown]: the list drawn (the last one the frame's OAM agreed with)
 
@@ -1109,7 +1114,7 @@ static int buildPieces(const struct Snap* s, struct Piece* out) {
         if ((flags & 1) && (flags & (1 << 14)) && !(flags & (1 << 13)) && id < 64) offscreen[id] = true;
     }
     int n = 0;
-    for (int k = 0; k < 64 && n < 256; k++) {
+    for (int k = 0; k < 64 && n < MAX_PIECES; k++) {
         int id = s->order[k];
         if (id >= 64) continue;
         const uint8_t* sp = s->sprites + 0x44 * id;
@@ -1151,19 +1156,23 @@ static int buildPieces(const struct Snap* s, struct Piece* out) {
             n++;
             uint32_t tmpl = (uint32_t) sp[0x14] | (uint32_t) sp[0x15] << 8 | (uint32_t) sp[0x16] << 16 | (uint32_t) sp[0x17] << 24;
             uint32_t tag = !(fl & 2) && tmpl ? r16(tmpl) : 0;   // struct SpriteTemplate starts with tileTag
-            for (int k2 = -1; k2 <= 1 && tag >= WEATHER_TAG_FIRST && tag <= WEATHER_TAG_LAST; k2 += 2) {
-                if (n >= 256) break;
-                out[n] = out[n - 1 - (k2 > 0)];
-                out[n].x = x + k2 * WEATHER_REPEAT;
-                out[n].copy = true;
-                n++;
-            }
+            if (tag < WEATHER_TAG_FIRST || tag > WEATHER_TAG_LAST) continue;
+            int at = n - 1, ry = tag == WEATHER_TAG_RAIN ? WEATHER_REPEAT_RAIN_Y : WEATHER_REPEAT;
+            for (int ky = -1; ky <= 1; ky++)
+                for (int kx = -1; kx <= 1 && n < MAX_PIECES; kx++) {
+                    if (!kx && !ky) continue;
+                    out[n] = out[at];
+                    out[n].x = x + kx * WEATHER_REPEAT;
+                    out[n].y = y + ky * ry;
+                    out[n].copy = true;
+                    n++;
+                }
             continue;
         }
         int bx = x - cvx, by = y - cvy;
         int cnt = (int) r8(table);
         int ss = C[PK_WIDE_SUBSPRITE_SIZE];   // 4: s8 x, y; 8 (Ruby / Sapphire): u16 x, y, read as s16, + 2 bytes' padding
-        for (int j = 0; j < cnt && n < 256; j++) {
+        for (int j = 0; j < cnt && n < MAX_PIECES; j++) {
             const uint8_t* sub = mem(subs + (uint32_t) (ss * j), (uint32_t) ss);
             if (!sub) break;
             uint32_t v = le16(sub + ss / 2);   // the shape / size / tile / priority bits
