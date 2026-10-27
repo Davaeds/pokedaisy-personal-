@@ -21,6 +21,30 @@ object WhatsNew {
     /** Newest first. */
     val RELEASES: List<Notes> = listOf(
         Notes(
+            "1.3.3",
+            listOf(
+                Section(
+                    NEW,
+                    listOf(
+                        "Pokémon Black on the DS: party, bag, map, Pokédex, EXPAND, FLY and the PC from anywhere.",
+                        "Three more games: Wishes of Tomorrow, PureRed / PureBlue and Dreamstone Mysteries.",
+                        "SHINY ODDS: pick how often wild Pokémon are shiny. Shiny ones get their own icons and marks.",
+                        "A NUZLOCKE tab keeps score of your run.",
+                        "DS RESOLUTION draws the DS games' 3D sharper, up to 8x.",
+                        "TIPS: now and then, a card about a feature you haven't tried yet.",
+                    ),
+                ),
+                Section(
+                    FIXES,
+                    listOf(
+                        "A hotkey with SELECT or START in it no longer swallows that button in the game.",
+                        "Turning WILD ENCOUNTERS back on always brings the wild Pokémon back.",
+                        "A DS game the library turned away before it was supported shows up again.",
+                    ),
+                ),
+            ),
+        ),
+        Notes(
             "1.3.2",
             listOf(
                 Section(
