@@ -173,8 +173,9 @@ change to any of the places listed under "Where it's decided" updates its rows h
     seven rates in its loaded encounter table (80 steps in Route 1's grass, no battle; back on, one within a few), SMART
     FF's battle wait reads the player's battle adapter (3 = choosing). EXPAND as on Gen 4 (`widecheck` on the Gear
     Station platform: as many far pixels in the overlap as HeartGold's field, ~20 a frame, all on the outer rows; Route 1
-    ~10); its battles keep plain margins (`pk_nds_battle_margins`: the battle carry, tuned on HG/SS, streaked Black's HP
-    boxes across them, and a battle pulls the view back to the screen anyway). PC and
+    ~10). Its battles are all 3D (sky, ground, platforms, the Pokemon), so their margins are the overworld's - the 3D past
+    the screen, the text box's band carried - not HG/SS's battle carry, which streaked its HP boxes (`pk_nds_battle_3d`;
+    a cave battle from the player's Thor save, start to a move, software and GPU at 3x). PC and
     FLY take the GameSystem's field event check's place for one frame (it runs only while no event does) and start the
     game's own events: the Pokémon Center PC's script (10090), and FLY the party menu's way (its field-skill check of the
     place, then the skill's event to the town's zone); traced with nds_dump's `watch`, checked headless (the PC's boxes

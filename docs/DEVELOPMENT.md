@@ -2013,6 +2013,15 @@ saved at Gear Station) and from the cart's own files. Heap blocks keep their sou
   wait). WILD ENCOUNTERS zeroes the seven rates of the zone's encounter table (the GameData's event data +0x38, the
   season's block of `/a/1/2/6`, reloaded on every zone change); the bike is the GameData's move form (+0x154). The BGM
   is a stack of songs (depth 0x020AA1B0, songs from 0x020AA1BC, 0x1C apart). All in `pk_nds_field.cpp`'s `BLACK_US`.
+- EXPAND in a battle: Black's battle is all 3D (the sky and ground too, the Pokemon as 3D quads; BG3 is the 2D over it),
+  so it gets the overworld's margins (`pk_nds_battle_3d`: the slices / GPU list past the screen, the text box's band
+  carried by its edge-to-edge rows), not Gen 4's BG3 battle carry (`pk_nds_battle_margins`), which streaked its HP boxes.
+  The boxes stop at the screen's edge there.
+- Its own look on the companion (sampled headless from its screens, HP poked into the live party for the fainted / low
+  states): the party's eight-sided slots (`BlackPartyPalette`: `PartyPalette.chamfer`, a diagonal `stripe`, the right
+  column a quarter lower, `stagger`) on its navy grid, the bag's charcoal rows on its blue dots, the Pokedex's green grid
+  (`DsBackdrops.kt`'s `DsPattern`s: a small tile repeated in GBA pixels). Platinum got the same treatment (its party's
+  slate stripes and blue slots, its bag's white list and purple bar), HG / SS a Pokedex backdrop (white, grey grid).
 - Getting out of the save's spot: Gear Station's hall is a rail map; the escalator's warp (the zone's event data in RAM)
   was pointed at another zone's door and the save moved on from there (`black_route1`'s README).
 - The cart: Gen 5's text is UTF-16 encrypted per line (`Gen5Text.kt`; `/a/0/0/2`: species 70, moves 203, items 54,

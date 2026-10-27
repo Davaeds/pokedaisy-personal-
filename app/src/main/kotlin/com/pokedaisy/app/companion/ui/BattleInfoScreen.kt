@@ -620,8 +620,21 @@ internal fun ThreatPill(mon: MonView, threats: List<MonView>) {
     if (hits.isEmpty()) return
     val worst = hits.maxBy { it.pct }
     when {
-        worst.pct > 100 -> VerdictPill("${com.pokedaisy.app.companion.data.typeLabel(worst.type)} ${worst.label}", verdictColor(50))
-        worst.pct < 100 -> VerdictPill(tr("RESISTS"), verdictColor(200))
+        worst.pct > 100 -> FittingVerdictPill("${com.pokedaisy.app.companion.data.typeLabel(worst.type)} ${worst.label}", worst.label, verdictColor(50))
+        worst.pct < 100 -> FittingVerdictPill(tr("RESISTS"), worst.label, verdictColor(200))
+    }
+}
+
+/** A [VerdictPill] of [text], or of [short] where [text] doesn't fit the room left to it (a DS game's companion over its
+ * button bar: two types and the level left too little, and RESISTS was cut to RESIS). */
+@Composable
+private fun FittingVerdictPill(text: String, short: String, color: Color) {
+    // Both composed, the one that fits placed (a plain Layout: the card's rows ask for intrinsic sizes).
+    androidx.compose.ui.layout.Layout({ VerdictPill(text, color); VerdictPill(short, color) }) { (fullM, shortM), c ->
+        val loose = c.copy(minWidth = 0, maxWidth = androidx.compose.ui.unit.Constraints.Infinity)
+        val full = fullM.measure(loose)
+        val p = if (full.width <= c.maxWidth) full else shortM.measure(c.copy(minWidth = 0))
+        layout(p.width, p.height) { p.place(0, 0) }
     }
 }
 

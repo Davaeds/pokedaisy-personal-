@@ -834,6 +834,8 @@ fun GameBackdrop(game: GameKind, modifier: Modifier = Modifier.fillMaxSize()) {
         Canvas(modifier) { drawRect(HGSS_BACKDROP) }
         return
     }
+    // Black's and Platinum's party screens: their own patterns (the scrim already on [modifier]).
+    dsPartyPattern(game)?.let { DsBackdrop(it, modifier, scrim = 0f); return }
     val bg = rememberGameBackground(game) ?: return
     if (bg.tiled) {
         // Whole-number scale of a 240px-wide GBA screen - on the

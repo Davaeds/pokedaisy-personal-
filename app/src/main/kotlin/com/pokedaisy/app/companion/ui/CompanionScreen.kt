@@ -361,6 +361,13 @@ fun CompanionScreen(
                     visible = current == "ITEMS" && hasItemsBackdrop(game),
                     enter = fadeIn(tween(200)), exit = fadeOut(tween(200)), label = "tab-backdrop",
                 ) { ItemsBackdrop(game, Modifier.fillMaxSize()) }
+                // The Pokédex's own screen (Black's green grid), the same way.
+                dsDexPattern(game)?.let { dex ->
+                    AnimatedVisibility(
+                        visible = current == "DEX",
+                        enter = fadeIn(tween(200)), exit = fadeOut(tween(200)), label = "dex-backdrop",
+                    ) { DsBackdrop(dex) }
+                }
             }
 
             val tabBar: @Composable () -> Unit = {
@@ -742,7 +749,7 @@ val LocalShoulderHints = androidx.compose.runtime.staticCompositionLocalOf { fal
 
 /** The companion's height in GBA pixels (rememberGbaTextMetrics' unit) below which its main text goes a step smaller: the
  * RG DS's 480 px are 240, the Thor's 1080 px 360, the Duo Lite's 960 px 320. */
-private const val SHORT_COMPANION_UNITS = 280
+private const val SHORT_COMPANION_UNITS = 316
 
 /** The companion is on a short screen ([isShortCompanion]): its text a step smaller, its fixed-size buttons smaller too
  * ([NavButtonSize], [SETTINGS_CHIP_WIDTH]). */

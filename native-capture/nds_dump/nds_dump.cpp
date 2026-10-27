@@ -284,7 +284,7 @@ static void runFrames(int n, u32 keys)
         inFrame = false;
         frameCount++;
         static int wasBattle = 0;
-        int battle = 0, inBattle = 0;
+        int battle = 0, inBattle = 0, battle3d = 0;
         if (auto* cart = nds->NDSCartSlot.GetCart()) {
             if (const PkNdsFieldGame* g = pk_nds_field_game(cart->GetHeader().GameCode, cart->GetHeader().ROMVersion)) {
                 int bits = pk_nds_field_state(g, read32, write32, wildOff);
@@ -294,13 +294,14 @@ static void runFrames(int n, u32 keys)
                 wasBattle = battle;
                 inBattle = battle;
                 if (!pk_nds_battle_margins(g)) battle = 0;   // as the app: no battle margins there
+                battle3d = inBattle && pk_nds_battle_3d(g);   // ... but the overworld's (Black)
             }
         }
         // As the app: a battle's margins are its background and its 3D, everything else the overworld's 3D.
         if (wideMargin) {
             pk_nds_wide_gpu_want(true);
             wideDrawn = pk_nds_wide_frame(nds, gpuOn ? gpuTopArgb.data() : nds->GPU.Framebuffer[nds->GPU.FrontBuffer][0].get(),
-                draw, !battle && !inBattle, appPerTick > 0 ? drawNext : true, battle) || wideDrawn;
+                draw, (!battle && !inBattle) || battle3d, appPerTick > 0 ? drawNext : true, battle) || wideDrawn;
         }
 #ifdef NDS_DUMP_GL
         if (gpuOn && draw) {

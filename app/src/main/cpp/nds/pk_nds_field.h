@@ -92,9 +92,12 @@ int pk_nds_battle_command(const PkNdsFieldGame* game, uint32_t (*read32)(uint32_
 #define PK_NDS_BATTLE_SELECTING 5
 
 /** EXPAND carries [game]'s battles into the margins (its background, 3D, HP boxes and text box: tuned on HG/SS). Not
- * Black's: its battle is all 3D and the carried HP boxes streaked across the margins; they stay plain there (a battle
- * pulls the view back to the screen anyway). */
+ * Black's: its battle is all 3D (pk_nds_battle_3d) and the carried HP boxes streaked across the margins. */
 int pk_nds_battle_margins(const PkNdsFieldGame* game);
+
+/** [game]'s battle is all 3D - sky, ground, platforms and the Pokemon (Black) - so EXPAND draws its margins as it does
+ * the overworld's: the 3D past the screen, the 2D over it carried where it crosses the screen's edge. */
+int pk_nds_battle_3d(const PkNdsFieldGame* game);
 
 /** [game]'s battle command while the player chooses (Gen 4's PK_NDS_BATTLE_SELECTING; Gen 5's adapter has its own). */
 int pk_nds_battle_selecting(const PkNdsFieldGame* game);

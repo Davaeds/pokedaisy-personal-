@@ -160,7 +160,8 @@ reason about Compose layout blind. Two ways, same screens:
    shared `OptionSelector`/`OptionConfirm`, at the Thor bottom screen's 1240x1080 (landscape); `DuoLiteCompanionScreenshotTest`
 re-runs them at the Retroid Pocket Duo Lite's 1280x960 (4:3: ~120 px less height - the summary moves its types beside the
 icon, STATES flattens its thumbnails, both only when the full layout doesn't fit); `RgDsCompanionScreenshotTest` at the RG DS's
-640x480 - a **short companion** (`isShortCompanion`: under 280 GBA pixels tall; the pixel font can't go below 2 screen px a GBA
+640x480 - a **short companion** (`isShortCompanion`: under 316 GBA pixels tall - the Thor's companion over a DS game's
+COMPANION / GAME SCREEN bar is 310, where battle INFO cut its lines, the Duo Lite's 320 isn't; the pixel font can't go below 2 screen px a GBA
 pixel, so there its text was as large for the screen as on a GBA): `LocalTextStep` -1, `LocalShortCompanion` (smaller
 `NavButtonSize` / `SETTINGS_CHIP_WIDTH`, one-line summary moves, the DEX's HT over WT); ui-preview: `-PcompanionW=640
 -PcompanionH=480 -PcompanionDensity=1.5`;
@@ -547,7 +548,9 @@ encounter table), tables / GUIDE from the cart (`scripts/gen_gen5_tables.py`, `g
 month), art and DEX pages by `NdsArt` (`Gen5Text`, `Gen5Lz`). MAP = the key item's Town Map (`NdsArt.townMapBlack` from a/0/8/5,
 `blackTownMap`: places are points from a/0/8/6, an 8 px grid snaps to them; `townMapZonesBlack` = a zone's place, a house's
 by its parent zone). PC / FLY: `pk_nds_call.cpp`'s `Gen5Fns` - the hook takes the GameSystem's field event check's place
-for a frame (traced with nds_dump's `watch`), FLY's destinations are the towns' places (`Gen5Field.kt`). docs/DEVELOPMENT.md's "Black".
+for a frame (traced with nds_dump's `watch`), FLY's destinations are the towns' places (`Gen5Field.kt`). Its battles are all 3D, so EXPAND draws them as the overworld
+(`pk_nds_battle_3d`), not with Gen 4's BG3 battle carry. Its companion look - and Platinum's, HG / SS's DEX - is the game's own
+screens' (`BlackPartyPalette` with cut corners, `PartyPalette.stagger`, `DsBackdrops.kt`'s patterns). docs/DEVELOPMENT.md's "Black".
 **Companion options (2026-10-08)**: RESUME GAMES (`Prefs.autoResume`, top-screen Settings > LIBRARY; off =
 a launch boots the save, a return from HOME still resumes - `freshLaunch`), CLOSE COMPANION (SETTINGS, two
 screens: the Presentation goes away until BACK on the game), STATUS BAR OFF / GAME / COMPANION (`Prefs.statusBarOnCompanion`,

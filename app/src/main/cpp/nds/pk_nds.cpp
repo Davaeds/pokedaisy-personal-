@@ -300,9 +300,12 @@ void pk_nds_run_frame(void)
     ds->fieldBits = pk_nds_field_bits();
     pk_nds_call_frame(nds, ds->field);
     if (ds->wide) {
-        // The overworld only: the field map on screen with nothing over it (a text box keeps it).
-        bool overworld = (ds->fieldBits & PK_NDS_FIELD_SCREEN) && !(ds->fieldBits & (PK_NDS_FIELD_MENU | PK_NDS_FIELD_BATTLE));
-        bool battle = (ds->fieldBits & PK_NDS_FIELD_BATTLE) != 0 && pk_nds_battle_margins(ds->field);
+        // The overworld only: the field map on screen with nothing over it (a text box keeps it) - or a battle that's
+        // all 3D like it (Black's).
+        bool inBattle = (ds->fieldBits & PK_NDS_FIELD_BATTLE) != 0;
+        bool overworld = ((ds->fieldBits & PK_NDS_FIELD_SCREEN) && !(ds->fieldBits & (PK_NDS_FIELD_MENU | PK_NDS_FIELD_BATTLE))) ||
+            (inBattle && pk_nds_battle_3d(ds->field));
+        bool battle = inBattle && pk_nds_battle_margins(ds->field);
         pk_nds_wide_gpu_want(overworld || battle);
         pk_nds_wide_frame(nds, gpu ? ds->topArgb : nds->GPU.Framebuffer[fb][0].get(), draw, overworld, drawNext, battle);
     }
