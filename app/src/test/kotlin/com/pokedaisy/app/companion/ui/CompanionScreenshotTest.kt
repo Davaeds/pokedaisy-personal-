@@ -1167,6 +1167,17 @@ open class CompanionScreenshotTest {
     @Test fun pureBlueMap() = pure("pureblue", "MAP", blue = true)
     @Test fun pureBlueDexEntry() = pure("pureblue", "DEX", blue = true, dexEntry = 100)
     @Test fun yellowParty() = yellow("yellow", "PARTY")
+    // The GUIDE (a player's request): HERE in VERMILION CITY (its people and items), on ROUTE 1 and in VIRIDIAN FOREST
+    // (the wild Pokémon, caught ones marked), NEXT BOSS, the generated WHERE IS; Red's HERE on ROUTE 1 too.
+    @Test fun yellowGuide() = yellow("yellow", "GUIDE", guidePage = "HERE")
+    @Test fun yellowGuideRoute() = yellow("yellow", "GUIDE", guidePage = "HERE", onMap = 12)
+    @Test fun yellowGuideForest() = yellow("yellow", "GUIDE", guidePage = "HERE", onMap = 51)
+    @Test fun yellowGuideNextBoss() = yellow("yellow", "GUIDE", guidePage = "NEXT BOSS")
+    @Test fun yellowGuideWhereIs() = yellow("yellow", "GUIDE", guidePage = "WHERE IS")
+    @Test fun yellowGuideGerman() = yellow("yellow_de", "GUIDE", guidePage = "HERE", onMap = 12, cfg = com.pokedaisy.app.companion.data.GEN1_YELLOW_DE,
+        romFile = yellowDeRom)
+    @Test fun redGuideRoute() = yellow("red", "GUIDE", guidePage = "HERE", onMap = 12, cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
+    @Test fun redGuideNextBoss() = yellow("red", "GUIDE", guidePage = "NEXT BOSS", cfg = com.pokedaisy.app.companion.data.GEN1_RED, romFile = redRom, game = GameKind.RED)
     /** A Normal / Flying summary (all three matchup groups) in Yellow's taller font, under the tab bar: its headings sit on
      * their chips' lines there, and once were clipped to a chip's height. */
     @Test fun yellowPartyDetail() = yellow("yellow", "PARTY", monIndex = 4)
@@ -1209,6 +1220,9 @@ open class CompanionScreenshotTest {
     @Test fun silverParty() = crystal("silver", "PARTY", silver = true)
     @Test fun silverDexEntry() = crystal("silver", "DEX", dexEntry = 155, silver = true)
     @Test fun crystalParty() = crystal("crystal", "PARTY")
+    @Test fun crystalGuide() = crystal("crystal", "GUIDE", guidePage = "HERE")
+    @Test fun crystalGuideNextBoss() = crystal("crystal", "GUIDE", guidePage = "NEXT BOSS")
+    @Test fun crystalGuideWhereIs() = crystal("crystal", "GUIDE", guidePage = "WHERE IS")
     @Test fun crystalItems() = crystal("crystal", "ITEMS")
     @Test fun crystalBattle() = crystal("crystal_battle", "BATTLE")
     @Test fun crystalBattleMenu() = crystal("crystal_battle_menu", "BATTLE", controls = true)
@@ -1277,6 +1291,9 @@ open class CompanionScreenshotTest {
         game: GameKind = GameKind.YELLOW,
         /** PARTY with this slot's summary open. */
         monIndex: Int? = null,
+        guidePage: String? = null,
+        /** The save as if it stood on this map (wCurMap): the fixtures are all in a Pokémon Center. */
+        onMap: Int? = null,
     ) {
         activeGame = game
         romLanguage = cfg.language   // another test's ROM may have left Japanese names on
@@ -1285,6 +1302,7 @@ open class CompanionScreenshotTest {
         if (rom.isFile) com.pokedaisy.app.companion.data.Gen1Art.extractTo(rom.readBytes(), RomArt.dirOverride!!)
         com.pokedaisy.app.companion.data.Gen1Dex.rom = if (rom.isFile) rom.readBytes() else null
         val t = com.pokedaisy.app.companion.data.readGen1Telemetry(FixtureMemoryReader.load(fixture), cfg)
+            .let { if (onMap == null) it else it.copy(mapNum = onMap, regionMapSectionId = onMap) }
         val v = buildSnapshotView(t).copy(game = game)
         // The icon sheets load asynchronously in the app; decode them before the snapshot.
         (v.party + v.battlePlayer + v.battleOpponent).forEach { m -> m.iconAsset?.let { GameArt.get(paparazzi.context, it) } }
@@ -1297,6 +1315,26 @@ open class CompanionScreenshotTest {
         }
         val dex = v.pokedex
         if (dex != null) (1..12).forEach { PokedexSource.entry(dex.tables, it); PokedexSource.frontSprite(dex.tables, it) }
+        if (guidePage != null) {
+            val world = gameGuide(guideId(game, null))!!.world!!
+            val here = world.encounters(v.mapGroup, v.mapNum, v.progress)
+            val teams = gameGuide(guideId(game, null))?.bosses.orEmpty().flatMap { b -> v.progress?.let { p -> b.trainers(p).flatMap { world.party(it, p) } }.orEmpty() }
+            ((here.grass + here.water + here.oldRod + here.goodRod + here.superRod).map { it.species } + teams.map { it.species })
+                .forEach { sp -> com.pokedaisy.app.companion.data.spriteAsset("pokemon", sp)?.let { GameArt.get(paparazzi.context, it) } }
+            snapshot {
+                AppTheme {
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        com.pokedaisy.app.companion.ui.theme.LocalGameFont provides com.pokedaisy.app.companion.ui.theme.rememberGameFont(game),
+                        com.pokedaisy.app.companion.ui.theme.LocalGameTextScale provides com.pokedaisy.app.companion.ui.theme.gameTextScale(game),
+                        com.pokedaisy.app.companion.ui.theme.LocalGameFontWidth provides com.pokedaisy.app.companion.ui.theme.gameFontWidth(game),
+                    ) {
+                        val ui = androidx.compose.runtime.remember { GuideUiState().apply { this.page = guidePage } }
+                        GuideScreen(rememberGuide(v.game, v.pokedex, v.guideTables)!!, ui, v)
+                    }
+                }
+            }
+            return
+        }
         if (dexEntry != null && dex != null) {
             PokedexSource.entry(dex.tables, dexEntry); PokedexSource.frontSprite(dex.tables, dexEntry)
             snapshot {
@@ -1370,7 +1408,7 @@ open class CompanionScreenshotTest {
         listOf(16, 97, 152, 161).forEach { warm(it) }
         if (guidePage != null) {
             // The guide's own icons (HERE's wild Pokémon, the bosses' teams), loaded as the app's tab would have them.
-            val world = com.pokedaisy.app.companion.data.PolishedCrystalWorld
+            val world = gameGuide(guideId(game, null))!!.world!!
             val here = world.encounters(v.mapGroup, v.mapNum, v.progress)
             val teams = gameGuide(guideId(game, null))?.bosses.orEmpty().take(3).flatMap { b -> v.progress?.let { world.party(b.trainer(it), it) }.orEmpty() }
             ((here.grass + here.headbutt + here.headbuttRare).map { it.species } + teams.map { it.species })

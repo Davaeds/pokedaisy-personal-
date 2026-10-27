@@ -201,12 +201,12 @@
   "matrix": {
     "columns": ["Party", "Bag", "Battle", "Map", "Dex", "Guide"],
     "rows": [
-      {"game": "Red / Blue (GB)", "version": "USA/Europe", "cells": ["yes", "yes", "part", "yes", "yes", "no"]},
+      {"game": "Red / Blue (GB)", "version": "USA/Europe", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "PureRed / PureBlue (GB)", "version": "2.7.6", "cells": ["yes", "yes", "part", "yes", "yes", "no"]},
-      {"game": "Yellow (GB)", "version": "USA/Europe", "cells": ["yes", "yes", "part", "yes", "yes", "no"]},
-      {"game": "Yellow (GB)", "version": "DE / FR / IT / ES", "cells": ["yes", "yes", "part", "yes", "yes", "no"]},
+      {"game": "Yellow (GB)", "version": "USA/Europe", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
+      {"game": "Yellow (GB)", "version": "DE / FR / IT / ES", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "Gold / Silver (GBC)", "version": "USA/Europe", "cells": ["yes", "yes", "part", "yes", "yes", "no"]},
-      {"game": "Crystal (GBC)", "version": "USA, USA/Europe rev 1, AU", "cells": ["yes", "yes", "part", "yes", "yes", "no"]},
+      {"game": "Crystal (GBC)", "version": "USA, USA/Europe rev 1, AU", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},
       {"game": "Crystal Clear (GBC)", "version": "2.5.11, 2.6.0 (4 builds)", "cells": ["yes", "yes", "part", "yes", "yes", "no"]},
       {"game": "Prism (GBC)", "version": "0.95 build 254", "cells": ["yes", "yes", "part", "yes", "yes", "no"]},
       {"game": "Polished Crystal (GBC)", "version": "3.2.0-3.2.3 (16 builds)", "cells": ["yes", "yes", "part", "yes", "yes", "yes"]},

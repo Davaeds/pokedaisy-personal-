@@ -572,6 +572,15 @@ data, `gen_polished_crystal_guide.py`, every build checked; `readGen2Telemetry` 
 trade flags as banks 0x10000+ / 0x20000+ and the clock as var 0x10000). Its controls were run through the real controller headless:
 the Game Boy battle menus drop presses as they open and after a cursor move, so every Game Boy pick (FIGHT / BAG / RUN / a move) now
 steers on the menu read each frame (`driveGbPickLocked`, `GbPartySwitch.battleMenu`) - docs/DEVELOPMENT.md's Polished section.
+**GUIDE on Yellow, Red, Blue and Crystal (2026-10-27, a player's request)**: HERE + NEXT BOSS + the generated WHERE IS over
+`GuideWorld`, like Polished Crystal. Gen 1: `scripts/gen_gen1_guide.py` reads pokeyellow / pokered's builds through their .sym
+-> `GuideGen1Gen.kt` (`G1Y_` / `G1R_` / `G1B_`), `GuideGen1.kt` (`Gen1World`, `readGen1Progress`: wEventFlags + banks for
+toggleable objects / hidden items / trades / badges, wRivalStarter as the champion's team var; the European Yellows = Yellow's RAM
++5 from wBattleMon up, `gen1GuideRam`); areas keyed by wCurMap and regrouped by town map name (`gen1Area`). No event flag survives
+Gen 1's Hall of Fame: a League boss is also done once the CERULEAN CAVE guard is hidden. Crystal: `scripts/gen_crystal_guide.py`
+(rev 0 / rev 1 / AU checked equal) -> `GuideCrystalGen.kt` in Polished Crystal's line format (`Gen2WildTables` /
+`Gen2BossTables` read both), `GuideCrystal.kt`; surfing adds 0-4 levels, RED is done when the League is won and his object
+flag is set again. Swarms and roaming beasts aren't listed.
 **Nintendo DS (2026-10-19; on for players from 1.3.0, `TelemetrySampler.NDS_SUPPORT = true` like the Game Boy's switch,
 the cart list `NDS_GAMES`, which the website's ROM check reads by header through compat.json's `ds`)**: Platinum (USA rev 1)
 and HeartGold / SoulSilver (USA) on melonDS (`third_party/melonds` at 1.1; our changes are one patch, `third_party/patches/melonds-pokedaisy.patch`,

@@ -45,6 +45,7 @@ internal val trCompanionInfo: Map<String, Tr> = mapOf(
     "PEOPLE" to Tr(ja = "ひとびと", fr = "GENS", de = "LEUTE", it = "PERSONE", es = "GENTE", br = "PESSOAS", pt = "PESSOAS"),
     "Reading the map..." to Tr(ja = "マップを よみこみちゅう...", fr = "Lecture de la carte...", de = "Karte wird gelesen...", it = "Lettura della mappa...", es = "Leyendo el mapa...", br = "Lendo o mapa...", pt = "A ler o mapa..."),
     "No wild POKéMON on this map." to Tr(ja = "この マップに やせいの ポケモンは いない。", fr = "Pas de POKéMON sauvage ici.", de = "Keine wilden POKéMON hier.", it = "Nessun POKéMON selvatico qui.", es = "No hay POKéMON salvajes aquí.", br = "Nenhum POKéMON selvagem neste mapa.", pt = "Nenhum POKéMON selvagem neste mapa."),
+    "WITH {0}" to Tr(ja = "{0}の チーム", fr = "AVEC {0}", de = "MIT {0}", it = "CON {0}", es = "CON {0}", br = "COM {0}", pt = "COM {0}"),
     "{0} of {1} caught here." to Tr(ja = "ここの ポケモン {1}ひき中 {0}ひき つかまえた", fr = "{0} sur {1} capturés ici.", de = "{0} von {1} hier gefangen.", it = "{0} su {1} catturati qui.", es = "{0} de {1} capturados aquí.", br = "{0} de {1} capturados aqui.", pt = "{0} de {1} capturados aqui."),
     "Its buildings included." to Tr(ja = "たてものの なかも ふくむ。", fr = "Bâtiments inclus.", de = "Gebäude inbegriffen.", it = "Edifici inclusi.", es = "Edificios incluidos.", br = "Inclui os prédios.", pt = "Inclui os edifícios."),
     "A ball = done." to Tr(ja = "ボール = クリア。", fr = "Une BALL = fait.", de = "Ein BALL = erledigt.", it = "Una BALL = fatto.", es = "Una BALL = hecho.", br = "Uma BOLA = feito.", pt = "Uma BOLA = feito."),

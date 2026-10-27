@@ -368,5 +368,7 @@ fun readGen1Telemetry(r: MemoryReader, cfg: Gen1Config): Telemetry {
         enemyActive = enemyActive,
         money = bcd(r.readCoreMemory(cfg.money, 3)),
         pokedex = cfg.pokedex?.let { t -> t.gen1?.let { runCatching { readGen1PokedexState(r, it, t) }.getOrNull() } },
+        // The GUIDE's flags, badges and the champion's team (GuideGen1.kt).
+        progress = gen1GuideRam(cfg)?.let { runCatching { readGen1Progress(r, it) }.getOrNull() },
     )
 }
