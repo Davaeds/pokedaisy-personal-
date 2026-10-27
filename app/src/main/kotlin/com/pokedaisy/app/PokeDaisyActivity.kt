@@ -1229,11 +1229,6 @@ class PokeDaisyActivity : Activity() {
             Prefs(this@PokeDaisyActivity).expandZoomOnText = on
             view.camera.zoomOnText = on
         }
-        override val portraitZoom get() = Prefs(this@PokeDaisyActivity).portraitZoom
-        override fun setPortraitZoom(on: Boolean) {
-            Prefs(this@PokeDaisyActivity).portraitZoom = on
-            view.camera.portraitZoom = on
-        }
         override val expandOffer get() = expandOfferUp.value
         override fun answerExpandOffer(turnOn: Boolean) {
             val prefs = Prefs(this@PokeDaisyActivity)
@@ -1710,10 +1705,7 @@ class PokeDaisyActivity : Activity() {
             lateFramesSource = { view.lateFrames }
             this.gba = gba
             this.nds = nds
-            wideCamera = view.camera.also {
-                it.zoomOnText = Prefs(this@PokeDaisyActivity).expandZoomOnText
-                it.portraitZoom = Prefs(this@PokeDaisyActivity).portraitZoom
-            }
+            wideCamera = view.camera.also { it.zoomOnText = Prefs(this@PokeDaisyActivity).expandZoomOnText }
             onWideOff = { runOnUiThread { showHud(com.pokedaisy.app.companion.i18n.tr("EXPAND hit a problem and is off for this game")) } }
             gen1Music = this@PokeDaisyActivity.gen1Music
             onCoreReady = { w, h ->

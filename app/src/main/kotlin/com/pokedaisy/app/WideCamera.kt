@@ -67,11 +67,6 @@ class WideCamera {
      * battles and anything else off the map always do, a picture over the field never. */
     @Volatile var zoomOnText = true
 
-    /** SETTINGS > PORTRAIT ZOOM: on a tall view (a phone upright), the field's 1x step is [PORTRAIT_ZOOM] closer, the
-     * sides of the game's own frame left off; anything wanting a close view still pulls in to the whole frame, text and
-     * menus too whatever [zoomOnText] says. Not on a DS game (its own margins). */
-    @Volatile var portraitZoom = false
-
     /** What the screen shows: the window pk_wide drew ([x], [y], [w], [h] in the frame's GBA pixels), placed on the
      * view at ([offX], [offY]) screen pixels from its top-left (<= 0: the window's whole pixels reach past the
      * view by the fraction the look-around / zoom has moved), [scale] screen pixels per GBA pixel. */
@@ -129,12 +124,9 @@ class WideCamera {
         val dt = if (lastNanos == 0L) 0f else ((now - lastNanos) / 1e9f).coerceIn(0f, 0.1f)
         lastNanos = now
 
-        val step = level.coerceIn(0, steps.size - 1)
-        // PORTRAIT ZOOM cuts the frame's sides: text and menus always pull out to the whole frame then.
-        val portraitIn = step == 0 && portraitZoom && vh > vw && marginX < 0
         val wantsClose = when (scene) {
             SCENE_FIELD -> false
-            SCENE_TEXT, SCENE_MENU -> zoomOnText || portraitIn
+            SCENE_TEXT, SCENE_MENU -> zoomOnText
             else -> true
         }
         // A fade decides nothing; nor does a picture over the field (FireRed's map preview, ~2 s): a pull-in and a
@@ -143,8 +135,7 @@ class WideCamera {
         else if (wantsClose) closeOverSince = 0L
         else if (closeOverSince == 0L) closeOverSince = now
         val close = closeOverSince == 0L || now - closeOverSince < RETURN_DELAY_NANOS
-        val home = if (portraitIn) fit * PORTRAIT_ZOOM else steps[step]
-        val target = if (close) fit else home
+        val target = if (close) fit else steps[level.coerceIn(0, steps.size - 1)]
         // The zoom is a timed ease-in-out in log space (the same feel at every step): a new target starts a new
         // motion from wherever the last one is - a pull-in at the pace of what's coming, the way back out slower.
         if (target != tweenTarget) {
@@ -235,8 +226,6 @@ class WideCamera {
 
         /** A step out must show at least this much more of the map than the one before it. */
         private const val MIN_STEP = 1.2f
-        /** PORTRAIT ZOOM's step in: the frame's middle 80% across (24 GBA px off each side). */
-        const val PORTRAIT_ZOOM = 1.25f
         /** The pull-in to 1x: a text box or a menu in under half a second; a battle over its first flashes (they last
          * ~0.8 s, the wipe follows) - still before anything slides. The way back out, slower. */
         private const val PULL_IN_NANOS = 420_000_000L

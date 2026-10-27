@@ -395,12 +395,6 @@ class Prefs(context: Context) {
         get() = p.getBoolean("expand_zoom_on_text", true)
         set(v) = p.edit().putBoolean("expand_zoom_on_text", v).apply()
 
-    /** EXPAND > PORTRAIT ZOOM: upright, the field a step closer than the game's whole width ([WideCamera.PORTRAIT_ZOOM],
-     * its sides left off); text, menus and battles still pull out to the whole frame. Off by default. */
-    var portraitZoom: Boolean
-        get() = p.getBoolean("portrait_zoom", false)
-        set(v) = p.edit().putBoolean("portrait_zoom", v).apply()
-
     /** SCREEN > OVERLAY: the frame around the game, an [com.pokedaisy.app.overlay.OverlayChoice.key] - "" (none, the
      * default), a built-in frame ("builtin:DAISY") or an imported overlay ("user:<its folder>"). */
     var overlay: String

@@ -154,8 +154,6 @@ internal val trSettings: Map<String, Tr> = mapOf(
     "GBA COLORS" to Tr(ja = "GBAの いろ", fr = "COULEURS GBA", de = "GBA-FARBEN", it = "COLORI GBA", es = "COLORES GBA", br = "CORES GBA", pt = "CORES GBA"),
     "ASPECT" to Tr(ja = "アスペクト", fr = "FORMAT", de = "FORMAT", it = "FORMATO", es = "FORMATO", br = "PROPORÇÃO", pt = "PROPORÇÃO"),
     "AUTO ZOOM IN" to Tr(ja = "オート ズームイン", fr = "ZOOM AUTO", de = "AUTO-ZOOM", it = "ZOOM AUTO", es = "ZOOM AUTO", br = "ZOOM AUTO", pt = "ZOOM AUTO"),
-    "PORTRAIT ZOOM" to Tr(ja = "たてがめん ズーム", fr = "ZOOM PORTRAIT", de = "HOCHKANT-ZOOM", it = "ZOOM VERTICALE", es = "ZOOM VERTICAL", br = "ZOOM RETRATO", pt = "ZOOM RETRATO"),
-    "Closer upright, sides trimmed" to Tr(ja = "たてで ちかく・りょうはしを カット", fr = "Plus près à la verticale, côtés coupés", de = "Näher im Hochformat, Seiten gekürzt", it = "Più vicino in verticale, lati tagliati", es = "Más cerca en vertical, lados recortados", br = "Mais perto na vertical, laterais cortadas", pt = "Mais perto na vertical, laterais cortadas"),
     "1x on dialogue, signs, menus" to Tr(ja = "かいわ・かんばん・メニューで 1x", fr = "1x : dialogues, panneaux, menus", de = "1x bei Dialog, Schild, Menü", it = "1x su dialoghi, cartelli, menu", es = "1x en diálogos, letreros, menús", br = "1x em diálogos, placas, menus", pt = "1x em diálogos, placas, menus"),
     "STRETCH" to Tr(ja = "ひきのばし", fr = "ÉTIRÉ", de = "GESTRECKT", it = "ESTESO", es = "ESTIRADO", br = "ESTICAR", pt = "ESTICAR"),
     "ORIGINAL" to Tr(ja = "オリジナル", fr = "ORIGINAL", de = "ORIGINAL", it = "ORIGINALE", es = "ORIGINAL", br = "ORIGINAL", pt = "ORIGINAL"),

@@ -597,13 +597,6 @@ class SettingsActivity : ComponentActivity() {
                 prefs.expandZoomOnText = !prefs.expandZoomOnText
                 revision++
             }.takeIf { prefs.gameAspect == com.pokedaisy.app.companion.GameAspect.WIDE },
-            // EXPAND only: upright, the field a step closer, the sides of the game's own picture left off.
-            SettingRow(tk("PORTRAIT ZOOM"), onOff(prefs.portraitZoom),
-                       labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.PORTRAIT_ZOOM),
-                       subtitle = "Closer upright, sides trimmed") {
-                prefs.portraitZoom = !prefs.portraitZoom
-                revision++
-            }.takeIf { prefs.gameAspect == com.pokedaisy.app.companion.GameAspect.WIDE },
             // The party, a minimap, the balls and BAG / WILD over the game on the field: its own page (layout, look, size, parts).
             SettingRow(tk("HUD"), onOff(prefs.fieldHud), labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.HUD), opensPage = true, subtitle = "Party, minimap and bag over the game") { screen = Screen.FIELD_HUD },
             // One screen: FIGHT, POKéMON and RUN in the room beside a battle (BattleButtons).

@@ -48,8 +48,6 @@ In a game that doesn't support it yet, `EXPAND` shows as `ORIGINAL` and the comp
 
 With `EXPAND` on, the `ZOOM` hotkey steps the view out so you see further around you. It's R3 (clicking the right stick) by default, or `C` on a keyboard; you can move it to any button under `HOTKEYS` (see [Controls](controls.md)). Battles, conversations and menus ease back in by themselves, so text is never tiny. Each game keeps the zoom you picked: open it again and, once you're back on the field, the view eases out to it. If you'd rather keep your zoom through conversations, signs and menus, turn `AUTO ZOOM IN` off in Settings; battles still ease in, and so do the party and bag screens you open from one.
 
-Holding your phone upright, the game fills the screen's width, so it looks smaller than it does sideways. Turn `PORTRAIT ZOOM` on in Settings to bring the overworld a step closer: a little of the game's own picture is left off at the left and right, and you see a bit less map to the sides. Battles, conversations and menus still ease back out to the whole picture, so nothing you read is cut off.
-
 The **right stick** looks around. Push it and the view moves; let go and it stays put until you walk, then glides back to you. Hold it while you walk and the camera looks ahead in that direction, keeping your character on screen.
 
 ## Status bar
