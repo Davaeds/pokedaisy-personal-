@@ -146,17 +146,13 @@ fun PartyGrid(
         val rows = (measurables.size + cols - 1) / cols
         // Whole pixels, the remainder spread over the first columns / rows like weights do.
         fun edge(total: Int, parts: Int, i: Int) = total * i / parts
-        // Two columns of a DS game's party: the right one a share of a row lower ([PartyPalette.stagger]).
-        val stagger = if (cols == 2) palette.stagger else 0f
-        fun rowEdge(r: Float) = (h * r / (rows + stagger)).toInt()
-        fun top(i: Int) = rowEdge(i / cols + if (i % cols == 1) stagger else 0f)
-        fun bottom(i: Int) = rowEdge(i / cols + 1 + if (i % cols == 1) stagger else 0f)
         val placeables = measurables.mapIndexed { i, m ->
             val c = i % cols
-            m.measure(Constraints.fixed(edge(w, cols, c + 1) - edge(w, cols, c), bottom(i) - top(i)))
+            val r = i / cols
+            m.measure(Constraints.fixed(edge(w, cols, c + 1) - edge(w, cols, c), edge(h, rows, r + 1) - edge(h, rows, r)))
         }
         layout(w, h) {
-            placeables.forEachIndexed { i, p -> p.place(edge(w, cols, i % cols), top(i)) }
+            placeables.forEachIndexed { i, p -> p.place(edge(w, cols, i % cols), edge(h, rows, i / cols)) }
         }
     }
 }
@@ -229,8 +225,6 @@ data class PartyPalette(
     val empty: PartySlotColors? = null,
     /** The slot's corners cut at 45 degrees this many slot pixels (Black's eight-sided boxes); 0 = FireRed's rounded. */
     val chamfer: Int = 0,
-    /** The right column set this share of a row lower, as the DS games' party screens set it. */
-    val stagger: Float = 0f,
     /** An empty slot as lines of this colour every other row ([empty]'s outline and fill round them): the DS games'. */
     val emptyLines: Color? = null,
 )
@@ -508,8 +502,8 @@ val GhostGreyPartyPalette: PartyPalette get() = if (OptionColors.dark) GhostGrey
  * Pokémon Black (headless, its party screen on the player's save, HP poked low / to 0 in two slots): eight-sided boxes in
  * a dark cyan / bright cyan / dark cyan line, steel blue with a darker diagonal band (lighter blue under the cursor), dark
  * red with a pink line when fainted (magenta under the cursor), white text on a grey shadow, the "HP" letters green on
- * charcoal, a frameless bar on near-black; no Poké Ball. Empty slots are blue lines on the navy grid. The right column
- * sits a quarter of a slot lower.
+ * charcoal, a frameless bar on near-black; no Poké Ball. Empty slots are blue lines on the navy grid. Its columns stay
+ * level here (the game sets the right one a quarter of a slot lower: the player's call).
  */
 val BlackPartyPalette = FireRedPartyPalette.copy(
     normal = PartySlotColors(Color(0xFF0C719E), Color(0xFF96FFFF), Color(0xFF0C5175), Color(0xFF0C719E), band = Color(0xFF0C5175), stripe = Color(0xFF0C304D)),
@@ -526,7 +520,7 @@ val BlackPartyPalette = FireRedPartyPalette.copy(
     hpRed = HpBarColors(Color(0xFFFB9A9A), Color(0xFFFB4938)),
     hpEmpty = HpBarColors(Color(0xFF202020), Color(0xFF202020)),
     ball = mapOf('K' to Color.Transparent, 'R' to Color.Transparent, 'H' to Color.Transparent, 'W' to Color.Transparent),
-    chamfer = 9, stagger = 0.25f,
+    chamfer = 9,
     emptyLines = Color(0xFF0C415D),
 )
 
@@ -534,7 +528,7 @@ val BlackPartyPalette = FireRedPartyPalette.copy(
  * Pokémon Platinum (headless, its party screen on the player's save, the lead copied into four more slots, one at 0 HP
  * and two low): blue slots - light blue over a deeper blue HP band - in a slate line, light blue in an orange line under
  * the cursor, orange-brown when fainted (salmon under the cursor), the "HP" letters red on black, a black-framed bar;
- * its pale Poké Ball. Empty slots are the slate stripes in a slate line. The right column sits a sixth of a slot lower.
+ * its pale Poké Ball. Empty slots are the slate stripes in a slate line. Its columns stay level, like Black's.
  */
 val PlatinumPartyPalette = FireRedPartyPalette.copy(
     normal = PartySlotColors(Color(0xFF494961), Color(0xFF9AC3F3), Color(0xFF82B2F3), Color(0xFF41699A), band = Color(0xFF5982D3)),
@@ -550,7 +544,6 @@ val PlatinumPartyPalette = FireRedPartyPalette.copy(
     hpRed = HpBarColors(Color(0xFFFB9A9A), Color(0xFFFB4938)),
     hpEmpty = HpBarColors(Color(0xFF697161), Color(0xFFA2AA92)),
     ball = mapOf('K' to Color(0xFF828282), 'R' to Color(0xFFFBBABA), 'H' to Color(0xFFCBAAAA), 'W' to Color(0xFFF3F3F3)),
-    stagger = 1f / 6,
     empty = PartySlotColors(Color(0xFF494961), Color(0xFF383849), Color(0xFF383849), Color(0xFF383849)),
     emptyLines = Color(0xFF798292),
 )

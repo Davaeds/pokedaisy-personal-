@@ -2018,8 +2018,8 @@ saved at Gear Station) and from the cart's own files. Heap blocks keep their sou
   carried by its edge-to-edge rows), not Gen 4's BG3 battle carry (`pk_nds_battle_margins`), which streaked its HP boxes.
   The boxes stop at the screen's edge there.
 - Its own look on the companion (sampled headless from its screens, HP poked into the live party for the fainted / low
-  states): the party's eight-sided slots (`BlackPartyPalette`: `PartyPalette.chamfer`, a diagonal `stripe`, the right
-  column a quarter lower, `stagger`) on its navy grid, the bag's charcoal rows on its blue dots, the Pokedex's green grid
+  states): the party's eight-sided slots (`BlackPartyPalette`: `PartyPalette.chamfer`, a diagonal `stripe`; the game
+  sets its right column a quarter of a slot lower, the companion keeps them level - the user's call) on its navy grid, the bag's charcoal rows on its blue dots, the Pokedex's green grid
   (`DsBackdrops.kt`'s `DsPattern`s: a small tile repeated in GBA pixels). Platinum got the same treatment (its party's
   slate stripes and blue slots, its bag's white list and purple bar), HG / SS a Pokedex backdrop (white, grey grid).
 - Getting out of the save's spot: Gear Station's hall is a rail map; the escalator's warp (the zone's event data in RAM)

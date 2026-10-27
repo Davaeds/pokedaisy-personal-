@@ -550,7 +550,8 @@ month), art and DEX pages by `NdsArt` (`Gen5Text`, `Gen5Lz`). MAP = the key item
 by its parent zone). PC / FLY: `pk_nds_call.cpp`'s `Gen5Fns` - the hook takes the GameSystem's field event check's place
 for a frame (traced with nds_dump's `watch`), FLY's destinations are the towns' places (`Gen5Field.kt`). Its battles are all 3D, so EXPAND draws them as the overworld
 (`pk_nds_battle_3d`), not with Gen 4's BG3 battle carry. Its companion look - and Platinum's, HG / SS's DEX - is the game's own
-screens' (`BlackPartyPalette` with cut corners, `PartyPalette.stagger`, `DsBackdrops.kt`'s patterns). docs/DEVELOPMENT.md's "Black".
+screens' (`BlackPartyPalette` with cut corners, `DsBackdrops.kt`'s patterns; the party's columns stay level, not lowered
+on the right like the games' - the user's call). docs/DEVELOPMENT.md's "Black".
 **Companion options (2026-10-08)**: RESUME GAMES (`Prefs.autoResume`, top-screen Settings > LIBRARY; off =
 a launch boots the save, a return from HOME still resumes - `freshLaunch`), CLOSE COMPANION (SETTINGS, two
 screens: the Presentation goes away until BACK on the game), STATUS BAR OFF / GAME / COMPANION (`Prefs.statusBarOnCompanion`,
