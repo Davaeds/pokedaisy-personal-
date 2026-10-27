@@ -240,6 +240,11 @@ class PokeDaisyActivity : Activity() {
     private var tipInBattle = false
     /** Between onResume and onPause: only then does play count. */
     private var tipsResumed = false
+    /** Play time for the Library's support window ([com.pokedaisy.app.companion.SupportAsk]): a game running in front,
+     *  not asleep, counted every 30 s into [Prefs.playMillis]. */
+    private var playClock: kotlinx.coroutines.Job? = null
+    private val playScope = kotlinx.coroutines.CoroutineScope(androidx.compose.ui.platform.AndroidUiDispatcher.Main)
+    private var playTick = 0L
     private var tipTrainerBattle = false
     private var tipTms: Map<Int, Int>? = null
     private var tipMapOpen = false
@@ -2064,6 +2069,7 @@ class PokeDaisyActivity : Activity() {
             followDisplay()
             return
         }
+        startPlayClock()
         // The game's task brought up on the bottom screen (the app's icon tapped there): back to the top one, so the
         // companion can have the bottom (a Presentation can't share the game's display).
         // Not while the companion is closed: then the game is on the second screen on purpose (SWAP SCREENS).
@@ -2239,6 +2245,7 @@ class PokeDaisyActivity : Activity() {
         stageRecomposer.cancel()
         stageRecomposing.cancel()
         lookGender.cancel()
+        playScope.cancel()
         com.pokedaisy.app.companion.ui.GameStart.waiting = false
         super.onDestroy()
     }
@@ -2261,8 +2268,37 @@ class PokeDaisyActivity : Activity() {
         if (movePause) { movePause = false; pauseGame() }
     }
 
+    private fun startPlayClock() {
+        playClock?.cancel()
+        playTick = android.os.SystemClock.uptimeMillis()
+        playClock = playScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(30_000)
+                countPlay()
+            }
+        }
+    }
+
+    private fun stopPlayClock() {
+        playClock?.cancel()
+        playClock = null
+        countPlay()
+    }
+
+    /** Adds the time since the last count, if the game ran meanwhile; a step is at most a minute (a stall adds no lump). */
+    private fun countPlay() {
+        val now = android.os.SystemClock.uptimeMillis()
+        val dt = (now - playTick).coerceIn(0L, 60_000L)
+        playTick = now
+        if (::engine.isInitialized && engine.running && !engine.sleeping) {
+            val prefs = Prefs(this)
+            prefs.playMillis += dt
+        }
+    }
+
     /** Everything onPause does: the game stops (or holds, asleep), its listeners and the second screen go. */
     private fun pauseGame() {
+        stopPlayClock()
         keyCapture.cancel()
         runCatching { displayManager.unregisterDisplayListener(displayListener) }
         runCatching { inputManager.unregisterInputDeviceListener(inputDeviceListener) }

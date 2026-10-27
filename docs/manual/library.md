@@ -3,7 +3,7 @@ title: Your game library
 summary: Add games, sort and favorite them, set covers, and use each game's menu for saves, info, cheats and more.
 section: start
 order: 4
-keywords: [games list, add rom, import, folder, zip, 7z, archive, cover, box art, artwork, icon, steamgriddb, rename, delete, hide, favourite, star, sort, grid, list view, frontend, es-de, esde, iisu, cocoon, launcher, filter, tabs, recently played, history, hacks, game boy, gbc, gba, console, platform]
+keywords: [support, donate, donation, tip, patreon, ko-fi, kofi, buy me a coffee, games list, add rom, import, folder, zip, 7z, archive, cover, box art, artwork, icon, steamgriddb, rename, delete, hide, favourite, star, sort, grid, list view, frontend, es-de, esde, iisu, cocoon, launcher, filter, tabs, recently played, history, hacks, game boy, gbc, gba, console, platform]
 ---
 
 The library is the first thing you see when you open PokeDaisy: every game you've added, in the order you pick. Tap a game to play it.
@@ -177,6 +177,12 @@ Every game plays, but the companion only reads the games it knows. The library t
 - `PARTIALLY SUPPORTED`: a ROM PokeDaisy matched to a game it knows. The party, bag, map and battles work, and whatever didn't match is switched off.
 
 From a linked folder, the library lists the supported games plus any unsupported hacks of FireRed, LeafGreen, Emerald, Ruby or Sapphire (tagged), so you can try them. When PokeDaisy can't tell which game a ROM is built on, `INFO` has `PICK A GAME` to tell it, and `FORGET MATCH` to undo a match. [Supported games](supported-games.md) has the full list and explains how matching works.
+
+## Supporting PokeDaisy
+
+PokeDaisy is free, has no ads and is made by one person. After you've played for a good while, the library asks once whether you'd like to support it, with `BUY ME A COFFEE`, `PATREON` and `KO-FI`. Pick one and your browser opens that page. `REMIND ME LATER` (or BACK) asks again a few hours of play later, and `NO THANKS` means it never asks again. Picking a site counts as an answer too.
+
+To know when to ask, PokeDaisy counts how long your games have been running. That count stays on your device and is never sent anywhere.
 
 ## Using a D-pad or controller
 

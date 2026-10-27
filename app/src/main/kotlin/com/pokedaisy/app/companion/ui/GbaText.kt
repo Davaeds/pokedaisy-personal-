@@ -144,6 +144,36 @@ fun GbaText(
     }
 }
 
+/**
+ * [GbaText] in more than one colour, wrapping as one text: each part is (text, colour, its shadow) - WHAT'S NEW's
+ * red lead-in before the grey rest of the line.
+ */
+@Composable
+fun GbaRichText(
+    parts: List<Triple<String, Color, Color>>,
+    m: GbaTextMetrics,
+    modifier: Modifier = Modifier,
+    maxLines: Int = Int.MAX_VALUE,
+) {
+    val style = gbaTextStyle(pixelFontFamily(), m, gameFontScaleX(m))
+    val k = m.fontPixel.roundToInt()
+    fun build(shadow: Boolean) = androidx.compose.ui.text.buildAnnotatedString {
+        for ((text, color, shade) in parts) {
+            pushStyle(androidx.compose.ui.text.SpanStyle(color = if (shadow) shade else color))
+            append(text)
+            pop()
+        }
+    }
+    val shadow = remember(parts) { build(true) }
+    val main = remember(parts) { build(false) }
+    Box(modifier) {
+        for ((dx, dy) in listOf(k to 0, 0 to k, k to k)) {
+            Text(shadow, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis, modifier = Modifier.offset { IntOffset(dx, dy) })
+        }
+        Text(main, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
+    }
+}
+
 /** How far right [GbaText]'s bold copy goes: half a font pixel ([pixelWidthPx] screen pixels wide), at least one. */
 fun boldOffsetPx(pixelWidthPx: Float): Int = (pixelWidthPx * 0.5f).roundToInt().coerceAtLeast(1)
 

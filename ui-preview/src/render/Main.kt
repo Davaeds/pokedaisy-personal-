@@ -851,7 +851,10 @@ fun trade(setup: com.pokedaisy.app.companion.ui.TradeState.() -> Unit = {}): () 
 }
 
 /** The Library just after an update, its WHAT'S NEW up with 1.3.2's notes. */
-fun whatsNewLibrary() = LibraryActivity().apply { whatsNew = com.pokedaisy.app.companion.WhatsNew.notesFor("1.3.2") }
+fun whatsNewLibrary() = LibraryActivity().apply { whatsNew = com.pokedaisy.app.companion.WhatsNew.notesFor("1.3.3") }
+
+/** The Library after 10 hours of play: the support window up. */
+fun supportLibrary() = LibraryActivity().apply { supportAsk = true }
 
 /** The activity [activity] made last (a shot's action presses its keys). */
 var lastActivity: androidx.activity.ComponentActivity? = null
@@ -1821,6 +1824,11 @@ fun main(args: Array<String>) {
         // WHAT'S NEW after an update (1.3.2's notes): the Thor's top screen, phones both ways, the Duo Lite's and the RG DS's
         // 4:3 screens, a tablet.
         Shot("library-whats-new", tw, th, td, activity { whatsNewLibrary() }),
+        Shot("library-support", tw, th, td, activity { supportLibrary() }),
+        Shot("library-support-phone", 1080, 2400, 2.625f, activity { supportLibrary() }),
+        Shot("library-support-phone-side", 2400, 1080, 2.625f, activity { supportLibrary() }),
+        Shot("library-support-4x3", 1280, 960, 2f, activity { supportLibrary() }),
+        Shot("library-support-rgds", 640, 480, 1.5f, activity { supportLibrary() }),
         Shot("library-whats-new-phone", 1080, 2400, 2.625f, activity { whatsNewLibrary() }),
         Shot("library-whats-new-phone-side", 2400, 1080, 2.625f, activity { whatsNewLibrary() }),
         Shot("library-whats-new-4x3", 1280, 960, 2f, activity { whatsNewLibrary() }),

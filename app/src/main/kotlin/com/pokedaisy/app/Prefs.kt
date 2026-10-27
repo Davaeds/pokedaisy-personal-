@@ -641,6 +641,21 @@ class Prefs(context: Context) {
         get() = p.getString("whats_new_seen", null)
         set(v) = p.edit().putString("whats_new_seen", v).apply()
 
+    /** How long games have run in front, not asleep, on this device (ms): only for the support window's timing. */
+    var playMillis: Long
+        get() = p.getLong("play_millis", 0L)
+        set(v) = p.edit().putLong("play_millis", v).apply()
+
+    /** [playMillis] at which the support window ([com.pokedaisy.app.companion.SupportAsk]) is due; REMIND ME LATER moves it. */
+    var supportAskAt: Long
+        get() = p.getLong("support_ask_at", com.pokedaisy.app.companion.SupportAsk.FIRST_ASK)
+        set(v) = p.edit().putLong("support_ask_at", v).apply()
+
+    /** The support window was answered for good: NO THANKS, or a site picked. */
+    var supportAskDone: Boolean
+        get() = p.getBoolean("support_ask_done", false)
+        set(v) = p.edit().putBoolean("support_ask_done", v).apply()
+
     /** The Library's one-time EXPAND introduction ([com.pokedaisy.app.companion.ui.ExpandIntro]) has been answered. */
     var expandIntroSeen: Boolean
         get() = p.getBoolean("expand_intro_seen", false)

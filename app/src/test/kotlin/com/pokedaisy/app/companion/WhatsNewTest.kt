@@ -20,6 +20,8 @@ class WhatsNewTest {
             assertTrue(n.version, n.sections.all { it.title == WhatsNew.NEW || it.title == WhatsNew.FIXES })
             // A window, not the release page: a handful of lines.
             assertTrue("${n.version}: ${n.sections.sumOf { it.items.size }} lines", n.sections.sumOf { it.items.size } <= 10)
+            // Each line leads with what it's about and a colon, which the window draws red.
+            for (item in n.sections.flatMap { it.items }) assertTrue("${n.version}: no lead-in: $item", item.indexOf(": ") in 1..36)
         }
         assertEquals(WhatsNew.RELEASES.size, WhatsNew.RELEASES.map { it.version }.toSet().size)
     }

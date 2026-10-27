@@ -375,6 +375,65 @@ object PixelIcons {
         "................",
     )
 
+    /** Ko-fi's mark, a mug with a heart, for [PixelArt]: K outline, W mug, R heart (the website's own drawing). */
+    val kofi = listOf(
+        ".KKKKKKKKKKK..",
+        ".KWWWWWWWWWKKK",
+        ".KWWRRWRRWWK.K",
+        ".KWRRRRRRRWK.K",
+        ".KWRRRRRRRWK.K",
+        ".KWWRRRRRWWKKK",
+        ".KWWWRRRWWWK..",
+        ".KWWWWRWWWWK..",
+        "..KWWWWWWWK...",
+        "...KKKKKKK....",
+    )
+
+    /** Patreon's mark, its bar and circle, for [PixelArt]: K outline, D bar, P circle, H its shine (the website's). */
+    val patreon = listOf(
+        "KKK...KKKK..",
+        "KDK..KPPPPK.",
+        "KDK.KPPHPPPK",
+        "KDK.KPPPPPPK",
+        "KDK.KPPPPPPK",
+        "KDK.KPPPPPPK",
+        "KDK..KPPPPK.",
+        "KDK...KKKK..",
+        "KDK.........",
+        "KKK.........",
+    )
+
+    /** A heart: thanks (the support window's). The pixel font's cap height. */
+    val heart = listOf(
+        ".11.11.",
+        "1111111",
+        "1111111",
+        "1111111",
+        ".11111.",
+        "..111..",
+        "...1...",
+    )
+
+    /** A tick: FIXES in WHAT'S NEW. [heart]'s size. */
+    val tick = listOf(
+        "......1",
+        ".....11",
+        "1...11.",
+        "11.11..",
+        "1111...",
+        ".11....",
+        "..1....",
+    )
+
+    /** A tiny daisy, for [PixelArt]: P petals, C its heart. WHAT'S NEW's bullet. */
+    val daisy = listOf(
+        "..P..",
+        ".PPP.",
+        "PPCPP",
+        ".PPP.",
+        "..P..",
+    )
+
     /** GitHub's mark: a disc with the cat cut out of it ('1' = the disc). */
     val github = listOf(
         "0000011111100000",
@@ -651,7 +710,26 @@ fun GoldTrophy(modifier: Modifier = Modifier) =
 @Composable
 fun CoffeeCup(modifier: Modifier = Modifier) = PixelArt(
     PixelIcons.coffee,
-    mapOf('K' to Color(0xFF202020), 'B' to Color(0xFF784020), 'C' to Color(0xFFFFDD00), 'S' to Color(0xFF909090)),
+    mapOf('K' to markInk(), 'B' to Color(0xFF784020), 'C' to Color(0xFFFFDD00), 'S' to Color(0xFF909090)),
+    modifier.fillMaxSize(),
+)
+
+/** The sites' marks' outline: their near-black, light in DARK MODE (it vanished on a dark window). */
+private fun markInk() = if (OptionColors.dark) Color(0xFFD8DCE4) else Color(0xFF202020)
+
+/** [PixelIcons.kofi] in Ko-fi's white and red. */
+@Composable
+fun KofiMug(modifier: Modifier = Modifier) = PixelArt(
+    PixelIcons.kofi,
+    mapOf('K' to markInk(), 'W' to Color.White, 'R' to Color(0xFFFF5E5B)),
+    modifier.fillMaxSize(),
+)
+
+/** [PixelIcons.patreon] in Patreon's navy and coral. */
+@Composable
+fun PatreonMark(modifier: Modifier = Modifier) = PixelArt(
+    PixelIcons.patreon,
+    mapOf('K' to markInk(), 'D' to if (OptionColors.dark) Color(0xFF9FB6C8) else Color(0xFF052D49), 'P' to Color(0xFFFF424D), 'H' to Color(0xFFFFA0A4)),
     modifier.fillMaxSize(),
 )
 

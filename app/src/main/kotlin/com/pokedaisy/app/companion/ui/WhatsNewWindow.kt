@@ -20,15 +20,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.pokedaisy.app.companion.WhatsNew
 import com.pokedaisy.app.companion.i18n.tr
 
 /**
- * The Library's WHAT'S NEW, once after an update to a version with [WhatsNew] notes: the version in the title window,
- * then each section (NEW, FIXES) as a red title over its lines in the smaller text ([small]), each behind a square
- * bullet. The lines scroll on a small screen (the D-pad too), fading out over a down arrow (right, clear of the words) while there's more below;
- * RELEASE PAGE (the GitHub release, for everything else) and OK stay below them.
+ * The Library's WHAT'S NEW, once after an update to a version with [WhatsNew] notes: the flower and the title, the version
+ * as a red pill; then each section under a coloured band (NEW green with a sparkle, FIXES blue with a tick), its lines in
+ * the smaller text, each behind a little daisy, the words before a line's colon (its feature, "SHINY ODDS:") in red. The
+ * lines scroll on a small screen (the D-pad too), fading out over a down arrow (right, clear of the words) while there's
+ * more below; RELEASE PAGE (the GitHub release, for everything else) and OK stay below them.
  */
 @Composable
 fun WhatsNewWindow(
@@ -39,29 +41,31 @@ fun WhatsNewWindow(
     onClose: () -> Unit,
 ) {
     val u = m.u
-    val bullet = small.lineHeight * 0.2f
     val scroll = rememberScrollState()
     OptionOverlay(onClose, Modifier.widthIn(max = 760.dp)) {
         Column {
-            OptionTitleWindow("WHAT'S NEW", m, trailing = "v${notes.version}")
+            OptionTitleWindow("WHAT'S NEW", m, leading = { PixelArt(LOGO_ROWS, LOGO_PALETTE, Modifier.size(m.lineHeight)) }) {
+                OptionBadge("v${notes.version}", m)
+            }
             Spacer(Modifier.height(u * 4))
             OptionListWindow(m, Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(u * 4)) {
                     Box(Modifier.weight(1f, fill = false)) {
                     Column(Modifier.dpadScroll(scroll, RectangleShape, small.lineHeight * 3).verticalScroll(scroll)) {
                         notes.sections.forEachIndexed { i, section ->
-                            if (i > 0) Spacer(Modifier.height(u * 6))
-                            GbaText(tr(section.title), OptionColors.value, OptionColors.valueShadow, m, modifier = Modifier.padding(horizontal = u * 4))
+                            if (i > 0) Spacer(Modifier.height(u * 8))
+                            SectionBand(section.title, m, Modifier.padding(horizontal = u * 2))
                             section.items.forEach { item ->
-                                Spacer(Modifier.height(u * 3))
+                                Spacer(Modifier.height(u * 4))
                                 Row(Modifier.padding(horizontal = u * 4)) {
-                                    // A square bullet, centred on the first line (the pixel font has no bullet glyph).
-                                    Box(
-                                        Modifier.padding(top = (small.lineHeight - bullet) / 2).size(bullet)
-                                            .background(OptionColors.label),
+                                    // A daisy, centred on the first line, a font pixel per cell like the words beside it.
+                                    val cell = with(LocalDensity.current) { small.fontPixel.toDp() }
+                                    PixelArt(
+                                        PixelIcons.daisy, mapOf('P' to OptionColors.value, 'C' to OptionColors.favorite),
+                                        Modifier.padding(top = (small.lineHeight - cell * 5) / 2).size(cell * 5),
                                     )
                                     Spacer(Modifier.width(u * 5))
-                                    GbaText(item, OptionColors.label, OptionColors.labelShadow, small, maxLines = Int.MAX_VALUE, modifier = Modifier.weight(1f))
+                                    GbaRichText(lineParts(item), small, Modifier.weight(1f))
                                 }
                             }
                         }
@@ -85,4 +89,34 @@ fun WhatsNewWindow(
             }
         }
     }
+}
+
+/** A section's title on its own colour: NEW in the NEW tags' green with a sparkle, FIXES in the field-move blue with a tick. */
+@Composable
+private fun SectionBand(title: String, m: GbaTextMetrics, modifier: Modifier = Modifier) {
+    val u = m.u
+    val new = title == WhatsNew.NEW
+    val fill = if (new) OptionColors.newBadge else OptionColors.fieldMove
+    val shadow = if (new) OptionColors.newBadgeShadow else OptionColors.fieldMoveShadow
+    val cell = with(LocalDensity.current) { m.fontPixel.toDp() }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.background(fill, PixelRoundedShape(u * 3)).padding(start = u * 6, end = u * 8, top = u * 2, bottom = u * 2),
+    ) {
+        ShadowedPixelIcon(if (new) PixelIcons.sparkle else PixelIcons.tick, OptionColors.badgeText, shadow, m, cell = cell)
+        Spacer(Modifier.width(u * 5))
+        GbaText(tr(title), OptionColors.badgeText, shadow, m)
+    }
+}
+
+/** A line's words before its colon in red (its feature or game: "SHINY ODDS:"; every line has one, WhatsNewTest), the rest grey. */
+@Composable
+private fun lineParts(item: String): List<Triple<String, Color, Color>> {
+    val colon = item.indexOf(": ")
+    val rest = Triple(item, OptionColors.label, OptionColors.labelShadow)
+    if (colon !in 1..36) return listOf(rest)
+    return listOf(
+        Triple(item.substring(0, colon + 1), OptionColors.value, OptionColors.valueShadow),
+        Triple(item.substring(colon + 1), OptionColors.label, OptionColors.labelShadow),
+    )
 }

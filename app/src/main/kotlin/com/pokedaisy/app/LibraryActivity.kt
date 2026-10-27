@@ -366,6 +366,10 @@ class LibraryActivity : ComponentActivity() {
         com.pokedaisy.app.companion.i18n.L10n.apply(prefs.appLanguage, null)
         unsupportedRoms = RomFolder.unsupported(this)
         partialRoms = RomFolder.partial(this)
+        // The support window, once its play time has come (back from a game, usually); never on WHAT'S NEW's visit.
+        if (!supportAsk && whatsNew == null) {
+            supportAsk = com.pokedaisy.app.companion.SupportAsk.due(prefs.playMillis, prefs.supportAskAt, prefs.supportAskDone)
+        }
         if (prefs.setupRequested) {
             prefs.setupRequested = false
             startSetup()
@@ -636,7 +640,7 @@ class LibraryActivity : ComponentActivity() {
             }
 
             // After any update offer, never over setup (this screen isn't composed then).
-            if (crashAsk && updates.release == null && !whatsNewShown) {
+            if (crashAsk && updates.release == null && !whatsNewShown && !supportShown) {
                 // Shown = asked, whatever the answer (or none, if the app goes away): only once.
                 LaunchedEffect(Unit) { prefs.crashReportsAsked = true }
                 OptionConfirm(
@@ -652,8 +656,19 @@ class LibraryActivity : ComponentActivity() {
                 )
             }
 
+            // The support window, alone: never with an update offer, WHAT'S NEW or setup. A site or NO THANKS ends it;
+            // REMIND ME LATER (or BACK, a tap outside) asks again after 5 more hours of play.
+            if (supportShown) {
+                com.pokedaisy.app.companion.ui.SupportWindow(
+                    m, small,
+                    onSite = { site -> prefs.supportAskDone = true; supportAsk = false; openUrl(site.url) },
+                    onLater = { prefs.supportAskAt = com.pokedaisy.app.companion.SupportAsk.remindAt(prefs.playMillis); supportAsk = false },
+                    onNoThanks = { prefs.supportAskDone = true; supportAsk = false },
+                )
+            }
+
             // After the crash-reports question, one at a time.
-            if (expandIntro && setup == null && !crashAsk && updates.release == null && !whatsNewShown) {
+            if (expandIntro && setup == null && !crashAsk && updates.release == null && !whatsNewShown && !supportShown) {
                 com.pokedaisy.app.companion.ui.ExpandIntro(
                     m, small,
                     onTurnOn = {
@@ -1315,6 +1330,8 @@ class LibraryActivity : ComponentActivity() {
     private var expandIntro by mutableStateOf(false)
     /** This update's WHAT'S NEW, until it's closed (internal for the ui-preview harness). */
     internal var whatsNew by mutableStateOf<com.pokedaisy.app.companion.WhatsNew.Notes?>(null)
+    /** The support window is up ([com.pokedaisy.app.companion.SupportAsk]; internal for ui-preview). */
+    internal var supportAsk by mutableStateOf(false)
     private var coverError by mutableStateOf<String?>(null)
 
     /** Downloads the picked icon over [rom]'s cover (only swapped once it has
@@ -1586,7 +1603,7 @@ class LibraryActivity : ComponentActivity() {
     private val libraryDialogOpen
         get() = pickingSort || renaming != null || deleting != null || gameInfo != null || coverPickerFor != null ||
             pendingImport != null || saveLoad != null || backupPick != null || updates.release != null || crashAsk ||
-            (expandIntro && !crashAsk) || ssIntroShown || whatsNewShown
+            (expandIntro && !crashAsk) || ssIntroShown || whatsNewShown || supportShown
 
     /** BACK for the library's windows (OptionOverlay & co.): the newest open one closes. */
     private val libraryBack = com.pokedaisy.app.companion.ui.CompanionBack()
@@ -1958,9 +1975,11 @@ class LibraryActivity : ComponentActivity() {
 
     /** The update's one-time "set up ScreenScraper?" window: wanted (set in onCreate), then shown once nothing else is up. */
     internal var ssIntro by mutableStateOf(false)
-    private val ssIntroShown get() = ssIntro && setup == null && !crashAsk && updates.release == null && !expandIntro && !whatsNewShown
+    private val ssIntroShown get() = ssIntro && setup == null && !crashAsk && updates.release == null && !expandIntro && !whatsNewShown && !supportShown
     /** WHAT'S NEW is up: after any update offer, never over setup. */
     private val whatsNewShown get() = whatsNew != null && setup == null && updates.release == null
+    /** The support window is up: after any update offer and WHAT'S NEW, never over setup. */
+    private val supportShown get() = supportAsk && setup == null && updates.release == null && !whatsNewShown
 
     /** The popup's sign-in (internal for ui-preview). */
     internal val ssLogin by lazy { ScreenScraperLogin.of(prefs) }

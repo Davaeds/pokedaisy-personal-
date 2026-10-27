@@ -568,13 +568,15 @@ fun OptionButton(
     frameLayers: List<Pair<Color, Int>>? = null,
     /** The room either side of the content, in GBA pixels: less for a row of icon buttons on a narrow screen. */
     sidePadding: Int = 8,
+    /** In a pop-up, the D-pad starts here rather than on its first control. */
+    focusStart: Boolean = false,
 ) {
     val u = m.u
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val stack = LocalOverlayStack.current
     val self = remember { FocusRequester() }
-    if (enabled) LocalOverlayStart.current?.register(self, current = false)
+    if (enabled) LocalOverlayStart.current?.register(self, current = focusStart)
     val fg = when {
         !enabled -> OptionColors.muted
         labelColors != null -> labelColors.first

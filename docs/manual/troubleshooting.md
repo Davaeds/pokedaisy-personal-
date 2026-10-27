@@ -120,6 +120,8 @@ PokeDaisy has no accounts of its own, no ads and no tracking. Your games and sav
 - **Crash reports**, only if you turn `CRASH REPORTS` on (it's off until you do; the app asks once, after a few days). A report holds the device model, Android version and where the app crashed.
 - **Sharing a best effort match**, only if you tap `SHARE` when asked. The window lists every value sent: the ROM's SHA-1, size, game code and revision, the game it was read as and how well, and the app version. No file name, account or device details.
 
+The play time the library uses to ask for support once ([Supporting PokeDaisy](library.md#supporting-pokedaisy)) never leaves your device either.
+
 `ASK FOR SUPPORT` doesn't send anything by itself: it opens the game request form in your browser, which you can read before you send it.
 
 ## How do I report a bug or ask for a game?
