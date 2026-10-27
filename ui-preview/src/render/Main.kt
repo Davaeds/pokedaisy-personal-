@@ -1250,6 +1250,8 @@ fun main(args: Array<String>) {
         // In the game's home town, which its own region map shows (Emerald has no Pallet Town rect).
         // After SWAP SCREENS: SETTINGS again, on that row and scrolled to it.
         Shot("$g-settings-after-swap", bw, bh, bd, companion("SETTINGS", settingsRow = "SWAP SCREENS")),
+        // APP > TIPS, with its NEW tag.
+        Shot("$g-settings-tips", bw, bh, bd, companion("SETTINGS", settingsRow = "TIPS")),
         Shot("$g-settings-battery-low", bw, bh, bd, companion("SETTINGS", battery = BatteryStatus(9, charging = false))),
         Shot("$g-settings-battery-charging", bw, bh, bd, companion("SETTINGS", battery = BatteryStatus(100, charging = true))),
         Shot("$g-card", bw, bh, bd, companion("CARD", snap = ::card)),
@@ -2211,6 +2213,10 @@ fun main(args: Array<String>) {
         },
         Shot("settings-ds-resolution-pick", tw, th, td, activity { SettingsActivity() }) {
             onNodeWithText("DS RESOLUTION").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        },
+        // Search: "hints" finds TIPS (its keywords), with its NEW tag.
+        Shot("settings-search-tips", tw, th, td, activity { SettingsActivity() }) {
+            onNode(hasSetTextAction()).performTextInput("hints")
         },
         Shot("settings-folders", tw, th * 2, td, activity { SettingsActivity() }) { onNodeWithText("FOLDERS").performScrollTo().performClick() },
         // CHEATS from the hub (no cheats yet), then as a game's library menu opens it.

@@ -643,6 +643,15 @@ fun CompanionScreen(
                 },
             )
 
+            // A feature tip, when this companion has a screen of its own (one screen: it's over the game, the HUD's view).
+            if (settings != null) {
+                FeatureTipHost(
+                    active = settings.showsTips, roomy = true,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), cardModifier = Modifier.fillMaxWidth(),
+                    maxWidth = 1200.dp, keys = settings::tipKeys, onTry = settings::tryTip,
+                )
+            }
+
             // EXPAND's one-time offer, in a game it knows (the Library's "NOT NOW" doesn't stop this one, once).
             if (settings?.expandOffer == true) {
                 ExpandIntro(

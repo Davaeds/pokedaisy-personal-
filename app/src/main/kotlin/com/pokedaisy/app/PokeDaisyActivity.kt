@@ -31,7 +31,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.compositionContext
@@ -53,6 +57,7 @@ import com.pokedaisy.app.overlay.OverlayStore
 import com.pokedaisy.app.companion.FfMusicMode
 import com.pokedaisy.app.companion.data.FfMenuWatch
 import com.pokedaisy.app.companion.TelemetryStore
+import com.pokedaisy.app.companion.TipId
 import com.pokedaisy.app.companion.data.hasData
 import com.pokedaisy.app.companion.data.RomArt
 import com.pokedaisy.app.companion.data.RegionMapWatch
@@ -224,6 +229,21 @@ class PokeDaisyActivity : Activity() {
     private var quickStickHold = false
     /** Bumped as the QUICK MENU opens: the HUD closes its open panel (FieldHud's closePanels). */
     private val hudCloseTick = androidx.compose.runtime.mutableIntStateOf(0)
+    /** A tip's SHOW ME opening a HUD panel (FieldHud's openPanel / openTick), and whether one is open (no tip over it). */
+    private val hudOpenPanel = androidx.compose.runtime.mutableStateOf<Pair<com.pokedaisy.app.companion.ui.FieldHudPanel, Int>?>(null)
+    private val hudOpenTick = androidx.compose.runtime.mutableIntStateOf(0)
+    private val hudPanelOpen = androidx.compose.runtime.mutableStateOf(false)
+    /** FEATURE TIPS' card goes on the companion when it has a screen of its own (two screens), else over the game. */
+    private val tipsOnCompanion = androidx.compose.runtime.mutableStateOf(false)
+    /** The tips' moments, as [tickTips] last saw them: a battle (and whether a trainer's), the TMs, the game's region map,
+     *  and the field play time each of the last wild battles ended at. */
+    private var tipInBattle = false
+    /** Between onResume and onPause: only then does play count. */
+    private var tipsResumed = false
+    private var tipTrainerBattle = false
+    private var tipTms: Map<Int, Int>? = null
+    private var tipMapOpen = false
+    private val tipWildEnds = ArrayDeque<Long>()
     private val hudUpright = androidx.compose.runtime.mutableStateOf(false)
     private val hudClear = androidx.compose.runtime.mutableStateOf(0 to 0)
     private val hudFrame = androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
@@ -524,6 +544,7 @@ class PokeDaisyActivity : Activity() {
 
         // The PC is worked with the game's buttons: an open companion window steps aside once it's up.
         override fun openPc(done: (com.pokedaisy.app.companion.data.ItemUseOutcome) -> Unit) {
+            com.pokedaisy.app.companion.FeatureTips.used(TipId.PC)
             val opened: (com.pokedaisy.app.companion.data.ItemUseOutcome) -> Unit = { o ->
                 if (o.result == com.pokedaisy.app.companion.data.ItemUseResult.USED) closeCompanionWindow()
                 done(o)
@@ -852,6 +873,7 @@ class PokeDaisyActivity : Activity() {
         }
 
         override fun fly(mapsec: Int, targets: com.pokedaisy.app.companion.data.FlyTargets, done: (com.pokedaisy.app.companion.data.FlyResult) -> Unit) {
+            com.pokedaisy.app.companion.FeatureTips.used(TipId.FLY)
             if (gen5Fly()) {
                 // [mapsec] is a town's place here (gen5OpenFlySpots); the flyer must still be in its slot.
                 val cfg = gen5Config()
@@ -1135,6 +1157,7 @@ class PokeDaisyActivity : Activity() {
             romIsNds && ::engine.isInitialized && engine.fieldState and MgbaCore.FIELD_KNOWN != 0
         override val autoRun get() = Prefs(this@PokeDaisyActivity).autoRun
         override fun setAutoRun(on: Boolean) {
+            if (on) com.pokedaisy.app.companion.FeatureTips.used(TipId.AUTO_RUN)
             Prefs(this@PokeDaisyActivity).autoRun = on
             if (::engine.isInitialized) engine.autoRun = on
         }
@@ -1147,6 +1170,7 @@ class PokeDaisyActivity : Activity() {
         override val runIndoorsSupported get() = fieldGame != WideScreen.OFF && !romCode.startsWith("AXV") && !romCode.startsWith("AXP")
         override val wildEncounters get() = Prefs(this@PokeDaisyActivity).wildEncounters
         override fun setWildEncounters(percent: Int) {
+            if (percent == 0) com.pokedaisy.app.companion.FeatureTips.used(TipId.WILD)
             Prefs(this@PokeDaisyActivity).wildEncounters = percent
             if (::engine.isInitialized) engine.wildEncounters = percent
         }
@@ -1154,6 +1178,7 @@ class PokeDaisyActivity : Activity() {
             romIsNds && ::engine.isInitialized && engine.fieldState and MgbaCore.FIELD_KNOWN != 0
         override val reusableTms get() = Prefs(this@PokeDaisyActivity).reusableTms
         override fun setReusableTms(on: Boolean) {
+            if (on) com.pokedaisy.app.companion.FeatureTips.used(TipId.REUSABLE_TMS)
             Prefs(this@PokeDaisyActivity).reusableTms = on
             if (::engine.isInitialized) engine.setReusableTms(tmSites, on)
         }
@@ -1334,6 +1359,7 @@ class PokeDaisyActivity : Activity() {
         }
         override val gameAspect get() = Prefs(this@PokeDaisyActivity).gameAspect
         override fun setGameAspect(aspect: com.pokedaisy.app.companion.GameAspect) {
+            if (aspect == com.pokedaisy.app.companion.GameAspect.WIDE) com.pokedaisy.app.companion.FeatureTips.used(TipId.EXPAND)
             Prefs(this@PokeDaisyActivity).gameAspect = aspect
             runOnUiThread { syncGameScreen() }
         }
@@ -1352,6 +1378,14 @@ class PokeDaisyActivity : Activity() {
             expandOfferUp.value = false
             if (turnOn) setGameAspect(com.pokedaisy.app.companion.GameAspect.WIDE)
         }
+        override val tips get() = Prefs(this@PokeDaisyActivity).tips
+        override fun setTips(on: Boolean) {
+            Prefs(this@PokeDaisyActivity).tips = on
+            com.pokedaisy.app.companion.FeatureTips.scheduler?.enabled = on
+        }
+        override val showsTips get() = tipsOnCompanion.value
+        override fun tipKeys(tip: TipId) = this@PokeDaisyActivity.tipKeys(tip)
+        override fun tryTip(tip: TipId) = this@PokeDaisyActivity.tryTip(tip)
         override val overlayChoices get() = com.pokedaisy.app.overlay.overlayChoices(overlayStore).map { (c, label) -> c.key to label }
         override val overlay get() = Prefs(this@PokeDaisyActivity).overlay
         override fun setOverlay(key: String) {
@@ -1540,6 +1574,8 @@ class PokeDaisyActivity : Activity() {
                 kotlinx.coroutines.delay(500)
             }
         }
+        com.pokedaisy.app.companion.FeatureTips.init(Prefs(this))
+        com.pokedaisy.app.companion.FeatureTips.available = ::tipAvailable
 
         // Debug-only mirror of the companion UI onto the main display, for
         // Claude's own testing use (screenshotting/tapping over adb): the
@@ -2020,6 +2056,7 @@ class PokeDaisyActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        tipsResumed = true
         if (movePause) {
             // The move's pause: the game never stopped. Only the screens follow (their configuration change may have
             // come before the pause).
@@ -2186,6 +2223,7 @@ class PokeDaisyActivity : Activity() {
 
     override fun onDestroy() {
         samplerThread.shutdown()
+        com.pokedaisy.app.companion.FeatureTips.available = { false }
         // Gone while the game slept (onPause held it): stop it now, as a close would have.
         if (::engine.isInitialized && engine.running) {
             view.unbindCoreBlocking()
@@ -2207,6 +2245,8 @@ class PokeDaisyActivity : Activity() {
 
     override fun onPause() {
         super.onPause()
+        tipsResumed = false
+        com.pokedaisy.app.companion.FeatureTips.scheduler?.save()
         // Android's pause around moving this activity to the other screen (moveToDisplay): the game runs on.
         val moving = movingSince != 0L && android.os.SystemClock.uptimeMillis() - movingSince < MOVE_PAUSE_MS
         movingSince = 0L
@@ -2665,6 +2705,9 @@ class PokeDaisyActivity : Activity() {
                     onOpenCompanion = if (panelClosed) ({ sidePanel.openPanel() }) else null,
                     frame = hudFrame.value,
                     closePanels = hudCloseTick.intValue,
+                    openPanel = hudOpenPanel.value, openTick = hudOpenTick.intValue,
+                    onTap = { com.pokedaisy.app.companion.FeatureTips.used(TipId.HUD) },
+                    onPanel = { hudPanelOpen.value = it },
                 )
                 com.pokedaisy.app.companion.ui.BattleButtons(
                     snap, buttons, battleInput, battleHints.value,
@@ -2684,6 +2727,28 @@ class PokeDaisyActivity : Activity() {
                     focused, hudFrame.value, if (engine?.gba == false && engine?.nds == false) GB_ROWS else GBA_ROWS,
                     onClose = { setBottomFocus(false) },
                 )
+                // A feature tip over the game, when the companion has no screen of its own: top centre, clear of the
+                // minimap and the area's name.
+                androidx.compose.foundation.layout.BoxWithConstraints(androidx.compose.ui.Modifier.fillMaxSize()) {
+                    val narrow = maxWidth < 600.dp
+                    val clearTop = with(androidx.compose.ui.platform.LocalDensity.current) { hudClear.value.first.toDp() }
+                    com.pokedaisy.app.companion.ui.FeatureTipHost(
+                        active = !tipsOnCompanion.value, roomy = false,
+                        modifier = androidx.compose.ui.Modifier.padding(top = clearTop + 8.dp),
+                        cardModifier = androidx.compose.ui.Modifier.width(maxWidth * if (narrow) 0.94f else 0.54f),
+                        maxWidth = maxWidth, keys = ::tipKeys, onTry = ::tryTip,
+                    )
+                }
+            }
+            // Tips' clock: field play time, the moments, whether the field is calm ([tickTips]).
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                var last = android.os.SystemClock.uptimeMillis()
+                while (true) {
+                    kotlinx.coroutines.delay(500)
+                    val now = android.os.SystemClock.uptimeMillis()
+                    runCatching { tickTips((now - last).coerceAtMost(1000)) }.onFailure { Log.w("pokedaisy", "tips", it) }
+                    last = now
+                }
             }
         }
     }
@@ -3210,6 +3275,9 @@ class PokeDaisyActivity : Activity() {
             fun axis(a: Int, b: Int) = event.getAxisValue(a).let { v -> if (kotlin.math.abs(v) > 0.05f) v else event.getAxisValue(b) }
             view.camera.stickX = axis(MotionEvent.AXIS_Z, MotionEvent.AXIS_RX)
             view.camera.stickY = axis(MotionEvent.AXIS_RZ, MotionEvent.AXIS_RY)
+            if (view.wide && maxOf(kotlin.math.abs(view.camera.stickX), kotlin.math.abs(view.camera.stickY)) > 0.6f) {
+                com.pokedaisy.app.companion.FeatureTips.used(TipId.ZOOM)
+            }
         }
         if (quickStickHold) {
             if (GbaInput.motionBits(event)?.let { it != 0 } == true) return true
@@ -3268,14 +3336,7 @@ class PokeDaisyActivity : Activity() {
                 else if (e.pressed) showHud(com.pokedaisy.app.companion.i18n.tr("Rewinding"))
                 engine.setRewindHeld(e.pressed)
             }
-            Hotkeys.Action.ZOOM -> if (e.pressed) runCatching {
-                if (!view.wide) showHud(com.pokedaisy.app.companion.i18n.tr("Zoom needs ASPECT > EXPAND"))
-                else {
-                    val step = view.camera.cycle()
-                    if (romKey.isNotEmpty()) Prefs(this).setZoomLevelFor(romKey, step)
-                    showHud(com.pokedaisy.app.companion.i18n.tr("Zoom {0}", "%.1fx".format(java.util.Locale.ROOT, view.camera.factor(step)).replace(".0x", "x")))
-                }
-            }
+            Hotkeys.Action.ZOOM -> if (e.pressed) zoomStep()
             Hotkeys.Action.SOFT_RESET -> if (e.pressed) {
                 engine.softReset()
                 showHud(com.pokedaisy.app.companion.i18n.tr("Soft reset"))
@@ -3289,18 +3350,166 @@ class PokeDaisyActivity : Activity() {
                 if (companionClosed) reopenCompanion()
                 else if (::sidePanel.isInitialized && sidePanel.enabled) sidePanel.openPanel()
             }
-            Hotkeys.Action.QUICK_MENU -> {
-                val wasOpen = quickMenu.open
-                quickMenu.trigger(e.pressed)
-                // Opened: the buttons are the menu's now, so a held direction stops walking.
-                if (!wasOpen && quickMenu.open) {
-                    input.releaseAll()
-                    quickHat = 0
-                    quickStickHold = false
-                    hudCloseTick.intValue++
-                    quickMenu.labels = Prefs(this).quickMenuLabels
-                    quickMenu.ring = Prefs(this).quickMenuStyle == com.pokedaisy.app.companion.QuickMenuStyle.RING
+            Hotkeys.Action.QUICK_MENU -> triggerQuickMenu(e.pressed)
+        }
+    }
+
+    /** ZOOM (its hotkey, or a tip's SHOW ME): EXPAND's next zoom step. */
+    private fun zoomStep() = runCatching {
+        if (!view.wide) showHud(com.pokedaisy.app.companion.i18n.tr("Zoom needs ASPECT > EXPAND"))
+        else {
+            com.pokedaisy.app.companion.FeatureTips.used(TipId.ZOOM)
+            val step = view.camera.cycle()
+            if (romKey.isNotEmpty()) Prefs(this).setZoomLevelFor(romKey, step)
+            showHud(com.pokedaisy.app.companion.i18n.tr("Zoom {0}", "%.1fx".format(java.util.Locale.ROOT, view.camera.factor(step)).replace(".0x", "x")))
+        }
+    }
+
+    /** The QUICK MENU's key went down ([pressed]) or up: it opens or closes. */
+    private fun triggerQuickMenu(pressed: Boolean) {
+        val wasOpen = quickMenu.open
+        quickMenu.trigger(pressed)
+        // Opened: the buttons are the menu's now, so a held direction stops walking.
+        if (!wasOpen && quickMenu.open) {
+            com.pokedaisy.app.companion.FeatureTips.used(TipId.QUICK_MENU)
+            input.releaseAll()
+            quickHat = 0
+            quickStickHold = false
+            hudCloseTick.intValue++
+            quickMenu.labels = Prefs(this).quickMenuLabels
+            quickMenu.ring = Prefs(this).quickMenuStyle == com.pokedaisy.app.companion.QuickMenuStyle.RING
+        }
+    }
+
+    // --- feature tips ------------------------------------------------------------
+
+    /** Every 500 ms (the HUD's composition, main thread): field play time and calm for [com.pokedaisy.app.companion.TipScheduler],
+     *  and the moments that call a tip up - running everywhere, wild battle after wild battle, a TM used up, the game's
+     *  own region map closed. */
+    private fun tickTips(dt: Long) {
+        val tips = com.pokedaisy.app.companion.FeatureTips.scheduler ?: return
+        // Asleep (screen off) or in the background, nothing counts as play.
+        val e = hudEngine.value?.takeIf {
+            it.running && !it.sleeping && tipsResumed
+        }
+        val snap = telemetry.snapshot.value
+        tipsOnCompanion.value = presentation != null || mainCompanion != null
+        val field = e != null && playing && e.onField.value && snap.hasData && !snap.unsupported && !snap.inBattle && !hudUpright.value
+        val windowOpen = ::sidePanel.isInitialized && sidePanel.windowOpen
+        val calm = field && !quickMenu.open && !hudPanelOpen.value && !windowOpen && !expandOfferUp.value && !e!!.holdFrame
+        // Over the game, a card goes when the field does (a battle, a menu, the QUICK MENU); on the companion it stays.
+        tips.current?.let { if (!tipsOnCompanion.value && (!field || quickMenu.open || windowOpen)) tips.timedOut(it) }
+        if (e != null) tipMoments(e, snap, tips)
+        tips.tick(dt, field, calm)
+    }
+
+    private fun tipMoments(e: EmulatorEngine, snap: com.pokedaisy.app.companion.data.SnapshotView, tips: com.pokedaisy.app.companion.TipScheduler) {
+        // AUTO-RUN: a minute of walking where it would run, B held for most of it.
+        if (e.walkFrames >= 60 * 60) {
+            if (e.runFrames * 10 >= e.walkFrames * 6) tips.moment(TipId.AUTO_RUN)
+            e.walkFrames = 0
+            e.runFrames = 0
+        }
+        // WILD ENCOUNTERS: three wild battles within three minutes of walking (a trainer's fills gEnemyParty).
+        if (snap.inBattle) {
+            if (!tipInBattle) tipTrainerBattle = false
+            tipInBattle = true
+            if (snap.enemyParty.isNotEmpty()) tipTrainerBattle = true
+        } else if (tipInBattle) {
+            tipInBattle = false
+            if (!tipTrainerBattle) {
+                tipWildEnds.addLast(tips.playedMillis)
+                while (tipWildEnds.size > 3) tipWildEnds.removeFirst()
+                if (tipWildEnds.size == 3 && tipWildEnds.last() - tipWildEnds.first() <= 3 * com.pokedaisy.app.companion.TipScheduler.MINUTE) {
+                    tips.moment(TipId.WILD)
+                    tipWildEnds.clear()
                 }
+            }
+        }
+        // REUSABLE TMS: one TM fewer in the bag (out of battle, nothing else in the pocket changed).
+        if (snap.hasData && !snap.inBattle) {
+            val tms = snap.items.filter { it.pocket == com.pokedaisy.app.companion.data.POCKET_TM_HM }.associate { it.itemId to it.quantity }
+            val before = tipTms
+            if (before != null && before.isNotEmpty() && tms.keys.all { it in before } &&
+                before.entries.sumOf { (id, q) -> q - (tms[id] ?: 0) } == 1 && before.all { (id, q) -> (tms[id] ?: 0) <= q }
+            ) tips.moment(TipId.REUSABLE_TMS)
+            tipTms = tms
+        }
+        // FLY: the game's own region map (a Town Map, its Fly map) just closed.
+        val mapOpen = e.regionMapOpen
+        if (tipMapOpen && !mapOpen) tips.moment(TipId.FLY)
+        tipMapOpen = mapOpen
+    }
+
+    /** A tip's feature is there to try here, and not on already. */
+    private fun tipAvailable(tip: TipId): Boolean {
+        if (!::engine.isInitialized || !engine.running) return false
+        val p = Prefs(this)
+        return when (tip) {
+            TipId.ZOOM -> view.wide && tipKey(Hotkeys.Action.ZOOM) != null
+            // ExpandIntro has offered it already: this is the one later reminder.
+            TipId.EXPAND -> wideGame != WideScreen.OFF && !view.wide && p.expandGameOfferSeen
+            TipId.QUICK_MENU -> tipKey(Hotkeys.Action.QUICK_MENU) != null && quickShown.value.any { quickActions.offered(it) }
+            TipId.HUD -> hudOn.value && !hudUpright.value
+            TipId.PC -> itemUse.canPc()
+            TipId.AUTO_RUN -> !p.autoRun && companionSettings.fieldReadable
+            TipId.WILD -> companionSettings.wildEncountersSupported && p.wildEncounters != 0
+            TipId.REUSABLE_TMS -> companionSettings.reusableTmsSupported && !companionSettings.reusableTmsBuiltIn && !p.reusableTms
+            TipId.FLY -> flyAction.canFly() && telemetry.snapshot.value.party.any { m ->
+                !m.isEgg && m.moves.any { it.id == com.pokedaisy.app.companion.ui.FLY_MOVE }
+            }
+        }
+    }
+
+    /** [action]'s key as a tip names it ("R3", "SELECT + R1"): a controller's binding, none without a controller. */
+    private fun tipKey(action: Hotkeys.Action): String? {
+        if (!Controllers.anyConnected() && !physicalPadUsed) return null
+        if (!::hotkeys.isInitialized) return null
+        val chord = hotkeys.rawBindings[action].orEmpty()
+            .firstOrNull { c -> c.split('+').all { it.trim().startsWith("BUTTON_") } } ?: return null
+        return chord.split('+').joinToString(" + ") { k ->
+            when (val name = k.trim()) {
+                "BUTTON_THUMBL" -> "L3"
+                "BUTTON_THUMBR" -> "R3"
+                else -> com.pokedaisy.app.companion.KeyCapture.label(name)
+            }
+        }
+    }
+
+    /** The keys a tip's card names. */
+    private fun tipKeys(tip: TipId): List<Pair<String, String>> = when (tip) {
+        TipId.ZOOM -> listOfNotNull(
+            tipKey(Hotkeys.Action.ZOOM)?.let { it to tr("ZOOM") }, tr("RIGHT STICK") to tr("LOOK AROUND"),
+        )
+        TipId.QUICK_MENU -> listOfNotNull(tipKey(Hotkeys.Action.QUICK_MENU)?.let { it to tr("QUICK MENU") })
+        else -> emptyList()
+    }
+
+    /** A tip's TRY IT: the feature itself, at once. */
+    private fun tryTip(tip: TipId) {
+        when (tip) {
+            TipId.ZOOM -> zoomStep()
+            TipId.EXPAND -> companionSettings.setGameAspect(GameAspect.WIDE)
+            TipId.QUICK_MENU -> triggerQuickMenu(true)
+            // The lead's summary: what a party icon opens.
+            TipId.HUD -> {
+                hudOpenPanel.value = com.pokedaisy.app.companion.ui.FieldHudPanel.SUMMARY to 0
+                hudOpenTick.intValue++
+            }
+            TipId.PC -> runQuickAction(com.pokedaisy.app.companion.QuickAction.PC)
+            TipId.AUTO_RUN -> {
+                companionSettings.setAutoRun(true)
+                showHud(tr("AUTO-RUN") + ": " + tr("ON"))
+            }
+            TipId.WILD -> runQuickAction(com.pokedaisy.app.companion.QuickAction.WILD)
+            TipId.REUSABLE_TMS -> {
+                companionSettings.setReusableTms(true)
+                showHud(tr("REUSABLE TMS") + ": " + tr("ON"))
+            }
+            // The QUICK MENU's FLY list: the same places the MAP's FLY offers, wherever the player is looking.
+            TipId.FLY -> {
+                triggerQuickMenu(true)
+                runQuickAction(com.pokedaisy.app.companion.QuickAction.FLY)
             }
         }
     }

@@ -622,6 +622,8 @@ private fun homeRows(
         // The on-screen buttons: when they show, layouts, size, extras, EDIT LAYOUT - its own page, with a preview.
         SettingRow(tk("TOUCH CONTROLS"), s.touchStyle.show.label, labelBadge = touchControlsBadge(), opensPage = true, subtitle = "The on-screen buttons: layout, size, extras") { navigate(Page.TOUCH) },
         groupTitle(tk("APP")),
+        // A card now and then about a feature the player hasn't found (FeatureTips).
+        tipsRow(s.tips) { s.setTips(it); changed() },
         // AUTO: the ROM's own language. Applies at once, both screens.
         SettingRow("LANGUAGE", L10n.settingLabel(s.appLanguage)) {
             val opts = L10n.options

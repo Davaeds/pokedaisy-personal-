@@ -154,6 +154,7 @@ val SETTING_KEYWORDS: Map<String, String> = mapOf(
     "NUZLOCKE" to "nuzlocke challenge hardcore run tracker encounter first catch per route area death dead faint permadeath graveyard dupes clause",
     "REUSABLE TMS" to "reusable tm tms technical machine machines reuse infinite unlimited keep tm single use consumed used up teach moves",
     "SHINY ODDS" to "shiny shinies shiny odds shiny rate shiny hunting hunt shiny charm sparkle rare color colour chance",
+    "TIPS" to "tips hints help popup pop up feature discovery introduce new features suggestions what can it do",
     "WILD ENCOUNTERS" to "wild encounters encounter rate random battles grass caves repel no encounters fewer battles",
 )
 
@@ -432,6 +433,13 @@ private fun Modifier.revealOnce(done: () -> Unit): Modifier = composed {
     }
     onSizeChanged { size = it }.bringIntoViewRequester(requester)
 }
+
+/** APP > TIPS, on both screens ([com.pokedaisy.app.companion.FeatureTips]): now and then a card about a feature the
+ *  player hasn't found yet. */
+fun tipsRow(on: Boolean, set: (Boolean) -> Unit): SettingRow = SettingRow(
+    tk("TIPS"), if (on) tk("ON") else tk("OFF"), subtitle = "Now and then, a feature you haven't tried yet",
+    labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.TIPS),
+) { set(!on) }
 
 /**
  * DISPLAY OPTIONS > LIGHT COMPANION, on both screens ([com.pokedaisy.app.companion.LightCompanion]): AUTO / ON / OFF

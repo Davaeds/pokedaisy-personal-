@@ -324,6 +324,33 @@ class Prefs(context: Context) {
         }.toMap()
         set(v) = p.edit().putString("new_feature_since", v.entries.joinToString(",") { "${it.key}:${it.value}" }).apply()
 
+    /** TIPS (SETTINGS > APP, companion.FeatureTips): a card now and then about a feature the player hasn't found. */
+    var tips: Boolean
+        get() = p.getBoolean("tips", true)
+        set(v) = p.edit().putBoolean("tips", v).apply()
+
+    /** What companion.TipScheduler remembers: field play time, when the last card went, each tip's history. */
+    val tipStore: com.pokedaisy.app.companion.TipStore = object : com.pokedaisy.app.companion.TipStore {
+        override var fieldMillis: Long
+            get() = p.getLong("tip_field_ms", 0)
+            set(v) = p.edit().putLong("tip_field_ms", v).apply()
+        override var lastClosedAt: Long
+            get() = p.getLong("tip_last_closed", -1)
+            set(v) = p.edit().putLong("tip_last_closed", v).apply()
+        override var records: Map<com.pokedaisy.app.companion.TipId, com.pokedaisy.app.companion.TipRecord>
+            // "key:shows:lastShownAt:done" per tip.
+            get() = p.getString("tip_records", null).orEmpty().split(',').mapNotNull { e ->
+                val f = e.split(':')
+                val id = com.pokedaisy.app.companion.TipId.of(f[0]) ?: return@mapNotNull null
+                if (f.size != 4) return@mapNotNull null
+                id to com.pokedaisy.app.companion.TipRecord(f[1].toIntOrNull() ?: 0, f[2].toLongOrNull() ?: -1, f[3] == "1")
+            }.toMap()
+            set(v) = p.edit().putString(
+                "tip_records",
+                v.entries.joinToString(",") { (id, r) -> "${id.key}:${r.shows}:${r.lastShownAt}:${if (r.done) 1 else 0}" },
+            ).apply()
+    }
+
     /** BATTLE BUTTONS (companion.ui.BattleButtons): one screen, FIGHT, POKéMON and RUN beside a battle. */
     var battleButtons: Boolean
         get() = p.getBoolean("battle_buttons", true)

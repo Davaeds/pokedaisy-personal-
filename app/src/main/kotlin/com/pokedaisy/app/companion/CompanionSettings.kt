@@ -292,6 +292,19 @@ interface CompanionSettings {
     val expandOffer: Boolean get() = false
     fun answerExpandOffer(turnOn: Boolean) {}
 
+    /** APP > TIPS ([com.pokedaisy.app.Prefs.tips], ON): a card now and then about a feature the player hasn't found. */
+    val tips: Boolean get() = true
+    fun setTips(on: Boolean) {}
+
+    /** The tip card shows on this companion (it's on a screen of its own, not over the game: Compose state). */
+    val showsTips: Boolean get() = false
+
+    /** The keys a tip names (the player's own bindings), as key and what it does. */
+    fun tipKeys(tip: TipId): List<Pair<String, String>> = emptyList()
+
+    /** A tip's TRY IT. */
+    fun tryTip(tip: TipId) {}
+
     /** SCREEN > OVERLAY's choices, as (key, label) - see [com.pokedaisy.app.Prefs.overlay]; empty = no row (no game).
      * Imported in the top screen's Settings (a file picker); picked here, live. */
     val overlayChoices: List<Pair<String, String>> get() = emptyList()

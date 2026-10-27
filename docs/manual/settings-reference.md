@@ -102,6 +102,7 @@ The `SHADERS` page:
 | `VERSION` | the version number | Tap to look for a newer version now. | [Install](install.md) |
 | `RUN SETUP` | | Back to the library with the first-time setup open again (ROMs folder, saves folder, game buttons, cover art). | [Install](install.md) |
 | `CRASH REPORTS` | `ON`, **`OFF`** | Sends a short report when the app crashes, only if you turn it on. Only in official builds. | [Troubleshooting](troubleshooting.md#what-does-pokedaisy-send-over-the-internet) |
+| `TIPS` | **`ON`**, `OFF` | Now and then, a card about a feature you haven't tried yet, shown in a game while you walk around. | [The companion](companion.md#tips) |
 | `LICENSES` | a page | The licenses of PokeDaisy and everything it includes. | |
 | `LANGUAGE` | **`AUTO`**, `ENGLISH`, `日本語`, `FRANÇAIS`, `DEUTSCH`, `ITALIANO`, `ESPAÑOL` | The app's own text. `AUTO` follows the game's language in game and the device's in the library. Game names (Pokémon, moves, items) stay as the game has them. | [The companion](companion.md) |
 | `HELP` | a page | This manual, with a search box. It keeps a copy for reading offline. | [Welcome](welcome.md) |
@@ -208,6 +209,7 @@ The `DISPLAY OPTIONS` page:
 
 | Setting | Choices | What it does | More |
 | --- | --- | --- | --- |
+| `TIPS` | as on the top screen | The same switch: a card now and then about a feature you haven't tried yet. | [The companion](companion.md#tips) |
 | `LANGUAGE` | as on the top screen | The app's own text, on both screens at once. | [The companion](companion.md) |
 | `HELP` | a page | This manual, without the search box (the bottom screen has no keyboard). | [Welcome](welcome.md) |
 

@@ -320,6 +320,13 @@ fun FieldHud(
     initialPanel: FieldHudPanel? = null,
     /** Bumped to close whatever panel is open (the QUICK MENU opening over it). */
     closePanels: Int = 0,
+    /** A tip's SHOW ME ([FeatureTipHost]): bumping [openTick] opens [openPanel] (its party slot / pocket second). */
+    openPanel: Pair<FieldHudPanel, Int>? = null,
+    openTick: Int = 0,
+    /** The player tapped something on the HUD (its tip is done with). */
+    onTap: () -> Unit = {},
+    /** A panel opened (true) or closed: no tip comes up over one. */
+    onPanel: (Boolean) -> Unit = {},
 ) {
     var panel by remember { mutableStateOf(initialPanel) }
     var summary by remember { mutableStateOf(0) }
@@ -331,6 +338,15 @@ fun FieldHud(
     DisposableEffect(Unit) { onDispose { FieldHudFit.tight = false } }
     LaunchedEffect(shown) { if (!shown) panel = null }
     LaunchedEffect(closePanels) { if (closePanels != 0) panel = null }
+    LaunchedEffect(openTick) {
+        val (p, i) = openPanel ?: return@LaunchedEffect
+        if (openTick == 0) return@LaunchedEffect
+        if (p == FieldHudPanel.SUMMARY) summary = i
+        if (p == FieldHudPanel.BAG) bagPocket = i
+        panel = p
+    }
+    val panelOpen = panel != null
+    LaunchedEffect(panelOpen) { onPanel(panelOpen) }
     val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(if (shown) 220 else 120), label = "field-hud")
     if (alpha == 0f && !shown) return
 
@@ -377,6 +393,7 @@ fun FieldHud(
                 val m = rememberGbaTextMetrics(1f)
                 val pc = itemUse?.takeIf { it.canPc() }?.let { use ->
                     {
+                        onTap()
                         use.openPc { o -> pcNotice = if (o.result == ItemUseResult.USED) null else ItemNotice(0, itemUseMessage(o), ok = false) }
                     }
                 }
@@ -388,6 +405,7 @@ fun FieldHud(
                 if (repel <= 0) repelFull = 0
                 else if (repel > repelFull) repelFull = com.pokedaisy.app.companion.REPEL_KINDS.firstOrNull { it.second >= repel }?.second ?: repel
                 val parts = HudParts(snapshot, style, wildHere, m, onOpenCompanion, pc, repel, repelFull) { p, i ->
+                    onTap()
                     if (p == FieldHudPanel.SUMMARY) summary = i
                     if (p == FieldHudPanel.BAG) bagPocket = i
                     panel = p

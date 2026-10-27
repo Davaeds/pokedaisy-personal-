@@ -106,6 +106,15 @@ class EmulatorEngine(
     /** AUTO-RUN: B held for the player while walking on the field (holding B walks); never on a bike or in a menu. */
     @Volatile var autoRun = false
 
+    /** With AUTO-RUN off: frames the player walked on the field where it would have run for them, and of those the ones
+     *  B was held (AUTO-RUN's tip: someone who runs everywhere). Emu thread writes, the UI reads and resets. */
+    @Volatile var walkFrames = 0L
+    @Volatile var runFrames = 0L
+
+    /** The game's own region map (a Town Map, the Fly map) is up: [RegionMapWatch], GBA only. */
+    @Volatile var regionMapOpen = false
+        private set
+
     /** RUN INDOORS: the current map lets the player run (gMapHeader.allowRunning; FireRed / Emerald engines). */
     @Volatile var runIndoors = false
 
@@ -926,6 +935,12 @@ class EmulatorEngine(
                 if (autoRun && (gba || nds) && keys and DIRECTIONS != 0 && keys and MgbaCore.Key.A == 0 &&
                     fieldState and AUTO_RUN_BLOCKERS == MgbaCore.FIELD_KNOWN && fieldScreen
                 ) keys = keys xor MgbaCore.Key.B
+                else if (!autoRun && (gba || nds) && keys and DIRECTIONS != 0 &&
+                    fieldState and AUTO_RUN_BLOCKERS == MgbaCore.FIELD_KNOWN && fieldScreen
+                ) {
+                    walkFrames++
+                    if (keys and MgbaCore.Key.B != 0) runFrames++
+                }
                 MgbaCore.pkSetKeys(keys)
                 if (nds) {
                     if (ndsScale != ndsScaleSet) {
@@ -995,6 +1010,7 @@ class EmulatorEngine(
 
                 // GBA memory watchers; a Game Boy game has none of these screens / engines to read.
                 mapOpen = gba && RegionMapWatch.isOpen(InProcessReader)
+                regionMapOpen = mapOpen
                 // A shop's screens count as the field: its clerk talks inside them (GitHub #41).
                 menuOpen = gba && FfMenuWatch.tick(InProcessReader) && !ShopWatch.isOpen(InProcessReader) ||
                     nds && fieldState and MgbaCore.FIELD_MENU != 0   // a DS menu screen: the field's child process

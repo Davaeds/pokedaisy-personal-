@@ -85,11 +85,14 @@ object NewFeatures {
     /** SETTINGS > DS RESOLUTION: a DS game's 3D drawn at 2x to 8x on the GPU (nds/pk_nds_gl.h). */
     const val DS_RESOLUTION = "ds_resolution"
 
+    /** SETTINGS > APP > TIPS: a card now and then about a feature the player hasn't found (FeatureTips). */
+    const val TIPS = "tips"
+
     /** Every feature that gets the tag. */
     val ALL = listOf(
         HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB, TOUCH_CONTROLS,
         COMPANION_TAB, REUSABLE_TMS, SHINY_ODDS, UNLIT_SCREEN, LIGHT_COMPANION, X_COMPANION, PLAYER_LOOK, RIVAL_LOOK, TEXT_LOOK, DAY_NIGHT,
-        FOLLOWER, COMPANION_HOTKEY, NUZLOCKE, GBA_BUTTONS, DS_RESOLUTION,
+        FOLLOWER, COMPANION_HOTKEY, NUZLOCKE, GBA_BUTTONS, DS_RESOLUTION, TIPS,
     )
 
     private const val DAYS = 7

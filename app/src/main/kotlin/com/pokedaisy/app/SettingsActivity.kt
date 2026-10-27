@@ -716,6 +716,12 @@ class SettingsActivity : ComponentActivity() {
                 CrashReports.setEnabled(prefs, !prefs.crashReportsEnabled)
                 revision++
             }.takeIf { CrashReports.available },
+            // A card now and then about a feature the player hasn't found (FeatureTips), in game.
+            com.pokedaisy.app.companion.ui.tipsRow(prefs.tips) { on ->
+                prefs.tips = on
+                com.pokedaisy.app.companion.FeatureTips.scheduler?.enabled = on
+                revision++
+            },
             // The GPL's notices and every bundled component's license.
             SettingRow(tk("LICENSES"), null, opensPage = true) { screen = Screen.LICENSES },
             // AUTO: the ROM's language in game, the device's here. Applies at once, both screens.
