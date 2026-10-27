@@ -271,6 +271,10 @@ interface CompanionSettings {
     val expandZoomOnText: Boolean get() = true
     fun setExpandZoomOnText(on: Boolean) {}
 
+    /** EXPAND's PORTRAIT ZOOM - see [com.pokedaisy.app.Prefs.portraitZoom]. */
+    val portraitZoom: Boolean get() = false
+    fun setPortraitZoom(on: Boolean) {}
+
     /** EXPAND's one-time offer in a game it knows, while EXPAND is off ([com.pokedaisy.app.Prefs.expandGameOfferSeen]):
      * true while it's up (Compose state). Shown once ever - the setting is global. */
     val expandOffer: Boolean get() = false

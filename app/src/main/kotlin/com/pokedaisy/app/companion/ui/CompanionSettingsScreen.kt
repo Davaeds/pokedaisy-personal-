@@ -530,6 +530,12 @@ private fun homeRows(
         // EXPAND only: whether a conversation, sign, menu or picture over the field pulls the zoom in (battles always do).
         SettingRow(tk("AUTO ZOOM IN"), onOff(s.expandZoomOnText), subtitle = "1x on dialogue, signs, menus") { s.setExpandZoomOnText(!s.expandZoomOnText); changed() }
             .takeIf { s.gameAspect == GameAspect.WIDE },
+        // EXPAND only: upright, the field a step closer, the sides of the game's own picture left off.
+        SettingRow(
+            tk("PORTRAIT ZOOM"), onOff(s.portraitZoom), subtitle = "Closer upright, sides trimmed",
+            labelBadge = NewFeatures.badge(NewFeatures.PORTRAIT_ZOOM),
+        ) { s.setPortraitZoom(!s.portraitZoom); changed() }
+            .takeIf { s.gameAspect == GameAspect.WIDE },
         // The party, a minimap, the balls and BAG / WILD over the game on the field: its own page (layout, look, size, parts).
         SettingRow(tk("HUD"), onOff(s.fieldHud), labelBadge = NewFeatures.badge(NewFeatures.HUD), opensPage = true, subtitle = "Party, minimap and bag over the game") { navigate(Page.FIELD_HUD) },
         // One screen: FIGHT, POKéMON and RUN in the room beside a battle (BattleButtons).
