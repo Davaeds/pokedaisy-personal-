@@ -1177,6 +1177,10 @@ class EmulatorEngine(
                     ffPerTick = ffPer
                     ffFit.reset(ffPer)
                     ffGroup = 1   // this frame ends a group: drawn, then the next refresh's tick
+                    // Timed from the next tick: kept from FF's last run, the first group "took" all the time FF was
+                    // off (seconds, minutes), the fit dropped to a frame a refresh - 1x - and FF only came back
+                    // seconds later, longer the longer it had been off; a refresh gap mid-FF did the same.
+                    ffGroupStart = 0L
                     if (ffPer > 0) vsyncTicks.drainPermits()
                 }
                 if ((perFrame > 0) != vsyncMode) {
@@ -1763,6 +1767,7 @@ internal fun ffFramesPerRefresh(speed: Float, refreshesPerFrame: Int): Int {
  * - under [ROOM] of a refresh for [wait] groups, a frame is tried; a try that ends up over [OVER] within [PROBE_GROUPS]
  *   groups goes back, and the next one waits twice as long ([MAX_WAIT_GROUPS] at most).
  * No cost per frame is modelled: a DS's skipped frames cost a fraction of its drawn one, and a group of 1 has none.
+ * A group over [STALL_PERIODS] refreshes is a stall and isn't counted.
  */
 internal class FfGroupFit {
     var size = 0
@@ -1786,6 +1791,9 @@ internal class FfGroupFit {
     /** A group of [size] frames took [groupNanos] against a refresh of [periodNanos]. */
     fun groupDone(groupNanos: Long, periodNanos: Long) {
         if (size <= 0 || periodNanos <= 0) return
+        // A stall, not the group's work (a map loading, a GC, the loop held up): left out, or as the first group it set
+        // the average outright and FF ran at 1x for seconds.
+        if (groupNanos > periodNanos * STALL_PERIODS) return
         avg = if (avg == 0.0) groupNanos.toDouble() else avg + (groupNanos - avg) * EMA
         val period = periodNanos.toDouble()
         if (avg > period * OVER) {
@@ -1822,6 +1830,8 @@ internal class FfGroupFit {
         const val ROOM = 0.85
         const val PROBE_GROUPS = 60
         const val MAX_WAIT_GROUPS = 1800
+        /** A group over this many refreshes is a stall ([groupDone]): 4 DS frames at their dearest (~20 ms) are ~5. */
+        const val STALL_PERIODS = 8
     }
 }
 
