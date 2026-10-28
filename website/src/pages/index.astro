@@ -348,7 +348,7 @@ const title = 'POKEDAISY'.split('');
   /* Every APK download from GitHub releases: counted at build, refreshed in the browser. Big: it's the proof. */
   .downloads { display: inline-flex; align-items: center; gap: 14px; margin-top: 36px; text-decoration: none; color: var(--ink); }
   .downloads[hidden] { display: none; }
-  .dl-count { font-size: var(--t-xl); line-height: 1; text-shadow: var(--bold); letter-spacing: 0.0625em; }
+  .dl-count { font-size: calc(var(--t-xl) * 0.85); line-height: 1; text-shadow: var(--bold); letter-spacing: 0.0625em; }
   .dl-label { font-size: var(--t-m); color: var(--muted); letter-spacing: 0.0625em; }
   .downloads:hover .dl-count { color: var(--red); }
   /* The facts under it, each behind a small red square (so a wrapped line still reads as a list). */
