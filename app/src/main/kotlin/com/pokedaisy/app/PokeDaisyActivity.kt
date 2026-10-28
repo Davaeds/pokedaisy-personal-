@@ -1835,7 +1835,7 @@ class PokeDaisyActivity : Activity() {
         }
         // A FireRed-engine hack's own region map (Unbound, Odyssey, ...), read
         // from the ROM on every launch - a few KB of reads (see RomRegionMap).
-        if (gba) RomRegionMap.load(filesDir, crc, r)
+        if (gba) RomRegionMap.load(filesDir, crc, r) else RomRegionMap.current = null   // not the last GBA game's
         // SMART FF steps aside while the game's region map or a menu is up (see EmulatorEngine).
         if (gba) RegionMapWatch.load(r)
         val (menuField, menuBattle) = Prefs(this).ffMenuCallbacks(crc)

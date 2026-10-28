@@ -193,11 +193,12 @@ fun emeraldHackFor(cfg: NativeConfig?): HackText? = when {
 
 /** Whether the MAP and place names come from the ROM's own region map ([RomRegionMap]): every
  * FireRed-engine hack but the ones that kept FireRed's (FireRed itself carries its title-cased names). */
-val readsRomRegionMap: Boolean get() = when (activeGame) {
+val readsRomRegionMap: Boolean get() = when {
+    // Game Boy and DS games: never a GBA ROM's map (Crystal Clear after Unbound drew Unbound's).
+    activeGame.isGameBoyGame || activeGame.isDsGame -> false
     // Recharged Yellow is a rebuild: FireRed 1.0's literal pools RomRegionMap follows aren't its code.
-    GameKind.YELLOW, GameKind.RED, GameKind.BLUE, GameKind.RECHARGED_YELLOW, GameKind.PLATINUM, GameKind.HEARTGOLD, GameKind.SOULSILVER, GameKind.BLACK,
-    GameKind.PURE_RED, GameKind.PURE_BLUE -> false
-    GameKind.FIRERED -> runningFireRedHack?.ownRegionMap == true
+    activeGame == GameKind.RECHARGED_YELLOW -> false
+    activeGame == GameKind.FIRERED -> runningFireRedHack?.ownRegionMap == true
     else -> true
 }
 /** Super Mariomon v1.2.1 / v1.2.2 / v1.3 share their tables, v1.5.x has its own (a species and seven
