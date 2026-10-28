@@ -82,7 +82,7 @@ const title = 'POKEDAISY'.split('');
       </div>
       <p class="hero-kicker">Game Boy, Advance and DS Pokémon, for handhelds with two screens or one</p>
       <div class="dialog f-dialog" data-type>
-        <p data-type-text>Play your Pokémon games. See everything about them on your second screen, or right beside the game.</p>
+        <p data-type-text>Play your Pokémon games. See everything about them on your second screen, or over the game.</p>
         <span class="more"><Pixel name="more" scale={1} /></span>
       </div>
       <div class="cta" data-track-where="hero">
@@ -100,7 +100,7 @@ const title = 'POKEDAISY'.split('');
     </div>
     <div class="hero-art">
       <div class="glow"></div>
-      <!-- Both at once: the Thor at the back, a one-screen handheld in front, its companion beside the game. -->
+      <!-- Both at once: the Thor at the back, a one-screen handheld in front, its companion in a window over the game. -->
       <div class="duo">
         <div class="duo-dual">
           <HeroDevice />
@@ -226,7 +226,7 @@ const title = 'POKEDAISY'.split('');
     <div class="section-head">
       <span class="eyebrow">DEVICES</span>
       <h2 class="heading">Two screens or one</h2>
-      <p class="lead">On a dual-screen handheld the companion gets a screen of its own. On one screen it sits right beside the game, or under it on a phone held upright. On a dual-screen handheld, SINGLE SCREEN plays it that way and frees the second screen for other apps.</p>
+      <p class="lead">On a dual-screen handheld the companion gets a screen of its own. On one screen it opens in a window over the game or a panel beside it, or under it on a phone held upright. On a dual-screen handheld, SINGLE SCREEN plays it that way and frees the second screen for other apps.</p>
     </div>
     <div class="device-grid">
       {deviceList.map(([icon, name, text, status, frame], i) => (
@@ -359,18 +359,15 @@ const title = 'POKEDAISY'.split('');
   .downloads + .hero-note { margin-top: 12px; }
 
   .hero-art { position: relative; }
-  /* Both handhelds at once: the Thor at the back on the right, the one-screen one in front, lower left. */
-  .duo { position: relative; padding-bottom: 6%; }
-  .duo-dual { position: relative; width: 74%; margin-left: auto; }
-  .duo-single { position: absolute; left: -4%; bottom: 0; width: 76%; z-index: 2; }
-  /* Its game keeps the whole picture: at this size the text box would be a sliver beside the panel. */
-  .duo-single :global(.textbox) { display: none; }
-  .duo :global(.device) { margin: 0; max-width: none; }
-  .duo-single :global(.device) { filter: drop-shadow(calc(var(--px) * 4) calc(var(--px) * 4) 0 rgba(29, 27, 38, 0.22)); }
+  /* Both handhelds at once: the Thor at the back on the right, the Retroid Pocket 5 in front, lower left,
+     over only the Thor's bottom edge so both sets of controls show. */
+  .duo { position: relative; display: grid; padding-bottom: 14px; }
+  .duo-dual { position: relative; width: 66%; margin-left: auto; }
+  .duo-single { position: relative; width: 82%; margin-top: -6%; z-index: 2; }
   .glow { position: absolute; inset: -6% -4%; background: radial-gradient(closest-side, rgba(232, 48, 40, 0.18), rgba(61, 111, 224, 0.12) 60%, transparent); filter: blur(30px); }
-  .tag { position: absolute; z-index: 1; filter: var(--hard-shadow); animation: hover 5s steps(10) infinite alternate-reverse; }
+  .tag { position: absolute; z-index: 3; filter: var(--hard-shadow); animation: hover 5s steps(10) infinite alternate-reverse; }
   .tag-dual { right: -12px; top: -18px; }
-  .tag-single { left: 8%; top: -22px; }
+  .tag-single { left: 4%; bottom: -22px; }
 
   /* Ticker */
   .ticker { background: var(--ink); color: #fff; overflow: hidden; border-block: var(--px) solid var(--ink); }
@@ -443,8 +440,7 @@ const title = 'POKEDAISY'.split('');
     /* The two labels stay (they're the point of the picture), smaller and inside the edges. */
     .tag { font-size: var(--t-xs); }
     .tag-dual { right: 0; top: -16px; }
-    .tag-single { left: 4%; top: -18px; }
-    .duo-single { left: 0; }
+    .tag-single { left: 2%; bottom: -18px; }
   }
 </style>
 
@@ -468,9 +464,9 @@ const title = 'POKEDAISY'.split('');
     }, 900);
   } else box?.classList.add('done');
 
-  // The one-screen handheld's companion slides in beside its game once the page has settled.
-  const single = document.querySelector<HTMLElement>('[data-single-device]');
-  setTimeout(() => single?.classList.add('open'), reduce ? 0 : 1600);
+  // The one-screen handheld's companion window opens and closes as its demo plays (CompanionDemo); without
+  // motion it just stays open.
+  if (reduce) document.querySelector<HTMLElement>('[data-single-device]')?.classList.add('open');
 
   // The download count, fresh from GitHub (the build's number stays if that fails or is rate-limited).
   const dl = document.querySelector<HTMLElement>('[data-downloads]');

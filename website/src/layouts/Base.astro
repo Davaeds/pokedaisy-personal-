@@ -58,13 +58,13 @@ const petals = [[4, 22, 1, 0, 22], [91, 10, 2, 4, 26], [70, 62, 1, 9, 24], [10, 
           }
         }
         // Sprites the same way: each sprite pixel a whole number of device pixels. (Not inside an app
-        // screen, which is scaled as one, or the handheld's controls, which size to their column.)
+        // screen, which is scaled as one, or a hero handheld, drawn in its own unit.)
         function snapSprites() {
           var r = window.devicePixelRatio || 1;
           var all = document.querySelectorAll('.pixel[data-s]');
           for (var i = 0; i < all.length; i++) {
             var el = all[i];
-            if (el.closest('[data-app], .ctl')) continue;
+            if (el.closest('[data-app], .handheld')) continue;
             var cs = getComputedStyle(el);
             var unit = parseFloat(cs.getPropertyValue('--px')) * Number(el.dataset.s);
             var cell = Math.max(1, Math.round(unit * r)) / r;
