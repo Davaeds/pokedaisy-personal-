@@ -3125,7 +3125,13 @@ class PokeDaisyActivity : Activity() {
         if (code == KeyEvent.KEYCODE_BACK) return null
         if (!::sidePanel.isInitialized || !sidePanel.windowOpen) {
             if (code !in menuHeld) return null
-            if (!down) menuHeld.remove(code)
+            if (!down) {
+                menuHeld.remove(code)
+                // The hotkeys heard it go down (in the window, the QUICK MENU or with X's companion focus): they hear it
+                // let go too, else it stays held for them and a later key alone completes its chord (GitHub #264: X
+                // that ended the focus, then SELECT minutes later, ran SELECT + X's EXIT GAME).
+                if (::hotkeys.isInitialized) for (e in hotkeys.onKey(code, false)) if (!e.pressed) handleHotkey(e)
+            }
             return true
         }
         if (::hotkeys.isInitialized && hotkeysOn) for (e in hotkeys.onKey(code, down)) if (!e.pressed) handleHotkey(e)
