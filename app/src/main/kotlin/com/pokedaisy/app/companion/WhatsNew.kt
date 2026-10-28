@@ -34,6 +34,7 @@ object WhatsNew {
                         "NUZLOCKE: a new tab that keeps score of your run.",
                         "DS RESOLUTION: the DS games' 3D drawn sharper, up to 8x.",
                         "TIPS: now and then, a card about a feature you haven't tried yet.",
+                        "ROMS FOLDERS: link several, like just your gba, gbc and nds folders, from + in the library or SETTINGS > FOLDERS.",
                     ),
                 ),
                 Section(
@@ -41,7 +42,7 @@ object WhatsNew {
                     listOf(
                         "Hotkeys: one with SELECT or START in it no longer swallows that button in the game.",
                         "WILD ENCOUNTERS: turning it back on always brings the wild Pokémon back.",
-                        "Library: a DS game it turned away before it was supported shows up again.",
+                        "Fast-forward and Game Boy sound: FF takes effect as soon as you turn it on, and loud Game Boy music no longer crackles.",
                     ),
                 ),
             ),
