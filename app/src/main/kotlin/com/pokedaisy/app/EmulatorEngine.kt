@@ -760,6 +760,11 @@ class EmulatorEngine(
         vw = MgbaCore.pkVideoWidth()
         vh = MgbaCore.pkVideoHeight()
         videoBuf = MgbaCore.pkVideoBuffer()
+        // The core starts with no follower and no tint (pk_wide_extras_reset): so do what this engine last sent.
+        followerSent = null
+        followerShown = false
+        tintNow.fill(256f)
+        tintSent.fill(256)
         onCoreReady?.invoke(vw, vh)
 
         // A state carries the save as it was when it was made, and loading it writes

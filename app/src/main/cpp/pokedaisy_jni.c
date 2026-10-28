@@ -200,6 +200,7 @@ static void pkTeardown(void) {
     g.vw = g.vh = 0;
     g.audioAvail = 0;
     pk_wide_configure(0);
+    pk_wide_extras_reset();   // FOLLOWER and DAY AND NIGHT: the closed game's lead walked on in the next one
     g.wideCrc = 0;
     g.wideW = 0;
     free(g.wide);

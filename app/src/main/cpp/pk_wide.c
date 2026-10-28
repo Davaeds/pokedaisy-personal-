@@ -833,6 +833,14 @@ void pk_follower_show(struct mCore* core, int on) {
     if (on && core && core->platform(core) == mPLATFORM_GBA) hookScanlines((struct GBA*) core->board);
 }
 
+void pk_wide_extras_reset(void) {
+    followOn = followHave = false;
+    followState = 0;
+    followOam = followSlot = -1;
+    tintR = tintG = tintB = 256;
+    tintShown = false;
+}
+
 static void followBegin(struct GBAVideoRenderer* r);
 static void followEnd(struct GBAVideoRenderer* r);
 
