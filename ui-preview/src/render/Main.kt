@@ -896,7 +896,7 @@ fun activity(expandIntro: Boolean = false, start: Boolean = false, make: () -> a
     File(ctx.filesDir, "media").deleteRecursively()
     prefs.steamGridDbApiKey = null
     prefs.libraryViewMode = 0
-    prefs.romsFolder = null
+    prefs.romsFolders = emptyList()
     prefs.hiddenRoms = emptySet()
     prefs.hotkeysEnabled = true
     prefs.savesDirOverride = null
@@ -1926,6 +1926,10 @@ fun main(args: Array<String>) {
         Shot("library-sort", tw, th, td, activity { LibraryActivity().also { datedLibrary() } }) {
             onNodeWithContentDescription("Sort").performClick()
         },
+        // The header's +: ADD A ROM FILE / ADD A ROMS FOLDER / MANAGE ROMS FOLDERS.
+        Shot("library-add-menu", tw, th, td, activity { LibraryActivity() }) {
+            onNodeWithContentDescription("Add games").performClick()
+        },
         Shot("library-sorted-added", tw, th, td, activity {
             datedLibrary()
             val ctx = android.content.Context()
@@ -2036,19 +2040,19 @@ fun main(args: Array<String>) {
         Shot("setup-roms-noaccess", tw, th, td, activity { LibraryActivity().apply { setup = SetupState().apply { hasAccess = false } } }),
         Shot("setup-roms-scanning", tw, th, td, activity {
             LibraryActivity().apply {
-                setup = SetupState().apply { romsFolder = "/storage/XXXX-XXXX/ROMs/GBA"; scanning = true; checked = 14; toCheck = 41 }
+                setup = SetupState().apply { romsFolders = listOf("/storage/XXXX-XXXX/ROMs/GBA", "/storage/XXXX-XXXX/ROMs/NDS"); scanning = true; checked = 14; toCheck = 41 }
             }
         }),
         Shot("setup-roms-found", tw, th, td, activity {
             LibraryActivity().apply {
                 setup = SetupState().apply {
-                    romsFolder = "/storage/XXXX-XXXX/ROMs/GBA"
+                    romsFolders = listOf("/storage/XXXX-XXXX/ROMs/GBA", "/storage/emulated/0/ROMs/GBC")
                     found = listOf("Pokémon FireRed", "Pokémon Emerald", "Pokémon Unbound", "Pokémon Radical Red", "Pokemon Emerald Imperium")
                 }
             }
         }),
         Shot("setup-roms-none", tw, th, td, activity {
-            LibraryActivity().apply { setup = SetupState().apply { romsFolder = "/storage/emulated/0/Download"; found = emptyList() } }
+            LibraryActivity().apply { setup = SetupState().apply { romsFolders = listOf("/storage/emulated/0/Download"); found = emptyList() } }
         }),
         Shot("setup-saves", tw, th, td, activity {
             LibraryActivity().apply {
@@ -2226,7 +2230,33 @@ fun main(args: Array<String>) {
         Shot("settings-search-tips", tw, th, td, activity { SettingsActivity() }) {
             onNode(hasSetTextAction()).performTextInput("hints")
         },
-        Shot("settings-folders", tw, th * 2, td, activity { SettingsActivity() }) { onNodeWithText("FOLDERS").performScrollTo().performClick() },
+        Shot("settings-folders", tw, th, td, activity { SettingsActivity() }) {
+            onNodeWithText("FOLDERS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+        },
+        // FOLDERS > ROMS FOLDERS with two folders linked, then empty.
+        Shot("settings-folders-roms", tw, th, td, activity {
+            Prefs(android.content.Context()).romsFolders = listOf("/storage/XXXX-XXXX/ROMs/gba", "/storage/emulated/0/ROMs/nds")
+            SettingsActivity()
+        }) {
+            onNodeWithText("FOLDERS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+            waitForIdle()
+            onNodeWithText("ROMS FOLDERS").performSemanticsAction(SemanticsActions.OnClick)
+        },
+        Shot("settings-folders-roms-empty", tw, th, td, activity { SettingsActivity() }) {
+            onNodeWithText("FOLDERS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+            waitForIdle()
+            onNodeWithText("ROMS FOLDERS").performSemanticsAction(SemanticsActions.OnClick)
+        },
+        Shot("settings-folders-saves", tw, th, td, activity { SettingsActivity() }) {
+            onNodeWithText("FOLDERS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+            waitForIdle()
+            onNodeWithText("GAME SAVES").performSemanticsAction(SemanticsActions.OnClick)
+        },
+        Shot("settings-folders-also", tw, th, td, activity { SettingsActivity() }) {
+            onNodeWithText("FOLDERS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
+            waitForIdle()
+            onNodeWithText("ALSO LOOK IN").performSemanticsAction(SemanticsActions.OnClick)
+        },
         // CHEATS from the hub (no cheats yet), then as a game's library menu opens it.
         Shot("settings-cheats-empty", tw, th, td, activity { SettingsActivity() }) {
             onNodeWithText("CHEATS").performScrollTo().performSemanticsAction(SemanticsActions.OnClick)

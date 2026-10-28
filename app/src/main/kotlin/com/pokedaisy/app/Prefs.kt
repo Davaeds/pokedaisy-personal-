@@ -600,12 +600,14 @@ class Prefs(context: Context) {
         if (path.isNullOrBlank()) remove("romsavedir_${file.name}") else putString("romsavedir_${file.name}", path)
     }.apply()
 
-    /** The player's own ROMs folder (first-time setup / Settings > Folders): its
-     * supported games are listed in the library and played in place, and it is
-     * rescanned for new ones whenever the library opens. Null = not linked. */
-    var romsFolder: String?
-        get() = p.getString("roms_folder", null)
-        set(v) = p.edit().putString("roms_folder", v).apply()
+    /** The player's own ROMs folders (first-time setup, the library's +, Settings > FOLDERS > ROMS FOLDERS): their
+     * supported games are listed in the library and played in place, and they are rescanned for new ones whenever
+     * the library opens. Several, so a player can link just `gba`, `gbc`, `nds` instead of a whole frontend tree,
+     * which takes long to look through. Before there could be more than one it was `roms_folder`, read once here. */
+    var romsFolders: List<String>
+        get() = p.getString("roms_folders", null)?.split('\n')?.filter { it.isNotBlank() }
+            ?: listOfNotNull(p.getString("roms_folder", null))
+        set(v) = p.edit().putString("roms_folders", v.distinct().joinToString("\n")).remove("roms_folder").apply()
 
     /** ROMs the player hid from the library (by path; the library menu's HIDE,
      * undone in Settings > HIDDEN GAMES). The file stays where it is, its name,

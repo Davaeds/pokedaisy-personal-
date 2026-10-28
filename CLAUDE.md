@@ -1701,17 +1701,21 @@ so the engine already stopped/suspended) + `TelemetryStore.reset()` (the sampler
 detected game). `LibraryActivity` forwards a non-VIEW launch carrying a ROM there. Setup table in
 docs/DEVELOPMENT.md's "Launch from a frontend" section. Not yet tried from a real frontend.
 
-**First-time setup + linked ROMs folder**: `SetupScreen.kt` (state + UI; `LibraryActivity` owns the
+**First-time setup + linked ROMs folders**: `SetupScreen.kt` (state + UI; `LibraryActivity` owns the
 pickers and threads) shows over the library while `Prefs.setupDone` is false and the library is empty,
-or after Settings' RUN SETUP (`Prefs.setupRequested`): ROMs folder → saves folder (offers folders that
-already hold `.sav`/`.srm`: the ROMs folder, RetroArch's per volume - `SavesLocation.suggestions`) →
+or after Settings' RUN SETUP (`Prefs.setupRequested`): ROMs folders → saves folder (offers folders that
+already hold `.sav`/`.srm`: the ROMs folders, RetroArch's per volume - `SavesLocation.suggestions`) →
 SteamGridDB key (the shared `CoverSync` runner, also behind Settings > Cover Art). Every step is
-skippable. The library is `RomFolder.libraryRoms`: imported `files/roms/` plus the linked folder's
-(`Prefs.romsFolder`) supported ROMs, played in place (never copied), rescanned off the UI thread on
-every library resume, with `CompanionSupport` verdicts cached by path+size+mtime in
+skippable. The library is `RomFolder.libraryRoms`: imported `files/roms/` plus the linked folders'
+(`Prefs.romsFolders`, several since 2026-10-27 - players link `gba` / `gbc` / `nds` rather than a whole frontend tree,
+slow to scan; the old one-folder `roms_folder` pref is read once; a folder inside a linked one is refused, one holding
+linked ones replaces them: `RomFolder.coveredBy` / `withFolder`) supported ROMs, played in place (never copied), rescanned off the UI thread on
+every library resume (an unreadable folder keeps its last games), with `CompanionSupport` verdicts cached by path+size+mtime in
 `filesDir/rom-folder-scan.tsv`. Any game can be HIDDEN from its library menu (`Prefs.hiddenRoms`, by path;
 name, cover and saves kept; Settings > HIDDEN GAMES shows them again); linked ROMs have no DELETE (the
-player's own files). Same-named imported ROMs win (covers/names are keyed by file name). Setup opened by
+player's own files). The library's + is a pick-list: ADD A ROM FILE / ADD A ROMS FOLDER / MANAGE ROMS FOLDERS (Settings
+opened alone on FOLDERS > ROMS FOLDERS, `SCREEN_ROMS_FOLDERS`). Settings > FOLDERS is a hub of four pages: ROMS FOLDERS,
+GAME SAVES, ALSO LOOK IN, SAVE STATES. Same-named imported ROMs win (covers/names are keyed by file name). Setup opened by
 RUN SETUP has a BACK (bottom-left) that returns to Settings from the first step. Folder picks
 need All files access first (`StorageAccess`); setup resumes the pick in `onResume` on return.
 **Zipped ROMs** (`RomArchive.kt`, `.zip` via java.util.zip, `.7z` via commons-compress + xz): the linked

@@ -57,7 +57,7 @@ Any Android 8.0+ device runs the games.
 
 1. Download `PokeDaisy-<version>.apk` from the [latest release](https://github.com/lidor30/pokedaisy/releases/latest)
    on the device and open it (allow your browser or file manager to install apps if Android asks).
-2. Open PokeDaisy. A short setup links your ROMs folder, picks where saves go (PokeDaisy's own folder or another
+2. Open PokeDaisy. A short setup links your ROMs folders, picks where saves go (PokeDaisy's own folder or another
    emulator's, like RetroArch's) and can add cover art. All of it can be changed later in Settings.
 
 The app updates itself: it offers each new version when you open it. The full manual is at

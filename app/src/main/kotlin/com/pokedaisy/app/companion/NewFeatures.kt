@@ -88,11 +88,14 @@ object NewFeatures {
     /** SETTINGS > APP > TIPS: a card now and then about a feature the player hasn't found (FeatureTips). */
     const val TIPS = "tips"
 
+    /** Settings > FOLDERS > ROMS FOLDERS and the library's + menu: several ROMs folders linked at once (RomFolder). */
+    const val ROMS_FOLDERS = "roms_folders"
+
     /** Every feature that gets the tag. */
     val ALL = listOf(
         HUD, BATTLE_BUTTONS, GAME_HOTKEYS, COMPANION_WINDOW, HUD_PC, QUICK_MENU, HUD_REPEL, SINGLE_SCREEN, MORE_TAB, TOUCH_CONTROLS,
         COMPANION_TAB, REUSABLE_TMS, SHINY_ODDS, UNLIT_SCREEN, LIGHT_COMPANION, X_COMPANION, PLAYER_LOOK, RIVAL_LOOK, TEXT_LOOK, DAY_NIGHT,
-        FOLLOWER, COMPANION_HOTKEY, NUZLOCKE, GBA_BUTTONS, DS_RESOLUTION, TIPS,
+        FOLLOWER, COMPANION_HOTKEY, NUZLOCKE, GBA_BUTTONS, DS_RESOLUTION, TIPS, ROMS_FOLDERS,
     )
 
     private const val DAYS = 7

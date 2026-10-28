@@ -125,7 +125,7 @@ import com.pokedaisy.app.companion.ui.drawPixelRoundRect
  */
 class SettingsActivity : ComponentActivity() {
 
-    private enum class Screen { HOME, SPEED, DISPLAY, HOTKEYS, CONTROLS, SHADERS, FIELD_HUD, QUICK_MENU, TOUCH, OVERLAYS, FOLDERS, COVER_ART, SCREENSCRAPER, HIDDEN, ACHIEVEMENTS, CHEATS, CHEAT_ADD, LICENSES, HELP }
+    private enum class Screen { HOME, SPEED, DISPLAY, HOTKEYS, CONTROLS, SHADERS, FIELD_HUD, QUICK_MENU, TOUCH, OVERLAYS, FOLDERS, ROMS_FOLDERS, SAVES_FOLDER, SAVE_SEARCH, STATES_FOLDER, COVER_ART, SCREENSCRAPER, HIDDEN, ACHIEVEMENTS, CHEATS, CHEAT_ADD, LICENSES, HELP }
 
     private lateinit var prefs: Prefs
     private var screen by mutableStateOf(Screen.HOME)
@@ -204,6 +204,9 @@ class SettingsActivity : ComponentActivity() {
     /** Opened straight on HELP (the library's ? button): BACK from its contents leaves. */
     private var helpOnly = false
 
+    /** Opened straight on ROMS FOLDERS (the library's + > MANAGE ROMS FOLDERS): BACK from it leaves. */
+    private var romsFoldersOnly = false
+
     /** Opened from a game's library menu (CHEATS): BACK from its cheats leaves, not to the hub. */
     private var cheatsOnly = false
     /** HOME's search box; kept while a sub-page it led to is open. */
@@ -220,9 +223,9 @@ class SettingsActivity : ComponentActivity() {
             cheatRom = File(path)
             screen = Screen.CHEATS
         }
-        if (intent?.getStringExtra(EXTRA_SCREEN) == SCREEN_HELP) {
-            helpOnly = true
-            screen = Screen.HELP
+        when (intent?.getStringExtra(EXTRA_SCREEN)) {
+            SCREEN_HELP -> { helpOnly = true; screen = Screen.HELP }
+            SCREEN_ROMS_FOLDERS -> { romsFoldersOnly = true; screen = Screen.ROMS_FOLDERS }
         }
         setContent {
             AppTheme { com.pokedaisy.app.companion.ui.CompactTextOnSmallWindows {
@@ -283,6 +286,10 @@ class SettingsActivity : ComponentActivity() {
                         Screen.TOUCH -> tk("TOUCH CONTROLS")
                         Screen.OVERLAYS -> tk("OVERLAY")
                         Screen.FOLDERS -> tk("FOLDERS")
+                        Screen.ROMS_FOLDERS -> tk("ROMS FOLDERS")
+                        Screen.SAVES_FOLDER -> tk("GAME SAVES")
+                        Screen.SAVE_SEARCH -> tk("ALSO LOOK IN")
+                        Screen.STATES_FOLDER -> tk("SAVE STATES")
                         Screen.COVER_ART -> tk("COVER ART")
                         Screen.SCREENSCRAPER -> "ScreenScraper"
                         Screen.HIDDEN -> tk("HIDDEN GAMES")
@@ -310,7 +317,11 @@ class SettingsActivity : ComponentActivity() {
                     Screen.QUICK_MENU -> QuickMenuScreen(m)
                     Screen.TOUCH -> TouchScreen(m)
                     Screen.OVERLAYS -> OverlaysScreen(m, small)
-                    Screen.FOLDERS -> FoldersScreen(m, small)
+                    Screen.FOLDERS -> SubRowsScreen(m) { folderRows() }
+                    Screen.ROMS_FOLDERS -> RomsFoldersScreen(m, small)
+                    Screen.SAVES_FOLDER -> SavesFolderScreen(m, small)
+                    Screen.SAVE_SEARCH -> AlsoLookInScreen(m, small)
+                    Screen.STATES_FOLDER -> StatesFolderScreen(m, small)
                     Screen.COVER_ART -> CoverArtScreen(m, small)
                     Screen.SCREENSCRAPER -> ScreenScraperScreen(m, small)
                     Screen.HIDDEN -> HiddenScreen(m, small)
@@ -483,7 +494,9 @@ class SettingsActivity : ComponentActivity() {
             screen == Screen.CHEAT_ADD -> screen = Screen.CHEATS
             screen == Screen.HELP && docsUi.back() -> {}
             screen == Screen.HELP && helpOnly -> finish()
-            screen == Screen.HOME || (screen == Screen.CHEATS && cheatsOnly) -> finish()
+            screen == Screen.HOME || (screen == Screen.CHEATS && cheatsOnly) || (screen == Screen.ROMS_FOLDERS && romsFoldersOnly) -> finish()
+            // FOLDERS' pages go back to it.
+            screen in FOLDER_PAGES -> screen = Screen.FOLDERS
             // SHADERS and OVERLAY open from DISPLAY OPTIONS.
             screen == Screen.SHADERS || screen == Screen.OVERLAYS -> { overlayRemoveMode = false; screen = Screen.DISPLAY }
             else -> { cheatRemoveMode = false; overlayRemoveMode = false; screen = Screen.HOME }
@@ -690,7 +703,7 @@ class SettingsActivity : ComponentActivity() {
                 ssLogin.refresh(prefs) { r -> runOnUiThread { r() } }
                 screen = Screen.SCREENSCRAPER
             }.takeIf { ScreenScraperClient.enabled },
-            SettingRow(tk("FOLDERS"), null, opensPage = true, subtitle = "Where ROMs, saves and states live") { screen = Screen.FOLDERS },
+            SettingRow(tk("FOLDERS"), null, opensPage = true, subtitle = "Where ROMs, saves and states live", labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.ROMS_FOLDERS)) { screen = Screen.FOLDERS },
             SettingRow(tk("HIDDEN GAMES"), RomFolder.hiddenRoms(this@SettingsActivity, prefs).size.takeIf { it > 0 }?.toString() ?: tk("NONE"), opensPage = true) { screen = Screen.HIDDEN },
             // A game's GameShark / Action Replay / CodeBreaker codes, on their own page.
             SettingRow(tk("CHEATS"), onOff(prefs.cheatsEnabled), opensPage = true) { screen = Screen.CHEATS },
@@ -1621,88 +1634,150 @@ class SettingsActivity : ComponentActivity() {
 
     // ---- folders --------------------------------------------------------
 
-    @Composable
-    private fun FoldersScreen(m: GbaTextMetrics, small: GbaTextMetrics) {
-        val tick = folderTick
-        val savesDir = remember(tick) { SavesLocation.dir(this@SettingsActivity, prefs) }
-        val statesDir = remember { File(getExternalFilesDir(null), "states").apply { mkdirs() } }
-        val pickSavesDir = rememberLauncherForActivityResult(StorageAccess.PickFolder()) { uri ->
-            val path = pickedFolder(uri) ?: return@rememberLauncherForActivityResult
-            prefs.savesDirOverride = path
-            folderTick++
-        }
-        val pickExtraSavesDir = rememberLauncherForActivityResult(StorageAccess.PickFolder()) { uri ->
-            val path = pickedFolder(uri) ?: return@rememberLauncherForActivityResult
-            prefs.extraSaveDirs = prefs.extraSaveDirs + path
-            folderTick++
-        }
-        val pickRomsDir = rememberLauncherForActivityResult(StorageAccess.PickFolder()) { uri ->
-            val path = pickedFolder(uri) ?: return@rememberLauncherForActivityResult
-            if (path != prefs.romsFolder) {
-                prefs.romsFolder = path
-                RomFolder.clearCache(this)
-            }
-            rescanRomsFolder()
-        }
-
-        Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-            RomsFolderSection(m, small, onChoose = { pickFolder(pickRomsDir) })
-            Spacer(Modifier.height(m.u * 4))
-            FolderSection(tr("GAME SAVES (.SAV / .SRM)"), savesDir, tick, m, small) {
-                OptionButton(tk("CHANGE FOLDER"), small, onClick = { pickFolder(pickSavesDir) })
-                if (prefs.savesDirOverride != null) {
-                    OptionButton(tk("USE DEFAULT"), small, onClick = { prefs.savesDirOverride = null; folderTick++ })
-                }
-            }
-            Spacer(Modifier.height(m.u * 4))
-            AlsoLookInSection(tick, m, small, onAdd = { pickFolder(pickExtraSavesDir) })
-            Spacer(Modifier.height(m.u * 4))
-            FolderSection(tr("SAVE STATES"), statesDir, tick, m, small)
-        }
+    /** FOLDERS: a row for each kind of folder, each on its own page (it was one long page of all four). */
+    private fun folderRows(): List<SettingRow> {
+        @Suppress("UNUSED_EXPRESSION") folderTick
+        val roms = prefs.romsFolders
+        val extra = prefs.extraSaveDirs
+        val states = statesDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        return listOf(
+            SettingRow(
+                tk("ROMS FOLDERS"), if (roms.isEmpty()) tk("NONE") else roms.size.toString(), opensPage = true,
+                subtitle = "Where the library finds your games", labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.ROMS_FOLDERS),
+            ) { screen = Screen.ROMS_FOLDERS },
+            SettingRow(tk("GAME SAVES"), if (prefs.savesDirOverride == null) tk("DEFAULT") else tk("CUSTOM"), opensPage = true, subtitle = "Where new saves go") {
+                screen = Screen.SAVES_FOLDER
+            },
+            SettingRow(tk("ALSO LOOK IN"), if (extra.isEmpty()) tk("NONE") else extra.size.toString(), opensPage = true, subtitle = "More folders to find a game's save in") {
+                screen = Screen.SAVE_SEARCH
+            },
+            SettingRow(tk("SAVE STATES"), humanSize(states), opensPage = true, subtitle = "The app's own save states") { screen = Screen.STATES_FOLDER },
+        )
     }
 
-    /** The linked ROMs folder: no file list or delete buttons here - those are
-     * the player's own files, not ours. */
+    private val statesDir by lazy { File(getExternalFilesDir(null), "states").apply { mkdirs() } }
+
+    /** ROMS FOLDERS: the linked folders, each with its games' count. No file list or delete buttons here - those
+     * are the player's own files, not ours. */
     @Composable
-    private fun RomsFolderSection(m: GbaTextMetrics, small: GbaTextMetrics, onChoose: () -> Unit) {
+    private fun RomsFoldersScreen(m: GbaTextMetrics, small: GbaTextMetrics) {
         val tick = folderTick
-        val folder = prefs.romsFolder
-        val found = remember(tick, folder) { RomFolder.found(this@SettingsActivity, prefs).size }
-        OptionListWindow(m, Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(horizontal = m.u * 4)) {
-                GbaText(tr("ROMS FOLDER"), OptionColors.label, OptionColors.labelShadow, m)
-                GbaText(folder ?: tr("NOT LINKED"), OptionColors.muted, OptionColors.mutedShadow, small, maxLines = 3)
-                GbaText(
-                    when {
-                        folder == null -> tr("Link the folder you keep your games in: its supported ROMs join the library and play from there.")
-                        romsScanning -> tr("LOOKING FOR GAMES…")
-                        else -> tr("{0} GAME(S) IN THE LIBRARY · CHECKED FOR NEW ONES EACH TIME THE APP OPENS", found)
-                    },
-                    OptionColors.muted, OptionColors.mutedShadow, small, maxLines = Int.MAX_VALUE,
-                )
-                Row(
-                    modifier = Modifier.padding(vertical = m.u * 4),
-                    horizontalArrangement = Arrangement.spacedBy(m.u * 4),
-                ) {
-                    OptionButton(if (folder == null) tk("CHOOSE FOLDER") else tk("CHANGE FOLDER"), small, onClick = onChoose)
-                    if (folder != null) {
-                        OptionButton(tk("RESCAN"), small, enabled = !romsScanning, onClick = { rescanRomsFolder() })
-                        OptionButton(tk("UNLINK"), small, onClick = { prefs.romsFolder = null; RomFolder.clearCache(this@SettingsActivity); folderTick++ })
+        val pick = rememberLauncherForActivityResult(StorageAccess.PickFolder()) { uri ->
+            val path = pickedFolder(uri) ?: return@rememberLauncherForActivityResult
+            val folders = prefs.romsFolders
+            val already = RomFolder.coveredBy(folders, path)
+            if (already != null) {
+                Toast.makeText(this, if (already == File(path).absolutePath) tr("That folder is already linked") else tr("Already linked through {0}", already), Toast.LENGTH_LONG).show()
+                return@rememberLauncherForActivityResult
+            }
+            prefs.romsFolders = RomFolder.withFolder(folders, path)
+            rescanRomsFolder()
+        }
+        val folders = remember(tick) { prefs.romsFolders }
+        val counts = remember(tick, folders) { folders.associateWith { RomFolder.found(this@SettingsActivity, prefs, it).size } }
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+            OptionListWindow(m, Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(horizontal = m.u * 4)) {
+                    GbaText(
+                        tr("Link the folders you keep your games in: their supported ROMs join the library and play from there."),
+                        OptionColors.label, OptionColors.labelShadow, small, maxLines = Int.MAX_VALUE,
+                    )
+                    GbaText(
+                        tr("You can add several. Picking just the folders with your games (gba, gbc, nds) is quicker to look through than one big folder of everything."),
+                        OptionColors.muted, OptionColors.mutedShadow, small, maxLines = Int.MAX_VALUE, modifier = Modifier.padding(top = m.u * 2),
+                    )
+                    if (folders.isNotEmpty()) {
+                        GbaText(
+                            if (romsScanning) tr("LOOKING FOR GAMES…")
+                            else tr("{0} GAME(S) IN THE LIBRARY · CHECKED FOR NEW ONES EACH TIME THE APP OPENS", counts.values.sum()),
+                            OptionColors.muted, OptionColors.mutedShadow, small, maxLines = Int.MAX_VALUE, modifier = Modifier.padding(top = m.u * 2),
+                        )
+                    }
+                    folders.forEach { d ->
+                        Row(Modifier.fillMaxWidth().padding(top = m.u * 4), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                GbaText(shortPath(d), OptionColors.label, OptionColors.labelShadow, small, maxLines = 2)
+                                GbaText(tr("{0} GAME(S)", counts[d] ?: 0), OptionColors.muted, OptionColors.mutedShadow, small)
+                            }
+                            Spacer(Modifier.width(m.u * 4))
+                            OptionButton(tk("REMOVE"), small, enabled = !romsScanning, onClick = {
+                                prefs.romsFolders = prefs.romsFolders - d
+                                RomFolder.forget(this@SettingsActivity, d)
+                                folderTick++
+                            })
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.padding(vertical = m.u * 4),
+                        horizontalArrangement = Arrangement.spacedBy(m.u * 4),
+                    ) {
+                        OptionButton(if (folders.isEmpty()) tk("CHOOSE FOLDER") else tk("ADD FOLDER"), small, enabled = !romsScanning, onClick = { pickFolder(pick) })
+                        if (folders.isNotEmpty()) {
+                            OptionButton(tk("RESCAN"), small, enabled = !romsScanning, onClick = { rescanRomsFolder() })
+                        }
                     }
                 }
             }
         }
     }
 
+    /** GAME SAVES: where new saves go (the app's own folder unless the player picked one). */
+    @Composable
+    private fun SavesFolderScreen(m: GbaTextMetrics, small: GbaTextMetrics) {
+        val tick = folderTick
+        val savesDir = remember(tick) { SavesLocation.dir(this@SettingsActivity, prefs) }
+        val pick = rememberLauncherForActivityResult(StorageAccess.PickFolder()) { uri ->
+            val path = pickedFolder(uri) ?: return@rememberLauncherForActivityResult
+            prefs.savesDirOverride = path
+            folderTick++
+        }
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+            FolderSection(null, savesDir, tick, m, small) {
+                OptionButton(tk("CHANGE FOLDER"), small, onClick = { pickFolder(pick) })
+                if (prefs.savesDirOverride != null) {
+                    OptionButton(tk("USE DEFAULT"), small, onClick = { prefs.savesDirOverride = null; folderTick++ })
+                }
+            }
+        }
+    }
+
+    /** ALSO LOOK IN's page. */
+    @Composable
+    private fun AlsoLookInScreen(m: GbaTextMetrics, small: GbaTextMetrics) {
+        val pick = rememberLauncherForActivityResult(StorageAccess.PickFolder()) { uri ->
+            val path = pickedFolder(uri) ?: return@rememberLauncherForActivityResult
+            prefs.extraSaveDirs = prefs.extraSaveDirs + path
+            folderTick++
+        }
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+            AlsoLookInSection(folderTick, m, small, onAdd = { pickFolder(pick) })
+        }
+    }
+
+    /** SAVE STATES: the app's own states, every file with its delete button. */
+    @Composable
+    private fun StatesFolderScreen(m: GbaTextMetrics, small: GbaTextMetrics) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+            FolderSection(null, statesDir, folderTick, m, small)
+        }
+    }
+
     private var romsScanning by mutableStateOf(false)
 
+    /** A folder added while a scan runs: scan again once it's done. */
+    private var rescanAgain = false
+
     private fun rescanRomsFolder() {
-        if (romsScanning) return
+        if (romsScanning) { rescanAgain = true; return }
         romsScanning = true
         folderTick++
         Thread({
             RomFolder.scan(this, prefs)
-            runOnUiThread { romsScanning = false; folderTick++ }
+            runOnUiThread {
+                romsScanning = false
+                folderTick++
+                if (rescanAgain) { rescanAgain = false; rescanRomsFolder() }
+            }
         }, "pokedaisy-rom-scan").apply { isDaemon = true; start() }
     }
 
@@ -1739,9 +1814,8 @@ class SettingsActivity : ComponentActivity() {
         val dirs = remember(tick) { prefs.extraSaveDirs }
         OptionListWindow(m, Modifier.fillMaxWidth()) {
             Column(Modifier.padding(horizontal = m.u * 4)) {
-                GbaText(tr("ALSO LOOK IN"), OptionColors.label, OptionColors.labelShadow, m)
                 GbaText(
-                    tr("A game's save found in one of these folders is played and saved right there, so another emulator keeps seeing it. New saves go to the saves folder above. A game can have its own folder too: SAVE FOLDER in its library menu."),
+                    tr("A game's save found in one of these folders is played and saved right there, so another emulator keeps seeing it. New saves go to the GAME SAVES folder. A game can have its own folder too: SAVE FOLDER in its library menu."),
                     OptionColors.muted, OptionColors.mutedShadow, small, maxLines = Int.MAX_VALUE,
                 )
                 dirs.forEach { d ->
@@ -1760,7 +1834,8 @@ class SettingsActivity : ComponentActivity() {
 
     @Composable
     private fun FolderSection(
-        title: String,
+        /** Null: the page's own title says what it is. */
+        title: String?,
         dir: File,
         tick: Int,
         m: GbaTextMetrics,
@@ -1776,7 +1851,7 @@ class SettingsActivity : ComponentActivity() {
         val total = files.sumOf { it.length() }
         OptionListWindow(m, Modifier.fillMaxWidth()) {
             Column(Modifier.padding(horizontal = m.u * 4)) {
-                GbaText(title, OptionColors.label, OptionColors.labelShadow, m)
+                title?.let { GbaText(it, OptionColors.label, OptionColors.labelShadow, m) }
                 GbaText(dir.absolutePath, OptionColors.muted, OptionColors.mutedShadow, small, maxLines = 3)
                 GbaText(tr("{0} FILE(S) · {1}", files.size, humanSize(total)), OptionColors.muted, OptionColors.mutedShadow, small)
                 Row(
@@ -1817,6 +1892,7 @@ class SettingsActivity : ComponentActivity() {
     }
 
     companion object {
+        private val FOLDER_PAGES = setOf(Screen.ROMS_FOLDERS, Screen.SAVES_FOLDER, Screen.SAVE_SEARCH, Screen.STATES_FOLDER)
         val RATES = floatArrayOf(0f, 1.5f, 2f, 3f, 4f, 5f, 6f, 8f, 10f)
         const val REPO_URL = "https://github.com/lidor30/pokedaisy"
         /** A ROM path: open straight on that game's CHEATS (its library menu). */
@@ -1824,6 +1900,8 @@ class SettingsActivity : ComponentActivity() {
         /** Opens one page alone ([SCREEN_HELP]: the manual); BACK finishes. */
         const val EXTRA_SCREEN = "screen"
         const val SCREEN_HELP = "HELP"
+        /** [EXTRA_SCREEN]: FOLDERS > ROMS FOLDERS alone (the library's + > MANAGE ROMS FOLDERS). */
+        const val SCREEN_ROMS_FOLDERS = "ROMS_FOLDERS"
         /** Cheat files are text; anything bigger isn't one. */
         const val MAX_CHEAT_FILE = 1 shl 20
         /** One picked overlay file at most (read into memory; a pack of a few 4K borders is ~20 MB). */
