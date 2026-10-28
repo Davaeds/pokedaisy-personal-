@@ -2,11 +2,13 @@
 
 <img src="https://pokedaisy.com/og.png" alt="PokeDaisy: Game Boy, Game Boy Color, GBA and DS player with a live companion, on two screens or one, for Pokemon games and ROM hacks, free and open source" width="100%">
 
-<h3>Play your Pokemon games. See everything about them on your second screen, or right beside the game.</h3>
+<h3>Pokémon, played better. Game Boy to DS, with a live companion, a widescreen overworld, a HUD and quick menu, and every chore one button away.</h3>
 
 <p>
-  <a href="https://github.com/lidor30/pokedaisy/releases/latest"><img src="https://img.shields.io/github/v/release/lidor30/pokedaisy?label=release&color=2f81f7" alt="Latest PokeDaisy release"></a>
-  <a href="https://github.com/lidor30/pokedaisy/releases"><img src="https://img.shields.io/github/downloads/lidor30/pokedaisy/total?label=downloads&color=5c8a3c" alt="Total downloads"></a>
+  <a href="https://github.com/lidor30/pokedaisy/releases/latest"><img src="https://img.shields.io/github/v/release/lidor30/pokedaisy?style=for-the-badge&label=release&color=2f81f7" alt="Latest PokeDaisy release"></a>
+  <a href="https://github.com/lidor30/pokedaisy/releases"><img src="https://img.shields.io/github/downloads/lidor30/pokedaisy/total?style=for-the-badge&label=downloads&color=5c8a3c" alt="Total downloads"></a>
+  <a href="https://discord.gg/vcmyKZZV5q"><img src="https://img.shields.io/badge/Discord-join-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join PokeDaisy on Discord"></a>
+  <a href="https://www.reddit.com/r/PokeDaisy/"><img src="https://img.shields.io/reddit/subreddit-subscribers/PokeDaisy?style=for-the-badge&logo=reddit&logoColor=white&label=r%2FPokeDaisy&color=FF4500" alt="r/PokeDaisy on Reddit"></a>
 </p>
 
 <p>
@@ -15,10 +17,13 @@
   · <strong><a href="#supported-games">Supported games</a></strong>
   · <strong><a href="https://pokedaisy.com/docs/">Manual</a></strong>
   · <strong><a href="https://github.com/lidor30/pokedaisy/issues">Report a problem</a></strong>
-  · <strong><a href="https://www.reddit.com/r/PokeDaisy/">r/PokeDaisy</a></strong>
-  · <strong><a href="https://ko-fi.com/pokedaisy">Ko-fi</a></strong>
-  · <strong><a href="https://www.patreon.com/cw/pokedaisy">Patreon</a></strong>
-  · <strong><a href="https://buymeacoffee.com/lidor30g">Buy me a coffee</a></strong>
+</p>
+
+<p>
+  <sub><strong>Support PokeDaisy</strong></sub><br>
+  <a href="https://www.patreon.com/cw/pokedaisy"><img src="https://img.shields.io/badge/Patreon-F96854?logo=patreon&logoColor=white" alt="Patreon"></a>
+  <a href="https://buymeacoffee.com/lidor30g"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee"></a>
+  <a href="https://ko-fi.com/pokedaisy"><img src="https://img.shields.io/badge/Ko--fi-FF5E5B?logo=kofi&logoColor=white" alt="Ko-fi"></a>
 </p>
 
 </div>
