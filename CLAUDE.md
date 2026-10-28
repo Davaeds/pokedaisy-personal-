@@ -1925,7 +1925,7 @@ default 22.1 can't build it: use `~/.nvm/versions/node/v22.23.3/bin`).
 - Labels: `fixed in next release` on a fixed one. Game requests and ideas go to Discussions (above); exact duplicates
   are closed pointing at the original.
 
-**Support window + WHAT'S NEW (2026-10-27)**: the Library asks for support once (`SupportAsk`, `ui/SupportWindow.kt`): after 10 h of
+**Support window + WHAT'S NEW (2026-10-27)**: the Library asks for support once (`SupportAsk`, `ui/SupportWindow.kt`): after 5 h of
 play (`Prefs.playMillis`, counted by PokeDaisyActivity's play clock while a game runs in front, not asleep), REMIND ME LATER (or
 BACK) +5 h, NO THANKS or a site (BUY ME A COFFEE / PATREON / KO-FI, the website's links) ends it; never on WHAT'S NEW's visit or
 over an update offer / setup. The user's calls: no play time shown (it read as tracking), no line under the site names, no

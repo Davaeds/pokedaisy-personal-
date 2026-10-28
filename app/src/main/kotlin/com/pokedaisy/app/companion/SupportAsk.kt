@@ -7,7 +7,7 @@ package com.pokedaisy.app.companion
  */
 object SupportAsk {
     const val HOUR = 60 * 60 * 1000L
-    const val FIRST_ASK = 10 * HOUR
+    const val FIRST_ASK = 5 * HOUR
     const val REMIND_AFTER = 5 * HOUR
 
     /** Where each tile goes: the same pages as the website's footer (website/src/lib/links.js); the names are the sites' own, not translated. */

@@ -853,7 +853,7 @@ fun trade(setup: com.pokedaisy.app.companion.ui.TradeState.() -> Unit = {}): () 
 /** The Library just after an update, its WHAT'S NEW up with 1.3.2's notes. */
 fun whatsNewLibrary() = LibraryActivity().apply { whatsNew = com.pokedaisy.app.companion.WhatsNew.notesFor("1.3.3") }
 
-/** The Library after 10 hours of play: the support window up. */
+/** The Library after 5 hours of play: the support window up. */
 fun supportLibrary() = LibraryActivity().apply { supportAsk = true }
 
 /** The activity [activity] made last (a shot's action presses its keys). */

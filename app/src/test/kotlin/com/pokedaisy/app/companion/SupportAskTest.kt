@@ -5,13 +5,13 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The support window's timing: 10 hours of play first, 5 more after REMIND ME LATER, never once answered. */
+/** The support window's timing: 5 hours of play first, 5 more after REMIND ME LATER, never once answered. */
 class SupportAskTest {
     private val h = SupportAsk.HOUR
 
-    @Test fun `asks after 10 hours of play`() {
-        assertFalse(SupportAsk.due(played = 9 * h, askAt = SupportAsk.FIRST_ASK, done = false))
-        assertTrue(SupportAsk.due(played = 10 * h, askAt = SupportAsk.FIRST_ASK, done = false))
+    @Test fun `asks after 5 hours of play`() {
+        assertFalse(SupportAsk.due(played = 4 * h, askAt = SupportAsk.FIRST_ASK, done = false))
+        assertTrue(SupportAsk.due(played = 5 * h, askAt = SupportAsk.FIRST_ASK, done = false))
         assertTrue(SupportAsk.due(played = 40 * h, askAt = SupportAsk.FIRST_ASK, done = false))
     }
 

@@ -28,13 +28,10 @@ object WhatsNew {
                 Section(
                     NEW,
                     listOf(
-                        "Pokémon Black on the DS: party, bag, map, Pokédex, EXPAND, FLY and the PC from anywhere.",
-                        "Three more games: Wishes of Tomorrow, PureRed / PureBlue and Dreamstone Mysteries.",
+                        "New games: Pokémon Black, Wishes of Tomorrow, PureRed / PureBlue and Dreamstone Mysteries.",
                         "SHINY ODDS: pick how often wild Pokémon are shiny. Shiny ones get their own icons and marks.",
                         "NUZLOCKE: a new tab that keeps score of your run.",
                         "DS RESOLUTION: the DS games' 3D drawn sharper, up to 8x.",
-                        "TIPS: now and then, a card about a feature you haven't tried yet.",
-                        "ROMS FOLDERS: link several, like just your gba, gbc and nds folders, from + in the library or SETTINGS > FOLDERS.",
                     ),
                 ),
                 Section(
