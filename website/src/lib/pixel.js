@@ -5,7 +5,7 @@
 
 import { CREATURES } from './creatures.js';
 import { HANDHELD_SPRITES } from './handheld.js';
-import { regionMapSprite } from './regionmap.js';
+import { regionMapSprite, seaSprite } from './regionmap.js';
 
 const INK = '#202020';
 
@@ -747,6 +747,7 @@ SPRITES.logo = daisyBall(32);
 for (const [id, c] of Object.entries(CREATURES)) SPRITES[id] = { pal: c.pal, rows: c.rows };
 Object.assign(SPRITES, HANDHELD_SPRITES);
 SPRITES.regionMap = regionMapSprite();
+SPRITES.sea = seaSprite();
 // The MAP tab's player: the walker's head, as the region map marks where you are.
 SPRITES.mapHead = { pal: SPRITES.walker.pal, rows: SPRITES.walker.rows.slice(0, 8) };
 

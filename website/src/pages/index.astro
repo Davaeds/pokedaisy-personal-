@@ -104,11 +104,9 @@ const title = 'POKEDAISY'.split('');
       <div class="duo">
         <div class="duo-dual">
           <HeroDevice />
-          <span class="tag tag-dual chip f-chip"><Pixel name="dual" scale={0.5} /> TWO SCREENS</span>
         </div>
         <div class="duo-single">
           <HeroSingleDevice />
-          <span class="tag tag-single chip f-chip"><Pixel name="single" scale={0.5} /> ONE SCREEN</span>
         </div>
       </div>
     </div>
@@ -361,13 +359,10 @@ const title = 'POKEDAISY'.split('');
   .hero-art { position: relative; }
   /* Both handhelds at once: the Thor at the back on the right, the Retroid Pocket 5 in front, lower left,
      over only the Thor's bottom edge so both sets of controls show. */
-  .duo { position: relative; display: grid; padding-bottom: 14px; }
+  .duo { position: relative; display: grid; }
   .duo-dual { position: relative; width: 66%; margin-left: auto; }
   .duo-single { position: relative; width: 82%; margin-top: -6%; z-index: 2; }
   .glow { position: absolute; inset: -6% -4%; background: radial-gradient(closest-side, rgba(232, 48, 40, 0.18), rgba(61, 111, 224, 0.12) 60%, transparent); filter: blur(30px); }
-  .tag { position: absolute; z-index: 3; filter: var(--hard-shadow); animation: hover 5s steps(10) infinite alternate-reverse; }
-  .tag-dual { right: -12px; top: -18px; }
-  .tag-single { left: 4%; bottom: -22px; }
 
   /* Ticker */
   .ticker { background: var(--ink); color: #fff; overflow: hidden; border-block: var(--px) solid var(--ink); }
@@ -437,10 +432,6 @@ const title = 'POKEDAISY'.split('');
   }
   @media (max-width: 560px) {
     .feature-grid, .player-grid { grid-template-columns: 1fr; }
-    /* The two labels stay (they're the point of the picture), smaller and inside the edges. */
-    .tag { font-size: var(--t-xs); }
-    .tag-dual { right: 0; top: -16px; }
-    .tag-single { left: 2%; bottom: -18px; }
   }
 </style>
 

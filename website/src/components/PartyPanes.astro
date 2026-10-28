@@ -34,7 +34,7 @@ const summaries = [
 <div class="pane on" data-pane="grid">
   {party.map((m, i) => (
     <div class:list={['slot', i === 0 && 'sel', m.status === 'FNT' && 'fnt']} data-slot={i}
-      style={`left:${i % 2 ? 288 : 16}px;top:${24 + Math.floor(i / 2) * 138}px`}>
+      style={`left:${i % 2 ? 'calc(50% + 8px)' : '16px'};top:${24 + Math.floor(i / 2) * 138}px`}>
       <span class="slot-ball"><Pixel name="partyOrb" scale={1} /></span>
       <span class="slot-icon"><Pixel name={m.icon} scale={m.egg ? 1.5 : 1} /></span>
       <span class="slot-name t24">{m.name}</span>
@@ -88,7 +88,7 @@ const summaries = [
         <span class:list={['strip-icon', i === si && 'f-iconBoxOn on']}><Pixel name={icon} scale={1} /></span>
       ))}
     </div>
-    <div class="pb pb-run f-pbRun" style="left:474px;top:378px;width:72px;height:56px" data-b={`back${si}`}><Pixel name="back" scale={1.334} /></div>
+    <div class="pb pb-run f-pbRun" style="right:14px;top:378px;width:72px;height:56px" data-b={`back${si}`}><Pixel name="back" scale={1.334} /></div>
   </div>
 ))}
 
@@ -96,7 +96,7 @@ const summaries = [
   /* FireRedPartyPalette: normal / selected / fainted slots, an orb over the corner. */
   .app .slot {
     --o: #4a4a63; --l: #84c6de; --f: #3994de; --s: #297bb5;
-    position: absolute; width: 256px; height: 118px; color: #fff; text-shadow: 2px 2px 0 #737373;
+    position: absolute; width: calc(50% - 24px); height: 118px; color: #fff; text-shadow: 2px 2px 0 #737373;
     background: var(--f);
     box-shadow: inset 0 0 0 4px var(--o), inset 0 0 0 6px var(--l);
     clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
@@ -130,6 +130,7 @@ const summaries = [
   .app .sum-r { display: grid; align-content: start; gap: 2px; overflow: hidden; }
   .app .smv { display: grid; gap: 4px; padding: 2px 0 2px 10px; box-shadow: inset 4px 0 0 var(--t); }
   .app .sum-r .sep-h { margin: 3px 0; }
-  .app .strip { position: absolute; left: 230px; top: 376px; display: flex; gap: 10px; align-items: center; }
+  /* Between DOWN (ends at 162) and BACK (starts 72 + 14 from the right). */
+  .app .strip { position: absolute; left: 162px; right: 86px; justify-content: center; top: 376px; display: flex; gap: 10px; align-items: center; }
   .app .strip-icon { display: grid; place-items: center; width: 60px; height: 60px; }
 </style>

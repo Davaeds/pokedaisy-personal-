@@ -132,6 +132,17 @@ function pixel(px, py) {
   return (px * 7 + py * 3) % 11 === 0 ? 'G' : 'g';
 }
 
+/** The open sea alone, one period of its wave lines (10 x 12): the MAP pane's backdrop past the map's sides. */
+export function seaSprite() {
+  const rows = [];
+  for (let y = 0; y < 12; y++) {
+    let row = '';
+    for (let x = 0; x < 10; x++) row += (y % 6 === 2 && (x + (y % 12 === 2 ? 0 : 5)) % 10 < 3) ? 'w' : '~';
+    rows.push(row);
+  }
+  return { pal: PAL, rows };
+}
+
 export function regionMapSprite() {
   const w = TILES[0].length * T;
   const h = TILES.length * T;

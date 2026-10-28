@@ -44,8 +44,6 @@ const games = new Set(data.matrix.rows.map((r) => r.game)).size;
 
       <div class="dev"><HeroDevice still /></div>
       <div class="dev1"><HeroSingleDevice still /></div>
-      <span class="tag t1 chip f-chip"><Pixel name="dual" scale={0.5} /> TWO SCREENS</span>
-      <span class="tag t2 chip f-chip"><Pixel name="single" scale={0.5} /> ONE SCREEN</span>
     </div>
   </body>
 </html>
@@ -84,7 +82,4 @@ const games = new Set(data.matrix.rows.map((r) => r.game)).size;
   /* The Thor at the back on the right, the Retroid Pocket 5 in front under it, over only its bottom edge. */
   .dev { position: absolute; right: 48px; top: 40px; width: 330px; }
   .dev1 { position: absolute; left: 610px; top: 430px; width: 410px; z-index: 2; }
-  .tag { position: absolute; z-index: 3; filter: drop-shadow(8px 8px 0 rgba(29, 27, 38, 0.14)); }
-  .t1 { right: 30px; top: 14px; }
-  .t2 { left: 1034px; top: 560px; }
 </style>

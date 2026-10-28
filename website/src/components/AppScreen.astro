@@ -10,7 +10,7 @@ import Pixel from './Pixel.astro';
 /**
  * [tabs]: the app's tab bar along the bottom (the hero handhelds' screens); [tinted]: the app's teal, faintly;
  * [width]: a wider canvas, the companion's window on a 16:9 screen (SidePanel.kt's companionWindowSize, ~1.39:1) -
- * the 560-wide panes stay in its middle; [shoulders]: that window's L / R keys at the tab bar's ends.
+ * the panes stretch across it; [shoulders]: that window's L / R keys at the tab bar's ends.
  */
 interface Props { label: string; bare?: boolean; tabs?: string[]; tinted?: boolean; width?: number; shoulders?: boolean }
 const { label, bare = false, tabs, tinted = false, width = 560, shoulders = false } = Astro.props;
@@ -52,9 +52,11 @@ const H = tabs ? 488 : 448;
   }
   /* Scaled to a fraction of a device pixel (a phone): smooth the font rather than break it. */
   .app.soft { -webkit-font-smoothing: antialiased; }
-  .app .app-body { position: absolute; left: calc((var(--aw, 560px) - 560px) / 2); width: 560px; top: 0; height: 448px; }
+  /* The panes take the canvas's width: wider in the one-screen window, where they stretch (as the app's do). */
+  .app .app-body { position: absolute; left: 0; width: var(--aw, 560px); top: 0; height: 448px; }
   .app.tinted { background: repeating-linear-gradient(180deg, #e2f1ee 0 2px, #d6ebe7 2px 4px); }
-  .app .app-tabs { position: absolute; left: 14px; right: 14px; bottom: 10px; height: 34px; display: flex; gap: 8px; }
+  /* Under the panes with a gap: they end by 448, the bar starts at 452. */
+  .app .app-tabs { position: absolute; left: 14px; right: 14px; bottom: 6px; height: 30px; display: flex; gap: 8px; }
   .app .app-tab { flex: 1; display: grid; place-items: center; font-size: 24px; color: #707070; text-shadow: 2px 2px 0 #c4c4c4; }
   .app .app-tab.on { color: #d81818; text-shadow: 2px 2px 0 #f8b8a8; }
   .app .app-tab.gear { flex: 0 0 60px; }
@@ -87,7 +89,7 @@ const H = tabs ? 488 : 448;
   .app .pb-move::before { background: linear-gradient(90deg, var(--t) 0 12px, transparent 12px calc(100% - 12px), var(--t) calc(100% - 12px)); opacity: 0.85; }
 
   /* The white window (SummaryFrame / battle INFO) and what goes in it. */
-  .app .win { position: absolute; left: 14px; top: 14px; width: 532px; height: 354px; padding: 4px 8px; color: #585858; text-shadow: 2px 2px 0 #d8d8d8; }
+  .app .win { position: absolute; left: 14px; right: 14px; top: 14px; height: 354px; padding: 4px 8px; color: #585858; text-shadow: 2px 2px 0 #d8d8d8; }
   .app .sep-h { height: 2px; background: #c8c8d0; margin: 6px 0; }
   .app .sep-v { width: 2px; background: #c8c8d0; align-self: stretch; }
   .app .red { color: #d81818; text-shadow: 2px 2px 0 #f8b8a8; }

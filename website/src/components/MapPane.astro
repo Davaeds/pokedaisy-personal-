@@ -6,17 +6,20 @@
 // over places (data-place) and back to the player (ME).
 import Pixel from './Pixel.astro';
 import { PLACES, PLAYER, T } from '../lib/regionmap.js';
+import { spriteUrl } from '../lib/pixel.js';
 
 // The map sprite at scale 2 (the app's --px is 2): a sprite pixel is 4 canvas pixels, a tile T x 4.
 const S = T * 4;
 const at = (p: { x: number; y: number }) => `left:${p.x * S}px;top:${p.y * S}px`;
 ---
-<div class="pane map-pane" data-pane="map" data-tile={S}>
-  <span class="map-art"><Pixel name="regionMap" scale={2} /></span>
-  {PLACES.map((p) => <span class="map-place" data-place={p.id} data-name={p.name} style={at(p)}></span>)}
-  <span class="map-place" data-place="ME" data-name={PLAYER.name} style={at(PLAYER)}></span>
-  <span class="map-head" style={at(PLAYER)}><Pixel name="mapHead" scale={1.5} /></span>
-  <span class="map-cursor" data-map-cursor style={at(PLAYER)}><i></i><i></i><i></i><i></i></span>
+<div class="pane map-pane" data-pane="map" data-tile={S} style={`--sea:${spriteUrl('sea')}`}>
+  <div class="map-inner">
+    <span class="map-art"><Pixel name="regionMap" scale={2} /></span>
+    {PLACES.map((p) => <span class="map-place" data-place={p.id} data-name={p.name} style={at(p)}></span>)}
+    <span class="map-place" data-place="ME" data-name={PLAYER.name} style={at(PLAYER)}></span>
+    <span class="map-head" style={at(PLAYER)}><Pixel name="mapHead" scale={1.5} /></span>
+    <span class="map-cursor" data-map-cursor style={at(PLAYER)}><i></i><i></i><i></i><i></i></span>
+  </div>
   <div class="map-label t32" data-map-label>{PLAYER.name}</div>
   <div class="map-btns">
     <span class="mbtn f-appBtn t24" data-b="places">PLACES</span>
@@ -26,7 +29,10 @@ const at = (p: { x: number; y: number }) => `left:${p.x * S}px;top:${p.y * S}px`
 </div>
 
 <style is:global>
-  .app .map-pane { background: #4878d0; }
+  /* The map keeps its shape in the middle of a wider tab, the sea carried on past its sides (its wave lines
+     lined up with the map's), and stops short of the tab bar. The label and buttons keep to the tab's corners. */
+  .app .map-pane { bottom: auto; height: 440px; overflow: hidden; background: #4878d0 var(--sea) calc((var(--aw, 560px) - 560px) / 2) 0 / 40px 48px; }
+  .app .map-inner { position: absolute; left: calc(50% - 280px); top: 0; width: 560px; height: 448px; }
   .app .map-art { position: absolute; left: 0; top: 0; }
   .app .map-place { position: absolute; width: 28px; height: 28px; }
   /* The player's head, a little above their tile, like the game's. */
