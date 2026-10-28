@@ -80,21 +80,23 @@ const title = 'POKEDAISY'.split('');
           {title.map((ch, i) => <span class:list={['drop-letter', i < 4 && 'red']} style={`--d:${i}`} aria-hidden="true">{ch}</span>)}
         </h1>
       </div>
-      <div class="dialog f-dialog" data-type>
-        <p data-type-text>Play your Game Boy, Advance and DS Pokémon games with a live companion on your second screen, or right over the game.</p>
-        <span class="more"><Pixel name="more" scale={1} /></span>
-      </div>
-      <!-- One row: the download, then the community (the Discord for help and chat, the subreddit) as icons. -->
+      <p class="hero-lead">Play your Game Boy, Advance and DS Pokémon games with a live companion on your second screen, or right over the game.</p>
       <div class="cta">
-        <a class="btn f-primary h-primaryHot primary big" href={download}><Pixel name="download" scale={1} /> DOWNLOAD</a>
-        <a class="btn f-discord h-discordHot big icon-btn" href={DISCORD_URL} aria-label="Join the Discord" title="Join the Discord"><Pixel name="discord" scale={0.75} /></a>
-        <a class="btn f-reddit h-redditHot big icon-btn" href={REDDIT_URL} aria-label="r/PokeDaisy on Reddit" title="r/PokeDaisy on Reddit"><Pixel name="reddit" scale={0.75} /></a>
+        <a class="btn f-primary h-primaryHot primary big" href={download}>
+          <Pixel name="download" scale={1} /> DOWNLOAD{latest && <span class="ver">v{latest.version}</span>}
+        </a>
       </div>
-      <p class="hero-meta small muted">
-        <a class="downloads" href={`${REPO_URL}/releases`} data-downloads hidden={!downloads}><span class="dl-count" data-downloads-count>{downloads.toLocaleString('en-US')}</span> downloads</a>
-        <span>Android 8.0+</span>
-        <span>Free, open source</span>
-      </p>
+      <!-- The community: the Discord for help and chat, the subreddit. -->
+      <div class="cta community">
+        <a class="btn f-discord h-discordHot" href={DISCORD_URL}><Pixel name="discord" scale={0.667} /> JOIN THE DISCORD</a>
+        <a class="btn f-reddit h-redditHot" href={REDDIT_URL}><Pixel name="reddit" scale={0.667} /> r/POKEDAISY</a>
+      </div>
+      <a class="downloads" href={`${REPO_URL}/releases`} data-downloads hidden={!downloads}>
+        <Pixel name="download" scale={1} />
+        <span class="dl-count" data-downloads-count>{downloads.toLocaleString('en-US')}</span>
+        <span class="dl-label">DOWNLOADS</span>
+      </a>
+      <p class="hero-meta small muted"><span>Android 8.0+</span><span>Free and open source</span><span>No ads, no accounts</span></p>
     </div>
     <div class="hero-art">
       <div class="glow"></div>
@@ -338,22 +340,21 @@ const title = 'POKEDAISY'.split('');
     80% { transform: translateY(-4px); }
     100% { transform: none; opacity: 1; }
   }
-  .dialog { position: relative; margin: 20px 0 28px; padding: calc(var(--px) * 3) calc(var(--px) * 5) calc(var(--px) * 5); font-size: var(--t-l); line-height: 1.4; color: #404048; text-shadow: var(--px) var(--px) 0 #d8d8d0; min-height: 3.3em; filter: var(--hard-shadow); }
-  .more { position: absolute; right: calc(var(--px) * 4); bottom: calc(var(--px) * 2); animation: bob 0.8s steps(1) infinite; opacity: 0; }
-  .dialog.done .more, :global(html:not(.js)) .more { opacity: 1; }
+  .hero-lead { margin: 24px 0 32px; max-width: 30em; font-size: var(--t-l); line-height: 1.4; color: var(--ink-2); text-wrap: pretty; }
   @keyframes bob { 50% { transform: translateY(var(--px)); } }
   .cta { display: flex; flex-wrap: wrap; gap: 16px 20px; align-items: center; }
-  /* The community buttons: icons only, as tall as DOWNLOAD beside them. */
-  .hero-copy .cta { align-items: stretch; }
-  .icon-btn { justify-content: center; padding-inline: calc(var(--px) * 4); }
-  /* The facts, one quiet line under the buttons, each behind a small red square (so a wrapped line still reads as a list). */
-  .hero-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px; margin-top: 24px; }
+  .ver { opacity: 0.85; font-size: var(--t-m); margin-left: 4px; }
+  .community { margin-top: 18px; }
+  /* Every APK download from GitHub releases: counted at build, refreshed in the browser. Big: it's the proof. */
+  .downloads { display: inline-flex; align-items: center; gap: 14px; margin-top: 36px; text-decoration: none; color: var(--ink); }
+  .downloads[hidden] { display: none; }
+  .dl-count { font-size: var(--t-xl); line-height: 1; text-shadow: var(--bold); letter-spacing: 0.0625em; }
+  .dl-label { font-size: var(--t-m); color: var(--muted); letter-spacing: 0.0625em; }
+  .downloads:hover .dl-count { color: var(--red); }
+  /* The facts under it, each behind a small red square (so a wrapped line still reads as a list). */
+  .hero-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px; margin-top: 14px; }
   .hero-meta > * { display: inline-flex; align-items: center; gap: 8px; }
   .hero-meta > *::before { content: ''; width: var(--px); height: var(--px); padding: calc(var(--px) * 0.5); background: var(--red); }
-  .downloads { color: inherit; text-decoration: none; }
-  .downloads[hidden] { display: none; }
-  .dl-count { color: var(--ink); text-shadow: var(--bold); }
-  .downloads:hover .dl-count { color: var(--red); }
 
   .hero-art { position: relative; }
   /* Both handhelds at once: the Thor at the back on the right, the Retroid Pocket 5 in front, lower left,
@@ -427,7 +428,7 @@ const title = 'POKEDAISY'.split('');
     .support { grid-template-columns: 1fr; padding: calc(var(--px) * 8); }
   }
   @media (max-width: 760px) {
-    .dialog { font-size: var(--t-m); }
+    .hero-lead { font-size: var(--t-m); }
   }
   @media (max-width: 560px) {
     .feature-grid, .player-grid { grid-template-columns: 1fr; }
@@ -438,21 +439,6 @@ const title = 'POKEDAISY'.split('');
   import { apkDownloads } from '../lib/releases.js';
 
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  // The hero's message types itself out like the game's text box.
-  const box = document.querySelector<HTMLElement>('[data-type]');
-  const textEl = box?.querySelector<HTMLElement>('[data-type-text]');
-  if (box && textEl && !reduce) {
-    const full = textEl.textContent ?? '';
-    textEl.style.minHeight = `${textEl.offsetHeight}px`;
-    textEl.textContent = '';
-    let i = 0;
-    setTimeout(function type() {
-      textEl.textContent = full.slice(0, ++i);
-      if (i < full.length) setTimeout(type, full[i - 1] === '.' || full[i - 1] === ':' ? 260 : 28);
-      else box.classList.add('done');
-    }, 900);
-  } else box?.classList.add('done');
 
   // The one-screen handheld's companion window opens and closes as its demo plays (CompanionDemo); without
   // motion it just stays open.
