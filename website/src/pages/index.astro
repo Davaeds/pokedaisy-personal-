@@ -70,7 +70,7 @@ const title = 'POKEDAISY'.split('');
 >
   <!-- Hero -->
   <section class="hero container">
-    <div class="hero-copy">
+    <div class="hero-copy" data-track-where="hero">
       <div class="hero-head">
         <div class="hero-mark">
           <span class="mark-ball"><Pixel name="logo" scale={1} label="PokeDaisy" /></span>
@@ -80,28 +80,21 @@ const title = 'POKEDAISY'.split('');
           {title.map((ch, i) => <span class:list={['drop-letter', i < 4 && 'red']} style={`--d:${i}`} aria-hidden="true">{ch}</span>)}
         </h1>
       </div>
-      <p class="hero-kicker">Game Boy, Advance and DS Pokémon, for handhelds with two screens or one</p>
       <div class="dialog f-dialog" data-type>
-        <p data-type-text>Play your Pokémon games. See everything about them on your second screen, or over the game.</p>
+        <p data-type-text>Play your Game Boy, Advance and DS Pokémon games with a live companion on your second screen, or right over the game.</p>
         <span class="more"><Pixel name="more" scale={1} /></span>
       </div>
-      <div class="cta" data-track-where="hero">
-        <a class="btn f-primary h-primaryHot primary big" href={download}>
-          <Pixel name="download" scale={1} /> DOWNLOAD{latest && <span class="ver">v{latest.version}</span>}
-        </a>
-        <a class="btn f-btn h-btnHot big" href="#check">CHECK YOUR ROM</a>
+      <!-- One row: the download, then the community (the Discord for help and chat, the subreddit) as icons. -->
+      <div class="cta">
+        <a class="btn f-primary h-primaryHot primary big" href={download}><Pixel name="download" scale={1} /> DOWNLOAD</a>
+        <a class="btn f-discord h-discordHot big icon-btn" href={DISCORD_URL} aria-label="Join the Discord" title="Join the Discord"><Pixel name="discord" scale={0.75} /></a>
+        <a class="btn f-reddit h-redditHot big icon-btn" href={REDDIT_URL} aria-label="r/PokeDaisy on Reddit" title="r/PokeDaisy on Reddit"><Pixel name="reddit" scale={0.75} /></a>
       </div>
-      <a class="downloads" href={`${REPO_URL}/releases`} data-downloads hidden={!downloads}>
-        <Pixel name="download" scale={0.75} />
-        <span class="dl-count" data-downloads-count>{downloads.toLocaleString('en-US')}</span>
-        <span class="dl-label">DOWNLOADS</span>
-      </a>
-      <p class="small muted hero-note">Free and open source · Android 8.0+ · No ads, no accounts</p>
-      <!-- The community, right under the download: the Discord for help and chat, the subreddit. -->
-      <div class="hero-social">
-        <a class="btn f-discord h-discordHot small" href={DISCORD_URL}><Pixel name="discord" scale={0.5} /> JOIN THE DISCORD</a>
-        <a class="btn f-reddit h-redditHot small" href={REDDIT_URL}><Pixel name="reddit" scale={0.5} /> r/POKEDAISY</a>
-      </div>
+      <p class="hero-meta small muted">
+        <a class="downloads" href={`${REPO_URL}/releases`} data-downloads hidden={!downloads}><span class="dl-count" data-downloads-count>{downloads.toLocaleString('en-US')}</span> downloads</a>
+        <span>Android 8.0+</span>
+        <span>Free, open source</span>
+      </p>
     </div>
     <div class="hero-art">
       <div class="glow"></div>
@@ -320,7 +313,6 @@ const title = 'POKEDAISY'.split('');
   .hero { display: grid; grid-template-columns: 1fr 1.05fr; gap: 48px; align-items: center; padding: 64px 0 56px; }
   .hero-head { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
   .hero-mark { position: relative; width: max-content; }
-  .hero-kicker { font-size: var(--t-m); color: var(--ink-2); margin-top: 18px; }
   .mark-ball { display: inline-block; transform-origin: 50% 85%; animation: capture 3.2s steps(1) infinite 1.2s; }
   @keyframes capture {
     0%, 52%, 100% { transform: rotate(0); }
@@ -351,16 +343,17 @@ const title = 'POKEDAISY'.split('');
   .dialog.done .more, :global(html:not(.js)) .more { opacity: 1; }
   @keyframes bob { 50% { transform: translateY(var(--px)); } }
   .cta { display: flex; flex-wrap: wrap; gap: 16px 20px; align-items: center; }
-  .ver { opacity: 0.85; font-size: var(--t-m); margin-left: 4px; }
-  .hero-note { margin-top: 24px; }
-  /* Every APK download from GitHub releases: counted at build, refreshed in the browser. */
-  .downloads { display: inline-flex; align-items: center; gap: 12px; margin-top: 28px; text-decoration: none; color: var(--ink); }
+  /* The community buttons: icons only, as tall as DOWNLOAD beside them. */
+  .hero-copy .cta { align-items: stretch; }
+  .icon-btn { justify-content: center; padding-inline: calc(var(--px) * 4); }
+  /* The facts, one quiet line under the buttons, each behind a small red square (so a wrapped line still reads as a list). */
+  .hero-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 22px; margin-top: 24px; }
+  .hero-meta > * { display: inline-flex; align-items: center; gap: 8px; }
+  .hero-meta > *::before { content: ''; width: var(--px); height: var(--px); padding: calc(var(--px) * 0.5); background: var(--red); }
+  .downloads { color: inherit; text-decoration: none; }
   .downloads[hidden] { display: none; }
-  .dl-count { font-size: var(--t-l); text-shadow: var(--bold); letter-spacing: 0.0625em; }
-  .dl-label { font-size: var(--t-s); color: var(--muted); letter-spacing: 0.0625em; }
+  .dl-count { color: var(--ink); text-shadow: var(--bold); }
   .downloads:hover .dl-count { color: var(--red); }
-  .downloads + .hero-note { margin-top: 12px; }
-  .hero-social { display: flex; flex-wrap: wrap; gap: 12px 16px; margin-top: 20px; }
 
   .hero-art { position: relative; }
   /* Both handhelds at once: the Thor at the back on the right, the Retroid Pocket 5 in front, lower left,
@@ -434,7 +427,7 @@ const title = 'POKEDAISY'.split('');
     .support { grid-template-columns: 1fr; padding: calc(var(--px) * 8); }
   }
   @media (max-width: 760px) {
-    .dialog, .hero-kicker { font-size: var(--t-m); }
+    .dialog { font-size: var(--t-m); }
   }
   @media (max-width: 560px) {
     .feature-grid, .player-grid { grid-template-columns: 1fr; }
