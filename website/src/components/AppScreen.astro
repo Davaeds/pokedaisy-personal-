@@ -32,7 +32,10 @@ const H = tabs ? 488 : 448;
   .appcard { filter: var(--hard-shadow); max-width: calc(560px + var(--px) * 10); margin: 0 auto; }
   .appcard:not(.f-card) { max-width: none; }
   .appcard.f-card { padding: calc(var(--px) * 2); }
-  .appwrap { position: relative; width: 100%; aspect-ratio: 560 / 448; overflow: hidden; }
+  /* Its width never comes from inside: the script sets the height from the width, and with the
+     aspect-ratio Safari fed that height back into the width (a 1px round-up a time), so a canvas in an
+     auto-sized track kept growing past its screen. */
+  .appwrap { position: relative; width: 100%; min-width: 0; aspect-ratio: 560 / 448; overflow: hidden; contain: inline-size; }
   .app {
     --px: 2px;
     position: absolute; left: 0; top: 0; width: 560px; height: 448px; overflow: hidden;

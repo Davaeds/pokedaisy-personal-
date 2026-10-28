@@ -34,8 +34,8 @@ const { still = false } = Astro.props;
 
 <style is:global>
   .device.single { max-width: 640px; }
-  .device.single .slab { display: grid; grid-template-columns: 1fr minmax(0, 76%) 1fr; gap: calc(var(--px) * 2); align-items: center; padding: calc(var(--px) * 4) calc(var(--px) * 2); }
-  .device.single .side { display: grid; justify-items: center; gap: calc(var(--px) * 4); }
+  .device.single .slab { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 76%) minmax(0, 1fr); gap: calc(var(--px) * 2); align-items: center; padding: calc(var(--px) * 4) calc(var(--px) * 2); }
+  .device.single .side { min-width: 0; display: grid; justify-items: center; gap: calc(var(--px) * 4); }
   .device.single .ctl { display: block; width: 86%; }
   .device.single .ctl .pixel { width: 100%; height: auto; aspect-ratio: 1; }
   .device.single .stick { animation: glow 2.4s steps(2) infinite; }

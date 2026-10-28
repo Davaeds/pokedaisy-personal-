@@ -51,16 +51,18 @@ const { still = false } = Astro.props;
     clip-path: polygon(calc(var(--px) * 2) 0, calc(100% - var(--px) * 2) 0, 100% calc(var(--px) * 2), 100% calc(100% - var(--px) * 2), calc(100% - var(--px) * 2) 100%, calc(var(--px) * 2) 100%, 0 calc(100% - var(--px) * 2), 0 calc(var(--px) * 2));
   }
 
-  /* The base: big round controls either side of the small screen, as on the Thor. */
-  .device .base { position: relative; display: grid; grid-template-columns: 1fr minmax(0, 50%) 1fr; gap: calc(var(--px) * 2); align-items: stretch; padding-block: calc(var(--px) * 3); }
-  .device .side { display: grid; justify-items: center; align-content: start; gap: calc(var(--px) * 4); padding-top: calc(var(--px) * 2); }
+  /* The base: big round controls either side of the small screen, as on the Thor. Every track ignores
+     its content's size (minmax(0, ...)): Safari sized the screen's column from the canvas, which grew
+     the screen past the base on phones. */
+  .device .base { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 50%) minmax(0, 1fr); gap: calc(var(--px) * 2); align-items: stretch; padding-block: calc(var(--px) * 3); }
+  .device .side { min-width: 0; display: grid; justify-items: center; align-content: start; gap: calc(var(--px) * 4); padding-top: calc(var(--px) * 2); }
   .device .ctl { display: block; width: 86%; }
   .device .ctl .pixel { width: 100%; height: auto; aspect-ratio: 1; }
   .device .stick { animation: glow 2.4s steps(2) infinite; }
   @keyframes glow { 50% { filter: brightness(1.2) saturate(1.2); } }
   .device .mini { width: calc(var(--px) * 5); height: calc(var(--px) * 5); margin-bottom: calc(var(--px) * 2); background: #2e2e38; box-shadow: 0 0 0 var(--px) #0c0c10, inset var(--px) var(--px) 0 #4a4a58;
     clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); }
-  .device .middle { display: grid; gap: calc(var(--px) * 3); align-content: start; }
+  .device .middle { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(var(--px) * 3); align-content: start; }
   .device .bezel.low { width: 100%; }
   .device .bezel.low .appwrap { max-width: none; }
   .device .menu-keys { display: flex; justify-content: center; gap: calc(var(--px) * 6); }
