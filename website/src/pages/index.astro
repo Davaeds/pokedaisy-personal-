@@ -97,6 +97,11 @@ const title = 'POKEDAISY'.split('');
         <span class="dl-label">DOWNLOADS</span>
       </a>
       <p class="small muted hero-note">Free and open source · Android 8.0+ · No ads, no accounts</p>
+      <!-- The community, right under the download: the Discord for help and chat, the subreddit. -->
+      <div class="hero-social">
+        <a class="btn f-discord h-discordHot small" href={DISCORD_URL}><Pixel name="discord" scale={0.5} /> JOIN THE DISCORD</a>
+        <a class="btn f-reddit h-redditHot small" href={REDDIT_URL}><Pixel name="reddit" scale={0.5} /> r/POKEDAISY</a>
+      </div>
     </div>
     <div class="hero-art">
       <div class="glow"></div>
@@ -355,6 +360,7 @@ const title = 'POKEDAISY'.split('');
   .dl-label { font-size: var(--t-s); color: var(--muted); letter-spacing: 0.0625em; }
   .downloads:hover .dl-count { color: var(--red); }
   .downloads + .hero-note { margin-top: 12px; }
+  .hero-social { display: flex; flex-wrap: wrap; gap: 12px 16px; margin-top: 20px; }
 
   .hero-art { position: relative; }
   /* Both handhelds at once: the Thor at the back on the right, the Retroid Pocket 5 in front, lower left,
