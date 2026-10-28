@@ -434,6 +434,21 @@ object PixelIcons {
         "..P..",
     )
 
+    /** Discord's mark: its controller face ('1' = the face, the eyes cut out). */
+    val discord = listOf(
+        "0011100000011100",
+        "0111111111111110",
+        "1111111111111111",
+        "1111111111111111",
+        "1111001111001111",
+        "1111001111001111",
+        "1111001111001111",
+        "1111111111111111",
+        "1111111111111111",
+        "0111100000011110",
+        "0011000000001100",
+    )
+
     /** GitHub's mark: a disc with the cat cut out of it ('1' = the disc). */
     val github = listOf(
         "0000011111100000",
@@ -737,6 +752,11 @@ fun PatreonMark(modifier: Modifier = Modifier) = PixelArt(
 @Composable
 fun GitHubMark(modifier: Modifier = Modifier) =
     PixelIcon(PixelIcons.github, if (OptionColors.dark) Color(0xFFD8DCE4) else Color(0xFF202020), modifier.fillMaxSize())
+
+/** [PixelIcons.discord] in Discord's blurple, beside its row and link. */
+@Composable
+fun DiscordMark(modifier: Modifier = Modifier) =
+    PixelIcon(PixelIcons.discord, if (OptionColors.dark) Color(0xFF8C95FF) else Color(0xFF5865F2), modifier.fillMaxSize())
 
 /** The Poké Ball rocking like a capture shake (tip left, tip right, rest) -
  * the app's "working on it" animation. Turns in 10° steps, pivoting at its base. */

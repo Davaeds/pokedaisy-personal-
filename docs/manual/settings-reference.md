@@ -105,6 +105,7 @@ The `SHADERS` page:
 | `TIPS` | **`ON`**, `OFF` | Now and then, a card about a feature you haven't tried yet, shown in a game while you walk around. | [The companion](companion.md#tips) |
 | `LICENSES` | a page | The licenses of PokeDaisy and everything it includes. | |
 | `LANGUAGE` | **`AUTO`**, `ENGLISH`, `日本語`, `FRANÇAIS`, `DEUTSCH`, `ITALIANO`, `ESPAÑOL` | The app's own text. `AUTO` follows the game's language in game and the device's in the library. Game names (Pokémon, moves, items) stay as the game has them. | [The companion](companion.md) |
+| `DISCORD` | | Opens PokeDaisy's Discord server, where you can get help, report a bug, share an idea or just chat. The `Discord` link under the list opens it too. | [Troubleshooting](troubleshooting.md#how-do-i-report-a-bug-or-ask-for-a-game) |
 | `HELP` | a page | This manual, with a search box. It keeps a copy for reading offline. | [Welcome](welcome.md) |
 
 ## Companion SETTINGS
@@ -211,6 +212,7 @@ The `DISPLAY OPTIONS` page:
 | --- | --- | --- | --- |
 | `TIPS` | as on the top screen | The same switch: a card now and then about a feature you haven't tried yet. | [The companion](companion.md#tips) |
 | `LANGUAGE` | as on the top screen | The app's own text, on both screens at once. | [The companion](companion.md) |
+| `DISCORD` | | Opens PokeDaisy's Discord server on the main screen, as on the top screen. | [Troubleshooting](troubleshooting.md#how-do-i-report-a-bug-or-ask-for-a-game) |
 | `HELP` | a page | This manual, without the search box (the bottom screen has no keyboard). | [Welcome](welcome.md) |
 
 ### Buttons at the bottom

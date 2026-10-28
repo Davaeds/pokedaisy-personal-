@@ -1297,6 +1297,9 @@ class PokeDaisyActivity : Activity() {
         override fun closeGame() {
             exitGame()   // drives the normal onPause()/onStop() lifecycle, which already suspends+saves
         }
+        override fun openDiscord() {
+            runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(com.pokedaisy.app.companion.Discord.URL))) }
+        }
         override val canCloseCompanion get() = secondScreen() != null
         override fun closeCompanion() {
             runOnUiThread {

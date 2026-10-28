@@ -7,6 +7,7 @@ import Base from '../layouts/Base.astro';
 import Pixel from '../components/Pixel.astro';
 import { FORMS, DEVICES, CONTACT_MAX } from '../../functions/feedback-form.js';
 import { REPO_URL } from '../lib/releases.js';
+import { DISCORD_URL } from '../lib/links.js';
 
 // The kind's own GitHub form, for people with an account, and where a sent one shows up.
 const kinds = [
@@ -25,7 +26,8 @@ const kinds = [
       <h1 class="heading">Tell PokeDaisy what you need</h1>
       <p class="lead">Ask for a game, report a bug or share an idea. No GitHub account needed: what you send here
         goes up on <a href={REPO_URL}>PokeDaisy's GitHub</a>, where anyone can follow it. Game requests and ideas
-        land in <a href={`${REPO_URL}/discussions`}>Discussions</a>, where people upvote the ones they want.</p>
+        land in <a href={`${REPO_URL}/discussions`}>Discussions</a>, where people upvote the ones they want.
+        Want a quick answer or to chat? Ask on <a href={DISCORD_URL}>PokeDaisy's Discord</a>.</p>
     </div>
 
     <form class="feedback" data-feedback novalidate data-where={JSON.stringify(Object.fromEntries(kinds.map((k) => [k[0], `${REPO_URL}/${k[5]}`])))}>

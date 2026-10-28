@@ -3,7 +3,7 @@ title: Troubleshooting and FAQ
 summary: Answers to the questions people ask most, from missing games and lost saves to silent music, achievements and what the app sends online.
 section: help
 order: 3
-keywords: [help, faq, problem, issue, bug, broken, fix, not working, missing, privacy, data, network, internet, offline, contact, report]
+keywords: [help, faq, problem, issue, bug, broken, fix, not working, missing, privacy, data, network, internet, offline, contact, report, discord, community, chat, support]
 ---
 
 Something not working the way you expect? Start here. If your question isn't answered, see [the last section](#how-do-i-report-a-bug-or-ask-for-a-game) for how to reach us.
@@ -126,6 +126,7 @@ The play time the library uses to ask for support once ([Supporting PokeDaisy](l
 
 ## How do I report a bug or ask for a game?
 
+- **Want help, or not sure it's a bug?** Ask on [PokeDaisy's Discord](https://discord.gg/vcmyKZZV5q) (Settings > `DISCORD` opens it). It's also the place for ideas and a chat.
 - **No GitHub account?** Use the [feedback page](https://pokedaisy.com/feedback/) for bug reports, game requests and ideas.
 - **On GitHub:** report a bug in [Issues](https://github.com/lidor30/pokedaisy/issues). Ask for a game in [Game requests](https://github.com/lidor30/pokedaisy/discussions/categories/game-requests) and share an idea in [Ideas](https://github.com/lidor30/pokedaisy/discussions/categories/ideas), where you can also upvote other people's.
 - **For a game the companion doesn't read,** `ASK FOR SUPPORT` on the companion's NOT SUPPORTED page (or in the game's library `INFO`) fills in the details we need.

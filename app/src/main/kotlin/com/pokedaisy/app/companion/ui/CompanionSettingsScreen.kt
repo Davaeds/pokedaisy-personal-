@@ -631,6 +631,11 @@ private fun homeRows(
                 s.setAppLanguage(opts.first { it.second == l }.first)
             })
         },
+        // PokeDaisy's Discord server, opened in the browser (or the Discord app) on the main screen.
+        SettingRow(
+            "DISCORD", null, subtitle = "Help, bug reports, ideas and chat",
+            labelBadge = NewFeatures.badge(NewFeatures.DISCORD), labelIcon = { DiscordMark() },
+        ) { s.openDiscord() },
         // The manual: every tab and setting explained (served by the website, kept for offline reading).
         SettingRow(tk("HELP"), null, subtitle = "The manual: how every screen and setting works", opensPage = true) { navigate(Page.HELP) },
     )

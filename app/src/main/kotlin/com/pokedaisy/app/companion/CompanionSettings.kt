@@ -209,6 +209,9 @@ interface CompanionSettings {
     /** Puts the companion back on its own screen (the main one, the game back on the second). */
     fun openCompanion() {}
 
+    /** SETTINGS > DISCORD: opens PokeDaisy's Discord server ([Discord.URL]) in the browser or the Discord app. */
+    fun openDiscord() {}
+
     /** Whether battle-only strategic hints (move effectiveness chips, foe
      * Weak-to/Resists/Immune-to) are shown — see [Prefs.showHints]. */
     val showHints: Boolean

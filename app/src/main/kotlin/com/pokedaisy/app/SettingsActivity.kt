@@ -80,6 +80,8 @@ import com.pokedaisy.app.companion.ui.AspectPicker
 import com.pokedaisy.app.companion.ui.aspectLabel
 import com.pokedaisy.app.companion.ui.portraitPlaceLabel
 import com.pokedaisy.app.companion.ui.CoffeeCup
+import com.pokedaisy.app.companion.ui.DiscordMark
+import com.pokedaisy.app.companion.Discord
 import com.pokedaisy.app.companion.ui.GbaText
 import com.pokedaisy.app.companion.ui.GitHubMark
 import com.pokedaisy.app.companion.ui.GoldTrophy
@@ -745,6 +747,11 @@ class SettingsActivity : ComponentActivity() {
                     L10n.apply(prefs.appLanguage, null)
                 }
             },
+            // PokeDaisy's Discord server in the browser (or the Discord app).
+            SettingRow(
+                "DISCORD", null, subtitle = "Help, bug reports, ideas and chat",
+                labelBadge = com.pokedaisy.app.companion.NewFeatures.badge(com.pokedaisy.app.companion.NewFeatures.DISCORD), labelIcon = { DiscordMark() },
+            ) { openUrl(Discord.URL) },
             // The manual (docs/manual, served by the website), readable offline once fetched.
             SettingRow(tk("HELP"), null, subtitle = "The manual: how every screen and setting works", opensPage = true) { screen = Screen.HELP },
         )
@@ -1075,7 +1082,7 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    /** Version, author, Buy Me a Coffee and the repo, under the settings list. */
+    /** Version, author, Buy Me a Coffee, the Discord and the repo, under the settings list. */
     @Composable
     private fun AboutFooter(m: GbaTextMetrics) {
         val small = rememberGbaTextMetrics(textScale = 1f)
@@ -1091,6 +1098,8 @@ class SettingsActivity : ComponentActivity() {
                 FooterLink(tr("Buy me a coffee"), m, small, Modifier.padding(start = m.u * 6), { CoffeeCup() }) {
                     openUrl(COFFEE_URL)
                 }
+                GbaText("  ·  ", OptionColors.label, OptionColors.labelShadow, small)
+                FooterLink("Discord", m, small, icon = { DiscordMark() }) { openUrl(Discord.URL) }
                 GbaText("  ·  ", OptionColors.label, OptionColors.labelShadow, small)
                 FooterLink("GitHub", m, small, icon = { GitHubMark() }) { openUrl(REPO_URL) }
             }

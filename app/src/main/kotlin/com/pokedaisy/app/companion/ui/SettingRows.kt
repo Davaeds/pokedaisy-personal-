@@ -95,6 +95,7 @@ val FLAGGED_SETTING_KEYWORDS: Map<String, String> = mapOf(
  */
 val SETTING_KEYWORDS: Map<String, String> = mapOf(
     "HELP" to "manual docs documentation guide how to faq instructions",
+    "DISCORD" to "discord server community chat support help contact report bug feedback ideas suggestions developers dev",
     "FF" to "fast forward turbo speed up",
     "DUAL-SCREEN LAUNCHER" to "frontend launcher two screens dual screen media game list swap",
     "FF SPEED" to "fast forward speed rate cap multiplier turbo",
