@@ -40,8 +40,8 @@ enum class TouchButton(val label: String, val gba: Int, val extra: Boolean = fal
     A("A", 1), B("B", 2),
     L("L", 512), R("R", 256),
     START(tk("START"), 8), SELECT(tk("SELECT"), 4),
-    /** GAME BUTTONS' X / Y: the DS's own X and Y (GbaInput swaps them in), so only shown in a DS game. */
-    X("X", com.pokedaisy.app.GbaControls.Btn.X.bit), Y("Y", com.pokedaisy.app.GbaControls.Btn.Y.bit),
+    /** The DS's own X and Y, so only shown in a DS game. */
+    X("X", com.pokedaisy.app.MgbaCore.Key.X), Y("Y", com.pokedaisy.app.MgbaCore.Key.Y),
     /** A tap turns FF on / off, held = fast while held. */
     FF(tk("FF"), 0, extra = true),
     /** Opens the QUICK MENU (a phone has no L3). */
