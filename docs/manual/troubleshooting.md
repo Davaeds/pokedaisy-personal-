@@ -15,7 +15,7 @@ Work through these in order:
 - **Is the folder linked?** Tap `+` > `MANAGE ROMS FOLDERS` in the library (or open Settings > `FOLDERS` > `ROMS FOLDERS`) and check the game's folder is in the list, or one it sits in. If not, tap `ADD FOLDER`. Picking a folder needs Android's "All files access" for PokeDaisy; if Android asks, allow it and tap the button again. Only folders on the device's own storage or SD card work, not cloud folders.
 - **Did it rescan?** The library looks for new games every time you open it. Tap the Refresh button (the circular arrow at the top of the library) to scan now; it tells you what it found.
 - **Is it deep in subfolders?** The scan looks a few folders down, not forever. Move very deeply nested games up a level or two.
-- **Is it a file PokeDaisy reads?** `.gba`, `.gb` and `.gbc` files, or one of those inside a `.zip` or `.7z`. Other archives and disc images aren't games it can play.
+- **Is it a file PokeDaisy reads?** `.gba`, `.gb`, `.gbc` and `.nds` files, or one of those inside a `.zip` or `.7z`. Other archives and disc images aren't games it can play.
 - **Is it a game the companion supports?** The linked folders only list Pokémon games: supported ones, plus unknown ones built on FireRed, LeafGreen, Emerald, Ruby or Sapphire (tagged `NOT SUPPORTED`, so you can still try them). Any other GBA or Game Boy game can be added with the **+** button in the library; PokeDaisy asks before adding a game the companion can't read.
 - **Did you hide it?** Games you hid with `HIDE` stay out of the library. Open Settings > `HIDDEN GAMES` and tap `SHOW` next to it.
 

@@ -22,6 +22,10 @@ object RomFolder {
     /** The folder itself plus a few levels: a frontend's tree nests (`ROMs/gba/Pokemon/Retail/`, GitHub #233). */
     private const val MAX_DEPTH = 6
 
+    /** A DS cart or an archive (which may hold one: GitHub #315, zipped DS games went missing) up to a DS cart's size. */
+    private fun maxBytes(f: File): Long =
+        if (f.name.endsWith(".nds", ignoreCase = true) || RomArchive.isArchive(f)) MAX_DS_ROM_BYTES else MAX_ROM_BYTES
+
     /** [partial]: read through a PARTIAL best-effort match ([CompanionSupport.Verdict.PARTIAL]) - listed, tagged. */
     /** [tryable]: unsupported but a Gen 3 Pokémon base game - listed, tagged NOT SUPPORTED, so TRY BEST EFFORT is reachable. */
     private class Entry(
@@ -124,7 +128,7 @@ object RomFolder {
                 .onEnter { it == root || !it.name.startsWith(".") }
                 .filter { f ->
                     f.isFile && f.name.substringAfterLast('.', "").lowercase() in EXTENSIONS &&
-                        f.length() in 0x200L..(if (f.name.endsWith(".nds", ignoreCase = true)) MAX_DS_ROM_BYTES else MAX_ROM_BYTES)
+                        f.length() in 0x200L..maxBytes(f)
                 }
                 .toList()
         }.distinctBy { it.absolutePath }
