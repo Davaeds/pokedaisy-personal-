@@ -70,10 +70,10 @@ interface CompanionSettings {
 
     /** MENU SOUNDS - see [com.pokedaisy.app.Prefs.menuSound]; [menuSoundsSupported]: the game's song table and a
      * silent song were found ([com.pokedaisy.app.companion.data.MenuSounds]). */
-    val menuSound: com.pokedaisy.app.companion.data.MenuSounds.Choice get() = com.pokedaisy.app.companion.data.MenuSounds.Choice.ON
-    fun setMenuSound(choice: com.pokedaisy.app.companion.data.MenuSounds.Choice) {}
-    /** The choices this game has (its song table's sounds that read; ON and OFF always). */
-    val menuSoundChoices: List<com.pokedaisy.app.companion.data.MenuSounds.Choice> get() = listOf(com.pokedaisy.app.companion.data.MenuSounds.Choice.ON, com.pokedaisy.app.companion.data.MenuSounds.Choice.OFF)
+    val menuSound: Int get() = com.pokedaisy.app.companion.data.MenuSounds.SE_SELECT
+    fun setMenuSound(song: Int) {}
+    /** The choices this game has, as song numbers: the beep (ON), every sound effect of its table that reads, OFF. */
+    val menuSoundChoices: List<Int> get() = listOf(com.pokedaisy.app.companion.data.MenuSounds.SE_SELECT, com.pokedaisy.app.companion.data.MenuSounds.OFF)
     val menuSoundsSupported: Boolean get() = false
 
     /** PLAYER LOOK ([com.pokedaisy.app.companion.data.PlayerLook]): [playerLookSupported] = a FireRed / LeafGreen /

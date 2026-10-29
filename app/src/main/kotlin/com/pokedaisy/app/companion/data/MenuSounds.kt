@@ -3,8 +3,8 @@ package com.pokedaisy.app.companion.data
 import java.io.File
 
 /**
- * MENU SOUNDS (SETTINGS > GAMEPLAY): the game's menu beep as it is, another of the game's own sounds in its place
- * ([Choice]), or off; everything else heard as before.
+ * MENU SOUNDS (SETTINGS > GAMEPLAY): the game's menu beep as it is, any other of the game's own sound effects in its
+ * place (picked from the whole song table by number, heard at once: [Patch.play]), or off; everything else heard as before.
  *
  * Moving a menu's cursor and picking from it both play SE_SELECT, song 5 in every Gen 3 Pokémon song table (the click
  * [com.pokedaisy.app.GameClickSound] renders). A game's own SOUND option silences it only by silencing the cries too, so
@@ -21,12 +21,9 @@ import java.io.File
  * beep's loudest. Those bytes are that sound's own, so it's as much quieter wherever else the game plays it.
  */
 object MenuSounds {
-    /** MENU SOUNDS' choices (Prefs.menuSound by name): the beep, a few of the Gen 3 song tables' other sound effects
-     * (pret's SE_CLICK, SE_PIN, SE_NOTE_C / _E / _G), or none. */
-    enum class Choice(val label: String, val song: Int) {
-        ON("ON", SE_SELECT), CLICK("CLICK", 30), PIN("PIN", 21), NOTE_C("NOTE C", 55), NOTE_E("NOTE E", 57),
-        NOTE_G("NOTE G", 59), OFF("OFF", -1),
-    }
+    /** MENU SOUNDS' choices are song numbers (Prefs.menuSound): [SE_SELECT] the beep as it is (ON), [OFF] none, any
+     * other one of [Patch.others]. */
+    const val OFF = -1
 
     /** A VOL command's value byte at [addr]: [from] in the ROM, [to] while the sound stands in for the beep. */
     class Vol(val addr: Long, val from: Byte, val to: Byte)
@@ -34,8 +31,9 @@ object MenuSounds {
     /** Another sound for the beep: its song header (the pointer for song 5's entry) and its volume bytes turned down. */
     class Other(val header: ByteArray, val vols: List<Vol>)
 
-    /** The patch: [entry] (gSongTable + 5 * 8) holds [beep] now and gets [silent], or one of [others]' headers. */
-    class Patch(val entry: Long, val beep: ByteArray, val silent: ByteArray, val others: Map<Choice, Other> = emptyMap())
+    /** The patch: [entry] (gSongTable + 5 * 8) holds [beep] now and gets [silent], or one of [others]' headers (by song
+     * number, in the table's order); [play] is m4aSongNumStart (no Thumb bit), to let the player hear a pick at once. */
+    class Patch(val entry: Long, val beep: ByteArray, val silent: ByteArray, val play: Long, val others: Map<Int, Other> = emptyMap())
 
     /** SE_SELECT's place in the song table. */
     const val SE_SELECT = 5
@@ -84,20 +82,21 @@ object MenuSounds {
         } ?: return null
         val beepVols = volumes(rom, beep) ?: emptyList()
         val beepLoud = beepVols.maxOfOrNull { it.second } ?: 127   // no VOL: the player's full 127
-        val others = LinkedHashMap<Choice, Other>()
-        for (c in Choice.entries) {
-            if (c.song < 0 || c.song == SE_SELECT) continue
-            val header = headerOf(c.song) ?: continue
-            if (tracks(header) !in 1..MAX_TRACKS || u16(rom, table + c.song * 8 + 4) == 0) continue
+        // Every sound effect in the table: a header with tracks, on a player other than the music's, whose volume reads.
+        val others = LinkedHashMap<Int, Other>()
+        for (n in 1 until MAX_SCAN) {
+            if (n == SE_SELECT) continue
+            val header = headerOf(n) ?: break   // past the table
+            if (tracks(header) !in 1..MAX_TRACKS || u16(rom, table + n * 8 + 4) == 0) continue
             val vols = volumes(rom, header)
             if (vols.isNullOrEmpty() || vols.size > MAX_VOLS) continue   // unreadable, or nothing to turn down
             val loud = vols.maxOf { it.second }
             val target = beepLoud * OTHER_VOLUME
-            others[c] = Other(le32(header), vols.map { (at, v) ->
+            others[n] = Other(le32(header), vols.map { (at, v) ->
                 Vol(ROM + at, v.toByte(), Math.round(v * target / loud).coerceIn(1, 127).toByte())
             })
         }
-        return Patch(songs.songTable + SE_SELECT * 8, le32(beep), le32(silent), others)
+        return Patch(songs.songTable + SE_SELECT * 8, le32(beep), le32(silent), songs.songNumStart and 1L.inv(), others)
     }
 
     /** Every VOL command's value in the song at [header] (file offset, value), its tracks read as the m4a engine reads

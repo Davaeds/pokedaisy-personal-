@@ -152,13 +152,17 @@ class Prefs(context: Context) {
         get() = p.getBoolean("reusable_tms", false)
         set(v) = p.edit().putBoolean("reusable_tms", v).apply()
 
-    /** MENU SOUNDS: the game's menu beep (moving and picking in its menus) as it is (ON, the default), another of the
-     * game's sounds in its place, or none (OFF), cries and every other sound kept (companion.data.MenuSounds). Before
-     * the other sounds it was a boolean, "menu_sounds", which still reads as ON / OFF. */
-    var menuSound: com.pokedaisy.app.companion.data.MenuSounds.Choice
-        get() = com.pokedaisy.app.companion.data.MenuSounds.Choice.entries.firstOrNull { it.name == p.getString("menu_sound", null) }
-            ?: if (p.getBoolean("menu_sounds", true)) com.pokedaisy.app.companion.data.MenuSounds.Choice.ON else com.pokedaisy.app.companion.data.MenuSounds.Choice.OFF
-        set(v) = p.edit().putString("menu_sound", v.name).remove("menu_sounds").apply()
+    /** MENU SOUNDS: the game's menu beep (moving and picking in its menus) as it is (its song, SE_SELECT: ON, the
+     * default), another of the game's sound effects in its place (that song's number), or none ([com.pokedaisy.app.companion.data.MenuSounds.OFF]),
+     * cries and every other sound kept (companion.data.MenuSounds). Before it was a boolean, "menu_sounds", which still
+     * reads as ON / OFF (as does a test build's "menu_sound" name). */
+    var menuSound: Int
+        get() = when {
+            p.contains("menu_sound_song") -> p.getInt("menu_sound_song", com.pokedaisy.app.companion.data.MenuSounds.SE_SELECT)
+            p.getString("menu_sound", null) == "OFF" || !p.getBoolean("menu_sounds", true) -> com.pokedaisy.app.companion.data.MenuSounds.OFF
+            else -> com.pokedaisy.app.companion.data.MenuSounds.SE_SELECT
+        }
+        set(v) = p.edit().putInt("menu_sound_song", v).remove("menu_sound").remove("menu_sounds").apply()
 
     /** PLAYER LOOK per ROM (keyed by CRC32): the hero the player wears ([com.pokedaisy.app.companion.data.LookChar]'s
      * name), null = the game's own. */

@@ -386,15 +386,11 @@ private fun wideBadge(s: CompanionSettings, aspect: GameAspect): String? = when 
     else -> tk("BETA")   // still not perfect (the user's call)
 }
 
-/** MENU SOUNDS' choices as the pick-list shows them (English keys, translated where drawn). */
-private fun menuSoundLabel(c: com.pokedaisy.app.companion.data.MenuSounds.Choice): String = when (c) {
-    com.pokedaisy.app.companion.data.MenuSounds.Choice.ON -> tk("ON")
-    com.pokedaisy.app.companion.data.MenuSounds.Choice.CLICK -> tk("CLICK")
-    com.pokedaisy.app.companion.data.MenuSounds.Choice.PIN -> tk("PIN")
-    com.pokedaisy.app.companion.data.MenuSounds.Choice.NOTE_C -> tk("NOTE C")
-    com.pokedaisy.app.companion.data.MenuSounds.Choice.NOTE_E -> tk("NOTE E")
-    com.pokedaisy.app.companion.data.MenuSounds.Choice.NOTE_G -> tk("NOTE G")
-    com.pokedaisy.app.companion.data.MenuSounds.Choice.OFF -> tk("OFF")
+/** MENU SOUNDS' choices (song numbers) as the pick-list shows them: ON, OFF, or the sound's number in the game's table. */
+private fun menuSoundLabel(song: Int): String = when (song) {
+    com.pokedaisy.app.companion.data.MenuSounds.SE_SELECT -> tk("ON")
+    com.pokedaisy.app.companion.data.MenuSounds.OFF -> tk("OFF")
+    else -> tr("SOUND {0}", song)
 }
 
 /** A pick-one list for a multi-choice setting; [options] are display labels. */
@@ -521,8 +517,9 @@ private fun homeRows(
         ) {
             if (s.menuSoundsSupported) {
                 val choices = s.menuSoundChoices
-                select(Selector(tk("MENU SOUNDS"), choices.map(::menuSoundLabel), menuSoundLabel(s.menuSound)) { l ->
-                    choices.firstOrNull { menuSoundLabel(it) == l }?.let(s::setMenuSound)
+                val labels = choices.map(::menuSoundLabel)
+                select(Selector(tk("MENU SOUNDS"), labels, menuSoundLabel(s.menuSound)) { l ->
+                    choices.getOrNull(labels.indexOf(l))?.let(s::setMenuSound)
                 })
             }
         },
