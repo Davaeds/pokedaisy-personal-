@@ -1056,10 +1056,13 @@ class PokeDaisyActivity : Activity() {
             if (::engine.isInitialized) engine.setReusableTms(tmSites, on)
         }
         override val reusableTmsSupported get() = tmSites.isNotEmpty()
-        override val menuSounds get() = Prefs(this@PokeDaisyActivity).menuSounds
-        override fun setMenuSounds(on: Boolean) {
-            Prefs(this@PokeDaisyActivity).menuSounds = on
-            if (::engine.isInitialized) engine.setMuteMenuSounds(menuSoundsPatch, !on)
+        override val menuSound get() = Prefs(this@PokeDaisyActivity).menuSound
+        override fun setMenuSound(choice: com.pokedaisy.app.companion.data.MenuSounds.Choice) {
+            Prefs(this@PokeDaisyActivity).menuSound = choice
+            if (::engine.isInitialized) engine.setMenuSound(menuSoundsPatch, choice)
+        }
+        override val menuSoundChoices get() = com.pokedaisy.app.companion.data.MenuSounds.Choice.entries.filter {
+            it == com.pokedaisy.app.companion.data.MenuSounds.Choice.ON || it == com.pokedaisy.app.companion.data.MenuSounds.Choice.OFF || menuSoundsPatch?.others?.containsKey(it) == true
         }
         override val menuSoundsSupported get() = menuSoundsPatch != null
         override val playerLookSupported get() = lookRunner.supported.value
@@ -1629,7 +1632,7 @@ class PokeDaisyActivity : Activity() {
         tmSites = emptyList()
         if (::engine.isInitialized) engine.setReusableTms(tmSites, false)
         menuSoundsPatch = null
-        if (::engine.isInitialized) engine.setMuteMenuSounds(null, false)
+        if (::engine.isInitialized) engine.setMenuSound(null, com.pokedaisy.app.companion.data.MenuSounds.Choice.ON)
         gbFieldCache = null
         if (::engine.isInitialized) engine.gbField = null
         if (gba) Thread({
@@ -1640,7 +1643,7 @@ class PokeDaisyActivity : Activity() {
             Log.i("pokedaisy", "reusable TMs: ${tms.size} site(s)")
             // MENU SOUNDS: the menu beep's song-table entry and a silent song (none = the row shows N/A).
             val beep = com.pokedaisy.app.companion.data.MenuSounds.find(r)
-            Log.i("pokedaisy", "menu sounds: ${if (beep != null) "beep at %08X".format(beep.entry) else "not found"}")
+            Log.i("pokedaisy", "menu sounds: ${if (beep != null) "beep at %08X, others ${beep.others.keys}".format(beep.entry) else "not found"}")
             runOnUiThread {
                 if (romData != r) return@runOnUiThread
                 wildFlag = flag
@@ -1648,7 +1651,7 @@ class PokeDaisyActivity : Activity() {
                 tmSites = tms
                 if (::engine.isInitialized) engine.setReusableTms(tms, Prefs(this).reusableTms)
                 menuSoundsPatch = beep
-                if (::engine.isInitialized) engine.setMuteMenuSounds(beep, !Prefs(this).menuSounds)
+                if (::engine.isInitialized) engine.setMenuSound(beep, Prefs(this).menuSound)
             }
         }, "wild-encounters").start()
         Prefs(this).let { p ->
@@ -1846,7 +1849,7 @@ class PokeDaisyActivity : Activity() {
         e.wildFlag = wildFlag
         e.wildEncounters = p.wildEncounters
         e.setReusableTms(tmSites, p.reusableTms)
-        e.setMuteMenuSounds(menuSoundsPatch, !p.menuSounds)
+        e.setMenuSound(menuSoundsPatch, p.menuSound)
     }
 
     override fun onNewIntent(intent: Intent) {

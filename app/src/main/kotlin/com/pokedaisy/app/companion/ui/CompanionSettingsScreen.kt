@@ -386,6 +386,17 @@ private fun wideBadge(s: CompanionSettings, aspect: GameAspect): String? = when 
     else -> tk("BETA")   // still not perfect (the user's call)
 }
 
+/** MENU SOUNDS' choices as the pick-list shows them (English keys, translated where drawn). */
+private fun menuSoundLabel(c: com.pokedaisy.app.companion.data.MenuSounds.Choice): String = when (c) {
+    com.pokedaisy.app.companion.data.MenuSounds.Choice.ON -> tk("ON")
+    com.pokedaisy.app.companion.data.MenuSounds.Choice.CLICK -> tk("CLICK")
+    com.pokedaisy.app.companion.data.MenuSounds.Choice.PIN -> tk("PIN")
+    com.pokedaisy.app.companion.data.MenuSounds.Choice.NOTE_C -> tk("NOTE C")
+    com.pokedaisy.app.companion.data.MenuSounds.Choice.NOTE_E -> tk("NOTE E")
+    com.pokedaisy.app.companion.data.MenuSounds.Choice.NOTE_G -> tk("NOTE G")
+    com.pokedaisy.app.companion.data.MenuSounds.Choice.OFF -> tk("OFF")
+}
+
 /** A pick-one list for a multi-choice setting; [options] are display labels. */
 private class Selector(
     val title: String,
@@ -499,15 +510,21 @@ private fun homeRows(
         ) {
             if (s.reusableTmsSupported) { s.setReusableTms(!s.reusableTms); changed() }
         },
-        // The game's menu beep on / off; cries and every other sound stay (MenuSounds.kt: song 5 pointed at a silent song).
+        // The game's menu beep, another of its sounds in its place, or none; cries and every other sound stay
+        // (MenuSounds.kt: song 5 pointed at another song). A pick-list: more than two choices.
         SettingRow(
             tk("MENU SOUNDS"),
-            if (s.menuSoundsSupported) onOff(s.menuSounds) else tk("N/A"),
+            if (s.menuSoundsSupported) menuSoundLabel(s.menuSound) else tk("N/A"),
             enabled = s.menuSoundsSupported,
             labelBadge = NewFeatures.badge(NewFeatures.MENU_SOUNDS),
             subtitle = "The game's beep in its menus",
         ) {
-            if (s.menuSoundsSupported) { s.setMenuSounds(!s.menuSounds); changed() }
+            if (s.menuSoundsSupported) {
+                val choices = s.menuSoundChoices
+                select(Selector(tk("MENU SOUNDS"), choices.map(::menuSoundLabel), menuSoundLabel(s.menuSound)) { l ->
+                    choices.firstOrNull { menuSoundLabel(it) == l }?.let(s::setMenuSound)
+                })
+            }
         },
         // B held for the player while walking on the field; holding it walks. Never on a bike or in a menu.
         SettingRow(tk("AUTO-RUN"), if (s.fieldReadable) onOff(s.autoRun) else tk("N/A"), enabled = s.fieldReadable) { if (s.fieldReadable) { s.setAutoRun(!s.autoRun); changed() } },

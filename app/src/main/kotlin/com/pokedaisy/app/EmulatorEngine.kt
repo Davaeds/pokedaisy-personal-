@@ -126,14 +126,14 @@ class EmulatorEngine(
         tmPatchDirty = true
     }
 
-    /** MENU SOUNDS off: the song-table patch that silences the menu beep ([com.pokedaisy.app.companion.data.MenuSounds];
-     * null = not found) and whether it's in; goes in with REUSABLE TMS' patches on the next frame boundary. */
+    /** MENU SOUNDS: the song-table patch that silences or replaces the menu beep ([com.pokedaisy.app.companion.data.MenuSounds];
+     * null = not found) and the choice; goes in with REUSABLE TMS' patches on the next frame boundary. */
     @Volatile private var menuSoundsPatch: com.pokedaisy.app.companion.data.MenuSounds.Patch? = null
-    @Volatile private var muteMenuSounds = false
+    @Volatile private var menuSound = com.pokedaisy.app.companion.data.MenuSounds.Choice.ON
 
-    fun setMuteMenuSounds(patch: com.pokedaisy.app.companion.data.MenuSounds.Patch?, on: Boolean) {
+    fun setMenuSound(patch: com.pokedaisy.app.companion.data.MenuSounds.Patch?, choice: com.pokedaisy.app.companion.data.MenuSounds.Choice) {
         menuSoundsPatch = patch
-        muteMenuSounds = on
+        menuSound = choice
         tmPatchDirty = true
     }
 
@@ -1424,11 +1424,18 @@ class EmulatorEngine(
             if (!all) MgbaCore.pkRomUnpatch()
             Log.i("pokedaisy", "reusable TMs: ${if (all) "${sites.size} site(s) patched" else "code didn't match"}")
         }
-        // MENU SOUNDS off, after the TMs (their all-or-none undo takes every option patch out).
+        // MENU SOUNDS, after the TMs (their all-or-none undo takes every option patch out): the beep silenced, or
+        // another sound in its entry with its volume bytes turned down.
         val beep = menuSoundsPatch
-        if (muteMenuSounds && beep != null) {
+        val choice = menuSound
+        val other = beep?.others?.get(choice)
+        if (beep != null && choice == com.pokedaisy.app.companion.data.MenuSounds.Choice.OFF) {
             val ok = MgbaCore.pkRomPatch(beep.entry, beep.beep, beep.entry, beep.silent)
             Log.i("pokedaisy", "menu sounds: ${if (ok) "beep silenced" else "table didn't match"}")
+        } else if (beep != null && other != null) {
+            val ok = MgbaCore.pkRomPatch(beep.entry, beep.beep, beep.entry, other.header)
+            val vols = if (ok) other.vols.count { MgbaCore.pkRomPatch(it.addr, byteArrayOf(it.from), it.addr, byteArrayOf(it.to)) } else 0
+            Log.i("pokedaisy", "menu sounds: ${if (ok) "$choice in, $vols of ${other.vols.size} volumes down" else "table didn't match"}")
         }
     }
 
