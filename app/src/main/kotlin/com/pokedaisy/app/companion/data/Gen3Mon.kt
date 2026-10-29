@@ -84,6 +84,12 @@ data class PartyMonLayout(
     val eliteRedux: Boolean = false,
     /** Expansion's Mints: +0x12's bits above the language are a nature XORed in. Off where that byte holds other flags. */
     val natureModifier: Boolean = true,
+    /** Shininess kept as bits of its own rather than worked out from the personality ([shinyBelow] then only says the
+     * config is marked): the byte and its bits. Elite Redux: +0x17's 0x0C (+0x14's bits 26-27; either drew the shiny
+     * colours headless, a new personality alone didn't); R.O.W.E.: +0x29's 0x80 (+0x28's bit 15: the shiny colours and
+     * the star by the name). -1 = none. */
+    val shinyBits: Int = -1,
+    val shinyBitsMask: Int = 0,
 )
 
 val VANILLA_PARTY_MON = PartyMonLayout()
@@ -99,7 +105,7 @@ val VANILLA_PARTY_MON = PartyMonLayout()
  */
 val ROWE_PARTY_MON = PartyMonLayout(
     size = 0x4C, status = 0x38, level = 0x3C, hp = 0x3E, maxHp = 0x40, flags = 0x27, eggMask = 0x80, hasStats = true, rowe = true,
-    nicknameLen = 12, language = -1,
+    nicknameLen = 12, language = -1, shinyBits = 0x29, shinyBitsMask = 0x80,
 )
 
 /**
@@ -112,7 +118,7 @@ val ROWE_PARTY_MON = PartyMonLayout(
  */
 val ELITE_REDUX_PARTY_MON = PartyMonLayout(
     size = 0x4C, status = 0x38, level = 0x3C, hp = 0x3E, maxHp = 0x40, flags = 0x15, eggMask = 0x80, hasStats = true,
-    eliteRedux = true, nicknameOff = 0x26, nicknameLen = 12, language = -1,
+    eliteRedux = true, nicknameOff = 0x26, nicknameLen = 12, language = -1, shinyBits = 0x17, shinyBitsMask = 0x0C,
 )
 
 /**
@@ -123,7 +129,7 @@ val ELITE_REDUX_PARTY_MON = PartyMonLayout(
  */
 val TEAM_ROCKET_PARTY_MON = PartyMonLayout(flags = 0x12, eggMask = 0x20, natureModifier = false)
 
-private fun decodeEliteReduxMon(raw: ByteArray, off: Int): Mon? {
+private fun decodeEliteReduxMon(raw: ByteArray, off: Int, layout: PartyMonLayout): Mon? {
     val w08 = u32(raw, off + 0x08)
     val w0c = u32(raw, off + 0x0C)
     val w10 = u32(raw, off + 0x10)
@@ -149,10 +155,11 @@ private fun decodeEliteReduxMon(raw: ByteArray, off: Int): Mon? {
         ),
         heldItem = (w14 and 0x3FF).toInt(),
         nickname = gen3Nickname(raw, off, ELITE_REDUX_PARTY_MON),
+        shiny = layout.shinyBelow > 0 && raw[off + layout.shinyBits].toInt() and layout.shinyBitsMask != 0,
     )
 }
 
-private fun decodeRoweMon(raw: ByteArray, off: Int): Mon? {
+private fun decodeRoweMon(raw: ByteArray, off: Int, layout: PartyMonLayout): Mon? {
     val w14 = u32(raw, off + 0x14)
     val w18 = u32(raw, off + 0x18)
     val species = (u32(raw, off + 0x1C) and 0xFFF).toInt()
@@ -174,6 +181,7 @@ private fun decodeRoweMon(raw: ByteArray, off: Int): Mon? {
             stats = List(6) { u16(raw, off + 0x40 + 2 * it) },
         ),
         nickname = gen3Nickname(raw, off, ROWE_PARTY_MON),
+        shiny = layout.shinyBelow > 0 && raw[off + layout.shinyBits].toInt() and layout.shinyBitsMask != 0,
     )
 }
 
@@ -204,8 +212,8 @@ val SOULGOLD_PARTY_MON = PartyMonLayout(
  */
 fun decodePartyMon(raw: ByteArray, off: Int, layout: PartyMonLayout = VANILLA_PARTY_MON): Mon? {
     if (raw.size < off + layout.size) return null
-    if (layout.rowe) return decodeRoweMon(raw, off)
-    if (layout.eliteRedux) return decodeEliteReduxMon(raw, off)
+    if (layout.rowe) return decodeRoweMon(raw, off, layout)
+    if (layout.eliteRedux) return decodeEliteReduxMon(raw, off, layout)
 
     var species: Int
     var heldItem = 0
@@ -370,11 +378,16 @@ data class BattleMonLayout(
     val stats: Int = 0x02,
     /** statStages[8] (HP, Atk, Def, Speed, Sp. Atk, Sp. Def, accuracy, evasion; 6 = unchanged). */
     val statStages: Int = 0x18,
+    /** personality and otId (u32 each), for the SHINY marks; -1 = not mapped. */
+    val personality: Int = -1,
+    val otId: Int = -1,
 )
 
 val VANILLA_BATTLE_MON = BattleMonLayout(
     size = BATTLE_POKEMON_SIZE, moves = 0x0C, type1 = 0x21, type2 = 0x22, pp = 0x24,
     hp = 0x28, level = 0x2A, maxHp = 0x2C, status1 = 0x4C,
+    // Read headless in a FireRed rev 1 and an Emerald wild battle: gBattleMons[1]'s matched gEnemyParty[0]'s.
+    personality = 0x48, otId = 0x54,
 )
 
 /**
@@ -385,6 +398,8 @@ val EXPANSION_BATTLE_MON = BattleMonLayout(
     size = 0x60, moves = 0x0C, type1 = 0x22, type2 = 0x23, pp = 0x25,
     hp = 0x2A, level = 0x2C, maxHp = 0x2E, status1 = 0x50,
     ability = 0x20, abilityU16 = true, item = 0x30,
+    // After the nickname, ppBonuses, OT name and experience (+0x48), as Team Rocket Edition's dump shows.
+    personality = 0x4C, otId = 0x58,
 )
 
 /** Too Many Types 2's: expansion's, but PP a byte later (a third type byte at +0x24). */
@@ -411,6 +426,14 @@ val ELITE_REDUX_BATTLE_MON = BattleMonLayout(
  */
 val TEAM_ROCKET_BATTLE_MON = EXPANSION_BATTLE_MON.copy(size = 0x5C)
 
+/**
+ * Pokémon Wishes of Tomorrow's (pokeemerald-expansion 1.15.3) 0x88-byte struct BattlePokemon: expansion's fields where
+ * [EXPANSION_BATTLE_MON] has them (types +0x22 / +0x23 and a third at +0x24, PP +0x25, HP +0x2A, level +0x2C, max HP +0x2E,
+ * item +0x30, status1 +0x50), its volatiles grown to 0x88 (the reference build's sizeof; its wild and trainer battles
+ * read the foe at +0x88, Heart and Soul's size).
+ */
+val WISHES_BATTLE_MON = EXPANSION_BATTLE_MON.copy(size = 0x88)
+
 /** R.O.W.E.'s: expansion's layout, the species' form id in its top 5 bits. */
 val ROWE_BATTLE_MON = EXPANSION_BATTLE_MON.copy(speciesMask = 0x7FF)
 
@@ -418,12 +441,12 @@ val ROWE_BATTLE_MON = EXPANSION_BATTLE_MON.copy(speciesMask = 0x7FF)
  * SoulGold's 0x98-byte struct BattlePokemon: expansion's fields up to max HP
  * where [EXPANSION_BATTLE_MON] has them, then a longer nickname (+0x34) that
  * pushes experience / personality to +0x4C / +0x50 and status1 to +0x54
- * (headless: poison poked there hurt the mon at the end of the turn).
+ * (headless: poison poked there hurt the mon at the end of the turn); otId +0x88 (both battlers' held the player's).
  */
-val SOULGOLD_BATTLE_MON = EXPANSION_BATTLE_MON.copy(size = 0x98, status1 = 0x54)
+val SOULGOLD_BATTLE_MON = EXPANSION_BATTLE_MON.copy(size = 0x98, status1 = 0x54, personality = 0x50, otId = 0x88)
 
-/** Decodes one struct BattlePokemon (a gBattleMons entry) at [off]. */
-fun decodeBattleMon(raw: ByteArray, off: Int, layout: BattleMonLayout = VANILLA_BATTLE_MON): BattleMon? {
+/** Decodes one struct BattlePokemon (a gBattleMons entry) at [off]; shiny under [shinyBelow] (0 = never marked). */
+fun decodeBattleMon(raw: ByteArray, off: Int, layout: BattleMonLayout = VANILLA_BATTLE_MON, shinyBelow: Int = 0): BattleMon? {
     if (raw.size < off + layout.size) return null
     val species = u16(raw, off + layout.species) and layout.speciesMask
     if (species == 0) return null
@@ -442,5 +465,7 @@ fun decodeBattleMon(raw: ByteArray, off: Int, layout: BattleMonLayout = VANILLA_
         stats = IntArray(5) { u16(raw, off + layout.stats + it * 2) },
         // Attack .. evasion (the HP slot isn't a stage the game uses).
         statStages = IntArray(7) { raw[off + layout.statStages + 1 + it].toInt() },
+        shiny = shinyBelow > 0 && layout.personality >= 0 && layout.otId >= 0 &&
+            shinyValue(u32(raw, off + layout.personality), u32(raw, off + layout.otId)) < shinyBelow,
     )
 }

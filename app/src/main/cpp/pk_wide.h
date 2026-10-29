@@ -196,6 +196,10 @@ void pk_follower_show(struct mCore* core, int on);
 /** FOLLOWER: its state as text (mgba_dump's followinfo). */
 void pk_follower_info(char* out, int n);
 
+/** A game closed: FOLLOWER (its sprite, shown or not) and DAY AND NIGHT's tint go back to none, so the next game starts
+ * without the last one's (they live here, not in the core, and the next game's engine starts from none). */
+void pk_wide_extras_reset(void);
+
 /** The signal (SIGSEGV...) that made pk_wide_view switch WIDE off for this game, or 0. A fault while drawing never
  * takes the app down: the frame is shown plain until the game is configured again. */
 int pk_wide_fault(void);

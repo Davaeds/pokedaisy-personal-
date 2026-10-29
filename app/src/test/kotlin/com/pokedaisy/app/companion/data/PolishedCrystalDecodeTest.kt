@@ -77,7 +77,7 @@ class PolishedCrystalDecodeTest {
 
     @Test
     fun `dex flags - by species, past the 8th bit (with the ROM)`() {
-        val rom = File(File(RETAIL_ROM_DIR).parentFile, "gbc/polishedcrystal-3.2.3.gbc")
+        val rom = File(File(RETAIL_ROM_DIR).parentFile, "gbc/Pokemon Polished Crystal (v3.2.3).gbc")
         assumeTrue("Polished Crystal 3.2.3 not on this machine", rom.isFile)
         Gen1Dex.rom = rom.readBytes()
         try {

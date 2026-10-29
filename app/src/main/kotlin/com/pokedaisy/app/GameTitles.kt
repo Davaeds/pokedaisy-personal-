@@ -44,6 +44,8 @@ object GameTitles {
         "0862ec35b24de5c7e2dcb88c9eea0873110d755c" to "Pokémon Platinum",
         "4fcded0e2713dc03929845de631d0932ea2b5a37" to "Pokémon HeartGold",
         "f8dc38ea20c17541a43b58c5e6d18c1732c7e582" to "Pokémon SoulSilver",
+        // Black (USA, Europe): the No-Intro dump (no decomp builds it).
+        "26ad0b9967aa279c4a266ee69f52b9b2332399a5" to "Pokémon Black",
         // The other Emeralds, by their own titles (No-Intro's dumps; no decomp builds them).
         "fe1558a3dcb0360ab558969e09b690888b846dd9" to "Pokémon Edición Esmeralda",
         "61c2eb2b380b1a75f0c94b767a2d4c26cd7ce4e3" to "Pokémon Smaragd-Edition",
@@ -116,6 +118,8 @@ object GameTitles {
         "5b38a681b6924ef3e0bb9f6cfbf22426c4c4e523" to "Pokémon Elite Redux",
         "2f3e17e55c6afe23da97ec0f96a067eeb142ad15" to "Pokémon Elite Redux",
         "40780347d0b4df6bf491eaf12603e5422caee677" to "Pokémon Team Rocket Edition: Dragonsden Version",
+        "60182b934d2e8eb3eef226a9bbc25e5df6becd4f" to "Pokémon Wishes of Tomorrow",
+        "20e91aecb3243eea7cd610659846f37062f5d709" to "Pokémon Dreamstone Mysteries",
         "20dfaea1d5317cf95fe0b493208edce7d50b865f" to "Pokémon Ghost Grey",
         "74337272566a74625d6dedefe47d2d153eb48ec1" to "Pokémon Ghost Grey",
         "0dafc0116b74406a2df491e26ccb40dd362fb0b7" to "Pokémon Ghost Grey",
@@ -160,10 +164,13 @@ object GameTitles {
         "772858dd5a3e66dea4454d5f83b48c83d732ca69" to "Pokémon Polished Crystal",
         "c4bd263e58325c6c04c34462c1b4a37fba085e9c" to "Pokémon Polished Crystal",
         "c0a2c70d73ce68830a891ddd292300c90766acdd" to "Pokémon Polished Crystal",
+        // PureRed / PureBlue v2.7.6 (Vortyne/pureRGB builds both byte for byte).
+        "2e94d09c1e16a57eb079404c030f26fdeeac949d" to "Pokémon PureRed",
+        "d419fe244fa17196f7df46ddab47c840e7573652" to "Pokémon PureBlue",
     )
 
     /** DS carts worth hashing (128 MB each, once per file): the DS games above. */
-    private val NDS_CODES = setOf("CPUE", "IPKE", "IPGE")
+    private val NDS_CODES = setOf("CPUE", "IPKE", "IPGE", "IRBO")
 
     /** Only these games' ROMs (and Game Boy carts) are worth hashing: every entry above is one of them. */
     private val CODES = setOf("BPRE", "BPGE", "BPEE", "AXVE", "AXPE") + EMERALD_LOCALIZED_CODES +
