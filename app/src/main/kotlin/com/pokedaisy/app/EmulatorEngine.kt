@@ -126,17 +126,14 @@ class EmulatorEngine(
         tmPatchDirty = true
     }
 
-    /** MENU SOUNDS: the song-table patch that silences or replaces the menu beep ([com.pokedaisy.app.companion.data.MenuSounds];
-     * null = not found) and the choice; goes in with REUSABLE TMS' patches on the next frame boundary. */
+    /** MENU SOUNDS off: the song-table patch that silences the menu beep ([com.pokedaisy.app.companion.data.MenuSounds];
+     * null = not found) and whether it's in; goes in with REUSABLE TMS' patches on the next frame boundary. */
     @Volatile private var menuSoundsPatch: com.pokedaisy.app.companion.data.MenuSounds.Patch? = null
-    @Volatile private var menuSound = com.pokedaisy.app.companion.data.MenuSounds.SE_SELECT
-    /** Play the menu sound once it's in (the player picking one in the list), when the game can be called. */
-    @Volatile private var menuSoundPreview = false
+    @Volatile private var muteMenuSounds = false
 
-    fun setMenuSound(patch: com.pokedaisy.app.companion.data.MenuSounds.Patch?, song: Int, preview: Boolean = false) {
+    fun setMuteMenuSounds(patch: com.pokedaisy.app.companion.data.MenuSounds.Patch?, on: Boolean) {
         menuSoundsPatch = patch
-        menuSound = song
-        if (preview && song != com.pokedaisy.app.companion.data.MenuSounds.OFF) menuSoundPreview = true
+        muteMenuSounds = on
         tmPatchDirty = true
     }
 
@@ -1427,18 +1424,11 @@ class EmulatorEngine(
             if (!all) MgbaCore.pkRomUnpatch()
             Log.i("pokedaisy", "reusable TMs: ${if (all) "${sites.size} site(s) patched" else "code didn't match"}")
         }
-        // MENU SOUNDS, after the TMs (their all-or-none undo takes every option patch out): the beep silenced, or
-        // another sound in its entry with its volume bytes turned down.
+        // MENU SOUNDS off, after the TMs (their all-or-none undo takes every option patch out).
         val beep = menuSoundsPatch
-        val choice = menuSound
-        val other = beep?.others?.get(choice)
-        if (beep != null && choice == com.pokedaisy.app.companion.data.MenuSounds.OFF) {
+        if (muteMenuSounds && beep != null) {
             val ok = MgbaCore.pkRomPatch(beep.entry, beep.beep, beep.entry, beep.silent)
             Log.i("pokedaisy", "menu sounds: ${if (ok) "beep silenced" else "table didn't match"}")
-        } else if (beep != null && other != null) {
-            val ok = MgbaCore.pkRomPatch(beep.entry, beep.beep, beep.entry, other.header)
-            val vols = if (ok) other.vols.count { MgbaCore.pkRomPatch(it.addr, byteArrayOf(it.from), it.addr, byteArrayOf(it.to)) } else 0
-            Log.i("pokedaisy", "menu sounds: ${if (ok) "$choice in, $vols of ${other.vols.size} volumes down" else "table didn't match"}")
         }
     }
 
@@ -1483,11 +1473,6 @@ class EmulatorEngine(
         repeat(emuJobs.size) { emuJobs.poll()?.let { job -> runCatching(job).onFailure { Log.e("pokedaisy", "emu job failed", it) } } }
         if (cheatsDirty) applyCheats()
         if (tmPatchDirty) applyTmPatch()
-        // MENU SOUNDS' pick heard: song 5, now whatever was picked, started as the game's menus start it.
-        if (menuSoundPreview && gba && !tmPatchDirty && MgbaCore.pkCallSafe()) {
-            menuSoundPreview = false
-            menuSoundsPatch?.let { MgbaCore.pkCall(it.play, com.pokedaisy.app.companion.data.MenuSounds.SE_SELECT, 0, 0, 0) }
-        }
         if (lookDirty) applyLook()
         // The jobs queued by now (one a job queues runs on a later frame); a delayed one waits its frames.
         repeat(fieldItemJobs.size) {

@@ -68,12 +68,10 @@ interface CompanionSettings {
     /** The game's own TMs never run out ([com.pokedaisy.app.companion.data.ReusableTms.BUILT_IN]): the row says so. */
     val reusableTmsBuiltIn: Boolean get() = false
 
-    /** MENU SOUNDS - see [com.pokedaisy.app.Prefs.menuSound]; [menuSoundsSupported]: the game's song table and a
+    /** MENU SOUNDS - see [com.pokedaisy.app.Prefs.menuSounds]; [menuSoundsSupported]: the game's song table and a
      * silent song were found ([com.pokedaisy.app.companion.data.MenuSounds]). */
-    val menuSound: Int get() = com.pokedaisy.app.companion.data.MenuSounds.SE_SELECT
-    fun setMenuSound(song: Int) {}
-    /** The choices this game has, as song numbers: the beep (ON), every sound effect of its table that reads, OFF. */
-    val menuSoundChoices: List<Int> get() = listOf(com.pokedaisy.app.companion.data.MenuSounds.SE_SELECT, com.pokedaisy.app.companion.data.MenuSounds.OFF)
+    val menuSounds: Boolean get() = true
+    fun setMenuSounds(on: Boolean) {}
     val menuSoundsSupported: Boolean get() = false
 
     /** PLAYER LOOK ([com.pokedaisy.app.companion.data.PlayerLook]): [playerLookSupported] = a FireRed / LeafGreen /
