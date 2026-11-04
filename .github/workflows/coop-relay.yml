@@ -36,7 +36,8 @@ jobs:
 
   deploy:
     needs: test
-    if: github.event_name != 'pull_request'
+    # Lidor's server only: the fork has no cloud login.
+    if: github.repository == 'lidor30/pokedaisy' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: coop-relay

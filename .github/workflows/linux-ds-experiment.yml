@@ -21,6 +21,8 @@ permissions:
   contents: read
 jobs:
   build:
+    # Lidor's repo only: the fork ships the Android app alone.
+    if: github.repository == 'lidor30/pokedaisy'
     strategy:
       matrix:
         target: [native, trimui]
