@@ -25,6 +25,8 @@ concurrency:
 
 jobs:
   test:
+    # Lidor's repo only, like deploy: the fork doesn't run the relay.
+    if: github.repository == 'lidor30/pokedaisy'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
